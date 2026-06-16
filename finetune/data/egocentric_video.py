@@ -65,14 +65,15 @@ class EgocentricVideoDataset(Dataset):
         self.resolution = image_resolution
         self.patch = patch_size
 
+        # A "clip" is any directory (at any depth) that directly contains image
+        # frames. This handles a flat folder, data_root/clip/*.jpg, and nested
+        # layouts like Ego-Exo4D <root>/train/<seq>/aria01_214-1/*.jpg.
         clips = []
-        if any(f.lower().endswith(_IMG_EXTS) for f in os.listdir(data_root)):
-            clips = [data_root]  # data_root is itself a clip of frames
-        else:
-            for name in sorted(os.listdir(data_root)):
-                sub = os.path.join(data_root, name)
-                if os.path.isdir(sub) and _list_frames(sub):
-                    clips.append(sub)
+        for dirpath, dirnames, filenames in os.walk(data_root):
+            dirnames.sort()
+            if any(f.lower().endswith(_IMG_EXTS) for f in filenames):
+                clips.append(dirpath)
+        clips.sort()
         if not clips:
             raise FileNotFoundError(f"No image frames found under {data_root!r}")
 
