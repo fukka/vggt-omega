@@ -198,6 +198,11 @@ def parse_args():
     p.add_argument("--depth-units", default="", help="Unit label for depth values in the viewer, e.g. 'm'")
     p.add_argument("--no-depth-hover", action="store_true",
                    help="Omit the embedded depth grid (smaller depth_viewer.html, no hover readout)")
+    p.add_argument("--points-per-frame", type=int, default=15000,
+                   help="Max points per frame in the 3D view (subsampled); lower = smaller html")
+    p.add_argument("--point-size", type=float, default=0.01, help="3D point size (normalized units)")
+    p.add_argument("--no-depth-edge-filter", action="store_true",
+                   help="Keep flying pixels at depth discontinuities in the per-frame 3D cloud")
     return p.parse_args()
 
 
@@ -222,27 +227,17 @@ def run_depth_modes(args) -> None:
         )
         print(f"Wrote {n} colormapped depths -> {os.path.join(target_dir, 'depth_vis')}/000000.jpg ...")
     if args.visualize_depth:
-        glb = None  # combined 3D point-cloud panel (optional; needs trimesh + Python >=3.10)
-        params = {
-            "conf_thres": max(2.0, float(args.conf_thres)),
-            "max_points": int(args.max_points_k * 1000),
-            "show_cam": not args.no_cam,
-            "mask_black_bg": args.mask_black_bg,
-            "mask_white_bg": args.mask_white_bg,
-            "mask_sky": args.mask_sky,
-        }
-        try:
-            glb = build_glb(predictions, target_dir, params, args.rebuild)
-        except (Exception, SystemExit) as exc:
-            print(f"[3D panel skipped] {exc}")
         html = depth_viewer.build_depth_viewer_html(
             predictions,
             os.path.join(target_dir, "depth_viewer.html"),
-            glb_path=glb,
             cmap=args.depth_cmap,
             normalize=args.depth_normalize,
             hover_max=0 if args.no_depth_hover else 160,
             units=args.depth_units,
+            points_per_frame=args.points_per_frame,
+            conf_thres=max(0.0, float(args.conf_thres)),
+            point_size=args.point_size,
+            filter_edges=not args.no_depth_edge_filter,
         )
         print(f"Wrote depth viewer: {html} ({os.path.getsize(html) / 1e6:.1f} MB)")
         if args.serve:
