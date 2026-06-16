@@ -21,7 +21,7 @@ def predictions_to_glb(
     mask_white_bg: bool = False,
     show_cam: bool = True,
     mask_sky: bool = False,
-    target_dir: str | None = None,
+    target_dir = None,
     max_points: int = 300000,
     filter_depth_edges: bool = True,
     depth_edge_rtol: float = 0.03,
@@ -98,7 +98,7 @@ def _images_to_rgb(images: np.ndarray) -> np.ndarray:
     return images
 
 
-def _limit_points(vertices: np.ndarray, colors: np.ndarray, max_points: int) -> tuple[np.ndarray, np.ndarray]:
+def _limit_points(vertices: np.ndarray, colors: np.ndarray, max_points: int):
     if max_points <= 0 or len(vertices) <= max_points:
         return vertices, colors
     indices = np.linspace(0, len(vertices) - 1, max_points).astype(np.int64)
@@ -166,7 +166,7 @@ def get_opengl_conversion_matrix() -> np.ndarray:
     return matrix
 
 
-def transform_points(transformation: np.ndarray, points: np.ndarray, dim: int | None = None) -> np.ndarray:
+def transform_points(transformation: np.ndarray, points: np.ndarray, dim = None) -> np.ndarray:
     points = np.asarray(points)
     initial_shape = points.shape[:-1]
     dim = dim or points.shape[-1]
@@ -245,7 +245,7 @@ def segment_sky(image_path: str, onnx_session, mask_filename: str) -> np.ndarray
     return output_mask
 
 
-def run_skyseg(onnx_session, input_size: list[int], image: np.ndarray) -> np.ndarray:
+def run_skyseg(onnx_session, input_size, image: np.ndarray) -> np.ndarray:
     image = cv2.resize(image, dsize=(input_size[0], input_size[1]))
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = np.array(image, dtype=np.float32)
