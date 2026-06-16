@@ -30,6 +30,8 @@ import os
 
 import numpy as np
 
+import depth_viewer
+
 
 # --------------------------------------------------------------------------- #
 # load
@@ -183,11 +185,83 @@ def parse_args():
     p.add_argument("--serve", action="store_true", help="Serve viewer.html over local HTTP")
     p.add_argument("--no-open", action="store_true", help="Do not auto-open a browser")
     p.add_argument("--port", type=int, default=8000)
+    # depth modes (operate on --results predictions.npz)
+    p.add_argument("--export-depth", action="store_true",
+                   help="Write raw float depth .npy per frame to <results>/depth/")
+    p.add_argument("--export-depth-visualized", action="store_true",
+                   help="Write colormapped depth .jpg per frame to <results>/depth_vis/")
+    p.add_argument("--visualize-depth", action="store_true",
+                   help="Build an interactive depth viewer (frame scrub + input/depth swipe + hover value + 3D)")
+    p.add_argument("--depth-cmap", default="turbo", help="Matplotlib colormap for depth (default: turbo)")
+    p.add_argument("--depth-normalize", choices=["global", "per-frame"], default="global",
+                   help="Depth color normalization: global (consistent across frames) or per-frame")
+    p.add_argument("--depth-units", default="", help="Unit label for depth values in the viewer, e.g. 'm'")
+    p.add_argument("--no-depth-hover", action="store_true",
+                   help="Omit the embedded depth grid (smaller depth_viewer.html, no hover readout)")
     return p.parse_args()
+
+
+def run_depth_modes(args) -> None:
+    """--export-depth / --export-depth-visualized / --visualize-depth (need --results)."""
+    if not args.results:
+        raise SystemExit(
+            "--export-depth / --export-depth-visualized / --visualize-depth require "
+            "--results (a predictions.npz bundle), not --glb."
+        )
+    predictions, target_dir = load_predictions(args.results)
+
+    if args.export_depth:
+        n = depth_viewer.export_depth_npy(predictions, os.path.join(target_dir, "depth"))
+        print(f"Wrote {n} depth arrays -> {os.path.join(target_dir, 'depth')}/000000.npy ...")
+    if args.export_depth_visualized:
+        n = depth_viewer.export_depth_vis(
+            predictions,
+            os.path.join(target_dir, "depth_vis"),
+            cmap=args.depth_cmap,
+            normalize=args.depth_normalize,
+        )
+        print(f"Wrote {n} colormapped depths -> {os.path.join(target_dir, 'depth_vis')}/000000.jpg ...")
+    if args.visualize_depth:
+        glb = None  # combined 3D point-cloud panel (optional; needs trimesh + Python >=3.10)
+        params = {
+            "conf_thres": max(2.0, float(args.conf_thres)),
+            "max_points": int(args.max_points_k * 1000),
+            "show_cam": not args.no_cam,
+            "mask_black_bg": args.mask_black_bg,
+            "mask_white_bg": args.mask_white_bg,
+            "mask_sky": args.mask_sky,
+        }
+        try:
+            glb = build_glb(predictions, target_dir, params, args.rebuild)
+        except (Exception, SystemExit) as exc:
+            print(f"[3D panel skipped] {exc}")
+        html = depth_viewer.build_depth_viewer_html(
+            predictions,
+            os.path.join(target_dir, "depth_viewer.html"),
+            glb_path=glb,
+            cmap=args.depth_cmap,
+            normalize=args.depth_normalize,
+            hover_max=0 if args.no_depth_hover else 160,
+            units=args.depth_units,
+        )
+        print(f"Wrote depth viewer: {html} ({os.path.getsize(html) / 1e6:.1f} MB)")
+        if args.serve:
+            serve_dir(os.path.dirname(html) or ".", os.path.basename(html), args.port)
+        elif not args.no_open:
+            import webbrowser
+
+            webbrowser.open("file://" + os.path.abspath(html))
+            print("Opened in your browser. (Host depth_viewer.html on any static server to share it.)")
+        else:
+            print(f"Open {html} in a browser, or host it on a static server to share.")
 
 
 def main():
     args = parse_args()
+
+    if args.export_depth or args.export_depth_visualized or args.visualize_depth:
+        run_depth_modes(args)
+        return
 
     if args.glb:
         glb_path = args.glb
