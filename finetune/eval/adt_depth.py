@@ -87,6 +87,73 @@ def _gather_real_frames(seq_dir: str) -> List[Tuple[str, str]]:
     return pairs
 
 
+def _colorize_depth(depth: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
+    """depth [H,W] float → [H,W,3] uint8 using viridis colormap."""
+    try:
+        import matplotlib.cm as cm
+        normed = np.clip((depth - vmin) / max(vmax - vmin, 1e-6), 0.0, 1.0)
+        return (cm.viridis(normed)[:, :, :3] * 255).astype(np.uint8)
+    except ImportError:
+        normed = np.clip((depth - vmin) / max(vmax - vmin, 1e-6), 0.0, 1.0)
+        g = (normed * 255).astype(np.uint8)
+        return np.stack([g, g, g], axis=-1)
+
+
+def _save_qual_grid(
+    save_path: str,
+    images_np: np.ndarray,   # [S,3,H,W] float32 in [0,1]
+    pred_depth: np.ndarray,  # [S,H,W]  aligned to GT scale
+    gt_depth: np.ndarray,    # [S,H,W]  GT metres
+    valid_mask: np.ndarray,  # [S,H,W]  bool
+    label: str = "",
+) -> None:
+    """Save horizontal strip  RGB | pred | GT | abs_error  for the centre frame."""
+    s = images_np.shape[0] // 2
+    rgb = (images_np[s].transpose(1, 2, 0) * 255).clip(0, 255).astype(np.uint8)
+
+    g = gt_depth[s]
+    p = pred_depth[s]
+    m = valid_mask[s]
+
+    valid_g = g[m]
+    vmin = float(np.percentile(valid_g, 2)) if valid_g.size > 0 else 0.0
+    vmax = float(np.percentile(valid_g, 98)) if valid_g.size > 0 else 10.0
+
+    p_vis = p.copy(); p_vis[~m] = 0.0
+    g_vis = g.copy(); g_vis[~m] = 0.0
+    err = np.abs(p - g); err[~m] = 0.0
+
+    pred_col = _colorize_depth(p_vis, vmin, vmax)
+    gt_col   = _colorize_depth(g_vis, vmin, vmax)
+    err_col  = _colorize_depth(err,   0.0, max((vmax - vmin) * 0.3, 0.1))
+    for panel in (pred_col, gt_col, err_col):
+        panel[~m] = 24   # dark background for invalid pixels
+
+    strip = np.concatenate([rgb, pred_col, gt_col, err_col], axis=1)
+
+    # Header bar with column labels
+    H, W = rgb.shape[:2]
+    bar_h = max(18, H // 20)
+    bar = np.full((bar_h, strip.shape[1], 3), 40, dtype=np.uint8)
+    try:
+        from PIL import ImageDraw, ImageFont
+        bar_img = Image.fromarray(bar)
+        draw = ImageDraw.Draw(bar_img)
+        cols = ["RGB", "Pred depth", "GT depth", "Abs error"]
+        for i, col_name in enumerate(cols):
+            draw.text((i * W + 4, 2), col_name, fill=(220, 220, 220))
+        if label:
+            draw.text((4, bar_h // 2), label, fill=(255, 200, 100))
+        bar = np.array(bar_img)
+    except Exception:
+        pass
+
+    out = np.concatenate([bar, strip], axis=0)
+    os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
+    Image.fromarray(out).save(save_path)
+    print(f"  [ADT] qual → {save_path}")
+
+
 def _load_gt_trajectory(traj_csv: str) -> np.ndarray:
     """Load ADT groundtruth/aria_trajectory.csv → (N, 3) world positions (metres)."""
     import csv
@@ -247,6 +314,8 @@ def run_adt_eval(
     align_modes: Tuple[str, ...] = ("none", "scale_only", "scale_shift"),
     eval_all_frames: bool = True,
     gt_traj_csv: Optional[str] = None,
+    qual_dir: Optional[str] = None,
+    n_qual: int = 4,
 ) -> Dict[str, dict]:
     """Run depth evaluation against ADT real sensor data with dense GT.
 
@@ -286,6 +355,9 @@ def run_adt_eval(
 
     frame_metrics: Dict[str, List[dict]] = {m: [] for m in align_modes}
     pred_positions: List[np.ndarray] = []
+    # Alignment mode used for qualitative visualizations (prefer scale_shift → first available)
+    _vis_mode = "scale_shift" if "scale_shift" in align_modes else align_modes[0]
+    n_saved = 0
 
     for batch in loader:
         images = batch["images"].to(device)     # [B,S,3,H,W]
@@ -301,7 +373,34 @@ def run_adt_eval(
                     pred_positions.append(pose_enc[b, s, :3])
 
         frame_indices = range(depth_pred.shape[1]) if eval_all_frames else [depth_pred.shape[1] // 2]
+        images_np = images.float().cpu().numpy()   # [B,S,3,H,W]  kept for qual saves
         for b in range(depth_pred.shape[0]):
+            # ── qualitative save (first n_qual windows) ───────────────────────
+            if qual_dir is not None and n_saved < n_qual:
+                s_c = depth_pred.shape[1] // 2   # centre frame of window
+                pred_c = depth_pred[b, s_c]
+                gt_c   = depths_gt[b, s_c]
+                mask_c = masks_gt[b, s_c]
+                if mask_c.sum() >= 10:
+                    aligned_c = align_depth(pred_c, gt_c, mask_c, mode=_vis_mode)
+                    # Build per-frame arrays for _save_qual_grid (expects [S,...])
+                    _save_qual_grid(
+                        save_path=os.path.join(
+                            qual_dir,
+                            f"{n_saved:04d}.png",
+                        ),
+                        images_np=images_np[b],           # [S,3,H,W]
+                        pred_depth=np.stack(
+                            [align_depth(depth_pred[b, s], depths_gt[b, s],
+                                         masks_gt[b, s], mode=_vis_mode)
+                             for s in range(depth_pred.shape[1])]
+                        ),                                 # [S,H,W] aligned
+                        gt_depth=depths_gt[b],             # [S,H,W]
+                        valid_mask=masks_gt[b],            # [S,H,W]
+                        label=label,
+                    )
+                    n_saved += 1
+
             for s in frame_indices:
                 pred = depth_pred[b, s]
                 gt = depths_gt[b, s]

@@ -122,6 +122,7 @@ def _apply_vggt_finetune(
     finetune_checkpoint: str,
     lora_rank: int,
     lora_alpha: int,
+    device: torch.device,
 ) -> torch.nn.Module:
     """Return a NEW model (separate copy) with LoRA + finetuned weights applied."""
     import copy
@@ -136,7 +137,7 @@ def _apply_vggt_finetune(
     missing, unexpected = model.load_state_dict(sd, strict=False)
     print(f"[eval]   VGGT finetune weights loaded "
           f"(missing={len(missing)}, unexpected={len(unexpected)})")
-    return model.eval()
+    return model.to(device).eval()
 
 
 def _load_dav2_base(model_name: str, device: torch.device) -> torch.nn.Module:
@@ -152,6 +153,7 @@ def _apply_dav2_finetune(
     lora_rank: int,
     lora_alpha: int,
     finetune_dav2_lora_only: bool,
+    device: torch.device,
 ) -> torch.nn.Module:
     """Return a NEW DAv2 model with finetuned weights applied."""
     import copy
@@ -164,7 +166,7 @@ def _apply_dav2_finetune(
     if not dav2_sd:
         print("[eval]   WARNING: 'dav2' key missing from checkpoint — "
               "DAv2 finetuned variant will equal pretrained")
-        return model.eval()
+        return model.to(device).eval()
 
     if finetune_dav2_lora_only:
         n = apply_lora(model, r=lora_rank, alpha=lora_alpha, dropout=0.0)
@@ -173,7 +175,7 @@ def _apply_dav2_finetune(
     missing, unexpected = model.load_state_dict(dav2_sd, strict=False)
     print(f"[eval]   DAv2 finetune weights loaded "
           f"(missing={len(missing)}, unexpected={len(unexpected)})")
-    return model.eval()
+    return model.to(device).eval()
 
 
 # --------------------------------------------------------------------------- #
@@ -335,6 +337,8 @@ def main() -> None:
 
     # ── Output ─────────────────────────────────────────────────────────────
     p.add_argument("--out-dir", default="eval_out")
+    p.add_argument("--n-qual", type=int, default=4,
+                   help="Number of qualitative result images to save per variant (0 = skip)")
 
     a = p.parse_args()
     device = torch.device(a.device)
@@ -366,7 +370,7 @@ def main() -> None:
     # VGGT finetuned
     if a.finetune_checkpoint:
         vggt_ft = _apply_vggt_finetune(
-            vggt_base, a.finetune_checkpoint, a.lora_rank, a.lora_alpha
+            vggt_base, a.finetune_checkpoint, a.lora_rank, a.lora_alpha, device
         )
         variants["vggt_finetuned"] = {
             "label":       "VGGT finetuned",
@@ -390,7 +394,7 @@ def main() -> None:
         if a.finetune_checkpoint:
             dav2_ft = _apply_dav2_finetune(
                 dav2_base, a.finetune_checkpoint,
-                a.lora_rank, a.lora_alpha, a.finetune_dav2_lora_only,
+                a.lora_rank, a.lora_alpha, a.finetune_dav2_lora_only, device,
             )
             variants["dav2_finetuned"] = {
                 "label":       "DAv2 finetuned",
@@ -418,6 +422,10 @@ def main() -> None:
             adt_results: dict = {}
             for var_key, var in variants.items():
                 print(f"\n[eval] --- {var['label']} ---")
+                _qual_dir = (
+                    os.path.join(a.out_dir, "qual", var_key)
+                    if a.n_qual > 0 else None
+                )
                 adt_results[var_key] = run_adt_eval(
                     predict_fn=var["predict_fn"],
                     label=var["label"],
@@ -429,6 +437,8 @@ def main() -> None:
                     depth_max_m=a.adt_depth_max,
                     align_modes=var["align_modes"],
                     gt_traj_csv=a.adt_gt_traj_csv if var["with_pose"] else None,
+                    qual_dir=_qual_dir,
+                    n_qual=a.n_qual,
                 )
             all_results["adt"] = adt_results
 
