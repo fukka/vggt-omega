@@ -14,6 +14,7 @@ class FinetuneConfig:
     seq_len: int = 8
     stride: int = 2
     window_stride: int = 1         # frames between window starts (1 = max overlap; seq_len*stride = none)
+    clip_pattern: str = "*214-1"   # keep only egocentric RGB (aria*_214-1); "" loads every camera
     image_resolution: int = 512
     patch_size: int = 16
     batch_size: int = 1

@@ -202,6 +202,9 @@ def parse_args():
                         "the Aria RGB Fisheye624 VRS calibration. Auto-detected from clip path when 'none'.")
     p.add_argument("--fisheye-k", default="", help="fx,fy,cx,cy (overrides preset K)")
     p.add_argument("--fisheye-d", default="", help="k1,k2,k3,k4 KB4 distortion coeffs (overrides preset D)")
+    p.add_argument("--clip-pattern", default="*214-1",
+                   help="fnmatch glob; keep only matching camera dirs (egocentric RGB aria*_214-1). "
+                        "Pass '' to load every camera.")
     p.add_argument("--out-dir", default="test_run_outputs")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--seed", type=int, default=0)
@@ -224,10 +227,13 @@ def main():
 
     dataset = EgocentricVideoDataset(
         args.data_root, seq_len=args.seq_len, stride=args.stride,
+        clip_pattern=args.clip_pattern,
         image_resolution=args.image_resolution, patch_size=args.patch_size,
     )
     n = len(dataset)
-    print(f"[test] dataset: {n} windows from {args.data_root}")
+    print(f"[test] dataset: {n} windows from {len(dataset.clips)} clips "
+          f"(pattern {args.clip_pattern!r}, skipped {dataset.num_skipped_dirs} non-matching dirs) "
+          f"under {args.data_root}")
     k = min(args.num_windows, n)
     if args.shuffle:
         idxs = sorted(np.random.choice(n, k, replace=False).tolist())

@@ -35,12 +35,20 @@ class TrainLogger:
         self._jsonl = open(os.path.join(out_dir, "metrics.jsonl"), "a", buffering=1)
         self._txt = open(os.path.join(out_dir, "train_log.txt"), "a", buffering=1)
         if use_tensorboard:
+            tb_dir = os.path.join(out_dir, "tb")
             try:
                 from torch.utils.tensorboard import SummaryWriter
 
-                self.tb = SummaryWriter(os.path.join(out_dir, "tb"))
+                self.tb = SummaryWriter(tb_dir)
+                self.text(f"[logger] TensorBoard -> {tb_dir}  (view: tensorboard --logdir {out_dir})")
             except Exception as e:  # pragma: no cover
-                self.text(f"[logger] TensorBoard unavailable ({e}); skipping.")
+                # Most commonly the 'tensorboard' pip package is missing; do not
+                # silently train for hours without the requested logging.
+                self.text(
+                    f"[logger] WARNING: --tensorboard requested but unavailable: {e}\n"
+                    f"[logger]          install it with `pip install tensorboard` "
+                    f"(metrics.jsonl/csv are still written regardless)."
+                )
 
     # ------------------------------------------------------------------ #
     def log_scalars(self, step: int, split: str, phase: str, metrics: Dict[str, float]) -> None:
@@ -54,6 +62,7 @@ class TrainLogger:
         if self.tb is not None:
             for k, v in metrics.items():
                 self.tb.add_scalar(f"{split}/{phase}/{k}", float(v), int(step))
+            self.tb.flush()  # make events visible promptly (don't wait for close/120s)
 
     def text(self, line: str) -> None:
         """Print to console and mirror into train_log.txt (rank-0 / enabled only)."""

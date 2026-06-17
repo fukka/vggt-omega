@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import re
+from fnmatch import fnmatch
 from typing import List, Tuple
 
 import torch
@@ -59,6 +60,7 @@ class EgocentricVideoDataset(Dataset):
         image_resolution: int = 512,
         patch_size: int = 16,
         window_stride: int = 1,
+        clip_pattern: str = "",
     ) -> None:
         super().__init__()
         self.seq_len = seq_len
@@ -69,18 +71,38 @@ class EgocentricVideoDataset(Dataset):
         # overlapping (each frame appears in up to `span` windows — heavy
         # redundancy); set to seq_len*stride for non-overlapping windows.
         self.window_stride = max(1, window_stride)
+        self.clip_pattern = clip_pattern
 
         # A "clip" is any directory (at any depth) that directly contains image
         # frames. This handles a flat folder, data_root/clip/*.jpg, and nested
         # layouts like Ego-Exo4D <root>/train/<seq>/aria01_214-1/*.jpg.
-        clips = []
+        #
+        # An Ego-Exo4D take holds MANY cameras side by side (egocentric RGB
+        # aria*_214-1, Aria SLAM grayscale *_1201-1/2, exocentric cam*/gp*); set
+        # clip_pattern (fnmatch glob, e.g. "*214-1") to keep only the egocentric
+        # RGB stream. A dir qualifies if ANY of its path components (relative to
+        # data_root) matches the pattern; empty pattern = accept every dir.
+        clips, skipped = [], 0
         for dirpath, dirnames, filenames in os.walk(data_root):
             dirnames.sort()
-            if any(f.lower().endswith(_IMG_EXTS) for f in filenames):
-                clips.append(dirpath)
+            if not any(f.lower().endswith(_IMG_EXTS) for f in filenames):
+                continue
+            if clip_pattern:
+                rel = os.path.relpath(dirpath, data_root)
+                parts = [p for p in rel.split(os.sep) if p not in ("", ".")]
+                if not any(fnmatch(p, clip_pattern) for p in parts):
+                    skipped += 1
+                    continue
+            clips.append(dirpath)
         clips.sort()
+        self.clips = clips
+        self.num_skipped_dirs = skipped
         if not clips:
-            raise FileNotFoundError(f"No image frames found under {data_root!r}")
+            raise FileNotFoundError(
+                f"No image clips under {data_root!r} matching clip_pattern={clip_pattern!r} "
+                f"({skipped} dirs with images were skipped by the filter; "
+                f"pass clip_pattern='' to disable filtering)"
+            )
 
         self.windows: List[Tuple[str, List[str]]] = []
         span = (seq_len - 1) * stride + 1

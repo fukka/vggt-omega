@@ -145,11 +145,14 @@ def build_loader(cfg: FinetuneConfig, rank: int = 0, world_size: int = 1):
         seq_len=cfg.seq_len,
         stride=cfg.stride,
         window_stride=cfg.window_stride,
+        clip_pattern=cfg.clip_pattern,
         image_resolution=cfg.image_resolution,
         patch_size=cfg.patch_size,
     )
     if is_main():
-        print(f"[finetune] dataset: {len(dataset)} windows from {cfg.data_root}")
+        print(f"[finetune] train: {len(dataset)} windows from {len(dataset.clips)} clips "
+              f"(pattern {cfg.clip_pattern!r}, skipped {dataset.num_skipped_dirs} non-matching dirs) "
+              f"under {cfg.data_root}")
     if world_size > 1:
         sampler = DistributedSampler(
             dataset, num_replicas=world_size, rank=rank, shuffle=True, drop_last=True
@@ -188,11 +191,13 @@ def build_val_loader(cfg: FinetuneConfig):
         seq_len=cfg.seq_len,
         stride=cfg.stride,
         window_stride=cfg.window_stride,
+        clip_pattern=cfg.clip_pattern,
         image_resolution=cfg.image_resolution,
         patch_size=cfg.patch_size,
     )
     if is_main():
-        print(f"[finetune] val dataset: {len(dataset)} windows from {cfg.val_data_root}")
+        print(f"[finetune] val: {len(dataset)} windows from {len(dataset.clips)} clips "
+              f"(pattern {cfg.clip_pattern!r}, skipped {dataset.num_skipped_dirs}) under {cfg.val_data_root}")
     return torch.utils.data.DataLoader(
         dataset,
         batch_size=cfg.batch_size,
@@ -239,6 +244,9 @@ def parse_args() -> FinetuneConfig:
     p.add_argument("--stride", type=int, default=2)
     p.add_argument("--window-stride", type=int, default=1,
                    help="frames between window starts (1 = max overlap; seq_len*stride = non-overlapping)")
+    p.add_argument("--clip-pattern", default="*214-1",
+                   help="fnmatch glob; keep only matching camera dirs (egocentric RGB aria*_214-1). "
+                        "Pass '' to load every camera (incl. exocentric/SLAM).")
     p.add_argument("--image-resolution", type=int, default=512)
     p.add_argument("--batch-size", type=int, default=1)
     p.add_argument("--num-workers", type=int, default=4)
@@ -293,6 +301,7 @@ def parse_args() -> FinetuneConfig:
         seq_len=a.seq_len,
         stride=a.stride,
         window_stride=a.window_stride,
+        clip_pattern=a.clip_pattern,
         image_resolution=a.image_resolution,
         batch_size=a.batch_size,
         num_workers=a.num_workers,
