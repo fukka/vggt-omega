@@ -32,6 +32,14 @@ class LoRALinear(nn.Module):
         nn.init.zeros_(self.lora_B)  # start as a no-op (delta = 0)
         self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
 
+    def __getattr__(self, name: str):
+        # Proxy nn.Linear attributes (in_features, out_features, weight, bias …)
+        # that callers may read directly on the wrapped module.
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return getattr(self.base, name)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         delta = (self.dropout(x) @ self.lora_A.t()) @ self.lora_B.t()
         return self.base(x) + self.scaling * delta
