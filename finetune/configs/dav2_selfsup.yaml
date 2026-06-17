@@ -1,0 +1,14 @@
+# Ablation — Phase A with NO VGGT->DAv2 distillation.
+# DAv2 is improved purely by its own photometric + multiview self-supervision
+# under VGGT's (frozen) poses, never copying VGGT's depth. Tests the echo-chamber
+# hypothesis on the DAv2 side: does dropping the imitation term stop DAv2 from
+# degrading toward a weaker teacher? Compare against ssi.yaml.
+__base__: base.yaml
+
+name: dav2_selfsup
+trainer: ssi
+notes: "Phase A: photometric+multiview only, no VGGT distillation (w_a_distill=0)."
+
+losses:
+  w_a_distill: 0.0
+  w_metric_anchor: 0.0

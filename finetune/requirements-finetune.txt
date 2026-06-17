@@ -4,4 +4,6 @@ torch>=2.3
 torchvision>=0.18
 numpy<2
 Pillow
+PyYAML               # run configs (finetune/configs/*.yaml)
+opencv-python        # fisheye->pinhole rectification in the training loader
 transformers>=4.40   # Depth-Anything-V2 partner model (omit if using --dav2-dummy)

@@ -61,12 +61,17 @@ class EgocentricVideoDataset(Dataset):
         patch_size: int = 16,
         window_stride: int = 1,
         clip_pattern: str = "",
+        rectifier=None,
     ) -> None:
         super().__init__()
         self.seq_len = seq_len
         self.stride = stride
         self.resolution = image_resolution
         self.patch = patch_size
+        # Optional fisheye->pinhole rectifier (FisheyeRectifier or any HWC-float
+        # callable). The losses assume pinhole; leave None only if frames are
+        # already rectified (e.g. prepare_egoexo4d.py --undistort).
+        self.rectifier = rectifier
         # Gap (in frames) between consecutive window starts. 1 = maximally
         # overlapping (each frame appears in up to `span` windows — heavy
         # redundancy); set to seq_len*stride for non-overlapping windows.
@@ -123,8 +128,10 @@ class EgocentricVideoDataset(Dataset):
     def _load(self, path: str, th: int, tw: int) -> torch.Tensor:
         with Image.open(path) as im:
             im = im.convert("RGB").resize((tw, th), Image.BICUBIC)
-            arr = torch.from_numpy(_to_float_array(im))
-        return arr.permute(2, 0, 1).contiguous()  # [3,H,W] in [0,1]
+            arr_np = _to_float_array(im)            # [H,W,3] in [0,1]
+        if self.rectifier is not None:
+            arr_np = self.rectifier(arr_np)         # fisheye -> pinhole
+        return torch.from_numpy(arr_np).permute(2, 0, 1).contiguous()  # [3,H,W]
 
     def __getitem__(self, idx: int):
         clip, paths = self.windows[idx]

@@ -130,8 +130,10 @@ def _apply_vggt_finetune(
 
     # Deep-copy the base so pretrained and finetuned variants are independent.
     model = copy.deepcopy(base_model)
-    n = apply_lora(model, r=lora_rank, alpha=lora_alpha, dropout=0.0)
-    print(f"[eval]   LoRA applied to {n} VGGT layers")
+    # Match training: LoRA lives in the aggregator backbone only (the heads were
+    # finetuned fully), so the checkpoint's keys line up exactly.
+    n = apply_lora(model.aggregator, r=lora_rank, alpha=lora_alpha, dropout=0.0)
+    print(f"[eval]   LoRA applied to {n} VGGT aggregator layers")
     ckpt = torch.load(finetune_checkpoint, map_location="cpu")
     sd = ckpt.get("vggt", ckpt)
     missing, unexpected = model.load_state_dict(sd, strict=False)

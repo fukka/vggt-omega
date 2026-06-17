@@ -1,0 +1,15 @@
+# Ablation — metric anchor in SCALE-ONLY mode.
+# Pins only the per-frame global depth scale (the depth<->pose gauge the SSI
+# terms leave free) and lets structure adapt freely to the distillation — vs the
+# default "full" proximal anchor that also holds structure near pretrained.
+# Tests whether preserving metric scale needs the structural constraint too.
+# Evaluate under `none` (metric).
+__base__: base.yaml
+
+name: metric_anchor_scale
+trainer: metric_anchor
+notes: "Metric anchor SCALE-ONLY (per-frame global log-depth), w=0.1."
+
+losses:
+  w_metric_anchor: 0.1
+  metric_anchor_mode: scale

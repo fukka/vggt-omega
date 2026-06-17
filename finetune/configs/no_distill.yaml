@@ -1,0 +1,15 @@
+# Ablation — Phase B with NO DAv2->VGGT distillation.
+# VGGT is improved by pure self-supervision (photometric + geometric +
+# smoothness) only. Tests whether distilling DAv2's structure into VGGT actually
+# helps, or just injects a (possibly worse) teacher's bias (echo-chamber check
+# on the VGGT side). Compare against ssi.yaml.
+__base__: base.yaml
+
+name: no_distill
+trainer: ssi
+notes: "Phase B self-supervised only (w_distill_ssi=w_distill_grad=0)."
+
+losses:
+  w_distill_ssi: 0.0
+  w_distill_grad: 0.0
+  w_metric_anchor: 0.0

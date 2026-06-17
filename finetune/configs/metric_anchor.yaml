@@ -1,0 +1,12 @@
+# Variant B — metric-anchored co-distillation.
+# Adds a light anchor to a frozen pretrained VGGT so the released checkpoint's
+# METRIC scale is preserved. Evaluate this one under `none` (metric) alignment.
+# Costs one extra frozen VGGT in GPU memory (see trainers/metric_anchor.py).
+__base__: base.yaml
+
+name: metric_anchor_r8
+trainer: metric_anchor
+notes: "Phase B + log-depth metric anchor to frozen pretrained VGGT. Metric scale."
+
+losses:
+  w_metric_anchor: 0.1   # tune 0.05-0.5; higher = stickier to pretrained metric depth

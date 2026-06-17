@@ -1,35 +1,37 @@
 # Copyright (c) 2026.
 """CLI entry point for alternating egocentric finetuning.
 
---data-root, --val-data-root, and --vggt-checkpoint default to the user's
-cluster paths, so on that cluster a bare invocation already trains on
-Ego-Exo4D; override them on the CLI elsewhere. Device defaults to ``cuda``.
+Runs are driven by a YAML config (``finetune/configs/*.yaml``). The config's
+``trainer:`` field selects the training strategy; outputs go to
+``<runs_root>/<name>/`` so multiple experiments coexist and are recorded in
+``<runs_root>/index.csv``.
 
 Examples
 --------
-Single-GPU (uses the default cluster paths + checkpoint)::
+Two strategies in parallel (each writes to its own runs/<name>/)::
 
-    python finetune/train.py --batch-size 2 --rounds 3 --steps-per-phase 500
+    python -m finetune.train --config finetune/configs/ssi.yaml
+    python -m finetune.train --config finetune/configs/metric_anchor.yaml
 
-Recommended full run (8 GPUs, ~1 pass over the data, bf16, cosine schedule)::
+8-GPU run with a quick override and a custom run name::
 
-    torchrun --nproc_per_node=8 finetune/train.py \
-        --epochs 1 --rounds 6 --window-stride 8 --batch-size 1 --grad-accum 2 \
-        --val-every 1000 --viz-every 500 --tensorboard
-    # --epochs auto-sizes steps-per-phase; warmup+cosine LR, EMA teacher, and
-    # layer-group LRs (LoRA 2e-4 / heads 2e-5) are on by default.
+    torchrun --nproc_per_node=8 -m finetune.train \
+        --config finetune/configs/metric_anchor.yaml \
+        --name metric_anchor_lr1e4 --set lr_vggt_lora=1.0e-4
 
-Offline dry run on CPU (no checkpoint, no data; exercises val + viz + logging)::
+Offline CPU dry run (no checkpoint, no data; exercises the whole loop)::
 
-    python finetune/train.py --dummy --device cpu --amp-dtype fp32 \
-        --rounds 1 --steps-per-phase 20 --warmup-steps 4 --val-every 10 --viz-every 5
+    python -m finetune.train --dummy --name smoke \
+        --set rounds=1 --set steps_per_phase=20 --set warmup_steps=4 \
+        --set val_every=10 --set viz_every=5 --device cpu
 
-Outputs land under ``--out-dir``:
-    metrics.jsonl / metrics.csv   per-step train + val losses
-    loss_curves.png               train-vs-val total loss per phase (at end)
-    viz/phase{A,B}_step*.jpg       input | VGGT depth | DAv2 depth | dyn-mask
+Outputs land under ``runs/<name>/``:
+    config.yaml provenance.json     resolved config + git SHA / argv / time
+    metrics.jsonl / metrics.csv     per-step train + val losses
+    loss_curves.png                 train-vs-val total loss per phase (at end)
+    viz/phase{A,B}_step*.jpg         input | VGGT depth | DAv2 depth | dyn-mask
     checkpoint_{last,best,final}.pt  trainable weights (LoRA + heads)
-    train_log.txt                 console mirror; tb/ if --tensorboard
+    train_log.txt                   console mirror; tb/ if tensorboard enabled
 """
 from __future__ import annotations
 
@@ -49,14 +51,9 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
 from .config import FinetuneConfig
-from .data import EgocentricVideoDataset, collate_windows, random_egocentric_batch
-from .engine import AlternatingTrainer
-
-# Default cluster paths (override on the CLI for other environments).
-_EGOEXO_ROOT = "/sdp-rgb-perception/tristan-space-s3/egoexo4d/lmeec_data/egoexo_dataset"
-_DEFAULT_DATA_ROOT = _EGOEXO_ROOT + "/train"
-_DEFAULT_VAL_DATA_ROOT = _EGOEXO_ROOT + "/val"
-_DEFAULT_VGGT_CKPT = "/group-volume/Fengjia/projects/vggt-omega/checkpoints/VGGT-Omega-1B-512/model.pt"
+from .data import EgocentricVideoDataset, FisheyeRectifier, collate_windows, looks_like_fisheye, random_egocentric_batch
+from .options import build_config, setup_run_dir
+from .trainers import build_trainer
 
 
 def setup_dist():
@@ -103,9 +100,11 @@ def build_vggt(cfg: FinetuneConfig):
         sd = sd.get("model", sd) if isinstance(sd, dict) else sd
         missing, unexpected = model.load_state_dict(sd, strict=False)
         print(f"[finetune] loaded VGGT checkpoint (missing={len(missing)}, unexpected={len(unexpected)})")
-    n = apply_lora(model, r=cfg.lora_rank, alpha=cfg.lora_alpha, dropout=cfg.lora_dropout)
+    # LoRA only in the aggregator backbone; the prediction heads are trained
+    # fully (mark_trainable), so we do NOT want redundant LoRA inside them.
+    n = apply_lora(model.aggregator, r=cfg.lora_rank, alpha=cfg.lora_alpha, dropout=cfg.lora_dropout)
     mark_trainable(model, ("dense_head", "camera_head"))
-    print(f"[finetune] injected LoRA into {n} VGGT-Omega linear layers")
+    print(f"[finetune] injected LoRA into {n} VGGT-Omega aggregator linear layers")
     return model
 
 
@@ -118,6 +117,21 @@ def build_dav2(cfg: FinetuneConfig):
         mark_trainable(model, ("head",))
         print(f"[finetune] injected LoRA into {n} DAv2 linear layers (LoRA-only)")
     return model
+
+
+def build_rectifier(cfg: FinetuneConfig):
+    """A FisheyeRectifier when cfg.rectify, else None (+ a loud warning if the
+    data looks like raw fisheye and rectification is off)."""
+    if cfg.rectify:
+        if is_main():
+            print(f"[finetune] rectifying fisheye -> pinhole (preset={cfg.camera_preset!r})")
+        return FisheyeRectifier(cfg.camera_preset, cfg.fisheye_k, cfg.fisheye_d)
+    if cfg.warn_unrectified and not (cfg.vggt_dummy or cfg.dav2_dummy) \
+            and looks_like_fisheye(cfg.clip_pattern, cfg.data_root) and is_main():
+        print("[finetune] WARNING: data looks like Aria fisheye but rectify=false. "
+              "The geometric/photometric losses assume PINHOLE; set rectify=true "
+              "(camera_preset: aria-214-1) or use pinhole-undistorted frames.")
+    return None
 
 
 class _RandomLoader:
@@ -133,13 +147,13 @@ class _RandomLoader:
             )
 
 
-def build_loader(cfg: FinetuneConfig, rank: int = 0, world_size: int = 1):
-    # Dummy/dry runs use random windows and ignore --data-root entirely (so the
+def build_loader(cfg: FinetuneConfig, rectifier=None, rank: int = 0, world_size: int = 1):
+    # Dummy/dry runs use random windows and ignore data_root entirely (so the
     # default cluster path doesn't need to exist locally).
     if cfg.vggt_dummy or cfg.dav2_dummy:
         return _RandomLoader(cfg.steps_per_phase, cfg)
     if not cfg.data_root:
-        raise ValueError("--data-root is required for real runs")
+        raise ValueError("data_root is required for real runs (set it in the --config YAML)")
     dataset = EgocentricVideoDataset(
         cfg.data_root,
         seq_len=cfg.seq_len,
@@ -148,6 +162,7 @@ def build_loader(cfg: FinetuneConfig, rank: int = 0, world_size: int = 1):
         clip_pattern=cfg.clip_pattern,
         image_resolution=cfg.image_resolution,
         patch_size=cfg.patch_size,
+        rectifier=rectifier,
     )
     if is_main():
         print(f"[finetune] train: {len(dataset)} windows from {len(dataset.clips)} clips "
@@ -174,7 +189,7 @@ def build_loader(cfg: FinetuneConfig, rank: int = 0, world_size: int = 1):
     )
 
 
-def build_val_loader(cfg: FinetuneConfig):
+def build_val_loader(cfg: FinetuneConfig, rectifier=None):
     """Held-out loader for periodic validation, or None if not configured.
 
     Not sharded with DistributedSampler: every rank evaluates the same first
@@ -194,6 +209,7 @@ def build_val_loader(cfg: FinetuneConfig):
         clip_pattern=cfg.clip_pattern,
         image_resolution=cfg.image_resolution,
         patch_size=cfg.patch_size,
+        rectifier=rectifier,
     )
     if is_main():
         print(f"[finetune] val: {len(dataset)} windows from {len(dataset.clips)} clips "
@@ -209,7 +225,7 @@ def build_val_loader(cfg: FinetuneConfig):
 
 
 def apply_epoch_sizing(cfg: FinetuneConfig, loader, world_size: int) -> None:
-    """If --epochs > 0 and the loader wraps a sized dataset, set steps_per_phase
+    """If epochs > 0 and the loader wraps a sized dataset, set steps_per_phase
     so the alternating loop covers cfg.epochs passes over the (per-rank) data.
 
     total_micro = epochs * (windows_per_rank / batch_size)
@@ -230,115 +246,40 @@ def apply_epoch_sizing(cfg: FinetuneConfig, loader, world_size: int) -> None:
               f"~{int(total_micro)} micro-iters/rank over {len(dataset)} train windows)")
 
 
-def parse_args() -> FinetuneConfig:
+def parse_args():
     p = argparse.ArgumentParser(description="Alternating DAv2 <-> VGGT-Omega egocentric finetuning")
-    p.add_argument("--data-root", default=_DEFAULT_DATA_ROOT)
-    p.add_argument("--val-data-root", default=_DEFAULT_VAL_DATA_ROOT,
-                   help="held-out split for validation (e.g. <root>/val)")
-    p.add_argument("--vggt-checkpoint", default=_DEFAULT_VGGT_CKPT)
-    p.add_argument("--dav2-model-name", default="depth-anything/Depth-Anything-V2-Small-hf")
-    p.add_argument("--dummy", action="store_true", help="shortcut for --vggt-dummy --dav2-dummy")
-    p.add_argument("--vggt-dummy", action="store_true")
-    p.add_argument("--dav2-dummy", action="store_true")
-    p.add_argument("--seq-len", type=int, default=8)
-    p.add_argument("--stride", type=int, default=2)
-    p.add_argument("--window-stride", type=int, default=1,
-                   help="frames between window starts (1 = max overlap; seq_len*stride = non-overlapping)")
-    p.add_argument("--clip-pattern", default="*214-1",
-                   help="fnmatch glob; keep only matching camera dirs (egocentric RGB aria*_214-1). "
-                        "Pass '' to load every camera (incl. exocentric/SLAM).")
-    p.add_argument("--image-resolution", type=int, default=512)
-    p.add_argument("--batch-size", type=int, default=1)
-    p.add_argument("--num-workers", type=int, default=4)
-    # schedule: prefer --epochs (auto-sizes steps-per-phase to cover the data)
-    p.add_argument("--epochs", type=float, default=0.0,
-                   help=">0 auto-sizes --steps-per-phase to this many passes over the train set")
-    p.add_argument("--rounds", type=int, default=6)
-    p.add_argument("--steps-per-phase", type=int, default=2000,
-                   help="micro-iterations per phase (ignored when --epochs > 0)")
-    p.add_argument("--dav2-steps-mult", type=float, default=1.0,
-                   help="phase A (DAv2) length = steps-per-phase * this")
-    p.add_argument("--grad-accum", type=int, default=1, help="micro-batches per optimizer step")
-    # optimizer + LR schedule
-    p.add_argument("--lr-vggt-head", type=float, default=2e-5)
-    p.add_argument("--lr-vggt-lora", type=float, default=2e-4)
-    p.add_argument("--lr-dav2", type=float, default=5e-5)
-    p.add_argument("--weight-decay", type=float, default=0.05)
-    p.add_argument("--warmup-steps", type=int, default=200)
-    p.add_argument("--lr-schedule", default="cosine", choices=["cosine", "constant"])
-    p.add_argument("--min-lr-ratio", type=float, default=0.05)
-    p.add_argument("--amp-dtype", default="bf16", choices=["bf16", "fp16", "fp32"])
-    p.add_argument("--lora-rank", type=int, default=8)
-    p.add_argument("--finetune-dav2-lora-only", action="store_true")
-    # EMA teacher (on by default)
-    p.add_argument("--no-ema", action="store_true", help="disable the EMA teacher")
-    p.add_argument("--ema-decay", type=float, default=0.999)
-    p.add_argument("--no-ema-distill", action="store_true",
-                   help="keep EMA but distill from the live DAv2 instead of the EMA copy")
+    p.add_argument("--config", default=None,
+                   help="run config YAML (e.g. finetune/configs/metric_anchor.yaml)")
+    p.add_argument("--name", default=None, help="override the run name (output dir = runs_root/name)")
+    p.add_argument("--set", dest="overrides", action="append", default=[], metavar="FIELD=VALUE",
+                   help="override any config field, e.g. --set lr_vggt_lora=1.0e-4 (repeatable)")
+    p.add_argument("--dummy", action="store_true", help="stand-in models, random data (CPU dry run)")
     p.add_argument("--device", default="cuda",
                    help="cuda (default; real training needs a GPU). Pass 'cpu' for dummy/CPU runs.")
-    p.add_argument("--out-dir", default="finetune_outputs")
-    p.add_argument("--seed", type=int, default=0)
-    # validation
-    p.add_argument("--val-every", type=int, default=0,
-                   help="steps between validation; 0 = once at the end of each phase")
-    p.add_argument("--val-steps", type=int, default=50, help="val batches averaged per validation pass")
-    # monitoring
-    p.add_argument("--log-every", type=int, default=50, help="steps between train-loss logs")
-    p.add_argument("--save-every", type=int, default=2000, help="steps between checkpoints (0 disables)")
-    p.add_argument("--viz-every", type=int, default=500, help="steps between depth montages (0 disables)")
-    p.add_argument("--num-viz-frames", type=int, default=4, help="frames per saved montage")
-    p.add_argument("--tensorboard", action="store_true", help="also log to <out-dir>/tb/")
+    p.add_argument("--resume", action="store_true", help="allow writing into an existing run dir")
+    p.add_argument("--overwrite", action="store_true", help="allow clobbering an existing run dir")
     a = p.parse_args()
 
-    return FinetuneConfig(
-        data_root=a.data_root,
-        val_data_root=a.val_data_root,
-        vggt_checkpoint=a.vggt_checkpoint,
-        dav2_model_name=a.dav2_model_name,
-        vggt_dummy=a.vggt_dummy or a.dummy,
-        dav2_dummy=a.dav2_dummy or a.dummy,
-        seq_len=a.seq_len,
-        stride=a.stride,
-        window_stride=a.window_stride,
-        clip_pattern=a.clip_pattern,
-        image_resolution=a.image_resolution,
-        batch_size=a.batch_size,
-        num_workers=a.num_workers,
-        epochs=a.epochs,
-        rounds=a.rounds,
-        steps_per_phase=a.steps_per_phase,
-        dav2_steps_mult=a.dav2_steps_mult,
-        grad_accum=a.grad_accum,
-        lr_vggt_head=a.lr_vggt_head,
-        lr_vggt_lora=a.lr_vggt_lora,
-        lr_dav2=a.lr_dav2,
-        weight_decay=a.weight_decay,
-        warmup_steps=a.warmup_steps,
-        lr_schedule=a.lr_schedule,
-        min_lr_ratio=a.min_lr_ratio,
-        amp_dtype=a.amp_dtype,
-        amp=(a.amp_dtype != "fp32"),
-        lora_rank=a.lora_rank,
-        finetune_dav2_lora_only=a.finetune_dav2_lora_only,
-        ema_teacher=not a.no_ema,
-        ema_decay=a.ema_decay,
-        use_ema_teacher_in_distill=not a.no_ema_distill,
-        out_dir=a.out_dir,
-        seed=a.seed,
-        val_every=a.val_every,
-        val_steps=a.val_steps,
-        log_every=a.log_every,
-        save_every=a.save_every,
-        viz_every=a.viz_every,
-        num_viz_frames=a.num_viz_frames,
-        tensorboard=a.tensorboard,
-    ), a.device
+    cfg = build_config(config_path=a.config, overrides=a.overrides, name=a.name)
+    if a.dummy:
+        cfg.vggt_dummy = True
+        cfg.dav2_dummy = True
+        if a.name is None and not a.config:
+            cfg.name = "dummy"
+    return cfg, a
 
 
 def main() -> None:
-    cfg, cli_device = parse_args()
+    cfg, args = parse_args()
     rank, world_size, local_rank = setup_dist()
+
+    # Resolve + create the run dir; rank 0 writes provenance and guards clobber.
+    if not cfg.out_dir:
+        cfg.out_dir = os.path.join(cfg.runs_root, cfg.name)
+    if is_main():
+        setup_run_dir(cfg, resume=args.resume, overwrite=args.overwrite)
+    if dist.is_initialized():
+        dist.barrier()
 
     # Per-rank seed for data sampling diversity; model init uses base seed
     set_seed(cfg.seed + rank)
@@ -347,7 +288,7 @@ def main() -> None:
     if local_rank is not None and use_cuda:
         device = torch.device(f"cuda:{local_rank}")
     else:
-        device = torch.device(cli_device)
+        device = torch.device(args.device)
 
     # Build models on CPU then move to device (avoids double alloc on rank != 0)
     set_seed(cfg.seed)  # identical init across all ranks
@@ -366,13 +307,14 @@ def main() -> None:
         if is_main():
             print(f"[finetune] DDP enabled: {world_size} ranks ({'nccl' if use_cuda else 'gloo'})")
 
-    # Build loaders first; --epochs finalizes steps_per_phase BEFORE the trainer
+    # Build loaders first; epochs finalizes steps_per_phase BEFORE the trainer
     # constructs its LR schedulers (which depend on the total step count).
-    loader = build_loader(cfg, rank=rank, world_size=world_size)
+    rectifier = build_rectifier(cfg)
+    loader = build_loader(cfg, rectifier=rectifier, rank=rank, world_size=world_size)
     apply_epoch_sizing(cfg, loader, world_size)
-    val_loader = build_val_loader(cfg)
+    val_loader = build_val_loader(cfg, rectifier=rectifier)
 
-    trainer = AlternatingTrainer(vggt, dav2, cfg, device=device)
+    trainer = build_trainer(cfg, vggt, dav2, device=device)
     # trainer.train() handles per-step logging, viz, validation, and saves
     # checkpoint_{last,best,final}.pt + loss_curves.png under cfg.out_dir.
     trainer.train(loader, val_loader)

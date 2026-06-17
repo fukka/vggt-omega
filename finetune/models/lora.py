@@ -68,7 +68,14 @@ def apply_lora(
 
 
 def mark_trainable(model: nn.Module, train_head_substrings: Iterable[str] = ("head",)) -> None:
-    """Freeze everything except LoRA adapters and the named prediction heads."""
+    """Freeze everything except LoRA adapters and the named prediction heads.
+
+    A subtlety: a head module may itself contain LoRA-wrapped linears (e.g. the
+    camera head's attention trunk). Those wrapped weights live under ``.base.``
+    and must STAY frozen — only their ``lora_A``/``lora_B`` train. Re-enabling
+    them by name would silently turn LoRA on that layer into a redundant full
+    finetune. We therefore skip ``.base.`` params when un-freezing heads.
+    """
     heads = tuple(train_head_substrings)
     for p in model.parameters():
         p.requires_grad_(False)
@@ -77,7 +84,7 @@ def mark_trainable(model: nn.Module, train_head_substrings: Iterable[str] = ("he
             module.lora_A.requires_grad_(True)
             module.lora_B.requires_grad_(True)
     for name, p in model.named_parameters():
-        if any(h in name for h in heads):
+        if any(h in name for h in heads) and ".base." not in name:
             p.requires_grad_(True)
 
 

@@ -1,0 +1,11 @@
+# Variant A — scale-shift-invariant (up-to-scale) co-distillation.
+# VGGT depth is judged on STRUCTURE; its absolute scale is allowed to float.
+# Evaluate this one mainly under `scale_shift` alignment.
+__base__: base.yaml
+
+name: ssi_r8
+trainer: ssi
+notes: "SSI Phase B (no metric anchor) + anchored/gated Phase A. Up-to-scale."
+
+losses:
+  w_metric_anchor: 0.0   # no metric anchor in this variant

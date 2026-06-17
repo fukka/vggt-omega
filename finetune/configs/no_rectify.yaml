@@ -1,0 +1,12 @@
+# Ablation — train on raw (unrectified) fisheye frames.
+# The geometric/photometric losses assume pinhole, so this should be WORSE if the
+# data is fisheye; it quantifies how much the in-loader rectification buys you.
+# (Set this only if your frames are NOT already pinhole-undistorted.)
+__base__: base.yaml
+
+name: no_rectify
+trainer: ssi
+notes: "rectify=false — fisheye fed to pinhole losses (rectification ablation)."
+
+data:
+  rectify: false

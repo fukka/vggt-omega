@@ -1,0 +1,85 @@
+# Shared defaults for egocentric finetuning runs.
+# Variant files (`ssi.yaml`, `metric_anchor.yaml`) pull this in via `__base__`
+# and override only what differs. Section headers are cosmetic — the loader
+# flattens them; every leaf key must be a FinetuneConfig field name.
+#
+# Run:
+#   python -m finetune.train --config finetune/configs/ssi.yaml
+#   python -m finetune.train --config finetune/configs/metric_anchor.yaml
+# (the two write to runs/<name>/ and can run in parallel.)
+
+trainer: ssi          # overridden by the variant files
+
+data:
+  data_root: /sdp-rgb-perception/tristan-space-s3/egoexo4d/lmeec_data/egoexo_dataset/train
+  val_data_root: /sdp-rgb-perception/tristan-space-s3/egoexo4d/lmeec_data/egoexo_dataset/val
+  seq_len: 8
+  stride: 2
+  window_stride: 8
+  clip_pattern: "*214-1"
+  image_resolution: 512
+  batch_size: 1
+  num_workers: 4
+  # Aria 214-1 is fisheye; the geometric losses assume pinhole. Rectify here
+  # unless the frames were already undistorted (prepare_egoexo4d.py --undistort).
+  rectify: true
+  camera_preset: aria-214-1
+
+model:
+  vggt_checkpoint: /group-volume/Fengjia/projects/vggt-omega/checkpoints/VGGT-Omega-1B-512/model.pt
+  dav2_model_name: depth-anything/Depth-Anything-V2-Small-hf
+  lora_rank: 8
+  lora_alpha: 16
+  finetune_dav2_lora_only: true   # safer than full DAv2 finetune
+
+losses:
+  # Phase B (improve VGGT)
+  w_photometric: 1.0
+  w_geometric: 0.5
+  w_smoothness: 0.05
+  w_distill_ssi: 0.5
+  w_distill_grad: 0.25
+  w_metric_anchor: 0.0            # only metric_anchor.yaml turns this on
+  # Phase A (improve DAv2)
+  w_a_distill: 1.0
+  w_a_multiview: 0.5
+  w_a_photometric: 0.5
+  w_a_smoothness: 0.05
+  a_distill_gate: true
+  offsets: [-1, 1]
+  ssim_alpha: 0.85
+
+optim:
+  lr_vggt_head: 2.0e-5
+  lr_vggt_lora: 2.0e-4
+  lr_dav2: 5.0e-5
+  weight_decay: 0.05
+  grad_clip: 1.0
+  grad_accum: 2
+  warmup_steps: 200
+  lr_schedule: cosine
+  min_lr_ratio: 0.05
+  amp_dtype: bf16
+
+schedule:
+  epochs: 1.0          # auto-sizes steps_per_phase to ~1 pass over the train set
+  rounds: 6
+  steps_per_phase: 2000
+  dav2_steps_mult: 1.0
+
+ema:
+  ema_teacher: true
+  ema_decay: 0.999
+  use_ema_teacher_in_distill: true
+
+val:
+  val_every: 1000
+  val_steps: 50
+
+monitor:
+  log_every: 50
+  save_every: 2000
+  viz_every: 500
+  num_viz_frames: 4
+  tensorboard: true
+  seed: 0

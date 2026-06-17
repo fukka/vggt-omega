@@ -1,0 +1,13 @@
+# Ablation — stronger metric anchor (proximal, per-pixel).
+# Same as metric_anchor.yaml but 3x the anchor weight: stickier to the pretrained
+# VGGT, so less drift (and less adaptation). Sweep point for the scale-vs-plasticity
+# trade-off. Evaluate under `none` (metric).
+__base__: base.yaml
+
+name: metric_anchor_strong
+trainer: metric_anchor
+notes: "Metric anchor (full mode), w_metric_anchor=0.3."
+
+losses:
+  w_metric_anchor: 0.3
+  metric_anchor_mode: full
