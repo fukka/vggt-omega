@@ -17,17 +17,22 @@ checkpoint; drop it (and pass ``--vggt-checkpoint``) to see real depth.
 Examples
 --------
     # check data loading only (CPU, no checkpoint, stand-in models):
-    python -m finetune.test_run --data-root <root>/train --dummy --num-windows 2
+    python finetune/test_run.py --data-root <root>/train --dummy --num-windows 2
 
     # real models:
-    python -m finetune.test_run --data-root <root>/train \
+    python finetune/test_run.py --data-root <root>/train \
         --vggt-checkpoint checkpoints/vggt_omega_1b_512.pt --num-windows 3
 
     # also rectify the fisheye frames (approx Kannala-Brandt via OpenCV):
-    python -m finetune.test_run --data-root <root>/train --dummy \
+    python finetune/test_run.py --data-root <root>/train --dummy \
         --rectify-fisheye --fisheye-k 150,150,256,256 --fisheye-d 0.0,0.0,0.0,0.0
 """
 from __future__ import annotations
+
+import sys as _sys, os as _os
+if not __package__:
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    __package__ = "finetune"
 
 import argparse
 import json

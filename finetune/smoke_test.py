@@ -4,9 +4,14 @@ data with stand-in models. No checkpoint, no dataset, no GPU.
 
 Run::
 
-    python -m finetune.smoke_test
+    python finetune/smoke_test.py
 """
 from __future__ import annotations
+
+import sys as _sys, os as _os
+if not __package__:
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    __package__ = "finetune"
 
 import sys
 
