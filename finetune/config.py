@@ -10,6 +10,7 @@ from typing import Tuple
 class FinetuneConfig:
     # data
     data_root: str = ""
+    val_data_root: str = ""        # held-out split for periodic validation (e.g. <root>/val)
     seq_len: int = 8
     stride: int = 2
     image_resolution: int = 512
@@ -57,8 +58,15 @@ class FinetuneConfig:
     ema_teacher: bool = False
     ema_decay: float = 0.999
 
-    # io
+    # validation
+    val_every: int = 0             # steps between validation; 0 = once at the end of each phase
+    val_steps: int = 50            # number of val batches averaged per validation pass
+
+    # io / monitoring
     out_dir: str = "finetune_outputs"
-    log_every: int = 20
-    save_every: int = 500
+    log_every: int = 20            # steps between train-loss console/JSONL logs
+    save_every: int = 500          # steps between checkpoint saves (0 disables periodic saves)
+    viz_every: int = 200           # steps between saved depth-montage images (0 disables)
+    num_viz_frames: int = 4        # frames per saved montage
+    tensorboard: bool = False      # also log to <out_dir>/tb/
     seed: int = 0

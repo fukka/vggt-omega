@@ -16,3 +16,7 @@ skyseg.onnx.tmp
 *.pt
 *.pth
 *.safetensors
+
+# finetune run artifacts (default --out-dir)
+finetune_outputs/
+test_run_outputs/

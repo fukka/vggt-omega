@@ -108,8 +108,11 @@ def test_lora():
 def test_engine():
     print("[4] alternating engine: phase A updates DAv2, phase B updates VGGT")
     torch.manual_seed(3)
+    import tempfile
+
     cfg = FinetuneConfig(vggt_dummy=True, dav2_dummy=True, seq_len=5, batch_size=1,
-                         offsets=(-1, 1), log_every=1, steps_per_phase=2, rounds=1, amp=False)
+                         offsets=(-1, 1), log_every=1, steps_per_phase=2, rounds=1, amp=False,
+                         out_dir=tempfile.mkdtemp(prefix="smoke_ft_"))
     vggt = DummyVGGT()
     dav2 = DummyDepthModel()
     trainer = AlternatingTrainer(vggt, dav2, cfg, device="cpu")
