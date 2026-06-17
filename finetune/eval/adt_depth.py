@@ -206,6 +206,7 @@ class ADTWindowDataset(Dataset):
         depth_scale: float = 0.001,   # uint16 mm → metres
         depth_max_m: float = 10.0,
         rotation: int = 270,          # CCW degrees; corrects Aria sensor orientation
+        max_frames: Optional[int] = 100,  # cap frames per sequence (None = all)
     ) -> None:
         self.seq_len = seq_len
         self.resolution = image_resolution
@@ -221,6 +222,9 @@ class ADTWindowDataset(Dataset):
             pairs = _gather_real_frames(seq_dir)
             if not pairs:
                 continue
+            if max_frames is not None and len(pairs) > max_frames:
+                pairs = pairs[:max_frames]
+                print(f"  [ADT] capped to first {max_frames} frames")
             for start in range(0, len(pairs) - seq_len + 1, self.window_stride):
                 self.windows.append(pairs[start : start + seq_len])
 
@@ -311,11 +315,12 @@ def run_adt_eval(
     batch_size: int = 1,
     depth_scale: float = 0.001,   # uint16 mm → metres
     depth_max_m: float = 10.0,
-    align_modes: Tuple[str, ...] = ("none", "scale_only", "scale_shift"),
+    align_modes: Tuple[str, ...] = ("none", "scale_shift"),
     eval_all_frames: bool = True,
     gt_traj_csv: Optional[str] = None,
     qual_dir: Optional[str] = None,
     n_qual: int = 4,
+    max_frames: Optional[int] = 100,
 ) -> Dict[str, dict]:
     """Run depth evaluation against ADT real sensor data with dense GT.
 
@@ -350,6 +355,7 @@ def run_adt_eval(
         image_resolution=image_resolution,
         depth_scale=depth_scale,
         depth_max_m=depth_max_m,
+        max_frames=max_frames,
     )
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 

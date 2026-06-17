@@ -319,6 +319,8 @@ def main() -> None:
     p.add_argument("--eval-adt-seq-dirs", nargs="*", default=None,
                    help="Explicit list of ADT sequence dirs (overrides --eval-adt-root)")
     p.add_argument("--adt-depth-max", type=float, default=10.0)
+    p.add_argument("--adt-max-frames", type=int, default=100,
+                   help="Cap frames per ADT sequence (-1 = use all frames)")
     p.add_argument("--adt-gt-traj-csv", default=None,
                    help="ADT groundtruth/aria_trajectory.csv for pose ATE (VGGT only)")
 
@@ -363,7 +365,7 @@ def main() -> None:
     variants["vggt_pretrained"] = {
         "label":       "VGGT pretrained",
         "predict_fn":  make_vggt_predict(vggt_base, device),
-        "align_modes": ("none", "scale_only", "scale_shift"),
+        "align_modes": ("none", "scale_shift"),
         "with_pose":   True,
     }
 
@@ -375,7 +377,7 @@ def main() -> None:
         variants["vggt_finetuned"] = {
             "label":       "VGGT finetuned",
             "predict_fn":  make_vggt_predict(vggt_ft, device),
-            "align_modes": ("none", "scale_only", "scale_shift"),
+            "align_modes": ("none", "scale_shift"),
             "with_pose":   True,
         }
 
@@ -386,7 +388,7 @@ def main() -> None:
             "label":       "DAv2 pretrained",
             "predict_fn":  make_dav2_predict(dav2_base, device),
             # 'none' is meaningless for DAv2 (affine-invariant)
-            "align_modes": ("scale_shift", "disparity_scale_shift"),
+            "align_modes": ("scale_shift",),
             "with_pose":   False,
         }
 
@@ -399,7 +401,7 @@ def main() -> None:
             variants["dav2_finetuned"] = {
                 "label":       "DAv2 finetuned",
                 "predict_fn":  make_dav2_predict(dav2_ft, device),
-                "align_modes": ("scale_shift", "disparity_scale_shift"),
+                "align_modes": ("scale_shift",),
                 "with_pose":   False,
             }
 
@@ -439,6 +441,7 @@ def main() -> None:
                     gt_traj_csv=a.adt_gt_traj_csv if var["with_pose"] else None,
                     qual_dir=_qual_dir,
                     n_qual=a.n_qual,
+                    max_frames=(None if a.adt_max_frames < 0 else a.adt_max_frames),
                 )
             all_results["adt"] = adt_results
 
