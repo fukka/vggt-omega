@@ -235,7 +235,8 @@ class ADTWindowDataset(Dataset):
 
 @torch.no_grad()
 def run_adt_eval(
-    vggt,
+    predict_fn,
+    label: str,
     seq_dirs: List[str],
     device: torch.device,
     seq_len: int = 8,
@@ -247,72 +248,64 @@ def run_adt_eval(
     eval_all_frames: bool = True,
     gt_traj_csv: Optional[str] = None,
 ) -> Dict[str, dict]:
-    """Run VGGT-Omega depth evaluation against ADT real sensor data with dense GT.
+    """Run depth evaluation against ADT real sensor data with dense GT.
 
     Parameters
     ----------
-    vggt          : VGGT-Omega model (nn.Module, already on device, in eval mode).
+    predict_fn    : callable(images [B,S,3,H,W] on device)
+                    → (depth_np [B,S,H,W], pose_enc_np [B,S,9] or None).
+                    Use make_vggt_predict() or make_dav2_predict() from run_eval.
+    label         : display name, e.g. "VGGT pretrained" or "DAv2 finetuned".
     seq_dirs      : list of ADT sequence dirs containing videos_rgb/ and depth_npy/.
     device        : torch device.
-    seq_len       : number of frames per VGGT window (must match model training).
-    image_resolution : target image resolution (must match model training).
-    batch_size    : number of windows per GPU batch.
+    seq_len       : number of frames per window (must match model training).
+    image_resolution : target image resolution.
+    batch_size    : windows per GPU batch.
     depth_scale   : multiplied into raw GT depth values (0.001 converts uint16 mm→m).
     depth_max_m   : max valid GT depth in metres.
-    align_modes   : which alignment modes to report (subset of 'none', 'scale_only',
-                    'scale_shift', 'disparity_scale_shift').
-    eval_all_frames : if True, evaluate every frame in each window; if False, only
-                      the center frame (useful when windows are overlapping).
-    gt_traj_csv   : optional path to ADT groundtruth/aria_trajectory.csv for pose ATE.
+    align_modes   : alignment modes to report.
+                    VGGT (metric): include 'none'. DAv2 (relative): skip 'none'.
+    eval_all_frames : if True, score every frame; if False, only the center frame.
+    gt_traj_csv   : optional ADT groundtruth/aria_trajectory.csv for pose ATE
+                    (only meaningful when predict_fn returns pose_enc, i.e. VGGT).
 
     Returns
     -------
-    dict mapping align_mode → aggregated metrics dict (keys: AbsRel, SqRel, RMSE,
-    RMSElog, delta1, delta2, delta3, scale_ratio, n_frames, n_valid_total).
-    Plus 'pose' key if gt_traj_csv is given.
+    dict mapping align_mode → aggregated metrics dict.
+    Plus 'pose' key if gt_traj_csv is given and pose_enc is returned.
     """
     dataset = ADTWindowDataset(
         seq_dirs,
         seq_len=seq_len,
-        window_stride=seq_len,  # non-overlapping
+        window_stride=seq_len,  # non-overlapping: each frame scored once
         image_resolution=image_resolution,
         depth_scale=depth_scale,
         depth_max_m=depth_max_m,
     )
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
-    vggt.eval()
     frame_metrics: Dict[str, List[dict]] = {m: [] for m in align_modes}
     pred_positions: List[np.ndarray] = []
 
     for batch in loader:
-        images = batch["images"].to(device)          # [B,S,3,H,W]
-        depths_gt = batch["depths"].numpy()           # [B,S,H,W]
-        masks_gt = batch["valid_masks"].numpy()       # [B,S,H,W] bool
+        images = batch["images"].to(device)     # [B,S,3,H,W]
+        depths_gt = batch["depths"].numpy()      # [B,S,H,W]
+        masks_gt = batch["valid_masks"].numpy()  # [B,S,H,W] bool
 
-        B, S, _, H, W = images.shape
-        preds = vggt(images)
+        depth_pred, pose_enc = predict_fn(images)   # both numpy [B,S,H,W] / [B,S,9]
 
-        # depth: model returns [B,S,H,W,1] or [B,S,H,W]; normalise to [B,S,H,W]
-        depth_pred = preds["depth"]
-        if depth_pred.ndim == 5:
-            depth_pred = depth_pred.squeeze(-1)
-        depth_pred = depth_pred.float().cpu().numpy()  # [B,S,H,W]
-
-        # Optionally collect predicted positions for ATE
-        if gt_traj_csv is not None and "pose_enc" in preds:
-            pose_enc = preds["pose_enc"].float().cpu().numpy()  # [B,S,9]
+        if gt_traj_csv is not None and pose_enc is not None:
+            B, S = depth_pred.shape[:2]
             for b in range(B):
                 for s in range(S):
                     pred_positions.append(pose_enc[b, s, :3])
 
-        # Evaluate each frame in the batch
-        frame_indices = range(S) if eval_all_frames else [S // 2]
-        for b in range(B):
+        frame_indices = range(depth_pred.shape[1]) if eval_all_frames else [depth_pred.shape[1] // 2]
+        for b in range(depth_pred.shape[0]):
             for s in frame_indices:
-                pred = depth_pred[b, s]    # (H, W)
-                gt = depths_gt[b, s]       # (H, W)
-                mask = masks_gt[b, s]      # (H, W)
+                pred = depth_pred[b, s]
+                gt = depths_gt[b, s]
+                mask = masks_gt[b, s]
                 if mask.sum() < 10:
                     continue
                 for mode in align_modes:
@@ -323,16 +316,14 @@ def run_adt_eval(
     results: Dict[str, dict] = {}
     for mode in align_modes:
         results[mode] = aggregate_metrics(frame_metrics[mode])
-        print_depth_summary(results[mode], label="VGGT-Omega [ADT real]", align=mode)
+        print_depth_summary(results[mode], label=f"{label} [ADT real]", align=mode)
 
-    # Pose ATE (optional, requires GT trajectory CSV)
     if gt_traj_csv is not None and pred_positions:
         gt_positions = _load_gt_trajectory(gt_traj_csv)
-        # Subsample GT to match number of predicted positions if unequal
         n = min(len(pred_positions), len(gt_positions))
-        pred_t = np.stack(pred_positions[:n])
-        gt_t = gt_positions[:n]
-        results["pose"] = pose_ate_rpe(pred_t, gt_t, align_sim3=True)
-        print_pose_summary(results["pose"], label="VGGT-Omega [ADT]")
+        results["pose"] = pose_ate_rpe(
+            np.stack(pred_positions[:n]), gt_positions[:n], align_sim3=True
+        )
+        print_pose_summary(results["pose"], label=f"{label} [ADT]")
 
     return results

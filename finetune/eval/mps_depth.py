@@ -532,7 +532,8 @@ class MPSEvalDataset(Dataset):
 
 @torch.no_grad()
 def run_mps_eval(
-    vggt,
+    predict_fn,
+    label: str,
     frame_dir: str,
     bundle: MPSBundle,
     device: torch.device,
@@ -544,25 +545,27 @@ def run_mps_eval(
     min_valid_pixels: int = 20,
     gt_traj_for_ate: bool = True,
 ) -> Dict[str, dict]:
-    """Run VGGT-Omega depth evaluation against MPS sparse GT.
+    """Run depth evaluation against MPS sparse GT.
 
-    VGGT-Omega requires a WINDOW of frames as input (multi-frame model), so we
-    collect a window of seq_len frames around each eval frame and take only the
-    center frame's predicted depth for comparison.
+    Builds a window of seq_len frames around each eval frame and evaluates the
+    center frame's predicted depth against the projected MPS sparse GT depth.
 
     Parameters
     ----------
-    vggt          : VGGT-Omega model (eval mode, on device).
+    predict_fn    : callable(images [1,S,3,H,W] on device)
+                    → (depth_np [1,S,H,W], pose_enc_np [1,S,9] or None).
+    label         : display name, e.g. "VGGT pretrained" or "DAv2 finetuned".
     frame_dir     : extracted egocentric RGB frame directory.
     bundle        : MPSBundle for this take.
     device        : torch device.
     K             : (3,3) camera intrinsics. If None, read from bundle's calib JSONL.
     T_cam_device  : (4,4) camera-from-device. If None, read from bundle's calib JSONL.
-    seq_len       : frames per VGGT window.
+    seq_len       : frames per window.
     image_resolution : target image resolution.
     align_modes   : alignment modes to evaluate.
     min_valid_pixels : skip frames with fewer valid MPS projected pixels.
-    gt_traj_for_ate  : if True, also run ATE comparison vs MPS trajectory.
+    gt_traj_for_ate  : if True, also run ATE vs MPS trajectory (only useful when
+                        predict_fn returns pose_enc, i.e. VGGT).
 
     Returns
     -------
@@ -576,33 +579,25 @@ def run_mps_eval(
         print("  [MPS] No frames found — skipping MPS eval")
         return {}
 
-    vggt.eval()
     frame_metrics: Dict[str, List[dict]] = {m: [] for m in align_modes}
     pred_positions: List[np.ndarray] = []
 
-    # We need windows around each frame: build index list and pad edges
     n = len(dataset)
     half = seq_len // 2
 
     for center_idx in range(n):
-        # Collect seq_len frames centered on center_idx (clamp at edges)
         idxs = [min(max(center_idx - half + i, 0), n - 1) for i in range(seq_len)]
         items = [dataset[i] for i in idxs]
 
         images = torch.stack([it["image"] for it in items]).unsqueeze(0).to(device)
         # [1, S, 3, H, W]
 
-        preds = vggt(images)
-        depth_pred = preds["depth"]
-        if depth_pred.ndim == 5:
-            depth_pred = depth_pred.squeeze(-1)
-        depth_pred = depth_pred[0, half].float().cpu().numpy()  # center frame (H, W)
+        depth_pred_all, pose_enc = predict_fn(images)   # [1,S,H,W], [1,S,9] or None
+        depth_pred = depth_pred_all[0, half]            # (H, W)
 
-        # Collect position from predicted pose_enc for ATE
-        if gt_traj_for_ate and "pose_enc" in preds:
-            pred_positions.append(preds["pose_enc"][0, half, :3].float().cpu().numpy())
+        if gt_traj_for_ate and pose_enc is not None:
+            pred_positions.append(pose_enc[0, half, :3])
 
-        # GT sparse depth at center frame
         center_item = items[half]
         depth_sparse = center_item["depth_sparse"].numpy()
         valid_mask = center_item["valid_mask"].numpy()
@@ -618,21 +613,16 @@ def run_mps_eval(
     results: Dict[str, dict] = {}
     for mode in align_modes:
         results[mode] = aggregate_metrics(frame_metrics[mode])
-        print_depth_summary(results[mode], label="VGGT-Omega [MPS sparse]", align=mode)
+        print_depth_summary(results[mode], label=f"{label} [MPS sparse]", align=mode)
 
-    # Pose ATE vs MPS bundle trajectory
     if gt_traj_for_ate and pred_positions:
         gt_t = bundle.gt_positions()
         n_pred = len(pred_positions)
-        # Subsample GT to match — every (n_gt / n_pred) steps
-        if len(gt_t) >= n_pred:
-            step = max(1, len(gt_t) // n_pred)
-            gt_sub = gt_t[::step][:n_pred]
-        else:
-            gt_sub = gt_t[:n_pred]
+        step = max(1, len(gt_t) // n_pred)
+        gt_sub = gt_t[::step][:n_pred]
         pred_t = np.stack(pred_positions[: len(gt_sub)])
         from .metrics import pose_ate_rpe, print_pose_summary
         results["pose"] = pose_ate_rpe(pred_t, gt_sub, align_sim3=True)
-        print_pose_summary(results["pose"], label="VGGT-Omega [MPS trajectory]")
+        print_pose_summary(results["pose"], label=f"{label} [MPS trajectory]")
 
     return results
