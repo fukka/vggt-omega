@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import glob
 import os
+import re
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -48,23 +49,81 @@ from .metrics import (
 # Frame collection helpers
 # --------------------------------------------------------------------------- #
 
+# ADT filenames look like ``frame_000400_87552837212850.jpg`` — the zero-padded
+# integer right after ``frame`` is the *frame id*, the stable key shared between
+# the RGB frame and its GT depth.  The trailing token is the capture timestamp,
+# which is NOT guaranteed to be identical between videos_rgb/ and depth_npy/, so
+# matching on the full stem can silently drop frames.  We sync on the frame id.
+_FRAME_ID_RE = re.compile(r"frame[_-]?(\d+)")
+
+
+def _frame_id(path: str) -> Optional[str]:
+    """Extract the frame id from a filename, normalized to a canonical integer.
+
+    ``frame_000400_87552837212850.jpg`` -> ``"400"``.  Normalizing via ``int``
+    makes zero-padded and unpadded ids compare equal (``frame_000400`` matches
+    ``frame_400``).  Falls back to the first integer run if there's no ``frame``
+    prefix, and to None if the name has no digits at all.
+    """
+    name = os.path.splitext(os.path.basename(path))[0]
+    m = _FRAME_ID_RE.search(name) or re.search(r"(\d+)", name)
+    return str(int(m.group(1))) if m else None
+
+
 def _collect_paired_frames(rgb_dir: str, depth_dir: str) -> List[Tuple[str, str]]:
-    """Scan rgb_dir for images; match each with a depth .npy by stem."""
-    pairs = []
-    seen = set()
+    """Pair each RGB frame with its GT depth .npy, synced on the frame id.
+
+    Strategy (per RGB frame):
+      1. exact-stem match  depth_dir/<rgb_stem>.npy   (fast path; what the DAv2
+         benchmark loader does — works when names are byte-identical),
+      2. else frame-id match  (robust when the timestamp suffix differs between
+         videos_rgb/ and depth_npy/).
+    Frames are returned in frame-id order; duplicates (same id) are dropped.
+    """
     all_rgb = sorted(
         glob.glob(os.path.join(rgb_dir, "*.png"))
         + glob.glob(os.path.join(rgb_dir, "*.jpg"))
         + glob.glob(os.path.join(rgb_dir, "*.jpeg"))
     )
+    all_depth = sorted(glob.glob(os.path.join(depth_dir, "*.npy")))
+
+    # Index depth files by stem and by frame id.
+    depth_by_stem: Dict[str, str] = {}
+    depth_by_id: Dict[str, str] = {}
+    for dp in all_depth:
+        depth_by_stem[os.path.splitext(os.path.basename(dp))[0]] = dp
+        fid = _frame_id(dp)
+        if fid is not None:
+            depth_by_id.setdefault(fid, dp)  # first wins (stable order)
+
+    pairs: List[Tuple[str, str]] = []
+    seen_ids: set = set()
+    n_stem, n_id = 0, 0
     for rgb_path in all_rgb:
         stem = os.path.splitext(os.path.basename(rgb_path))[0]
-        if stem in seen:
+        fid = _frame_id(rgb_path)
+        depth_path = depth_by_stem.get(stem)
+        if depth_path is not None:
+            n_stem += 1
+        elif fid is not None:
+            depth_path = depth_by_id.get(fid)
+            if depth_path is not None:
+                n_id += 1
+        if depth_path is None:
             continue
-        depth_path = os.path.join(depth_dir, f"{stem}.npy")
-        if os.path.exists(depth_path):
-            seen.add(stem)
-            pairs.append((rgb_path, depth_path))
+        # Dedup on frame id so a frame present as both .png and .jpg, or matched
+        # twice, is only included once.
+        key = fid if fid is not None else stem
+        if key in seen_ids:
+            continue
+        seen_ids.add(key)
+        pairs.append((rgb_path, depth_path))
+
+    if n_id and not n_stem:
+        print(f"  [ADT] matched {len(pairs)} frames by frame-id "
+              f"(stems differ between videos_rgb/ and depth_npy/)")
+    elif n_id:
+        print(f"  [ADT] matched {n_stem} by exact stem, {n_id} by frame-id")
     return pairs
 
 
@@ -82,8 +141,23 @@ def _gather_real_frames(seq_dir: str) -> List[Tuple[str, str]]:
     if not os.path.isdir(depth_dir):
         print(f"  [ADT] WARN depth_npy not found: {depth_dir}")
         return []
+
+    n_rgb = len(glob.glob(os.path.join(rgb_dir, "*.png"))
+                + glob.glob(os.path.join(rgb_dir, "*.jpg"))
+                + glob.glob(os.path.join(rgb_dir, "*.jpeg")))
+    n_depth = len(glob.glob(os.path.join(depth_dir, "*.npy")))
     pairs = _collect_paired_frames(rgb_dir, depth_dir)
     print(f"  [ADT] {len(pairs)} real frames — {seq_dir}")
+    if len(pairs) < min(n_rgb, n_depth):
+        print(f"  [ADT] WARN paired {len(pairs)} of {n_rgb} RGB / {n_depth} depth "
+              "— some frames had no frame-id match")
+    # Verification: show the first few pairings so RGB↔depth sync is auditable,
+    # and assert the frame ids actually line up.
+    for rgb_p, dep_p in pairs[:3]:
+        rid, did = _frame_id(rgb_p), _frame_id(dep_p)
+        flag = "" if rid == did else "  <-- FRAME-ID MISMATCH"
+        print(f"  [ADT]   rgb={os.path.basename(rgb_p)}  "
+              f"depth={os.path.basename(dep_p)}{flag}")
     return pairs
 
 
