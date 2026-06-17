@@ -71,14 +71,15 @@ def _frame_id(path: str) -> Optional[str]:
 
 
 def _collect_paired_frames(rgb_dir: str, depth_dir: str) -> List[Tuple[str, str]]:
-    """Pair each RGB frame with its GT depth .npy, synced on the frame id.
+    """Pair GT depth maps with their RGB frame, anchored on the depth range.
 
-    Strategy (per RGB frame):
-      1. exact-stem match  depth_dir/<rgb_stem>.npy   (fast path; what the DAv2
-         benchmark loader does — works when names are byte-identical),
-      2. else frame-id match  (robust when the timestamp suffix differs between
-         videos_rgb/ and depth_npy/).
-    Frames are returned in frame-id order; duplicates (same id) are dropped.
+    GT depth typically covers a *subset* of the RGB stream (e.g. RGB starts at
+    frame_000000 while depth starts at frame_000282), so we iterate over the
+    depth files — the limiting set — and find each one's RGB partner.  Overlapping
+    frames share the same filename, so the match is by exact stem; a frame-id
+    fallback covers a differing timestamp suffix just in case.
+
+    Frames are returned in depth (frame-id) order; duplicates are dropped.
     """
     all_rgb = sorted(
         glob.glob(os.path.join(rgb_dir, "*.png"))
@@ -87,32 +88,31 @@ def _collect_paired_frames(rgb_dir: str, depth_dir: str) -> List[Tuple[str, str]
     )
     all_depth = sorted(glob.glob(os.path.join(depth_dir, "*.npy")))
 
-    # Index depth files by stem and by frame id.
-    depth_by_stem: Dict[str, str] = {}
-    depth_by_id: Dict[str, str] = {}
-    for dp in all_depth:
-        depth_by_stem[os.path.splitext(os.path.basename(dp))[0]] = dp
-        fid = _frame_id(dp)
+    # Index RGB files by stem and by frame id.
+    rgb_by_stem: Dict[str, str] = {}
+    rgb_by_id: Dict[str, str] = {}
+    for rp in all_rgb:
+        rgb_by_stem[os.path.splitext(os.path.basename(rp))[0]] = rp
+        fid = _frame_id(rp)
         if fid is not None:
-            depth_by_id.setdefault(fid, dp)  # first wins (stable order)
+            rgb_by_id.setdefault(fid, rp)  # first wins (stable order)
 
     pairs: List[Tuple[str, str]] = []
     seen_ids: set = set()
     n_stem, n_id = 0, 0
-    for rgb_path in all_rgb:
-        stem = os.path.splitext(os.path.basename(rgb_path))[0]
-        fid = _frame_id(rgb_path)
-        depth_path = depth_by_stem.get(stem)
-        if depth_path is not None:
+    for depth_path in all_depth:                      # anchor on the depth range
+        stem = os.path.splitext(os.path.basename(depth_path))[0]
+        fid = _frame_id(depth_path)
+        rgb_path = rgb_by_stem.get(stem)
+        if rgb_path is not None:
             n_stem += 1
         elif fid is not None:
-            depth_path = depth_by_id.get(fid)
-            if depth_path is not None:
+            rgb_path = rgb_by_id.get(fid)
+            if rgb_path is not None:
                 n_id += 1
-        if depth_path is None:
+        if rgb_path is None:
             continue
-        # Dedup on frame id so a frame present as both .png and .jpg, or matched
-        # twice, is only included once.
+        # Dedup on frame id so a depth matched twice is only included once.
         key = fid if fid is not None else stem
         if key in seen_ids:
             continue
@@ -147,10 +147,10 @@ def _gather_real_frames(seq_dir: str) -> List[Tuple[str, str]]:
                 + glob.glob(os.path.join(rgb_dir, "*.jpeg")))
     n_depth = len(glob.glob(os.path.join(depth_dir, "*.npy")))
     pairs = _collect_paired_frames(rgb_dir, depth_dir)
-    print(f"  [ADT] {len(pairs)} real frames — {seq_dir}")
-    if len(pairs) < min(n_rgb, n_depth):
-        print(f"  [ADT] WARN paired {len(pairs)} of {n_rgb} RGB / {n_depth} depth "
-              "— some frames had no frame-id match")
+    print(f"  [ADT] {len(pairs)} real frames from {n_depth} depth "
+          f"/ {n_rgb} RGB — {seq_dir}")
+    if len(pairs) < n_depth:
+        print(f"  [ADT] WARN {n_depth - len(pairs)} depth map(s) had no RGB partner")
     # Verification: show the first few pairings so RGB↔depth sync is auditable,
     # and assert the frame ids actually line up.
     for rgb_p, dep_p in pairs[:3]:
