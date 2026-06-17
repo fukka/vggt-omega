@@ -11,16 +11,18 @@ Single-GPU (uses the default cluster paths + checkpoint)::
 
     python finetune/train.py --batch-size 2 --rounds 3 --steps-per-phase 500
 
-Multi-GPU (torchrun) with validation + monitoring::
+Recommended full run (8 GPUs, ~1 pass over the data, bf16, cosine schedule)::
 
-    torchrun --nproc_per_node=4 finetune/train.py \
-        --batch-size 1 --rounds 3 --steps-per-phase 500 \
-        --val-every 250 --viz-every 200 --tensorboard
+    torchrun --nproc_per_node=8 finetune/train.py \
+        --epochs 1 --rounds 6 --window-stride 8 --batch-size 1 --grad-accum 2 \
+        --val-every 1000 --viz-every 500 --tensorboard
+    # --epochs auto-sizes steps-per-phase; warmup+cosine LR, EMA teacher, and
+    # layer-group LRs (LoRA 2e-4 / heads 2e-5) are on by default.
 
 Offline dry run on CPU (no checkpoint, no data; exercises val + viz + logging)::
 
-    python finetune/train.py --dummy --device cpu --rounds 1 --steps-per-phase 20 \
-        --val-every 10 --viz-every 5
+    python finetune/train.py --dummy --device cpu --amp-dtype fp32 \
+        --rounds 1 --steps-per-phase 20 --warmup-steps 4 --val-every 10 --viz-every 5
 
 Outputs land under ``--out-dir``:
     metrics.jsonl / metrics.csv   per-step train + val losses
@@ -142,6 +144,7 @@ def build_loader(cfg: FinetuneConfig, rank: int = 0, world_size: int = 1):
         cfg.data_root,
         seq_len=cfg.seq_len,
         stride=cfg.stride,
+        window_stride=cfg.window_stride,
         image_resolution=cfg.image_resolution,
         patch_size=cfg.patch_size,
     )
@@ -184,6 +187,7 @@ def build_val_loader(cfg: FinetuneConfig):
         cfg.val_data_root,
         seq_len=cfg.seq_len,
         stride=cfg.stride,
+        window_stride=cfg.window_stride,
         image_resolution=cfg.image_resolution,
         patch_size=cfg.patch_size,
     )
@@ -199,6 +203,28 @@ def build_val_loader(cfg: FinetuneConfig):
     )
 
 
+def apply_epoch_sizing(cfg: FinetuneConfig, loader, world_size: int) -> None:
+    """If --epochs > 0 and the loader wraps a sized dataset, set steps_per_phase
+    so the alternating loop covers cfg.epochs passes over the (per-rank) data.
+
+    total_micro = epochs * (windows_per_rank / batch_size)
+    steps_per_phase = total_micro / (rounds * (1 + dav2_steps_mult))
+    """
+    if cfg.epochs <= 0:
+        return
+    dataset = getattr(loader, "dataset", None)
+    if dataset is None or not hasattr(dataset, "__len__"):
+        return
+    windows_per_rank = max(1, len(dataset) // max(1, world_size))
+    total_micro = cfg.epochs * windows_per_rank / max(1, cfg.batch_size)
+    denom = cfg.rounds * (1.0 + cfg.dav2_steps_mult)
+    cfg.steps_per_phase = max(1, int(round(total_micro / max(1e-9, denom))))
+    if is_main():
+        print(f"[finetune] epochs={cfg.epochs}: steps_per_phase={cfg.steps_per_phase} "
+              f"(rounds={cfg.rounds}, A:B={cfg.dav2_steps_mult:g}:1, "
+              f"~{int(total_micro)} micro-iters/rank over {len(dataset)} train windows)")
+
+
 def parse_args() -> FinetuneConfig:
     p = argparse.ArgumentParser(description="Alternating DAv2 <-> VGGT-Omega egocentric finetuning")
     p.add_argument("--data-root", default=_DEFAULT_DATA_ROOT)
@@ -211,14 +237,36 @@ def parse_args() -> FinetuneConfig:
     p.add_argument("--dav2-dummy", action="store_true")
     p.add_argument("--seq-len", type=int, default=8)
     p.add_argument("--stride", type=int, default=2)
+    p.add_argument("--window-stride", type=int, default=1,
+                   help="frames between window starts (1 = max overlap; seq_len*stride = non-overlapping)")
     p.add_argument("--image-resolution", type=int, default=512)
     p.add_argument("--batch-size", type=int, default=1)
     p.add_argument("--num-workers", type=int, default=4)
-    p.add_argument("--rounds", type=int, default=3)
-    p.add_argument("--steps-per-phase", type=int, default=500)
+    # schedule: prefer --epochs (auto-sizes steps-per-phase to cover the data)
+    p.add_argument("--epochs", type=float, default=0.0,
+                   help=">0 auto-sizes --steps-per-phase to this many passes over the train set")
+    p.add_argument("--rounds", type=int, default=6)
+    p.add_argument("--steps-per-phase", type=int, default=2000,
+                   help="micro-iterations per phase (ignored when --epochs > 0)")
+    p.add_argument("--dav2-steps-mult", type=float, default=1.0,
+                   help="phase A (DAv2) length = steps-per-phase * this")
+    p.add_argument("--grad-accum", type=int, default=1, help="micro-batches per optimizer step")
+    # optimizer + LR schedule
+    p.add_argument("--lr-vggt-head", type=float, default=2e-5)
+    p.add_argument("--lr-vggt-lora", type=float, default=2e-4)
+    p.add_argument("--lr-dav2", type=float, default=5e-5)
+    p.add_argument("--weight-decay", type=float, default=0.05)
+    p.add_argument("--warmup-steps", type=int, default=200)
+    p.add_argument("--lr-schedule", default="cosine", choices=["cosine", "constant"])
+    p.add_argument("--min-lr-ratio", type=float, default=0.05)
+    p.add_argument("--amp-dtype", default="bf16", choices=["bf16", "fp16", "fp32"])
     p.add_argument("--lora-rank", type=int, default=8)
     p.add_argument("--finetune-dav2-lora-only", action="store_true")
-    p.add_argument("--ema-teacher", action="store_true")
+    # EMA teacher (on by default)
+    p.add_argument("--no-ema", action="store_true", help="disable the EMA teacher")
+    p.add_argument("--ema-decay", type=float, default=0.999)
+    p.add_argument("--no-ema-distill", action="store_true",
+                   help="keep EMA but distill from the live DAv2 instead of the EMA copy")
     p.add_argument("--device", default="cuda",
                    help="cuda (default; real training needs a GPU). Pass 'cpu' for dummy/CPU runs.")
     p.add_argument("--out-dir", default="finetune_outputs")
@@ -228,9 +276,9 @@ def parse_args() -> FinetuneConfig:
                    help="steps between validation; 0 = once at the end of each phase")
     p.add_argument("--val-steps", type=int, default=50, help="val batches averaged per validation pass")
     # monitoring
-    p.add_argument("--log-every", type=int, default=20, help="steps between train-loss logs")
-    p.add_argument("--save-every", type=int, default=500, help="steps between checkpoints (0 disables)")
-    p.add_argument("--viz-every", type=int, default=200, help="steps between depth montages (0 disables)")
+    p.add_argument("--log-every", type=int, default=50, help="steps between train-loss logs")
+    p.add_argument("--save-every", type=int, default=2000, help="steps between checkpoints (0 disables)")
+    p.add_argument("--viz-every", type=int, default=500, help="steps between depth montages (0 disables)")
     p.add_argument("--num-viz-frames", type=int, default=4, help="frames per saved montage")
     p.add_argument("--tensorboard", action="store_true", help="also log to <out-dir>/tb/")
     a = p.parse_args()
@@ -244,14 +292,29 @@ def parse_args() -> FinetuneConfig:
         dav2_dummy=a.dav2_dummy or a.dummy,
         seq_len=a.seq_len,
         stride=a.stride,
+        window_stride=a.window_stride,
         image_resolution=a.image_resolution,
         batch_size=a.batch_size,
         num_workers=a.num_workers,
+        epochs=a.epochs,
         rounds=a.rounds,
         steps_per_phase=a.steps_per_phase,
+        dav2_steps_mult=a.dav2_steps_mult,
+        grad_accum=a.grad_accum,
+        lr_vggt_head=a.lr_vggt_head,
+        lr_vggt_lora=a.lr_vggt_lora,
+        lr_dav2=a.lr_dav2,
+        weight_decay=a.weight_decay,
+        warmup_steps=a.warmup_steps,
+        lr_schedule=a.lr_schedule,
+        min_lr_ratio=a.min_lr_ratio,
+        amp_dtype=a.amp_dtype,
+        amp=(a.amp_dtype != "fp32"),
         lora_rank=a.lora_rank,
         finetune_dav2_lora_only=a.finetune_dav2_lora_only,
-        ema_teacher=a.ema_teacher,
+        ema_teacher=not a.no_ema,
+        ema_decay=a.ema_decay,
+        use_ema_teacher_in_distill=not a.no_ema_distill,
         out_dir=a.out_dir,
         seed=a.seed,
         val_every=a.val_every,
@@ -294,9 +357,13 @@ def main() -> None:
         if is_main():
             print(f"[finetune] DDP enabled: {world_size} ranks ({'nccl' if use_cuda else 'gloo'})")
 
-    trainer = AlternatingTrainer(vggt, dav2, cfg, device=device)
+    # Build loaders first; --epochs finalizes steps_per_phase BEFORE the trainer
+    # constructs its LR schedulers (which depend on the total step count).
     loader = build_loader(cfg, rank=rank, world_size=world_size)
+    apply_epoch_sizing(cfg, loader, world_size)
     val_loader = build_val_loader(cfg)
+
+    trainer = AlternatingTrainer(vggt, dav2, cfg, device=device)
     # trainer.train() handles per-step logging, viz, validation, and saves
     # checkpoint_{last,best,final}.pt + loss_curves.png under cfg.out_dir.
     trainer.train(loader, val_loader)

@@ -112,6 +112,7 @@ def test_engine():
 
     cfg = FinetuneConfig(vggt_dummy=True, dav2_dummy=True, seq_len=5, batch_size=1,
                          offsets=(-1, 1), log_every=1, steps_per_phase=2, rounds=1, amp=False,
+                         warmup_steps=0,  # single-step test: need full LR immediately
                          out_dir=tempfile.mkdtemp(prefix="smoke_ft_"))
     vggt = DummyVGGT()
     dav2 = DummyDepthModel()

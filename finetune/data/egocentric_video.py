@@ -58,12 +58,17 @@ class EgocentricVideoDataset(Dataset):
         stride: int = 2,
         image_resolution: int = 512,
         patch_size: int = 16,
+        window_stride: int = 1,
     ) -> None:
         super().__init__()
         self.seq_len = seq_len
         self.stride = stride
         self.resolution = image_resolution
         self.patch = patch_size
+        # Gap (in frames) between consecutive window starts. 1 = maximally
+        # overlapping (each frame appears in up to `span` windows — heavy
+        # redundancy); set to seq_len*stride for non-overlapping windows.
+        self.window_stride = max(1, window_stride)
 
         # A "clip" is any directory (at any depth) that directly contains image
         # frames. This handles a flat folder, data_root/clip/*.jpg, and nested
@@ -81,7 +86,7 @@ class EgocentricVideoDataset(Dataset):
         span = (seq_len - 1) * stride + 1
         for clip in clips:
             frames = _list_frames(clip)
-            for start in range(0, max(1, len(frames) - span + 1)):
+            for start in range(0, max(1, len(frames) - span + 1), self.window_stride):
                 window = frames[start : start + span : stride]
                 if len(window) == seq_len:
                     self.windows.append((clip, window))

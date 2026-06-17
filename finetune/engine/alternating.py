@@ -14,13 +14,16 @@ teacher (alternating / EM style), which is more stable than joint co-training.
 """
 from __future__ import annotations
 
+import math
 import os
-from typing import Dict, Iterable, Optional, Tuple
+from contextlib import nullcontext
+from typing import Dict, Iterable, List, Optional
 
 import torch
 import torch.distributed as dist
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data.distributed import DistributedSampler
 
 from ..config import FinetuneConfig
 from ..losses import (
@@ -46,9 +49,53 @@ def _is_main() -> bool:
 
 
 def _cycle(loader: Iterable):
+    """Infinite stream over ``loader``; advances DistributedSampler epochs so
+    each pass reshuffles (DDP correctness for multi-epoch training)."""
+    epoch = 0
+    sampler = getattr(loader, "sampler", None)
     while True:
+        if isinstance(sampler, DistributedSampler):
+            sampler.set_epoch(epoch)
         for batch in loader:
             yield batch
+        epoch += 1
+
+
+def _param_groups(model: nn.Module, base_lr: float, lora_lr: float, weight_decay: float) -> List[dict]:
+    """Split trainable params into (weight-decay matrices @base_lr),
+    (no-decay norms/biases @base_lr), (LoRA adapters @lora_lr, no decay)."""
+    decay, no_decay, lora = [], [], []
+    for name, p in model.named_parameters():
+        if not p.requires_grad:
+            continue
+        if "lora_" in name:
+            lora.append(p)
+        elif p.ndim < 2 or name.endswith(".bias") or "norm" in name.lower():
+            no_decay.append(p)
+        else:
+            decay.append(p)
+    groups = []
+    if decay:
+        groups.append({"params": decay, "lr": base_lr, "weight_decay": weight_decay})
+    if no_decay:
+        groups.append({"params": no_decay, "lr": base_lr, "weight_decay": 0.0})
+    if lora:
+        groups.append({"params": lora, "lr": lora_lr, "weight_decay": 0.0})
+    return groups
+
+
+def _warmup_cosine(warmup: int, total: int, min_ratio: float, schedule: str):
+    """LambdaLR multiplier: linear warmup then cosine decay (or constant)."""
+    def fn(step: int) -> float:
+        if warmup > 0 and step < warmup:
+            return (step + 1) / warmup
+        if schedule != "cosine" or total <= warmup:
+            return 1.0
+        prog = (step - warmup) / max(1, total - warmup)
+        prog = min(1.0, max(0.0, prog))
+        return min_ratio + 0.5 * (1.0 - min_ratio) * (1.0 + math.cos(math.pi * prog))
+
+    return fn
 
 
 def _squeeze_depth(depth: torch.Tensor) -> torch.Tensor:
@@ -77,19 +124,35 @@ class AlternatingTrainer:
 
         self.vggt_params = trainable_parameters(vggt_raw)
         self.dav2_params = trainable_parameters(dav2_raw)
+        betas, eps = (cfg.adam_beta1, cfg.adam_beta2), cfg.adam_eps
+        vggt_groups = _param_groups(vggt_raw, cfg.lr_vggt_head, cfg.lr_vggt_lora, cfg.weight_decay)
+        dav2_groups = _param_groups(dav2_raw, cfg.lr_dav2, cfg.lr_dav2, cfg.weight_decay)
         self.opt_vggt = torch.optim.AdamW(
-            self.vggt_params or list(vggt_raw.parameters()),
-            lr=cfg.lr_vggt,
-            weight_decay=cfg.weight_decay,
+            vggt_groups or [{"params": list(vggt_raw.parameters()), "lr": cfg.lr_vggt_head}],
+            lr=cfg.lr_vggt_head, betas=betas, eps=eps,
         )
         self.opt_dav2 = torch.optim.AdamW(
-            self.dav2_params or list(dav2_raw.parameters()),
-            lr=cfg.lr_dav2,
-            weight_decay=cfg.weight_decay,
+            dav2_groups or [{"params": list(dav2_raw.parameters()), "lr": cfg.lr_dav2}],
+            lr=cfg.lr_dav2, betas=betas, eps=eps,
         )
 
-        self.use_amp = bool(cfg.amp) and self.device.type == "cuda"
-        self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
+        # per-phase micro-iteration counts (Phase A can be shortened via dav2_steps_mult)
+        self.steps_b = max(1, cfg.steps_per_phase)
+        self.steps_a = max(1, int(round(cfg.steps_per_phase * cfg.dav2_steps_mult)))
+        accum = max(1, cfg.grad_accum)
+        opt_steps_v = cfg.rounds * math.ceil(self.steps_b / accum)
+        opt_steps_d = cfg.rounds * math.ceil(self.steps_a / accum)
+        self.sched_vggt = torch.optim.lr_scheduler.LambdaLR(
+            self.opt_vggt, _warmup_cosine(cfg.warmup_steps, opt_steps_v, cfg.min_lr_ratio, cfg.lr_schedule))
+        self.sched_dav2 = torch.optim.lr_scheduler.LambdaLR(
+            self.opt_dav2, _warmup_cosine(cfg.warmup_steps, opt_steps_d, cfg.min_lr_ratio, cfg.lr_schedule))
+
+        # mixed precision: autocast dtype + (fp16-only) gradient scaler
+        self._amp_dtype = None
+        if cfg.amp and cfg.amp_dtype != "fp32" and self.device.type == "cuda":
+            self._amp_dtype = torch.bfloat16 if cfg.amp_dtype == "bf16" else torch.float16
+        self._use_scaler = self._amp_dtype == torch.float16
+        self.scaler = torch.cuda.amp.GradScaler(enabled=self._use_scaler)
 
         # EMA is built from the raw module so it stays a plain nn.Module
         self.ema = EmaTeacher(dav2_raw, cfg.ema_decay) if cfg.ema_teacher else None
@@ -110,28 +173,49 @@ class AlternatingTrainer:
         dist.all_reduce(t, op=dist.ReduceOp.SUM)
         return float(t.item() / dist.get_world_size())
 
+    def _autocast(self):
+        if self._amp_dtype is None:
+            return nullcontext()
+        return torch.autocast(device_type=self.device.type, dtype=self._amp_dtype)
+
     def _vggt_forward(self, images: torch.Tensor, train: bool):
         self.vggt.train(train)
-        preds = self.vggt(images)
-        depth = _squeeze_depth(preds["depth"])
-        pose_enc = preds["pose_enc"]
+        with self._autocast():
+            preds = self.vggt(images)
+        # losses run in fp32 for numerical stability of the geometry math
+        depth = _squeeze_depth(preds["depth"]).float()
+        pose_enc = preds["pose_enc"].float()
         conf = preds.get("depth_conf")
+        conf = conf.float() if conf is not None else None
         return depth, pose_enc, conf
 
-    def _backward_step(self, loss, optimizer, params):
-        optimizer.zero_grad(set_to_none=True)
-        if self.use_amp:
+    def _dav2_depth(self, model: nn.Module, images: torch.Tensor) -> torch.Tensor:
+        with self._autocast():
+            d = model(images)
+        return _squeeze_depth(d).float()
+
+    def _backward_step(self, loss, optimizer, params, scheduler, do_step: bool):
+        """Accumulation-aware step: scales loss by 1/grad_accum, only steps the
+        optimizer + scheduler (and zeroes grads) on ``do_step``."""
+        loss = loss / max(1, self.cfg.grad_accum)
+        if self._use_scaler:
             self.scaler.scale(loss).backward()
+        else:
+            loss.backward()
+        if not do_step:
+            return
+        if self._use_scaler:
             if self.cfg.grad_clip:
                 self.scaler.unscale_(optimizer)
                 nn.utils.clip_grad_norm_(params, self.cfg.grad_clip)
             self.scaler.step(optimizer)
             self.scaler.update()
         else:
-            loss.backward()
             if self.cfg.grad_clip:
                 nn.utils.clip_grad_norm_(params, self.cfg.grad_clip)
             optimizer.step()
+        optimizer.zero_grad(set_to_none=True)
+        scheduler.step()
 
     # --- pure loss math (no backward); reused by training and validation ----- #
     def _phase_b_losses(self, images, depth, pose_enc, conf, dav2_depth):
@@ -190,27 +274,36 @@ class AlternatingTrainer:
             pack["dyn_mask"] = dyn_mask[0].detach().float().cpu()
         return pack
 
+    def _dav2_teacher(self) -> nn.Module:
+        """Frozen DAv2 used as the Phase-B distillation teacher: the EMA copy
+        when enabled (stable mean-teacher target), else the live DAv2."""
+        if self.ema is not None and self.cfg.use_ema_teacher_in_distill:
+            return self.ema.model
+        return self.dav2
+
     # --- training steps (forward + backward), optionally collecting viz ------ #
-    def _phase_b(self, images, collect_viz=False):
+    def _phase_b(self, images, collect_viz=False, do_step=True):
         images = images.to(self.device)
         self.dav2.eval()
         depth, pose_enc, conf = self._vggt_forward(images, train=True)
         with torch.no_grad():
-            dav2_depth = _squeeze_depth(self.dav2(images))
+            teacher = self._dav2_teacher()
+            teacher.eval()
+            dav2_depth = self._dav2_depth(teacher, images)
         total, logs, dyn = self._phase_b_losses(images, depth, pose_enc, conf, dav2_depth)
-        self._backward_step(total, self.opt_vggt, self.vggt_params)
+        self._backward_step(total, self.opt_vggt, self.vggt_params, self.sched_vggt, do_step)
         viz = self._viz_pack(images, depth, dav2_depth, dyn) if collect_viz else None
         return logs, viz
 
-    def _phase_a(self, images, collect_viz=False):
+    def _phase_a(self, images, collect_viz=False, do_step=True):
         images = images.to(self.device)
         with torch.no_grad():
             depth_v, pose_enc, _ = self._vggt_forward(images, train=False)
         self.dav2.train()
-        dav2_depth = _squeeze_depth(self.dav2(images))
+        dav2_depth = self._dav2_depth(self.dav2, images)
         total, logs = self._phase_a_losses(images, dav2_depth, depth_v, pose_enc)
-        self._backward_step(total, self.opt_dav2, self.dav2_params)
-        if self.ema is not None:
+        self._backward_step(total, self.opt_dav2, self.dav2_params, self.sched_dav2, do_step)
+        if self.ema is not None and do_step:
             self.ema.update(_unwrap(self.dav2))
         viz = self._viz_pack(images, depth_v, dav2_depth) if collect_viz else None
         return logs, viz
@@ -242,7 +335,7 @@ class AlternatingTrainer:
                 break
             images = batch["images"].to(self.device)
             depth, pose_enc, conf = self._vggt_forward(images, train=False)
-            dav2_depth = _squeeze_depth(self.dav2(images))
+            dav2_depth = self._dav2_depth(self.dav2, images)
             _, lb, _ = self._phase_b_losses(images, depth, pose_enc, conf, dav2_depth)
             _, la = self._phase_a_losses(images, dav2_depth, depth, pose_enc)
             for k, v in la.items():
@@ -331,19 +424,23 @@ class AlternatingTrainer:
             )
         data = _cycle(loader)
         for rnd in range(cfg.rounds):
-            self._run_phase("A", data, self._phase_a, f"round {rnd} / phase A (DAv2)", val_loader)
-            self._run_phase("B", data, self._phase_b, f"round {rnd} / phase B (VGGT)", val_loader)
+            self._run_phase("A", data, self._phase_a, self.steps_a, self.opt_dav2,
+                            f"round {rnd} / phase A (DAv2)", val_loader)
+            self._run_phase("B", data, self._phase_b, self.steps_b, self.opt_vggt,
+                            f"round {rnd} / phase B (VGGT)", val_loader)
         self.save_checkpoint("final")
         self.logger.close()
 
-    def _run_phase(self, phase: str, data, step_fn, tag: str, val_loader) -> None:
+    def _run_phase(self, phase, data, step_fn, num_steps, optimizer, tag, val_loader) -> None:
         cfg = self.cfg
+        accum = max(1, cfg.grad_accum)
         running: Dict[str, float] = {}
         count = 0
-        for it in range(cfg.steps_per_phase):
+        for it in range(num_steps):
             batch = next(data)
+            do_step = ((it + 1) % accum == 0) or (it + 1 == num_steps)
             do_viz = _is_main() and cfg.viz_every > 0 and (self.global_step + 1) % cfg.viz_every == 0
-            logs, viz = step_fn(batch["images"], collect_viz=do_viz)
+            logs, viz = step_fn(batch["images"], collect_viz=do_viz, do_step=do_step)
             self.global_step += 1
 
             for k, v in logs.items():
@@ -352,11 +449,12 @@ class AlternatingTrainer:
 
             if self.global_step % cfg.log_every == 0:
                 avg = {k: self._reduce_scalar(running[k] / count) for k in running}
+                avg["lr"] = optimizer.param_groups[-1]["lr"]  # LoRA group LR (schedule visible)
                 self.logger.log_scalars(self.global_step, "train", phase, avg)
                 if _is_main():
-                    msg = " ".join(f"{k}={avg[k]:.4f}" for k in avg)
+                    msg = " ".join(f"{k}={avg[k]:.4g}" for k in avg)
                     self.logger.text(
-                        f"[{tag}] step {it+1}/{cfg.steps_per_phase} (gstep {self.global_step}) {msg}"
+                        f"[{tag}] step {it+1}/{num_steps} (gstep {self.global_step}) {msg}"
                     )
                 running, count = {}, 0
 
