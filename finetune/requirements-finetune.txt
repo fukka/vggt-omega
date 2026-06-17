@@ -6,4 +6,5 @@ numpy<2
 Pillow
 PyYAML               # run configs (finetune/configs/*.yaml)
 opencv-python        # fisheye->pinhole rectification in the training loader
+tensorboard          # scalar logging (on by default; <out_dir>/tb/)
 transformers>=4.40   # Depth-Anything-V2 partner model (omit if using --dav2-dummy)

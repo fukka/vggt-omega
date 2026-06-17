@@ -115,6 +115,30 @@ writes `config.yaml` (the fully-resolved config) and `provenance.json` (git SHA,
 argv, host, time). `runs/index.csv` gets one row per run — the at-a-glance log of
 what has been trained.
 
+### Catching when it starts to fail
+
+Every `eval_every` steps (default 500) the trainer runs two validation arms and
+logs to TensorBoard (`<out_dir>/tb/`, on by default) + `metrics.jsonl`:
+
+- **Qualitative** — depth montages (input | VGGT | DAv2) on `val_data_root`,
+  no GT, saved to `runs/<name>/val_qual/step*.jpg` (`val_qual_n` per eval).
+- **Quantitative** — ADT dense-GT depth metrics on `eval_adt_root`
+  (`eval_adt_max_frames`, default 100). All four variants are reported
+  (VGGT/DAv2 × pretrained/finetuned); the **pretrained baseline is computed once**
+  at step 0 (the model is still pretrained then) and held constant. Watch
+  `eval/adt/vggt_finetuned/none/AbsRel` (metric) and `.../scale_shift/AbsRel`
+  (structure) cross their pretrained baselines to see exactly when finetuning
+  starts to hurt.
+
+This mirrors the standalone report:
+```bash
+python -m finetune.eval.run_eval \
+  --vggt-checkpoint .../VGGT-Omega-1B-512/model.pt \
+  --finetune-checkpoint runs/<name>/checkpoint_best.pt \
+  --eval-adt-root /group-volume/Fengjia/data/projectaria_tools_adt_data_clean \
+  --out-dir eval_out
+```
+
 ## Data conventions
 
 The losses assume the **pinhole** intrinsics VGGT-Omega predicts. Aria / fisheye

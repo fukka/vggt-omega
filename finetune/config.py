@@ -110,9 +110,21 @@ class FinetuneConfig:
     ema_decay: float = 0.999
     use_ema_teacher_in_distill: bool = True  # phase B distills from EMA(DAv2) instead of the raw DAv2
 
-    # validation
+    # validation — cheap loss-based pass on val_data_root
     val_every: int = 0             # steps between validation; 0 = once at the end of each phase
     val_steps: int = 50            # number of val batches averaged per validation pass
+
+    # in-training EVALUATION (the "when does it start to fail?" signal). Runs two
+    # arms every eval_every steps (0 disables both):
+    #   - qualitative: depth montages on val_data_root (no GT), val_qual_n of them
+    #   - quantitative: ADT dense-GT depth metrics (Aria), <= eval_adt_max_frames
+    # All four variants (VGGT/DAv2 x pretrained/finetuned) are reported, but the
+    # pretrained ones are computed ONCE at step 0 (model == pretrained then) and
+    # cached as a constant baseline thereafter.
+    eval_every: int = 500          # steps between full eval (quant ADT + qual val); 0 disables
+    eval_adt_root: str = "/group-volume/Fengjia/data/projectaria_tools_adt_data_clean"
+    eval_adt_max_frames: int = 100  # cap ADT depth frames per quantitative eval (-1 = all)
+    val_qual_n: int = 2            # qualitative val montages saved per eval (~"sequences")
 
     # io / monitoring
     out_dir: str = ""              # resolved to <runs_root>/<name> by options.py (leave "" to auto-set)
@@ -120,5 +132,5 @@ class FinetuneConfig:
     save_every: int = 2000         # steps between checkpoint saves (0 disables periodic saves)
     viz_every: int = 500           # steps between saved depth-montage images (0 disables)
     num_viz_frames: int = 4        # frames per saved montage
-    tensorboard: bool = False      # also log to <out_dir>/tb/
+    tensorboard: bool = True       # also log to <out_dir>/tb/ (scalars: train, val, eval)
     seed: int = 0

@@ -27,11 +27,15 @@ Offline CPU dry run (no checkpoint, no data; exercises the whole loop)::
 
 Outputs land under ``runs/<name>/``:
     config.yaml provenance.json     resolved config + git SHA / argv / time
-    metrics.jsonl / metrics.csv     per-step train + val losses
+    metrics.jsonl / metrics.csv     per-step train/val losses + ADT eval metrics
     loss_curves.png                 train-vs-val total loss per phase (at end)
     viz/phase{A,B}_step*.jpg         input | VGGT depth | DAv2 depth | dyn-mask
+    val_qual/step*.jpg               qualitative depth montages on val (no GT)
     checkpoint_{last,best,final}.pt  trainable weights (LoRA + heads)
-    train_log.txt                   console mirror; tb/ if tensorboard enabled
+    tb/                              TensorBoard scalars (train, val, eval)
+    train_log.txt                   console mirror
+Every eval_every steps it also runs the ADT dense-GT quantitative eval (all four
+VGGT/DAv2 x pretrained/finetuned variants; pretrained computed once at step 0).
 """
 from __future__ import annotations
 

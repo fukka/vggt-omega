@@ -181,6 +181,11 @@ class BaseAlternatingTrainer:
         self.logger = TrainLogger(
             cfg.out_dir, enabled=_is_main(), use_tensorboard=cfg.tensorboard
         )
+        # in-training eval state: ADT seq dirs (resolved lazily) + pretrained
+        # baseline metrics (computed once at step 0 and cached as constants).
+        self._adt_resolved = False
+        self._adt_seq_dirs = None
+        self._adt_baseline = None
 
     # ------------------------------------------------------------------ #
     # loss hooks — implemented by strategy subclasses
@@ -353,6 +358,134 @@ class BaseAlternatingTrainer:
             self.best_val = b_tot
             self.save_checkpoint("best")
 
+    # ------------------- in-training evaluation ----------------------- #
+    # Two arms (see config): qualitative depth montages on val (no GT) and
+    # quantitative ADT depth metrics (dense GT). Rank-0 only + barrier so DDP
+    # ranks stay in lockstep; wrapped in try/except so a flaky eval never kills
+    # a long training run.
+    def _periodic_eval(self, val_loader, is_first: bool = False) -> None:
+        if _is_main():
+            try:
+                self._qual_eval(val_loader)
+            except Exception as e:  # pragma: no cover - monitoring must not crash training
+                self.logger.text(f"[eval] qualitative val failed: {e}")
+            try:
+                self._quant_eval_adt(is_first)
+            except Exception as e:  # pragma: no cover
+                self.logger.text(f"[eval] quantitative ADT failed: {e}")
+        if dist.is_initialized():
+            dist.barrier()
+
+    @torch.no_grad()
+    def _qual_eval(self, val_loader) -> None:
+        """Save depth montages (input | VGGT | DAv2) on val frames — no GT needed."""
+        if val_loader is None or self.cfg.val_qual_n <= 0:
+            return
+        import cv2
+
+        out = os.path.join(self.cfg.out_dir, "val_qual")
+        os.makedirs(out, exist_ok=True)
+        vggt_raw, dav2_raw = _unwrap(self.vggt).eval(), _unwrap(self.dav2).eval()
+        saved = 0
+        for batch in val_loader:
+            if saved >= self.cfg.val_qual_n:
+                break
+            images = batch["images"].to(self.device)
+            with self._autocast():
+                depth = _squeeze_depth(vggt_raw(images)["depth"]).float()
+                dav2_depth = _squeeze_depth(dav2_raw(images)).float()
+            montage = training_montage(
+                images[0].detach().float().cpu(),
+                depth[0].detach().float().cpu(),
+                dav2_depth[0].detach().float().cpu(),
+                None, num_frames=self.cfg.num_viz_frames,
+                caption=f"VAL gstep {self.global_step} #{saved}",
+            )
+            cv2.imwrite(os.path.join(out, f"step{self.global_step:07d}_{saved}.jpg"), montage)
+            saved += 1
+
+    def _resolve_adt_dirs(self):
+        if self._adt_resolved:
+            return self._adt_seq_dirs
+        self._adt_resolved = True
+        root = self.cfg.eval_adt_root
+        if not root:
+            return None
+        try:
+            from ..eval.run_eval import _find_adt_seq_dirs
+
+            dirs = _find_adt_seq_dirs(root)
+        except Exception as e:
+            self.logger.text(f"[eval] ADT resolve failed ({e}); quantitative eval disabled.")
+            dirs = []
+        if dirs:
+            self._adt_seq_dirs = dirs
+            self.logger.text(
+                f"[eval] ADT quantitative eval: {len(dirs)} seq dir(s), "
+                f"<= {self.cfg.eval_adt_max_frames} frames"
+            )
+        else:
+            self.logger.text(f"[eval] no ADT sequences under {root!r}; quantitative eval disabled.")
+        return self._adt_seq_dirs
+
+    def _adt_eval_one(self, raw_model, kind: str):
+        from ..eval.adt_depth import run_adt_eval
+        from ..eval.run_eval import make_dav2_predict, make_vggt_predict
+
+        if kind == "vggt":
+            predict_fn, modes = make_vggt_predict(raw_model, self.device), ("none", "scale_shift")
+        else:
+            predict_fn, modes = make_dav2_predict(raw_model, self.device), ("scale_shift",)
+        mf = self.cfg.eval_adt_max_frames
+        return run_adt_eval(
+            predict_fn=predict_fn, label=f"{kind}", seq_dirs=self._adt_seq_dirs,
+            device=self.device, seq_len=self.cfg.seq_len,
+            image_resolution=self.cfg.image_resolution, align_modes=modes,
+            qual_dir=None, n_qual=0, max_frames=(None if mf is not None and mf < 0 else mf),
+        )
+
+    def _quant_eval_adt(self, is_first: bool) -> None:
+        if not self._resolve_adt_dirs():
+            return
+        vggt_raw, dav2_raw = _unwrap(self.vggt), _unwrap(self.dav2)
+        if is_first or self._adt_baseline is None:
+            # At step 0 the live models ARE the pretrained models (LoRA delta 0,
+            # heads still pretrained) -> compute the pretrained baseline once.
+            base_v = self._adt_eval_one(vggt_raw, "vggt")
+            base_d = self._adt_eval_one(dav2_raw, "dav2")
+            self._adt_baseline = {"vggt": base_v, "dav2": base_d}
+            self._log_adt(base_v, base_d, base_v, base_d)  # finetuned == pretrained at start
+        else:
+            ft_v = self._adt_eval_one(vggt_raw, "vggt")
+            ft_d = self._adt_eval_one(dav2_raw, "dav2")
+            self._log_adt(self._adt_baseline["vggt"], self._adt_baseline["dav2"], ft_v, ft_d)
+
+    def _log_adt(self, vggt_pre, dav2_pre, vggt_ft, dav2_ft) -> None:
+        flat: Dict[str, float] = {}
+        for variant, res in (("vggt_pretrained", vggt_pre), ("vggt_finetuned", vggt_ft),
+                             ("dav2_pretrained", dav2_pre), ("dav2_finetuned", dav2_ft)):
+            if not res:
+                continue
+            for mode, metrics in res.items():
+                if not isinstance(metrics, dict):
+                    continue
+                for mk in ("AbsRel", "delta1"):
+                    v = metrics.get(mk)
+                    if isinstance(v, (int, float)) and v == v:  # finite, not NaN
+                        flat[f"{variant}/{mode}/{mk}"] = float(v)
+        if not flat:
+            return
+        self.logger.log_scalars(self.global_step, "eval", "adt", flat)
+
+        def grab(res, mode):
+            return res.get(mode, {}).get("AbsRel", float("nan")) if res else float("nan")
+        self.logger.text(
+            f"[eval] gstep {self.global_step} ADT AbsRel | "
+            f"VGGT(none) pre={grab(vggt_pre,'none'):.4f} ft={grab(vggt_ft,'none'):.4f} | "
+            f"VGGT(ss) pre={grab(vggt_pre,'scale_shift'):.4f} ft={grab(vggt_ft,'scale_shift'):.4f} | "
+            f"DAv2(ss) pre={grab(dav2_pre,'scale_shift'):.4f} ft={grab(dav2_ft,'scale_shift'):.4f}"
+        )
+
     # ------------------------- checkpoint / viz ----------------------- #
     def save_checkpoint(self, tag: str = "last") -> None:
         """Save only trainable params (LoRA deltas + heads, or full DAv2)."""
@@ -413,6 +546,11 @@ class BaseAlternatingTrainer:
                 f"checkpoints (every {cfg.save_every}), "
                 f"val {sched if val_loader is not None else 'disabled'}, tb={cfg.tensorboard}"
             )
+        # Step-0 eval: models still == pretrained, so this both captures the
+        # pretrained baseline (computed once) and gives every curve a start point.
+        if cfg.eval_every > 0:
+            self._periodic_eval(val_loader, is_first=True)
+
         data = _cycle(loader)
         for rnd in range(cfg.rounds):
             self._run_phase("A", data, self._phase_a, self.steps_a, self.opt_dav2,
@@ -454,6 +592,9 @@ class BaseAlternatingTrainer:
 
             if val_loader is not None and cfg.val_every > 0 and self.global_step % cfg.val_every == 0:
                 self._do_validation(val_loader, tag)
+
+            if cfg.eval_every > 0 and self.global_step % cfg.eval_every == 0:
+                self._periodic_eval(val_loader, is_first=(self._adt_baseline is None))
 
             if cfg.save_every > 0 and self.global_step % cfg.save_every == 0:
                 self.save_checkpoint("last")

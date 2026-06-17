@@ -73,8 +73,16 @@ ema:
   use_ema_teacher_in_distill: true
 
 val:
+  # cheap loss-based validation on val_data_root
   val_every: 1000
   val_steps: 50
+  # full eval every eval_every steps (watch these curves to catch when it fails):
+  #   qualitative depth montages on val_data_root (no GT) -> runs/<name>/val_qual/
+  #   quantitative ADT dense-GT depth metrics (all 4 variants; pretrained once)
+  eval_every: 500
+  eval_adt_root: /group-volume/Fengjia/data/projectaria_tools_adt_data_clean
+  eval_adt_max_frames: 100
+  val_qual_n: 2
 
 monitor:
   log_every: 50
