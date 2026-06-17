@@ -1,20 +1,21 @@
 # Copyright (c) 2026.
 """ADT (Aria Digital Twin) dense-GT depth evaluation for VGGT-Omega.
 
-ADT has Blender-rendered synthetic frames with perfect dense depth maps and a
-ground-truth camera trajectory. It uses the exact same Aria RGB fisheye camera
-as Ego-Exo4D (just rendered to pinhole), making it the strongest available
-absolute-accuracy eval for our finetuned model.
+ADT provides real Aria sensor frames with paired dense GT depth maps (from the
+digital-twin simulation), giving absolute-accuracy eval on the same fisheye camera
+that Ego-Exo4D uses.
 
 Expected ADT sequence layout
 -----------------------------
   <seq_dir>/
-    blender_rendered_maps/
-      pinhole/
-        videos_rgb/   *.png   (one per frame)
-        depth_maps/   *.npy   (float32 metres; matching stems)
+    videos_rgb/   *.jpg | *.png   (real Aria RGB frames; typically 1408×1408)
+    depth_npy/    *.npy           (GT depth maps, matching stems; uint16 millimetres)
     groundtruth/
-      aria_trajectory.csv     (GT camera pose: world-from-device, XYZW, us timestamps)
+      aria_trajectory.csv         (GT camera pose: world-from-device, XYZW, us timestamps)
+
+Important: real Aria frames are rotated 90° CW in storage; apply 270° CCW rotation
+before use (same as ADT evaluation convention). Depth values are in millimetres —
+pass depth_scale=0.001 to convert to metres (the default).
 
 Dataset and eval runner
 -----------------------
@@ -67,19 +68,22 @@ def _collect_paired_frames(rgb_dir: str, depth_dir: str) -> List[Tuple[str, str]
     return pairs
 
 
-def _gather_pinhole_frames(seq_dir: str) -> List[Tuple[str, str]]:
-    """Return paired (rgb, depth) frames from the pinhole renders of one ADT sequence."""
-    render_root = os.path.join(seq_dir, "blender_rendered_maps", "pinhole")
-    rgb_dir = os.path.join(render_root, "videos_rgb")
-    depth_dir = os.path.join(render_root, "depth_maps")
+def _gather_real_frames(seq_dir: str) -> List[Tuple[str, str]]:
+    """Return paired (rgb, depth) frames from the real ADT sensor data.
+
+    Layout: <seq_dir>/videos_rgb/*.jpg  +  <seq_dir>/depth_npy/*.npy
+    Depth values are uint16 millimetres; caller applies depth_scale=0.001.
+    """
+    rgb_dir = os.path.join(seq_dir, "videos_rgb")
+    depth_dir = os.path.join(seq_dir, "depth_npy")
     if not os.path.isdir(rgb_dir):
-        print(f"  [ADT] WARN pinhole rgb dir not found: {rgb_dir}")
+        print(f"  [ADT] WARN videos_rgb not found: {rgb_dir}")
         return []
     if not os.path.isdir(depth_dir):
-        print(f"  [ADT] WARN pinhole depth dir not found: {depth_dir}")
+        print(f"  [ADT] WARN depth_npy not found: {depth_dir}")
         return []
     pairs = _collect_paired_frames(rgb_dir, depth_dir)
-    print(f"  [ADT] {len(pairs)} pinhole frames — {seq_dir}")
+    print(f"  [ADT] {len(pairs)} real frames — {seq_dir}")
     return pairs
 
 
@@ -103,7 +107,7 @@ def _load_gt_trajectory(traj_csv: str) -> np.ndarray:
 # --------------------------------------------------------------------------- #
 
 class ADTWindowDataset(Dataset):
-    """Consecutive windows of seq_len frames from ADT pinhole renders.
+    """Consecutive windows of seq_len frames from ADT real sensor data.
 
     Each item
     ---------
@@ -114,6 +118,10 @@ class ADTWindowDataset(Dataset):
 
     Notes
     -----
+    • Real Aria frames are stored 90° CW; a 270° CCW rotation is applied to both
+      RGB and depth before resizing, matching the ADT evaluation convention.
+    • Depth values in depth_npy/ are uint16 millimetres; depth_scale=0.001 converts
+      them to metres (the default).
     • VGGT-Omega takes [0, 1] images (no ImageNet normalization).
     • Windows within one sequence are non-overlapping by default (stride=seq_len).
       Use window_stride=1 for maximum overlap, but then evaluate only the center
@@ -128,20 +136,22 @@ class ADTWindowDataset(Dataset):
         window_stride: Optional[int] = None,
         image_resolution: int = 512,
         patch_size: int = 16,
-        depth_scale: float = 1.0,
+        depth_scale: float = 0.001,   # uint16 mm → metres
         depth_max_m: float = 10.0,
+        rotation: int = 270,          # CCW degrees; corrects Aria sensor orientation
     ) -> None:
         self.seq_len = seq_len
         self.resolution = image_resolution
         self.patch = patch_size
         self.depth_scale = depth_scale
         self.depth_max_m = depth_max_m
+        self.rot_k = {0: 0, 90: 1, 180: 2, 270: 3}[rotation]
         # Default: non-overlapping windows so each frame is evaluated once
         self.window_stride = window_stride if window_stride is not None else seq_len
 
         self.windows: List[List[Tuple[str, str]]] = []
         for seq_dir in seq_dirs:
-            pairs = _gather_pinhole_frames(seq_dir)
+            pairs = _gather_real_frames(seq_dir)
             if not pairs:
                 continue
             for start in range(0, len(pairs) - seq_len + 1, self.window_stride):
@@ -151,7 +161,7 @@ class ADTWindowDataset(Dataset):
             seq_list = "\n  ".join(seq_dirs)
             raise RuntimeError(
                 f"No windows of length {seq_len} found in ADT seq dirs:\n  {seq_list}\n"
-                "Ensure blender_rendered_maps/pinhole/ exists in each sequence dir."
+                "Ensure videos_rgb/ and depth_npy/ exist in each sequence dir."
             )
         print(f"  [ADT] {len(self.windows)} windows from {len(seq_dirs)} sequence(s)")
 
@@ -173,9 +183,15 @@ class ADTWindowDataset(Dataset):
         rgb_paths = [p[0] for p in pairs]
         depth_paths = [p[1] for p in pairs]
 
-        # Determine target size from first frame
+        # Determine target size from the first frame AFTER rotation.
+        # np.rot90 with k=3 (270° CCW) swaps H and W if the image is not square.
         with Image.open(rgb_paths[0]) as im0:
-            w0, h0 = im0.size
+            w0_raw, h0_raw = im0.size   # pre-rotation (W, H) PIL convention
+        if self.rot_k % 2 == 1:
+            # 90° or 270°: H and W swap after rotation
+            h0, w0 = w0_raw, h0_raw
+        else:
+            h0, w0 = h0_raw, w0_raw
         th, tw = self._target_hw(w0, h0, self.resolution, self.patch)
 
         images, depths, masks = [], [], []
@@ -183,6 +199,8 @@ class ADTWindowDataset(Dataset):
             # ── RGB ──────────────────────────────────────────────────────────
             with Image.open(rgb_p) as im:
                 img = np.array(im.convert("RGB"), dtype=np.float32) / 255.0
+            if self.rot_k:
+                img = np.rot90(img, k=self.rot_k).copy()
             img_t = torch.from_numpy(img).permute(2, 0, 1)  # [3,H,W]
             img_t = F.interpolate(
                 img_t.unsqueeze(0), size=(th, tw), mode="bilinear", align_corners=False
@@ -193,6 +211,8 @@ class ADTWindowDataset(Dataset):
             d = np.load(dep_p).astype(np.float32)
             if d.ndim == 3:
                 d = d.squeeze(-1)
+            if self.rot_k:
+                d = np.rot90(d, k=self.rot_k).copy()
             d = d * self.depth_scale
             d_t = torch.from_numpy(d)
             d_t = F.interpolate(
@@ -221,23 +241,23 @@ def run_adt_eval(
     seq_len: int = 8,
     image_resolution: int = 512,
     batch_size: int = 1,
-    depth_scale: float = 1.0,
+    depth_scale: float = 0.001,   # uint16 mm → metres
     depth_max_m: float = 10.0,
     align_modes: Tuple[str, ...] = ("none", "scale_only", "scale_shift"),
     eval_all_frames: bool = True,
     gt_traj_csv: Optional[str] = None,
 ) -> Dict[str, dict]:
-    """Run VGGT-Omega depth evaluation against ADT dense GT.
+    """Run VGGT-Omega depth evaluation against ADT real sensor data with dense GT.
 
     Parameters
     ----------
     vggt          : VGGT-Omega model (nn.Module, already on device, in eval mode).
-    seq_dirs      : list of ADT sequence directories containing pinhole renders.
+    seq_dirs      : list of ADT sequence dirs containing videos_rgb/ and depth_npy/.
     device        : torch device.
     seq_len       : number of frames per VGGT window (must match model training).
     image_resolution : target image resolution (must match model training).
     batch_size    : number of windows per GPU batch.
-    depth_scale   : multiplied into raw GT depth values (1.0 for ADT metres).
+    depth_scale   : multiplied into raw GT depth values (0.001 converts uint16 mm→m).
     depth_max_m   : max valid GT depth in metres.
     align_modes   : which alignment modes to report (subset of 'none', 'scale_only',
                     'scale_shift', 'disparity_scale_shift').
@@ -303,7 +323,7 @@ def run_adt_eval(
     results: Dict[str, dict] = {}
     for mode in align_modes:
         results[mode] = aggregate_metrics(frame_metrics[mode])
-        print_depth_summary(results[mode], label="VGGT-Omega [ADT pinhole]", align=mode)
+        print_depth_summary(results[mode], label="VGGT-Omega [ADT real]", align=mode)
 
     # Pose ATE (optional, requires GT trajectory CSV)
     if gt_traj_csv is not None and pred_positions:

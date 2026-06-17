@@ -131,15 +131,31 @@ def _save_results(results: dict, out_dir: str) -> None:
 # ADT eval helpers
 # --------------------------------------------------------------------------- #
 
+# Default ADT sequence used for evaluation.
+_DEFAULT_ADT_SEQ = "Apartment_release_clean_seq131_M1292"
+
+
 def _find_adt_seq_dirs(adt_root: str) -> List[str]:
-    """Auto-discover ADT sequence dirs that have pinhole renders."""
-    seq_dirs = []
+    """Return ADT sequence dirs that have real sensor data (videos_rgb/ + depth_npy/).
+
+    Defaults to the single sequence Apartment_release_clean_seq131_M1292 when
+    it exists; falls back to scanning all subdirectories.
+    """
     if not os.path.isdir(adt_root):
-        return seq_dirs
+        return []
+
+    # Prefer the canonical eval sequence
+    default_seq = os.path.join(adt_root, _DEFAULT_ADT_SEQ)
+    if os.path.isdir(os.path.join(default_seq, "videos_rgb")) and \
+       os.path.isdir(os.path.join(default_seq, "depth_npy")):
+        return [default_seq]
+
+    # Fall back: scan for any subdirectory with both videos_rgb and depth_npy
+    seq_dirs = []
     for name in sorted(os.listdir(adt_root)):
         seq_dir = os.path.join(adt_root, name)
-        pinhole_rgb = os.path.join(seq_dir, "blender_rendered_maps", "pinhole", "videos_rgb")
-        if os.path.isdir(pinhole_rgb):
+        if (os.path.isdir(os.path.join(seq_dir, "videos_rgb")) and
+                os.path.isdir(os.path.join(seq_dir, "depth_npy"))):
             seq_dirs.append(seq_dir)
     return seq_dirs
 
@@ -171,7 +187,8 @@ def main() -> None:
 
     # ── ADT eval ───────────────────────────────────────────────────────────
     p.add_argument("--eval-adt-root", default=None,
-                   help="Root of ADT download containing <seq>/blender_rendered_maps/")
+                   help="Root of ADT download; auto-selects "
+                        f"{_DEFAULT_ADT_SEQ} (videos_rgb/ + depth_npy/)")
     p.add_argument("--eval-adt-seq-dirs", nargs="*", default=None,
                    help="Explicit list of ADT sequence dirs (overrides --eval-adt-root)")
     p.add_argument("--adt-depth-max", type=float, default=10.0,
@@ -242,7 +259,8 @@ def main() -> None:
         if a.eval_adt_root:
             seq_dirs += _find_adt_seq_dirs(a.eval_adt_root)
         if not seq_dirs:
-            print("[eval] WARNING: --eval-adt-root found no pinhole sequence dirs; skipping ADT.")
+            print("[eval] WARNING: --eval-adt-root found no sequence dirs with "
+                  "videos_rgb/ + depth_npy/; skipping ADT.")
         else:
             print(f"\n[eval] === ADT evaluation ({len(seq_dirs)} sequences) ===")
             adt_metrics = run_adt_eval(
