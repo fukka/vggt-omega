@@ -16,16 +16,19 @@ checkpoint; drop it (and pass ``--vggt-checkpoint``) to see real depth.
 
 Examples
 --------
-    # check data loading only (CPU, no checkpoint, stand-in models):
+    # check data loading only (CPU, no checkpoint):
     python finetune/test_run.py --data-root <root>/train --dummy --num-windows 2
 
-    # real models:
+    # real models (fisheye rectification on by default; Aria 214-1 preset auto-detected):
     python finetune/test_run.py --data-root <root>/train \
         --vggt-checkpoint checkpoints/vggt_omega_1b_512.pt --num-windows 3
 
-    # also rectify the fisheye frames (approx Kannala-Brandt via OpenCV):
+    # explicit Aria preset (same as auto-detected when path contains 'aria'):
     python finetune/test_run.py --data-root <root>/train --dummy \
-        --rectify-fisheye --fisheye-k 150,150,256,256 --fisheye-d 0.0,0.0,0.0,0.0
+        --camera-preset aria-214-1 --num-windows 3
+
+    # disable rectification:
+    python finetune/test_run.py --data-root <root>/train --dummy --no-rectify
 """
 from __future__ import annotations
 
@@ -102,23 +105,99 @@ def label(img: np.ndarray, text: str) -> np.ndarray:
     return out
 
 
-def build_rectifier(args, H: int, W: int):
-    """Returns (fn: bgr->bgr, info dict). Default identity (no rectification)."""
+# Aria RGB 214-1 KB4 coefficients fitted from the actual Fisheye624 VRS calibration
+# via least-squares over θ∈[0°,60°]; max angular error 0.22° vs the full
+# 13th-order Fisheye624 model (f=611, cx≈715, cy≈717 at native 1408×1408).
+_ARIA_214_1_D_KB4 = np.array([0.3852, -0.4442, 0.5591, -0.3254], np.float64)
+# Native 1408×1408 sensor intrinsics (before rotation)
+_ARIA_214_1_F_NORM  = 610.94 / 1408.0
+_ARIA_214_1_CX_NORM = 715.11 / 1408.0  # native cx/W
+_ARIA_214_1_CY_NORM = 716.71 / 1408.0  # native cy/H
+# After 90° CW rotation (standard for extracted Aria RGB frames):
+#   new_cx = H_native - old_cy → normalized: (1 - CY_NORM)
+#   new_cy = old_cx            → normalized: CX_NORM
+_ARIA_214_1_CX_ROT_NORM = 1.0 - _ARIA_214_1_CY_NORM  # ≈ 0.491
+_ARIA_214_1_CY_ROT_NORM = _ARIA_214_1_CX_NORM         # ≈ 0.508
+# Output focal (fraction of max(H,W)) that avoids black borders for this camera.
+# Derived empirically: 0.55*H at 512px ≈ focal=281, matching projectaria_tools
+# linear-camera output at the same resolution (0.22° max error vs GT).
+_ARIA_214_1_FOCAL_OUT_NORM = 0.55
+
+
+def _aria_K(H: int, W: int) -> np.ndarray:
+    """Intrinsics for a pre-extracted (rotated 90° CW) Aria RGB 214-1 frame."""
+    f  = _ARIA_214_1_F_NORM * max(H, W)
+    cx = _ARIA_214_1_CX_ROT_NORM * W
+    cy = _ARIA_214_1_CY_ROT_NORM * H
+    return np.array([[f, 0, cx], [0, f, cy], [0, 0, 1.0]], np.float64)
+
+
+def _detect_preset(clip_path: str) -> str:
+    """Heuristic: paths containing 'aria' → assume Aria 214-1 fisheye."""
+    return "aria-214-1" if "aria" in clip_path.lower() else "none"
+
+
+def build_rectifier(args, H: int, W: int, clip_path: str = ""):
+    """Returns (fn: bgr->bgr, info dict).
+
+    Preset auto-detection: if the clip path contains 'aria' and no explicit
+    preset is given, 'aria-214-1' is used automatically.  Pass --no-rectify
+    to disable entirely.
+    """
     if not args.rectify_fisheye:
-        return (lambda bgr: bgr), {"mode": "identity (no rectification configured)"}
+        return (lambda bgr: bgr), {"mode": "identity (--no-rectify set)"}
+
+    preset = args.camera_preset
+    if preset == "none" and clip_path:
+        auto = _detect_preset(clip_path)
+        if auto != "none":
+            preset = auto
+            print(f"[test] auto-detected camera preset '{preset}' from clip path")
+
+    # --- Intrinsics K ---
     if args.fisheye_k:
         fx, fy, cx, cy = (float(v) for v in args.fisheye_k.split(","))
+        K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1.0]], np.float64)
+    elif preset == "aria-214-1":
+        K = _aria_K(H, W)
     else:
-        fx = fy = 0.45 * max(H, W)
-        cx, cy = W / 2.0, H / 2.0
-    D = np.array([float(v) for v in args.fisheye_d.split(",")], np.float64) if args.fisheye_d else np.zeros(4)
-    K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], np.float64)
+        f = 0.43 * max(H, W)
+        K = np.array([[f, 0, W / 2.0], [0, f, H / 2.0], [0, 0, 1.0]], np.float64)
 
-    def rect(bgr):
-        return cv2.fisheye.undistortImage(bgr, K, D.reshape(4, 1), Knew=K)
+    # --- Distortion D (Kannala-Brandt k1 k2 k3 k4) ---
+    if args.fisheye_d:
+        D = np.array([float(v) for v in args.fisheye_d.split(",")], np.float64)
+    elif preset == "aria-214-1":
+        D = _ARIA_214_1_D_KB4.copy()
+    else:
+        # D=zeros = equidistant fisheye → pinhole; still a non-trivial transform
+        D = np.zeros(4, np.float64)
+        print("[test] WARNING: no camera preset; using equidistant fisheye model (D=zeros). "
+              "Pass --camera-preset aria-214-1 for Aria RGB 214-1 frames.")
 
-    return rect, {"mode": "opencv-fisheye (Kannala-Brandt approx)", "K": K.tolist(), "D": D.tolist(),
-                  "note": "approximate; for exact Aria rectification use projectaria_tools on native-res frames"}
+    D4 = D.reshape(4, 1)
+    # Fixed output focal: 0.55*max(H,W) avoids black borders for Aria (validated
+    # vs projectaria_tools ground-truth on ADT sample — 0 black pixels, <0.22° error).
+    # estimateNewCameraMatrixForUndistortRectify is NOT used: for wide-angle cameras
+    # it returns a very small focal (130°+ FoV) that causes large black blobs.
+    if preset == "aria-214-1":
+        focal_out = _ARIA_214_1_FOCAL_OUT_NORM * max(H, W)
+    else:
+        focal_out = 0.5 * max(H, W)   # ~90° FoV; safe for unknown cameras
+    Knew = np.array([[focal_out, 0, W / 2.0], [0, focal_out, H / 2.0], [0, 0, 1.0]], np.float64)
+    map1, map2 = cv2.fisheye.initUndistortRectifyMap(
+        K, D4, np.eye(3, dtype=np.float64), Knew, (W, H), cv2.CV_16SC2
+    )
+
+    def rect(bgr: np.ndarray) -> np.ndarray:
+        return cv2.remap(bgr, map1, map2, cv2.INTER_LINEAR, cv2.BORDER_CONSTANT)
+
+    return rect, {
+        "mode": "opencv-fisheye KB4",
+        "preset": preset,
+        "K_src": K.tolist(), "D": D.tolist(), "K_dst": Knew.tolist(),
+        "note": "KB4 coefficients fitted from Aria Fisheye624 VRS calibration (max err 0.22 deg)",
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -137,15 +216,20 @@ def parse_args():
     p.add_argument("--num-windows", type=int, default=2, help="how many windows to sample")
     p.add_argument("--max-frames-per-window", type=int, default=0, help="0 = all frames in the window")
     p.add_argument("--shuffle", action="store_true", help="random windows (else evenly spaced)")
-    p.add_argument("--rectify-fisheye", action="store_true")
-    p.add_argument("--fisheye-k", default="", help="fx,fy,cx,cy for OpenCV fisheye undistort")
-    p.add_argument("--fisheye-d", default="", help="k1,k2,k3,k4 fisheye distortion coeffs")
+    p.add_argument("--no-rectify", action="store_true",
+                   help="skip fisheye rectification (raw_input_rectified = raw_input)")
+    p.add_argument("--camera-preset", default="none", choices=["none", "aria-214-1"],
+                   help="Built-in approximate camera model. 'aria-214-1' uses KB4 fitted from "
+                        "the Aria RGB Fisheye624 VRS calibration. Auto-detected from clip path when 'none'.")
+    p.add_argument("--fisheye-k", default="", help="fx,fy,cx,cy (overrides preset K)")
+    p.add_argument("--fisheye-d", default="", help="k1,k2,k3,k4 KB4 distortion coeffs (overrides preset D)")
     p.add_argument("--out-dir", default="test_run_outputs")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--seed", type=int, default=0)
     a = p.parse_args()
     a.vggt_dummy = a.vggt_dummy or a.dummy
     a.dav2_dummy = a.dav2_dummy or a.dummy
+    a.rectify_fisheye = not a.no_rectify  # on by default; --no-rectify disables
     return a
 
 
@@ -194,7 +278,7 @@ def main():
         images = sample["images"].unsqueeze(0).to(device)  # [1,S,3,H,W]
         S, _, H, W = images.shape[1:]
         if rectifier is None:
-            rectifier, meta["rectification"] = build_rectifier(args, H, W)
+            rectifier, meta["rectification"] = build_rectifier(args, H, W, clip_path=sample["clip"])
 
         with torch.inference_mode():
             preds = vggt(images)
