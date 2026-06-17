@@ -17,7 +17,9 @@ from __future__ import annotations
 from typing import Dict, Iterable
 
 import torch
+import torch.distributed as dist
 import torch.nn as nn
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 from ..config import FinetuneConfig
 from ..losses import (
@@ -29,6 +31,15 @@ from ..losses import (
     to_disparity,
 )
 from ..models import EmaTeacher, count_parameters, trainable_parameters
+
+
+def _unwrap(m: nn.Module) -> nn.Module:
+    """Strip DDP wrapper; no-op on plain modules."""
+    return m.module if isinstance(m, DDP) else m
+
+
+def _is_main() -> bool:
+    return not dist.is_initialized() or dist.get_rank() == 0
 
 
 def _cycle(loader: Iterable):
@@ -53,18 +64,23 @@ class AlternatingTrainer:
     ) -> None:
         self.cfg = cfg
         self.device = torch.device(device)
+        # models may already be DDP-wrapped and on device; .to() is a no-op if so
         self.vggt = vggt.to(self.device)
         self.dav2 = dav2.to(self.device)
 
-        self.vggt_params = trainable_parameters(self.vggt)
-        self.dav2_params = trainable_parameters(self.dav2)
+        # Unwrap DDP to access raw parameters for optimizer + EMA
+        vggt_raw = _unwrap(self.vggt)
+        dav2_raw = _unwrap(self.dav2)
+
+        self.vggt_params = trainable_parameters(vggt_raw)
+        self.dav2_params = trainable_parameters(dav2_raw)
         self.opt_vggt = torch.optim.AdamW(
-            self.vggt_params or list(self.vggt.parameters()),
+            self.vggt_params or list(vggt_raw.parameters()),
             lr=cfg.lr_vggt,
             weight_decay=cfg.weight_decay,
         )
         self.opt_dav2 = torch.optim.AdamW(
-            self.dav2_params or list(self.dav2.parameters()),
+            self.dav2_params or list(dav2_raw.parameters()),
             lr=cfg.lr_dav2,
             weight_decay=cfg.weight_decay,
         )
@@ -72,7 +88,8 @@ class AlternatingTrainer:
         self.use_amp = bool(cfg.amp) and self.device.type == "cuda"
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
 
-        self.ema = EmaTeacher(self.dav2, cfg.ema_decay) if cfg.ema_teacher else None
+        # EMA is built from the raw module so it stays a plain nn.Module
+        self.ema = EmaTeacher(dav2_raw, cfg.ema_decay) if cfg.ema_teacher else None
 
     # ------------------------------------------------------------------ #
     def _vggt_forward(self, images: torch.Tensor, train: bool):
@@ -166,10 +183,11 @@ class AlternatingTrainer:
     # ------------------------------------------------------------------ #
     def train(self, loader: Iterable) -> None:
         cfg = self.cfg
-        tv, total_v = count_parameters(self.vggt)
-        td, total_d = count_parameters(self.dav2)
-        print(f"[finetune] VGGT trainable {tv/1e6:.2f}M / {total_v/1e6:.2f}M | "
-              f"DAv2 trainable {td/1e6:.2f}M / {total_d/1e6:.2f}M")
+        if _is_main():
+            tv, total_v = count_parameters(_unwrap(self.vggt))
+            td, total_d = count_parameters(_unwrap(self.dav2))
+            print(f"[finetune] VGGT trainable {tv/1e6:.2f}M / {total_v/1e6:.2f}M | "
+                  f"DAv2 trainable {td/1e6:.2f}M / {total_d/1e6:.2f}M")
         data = _cycle(loader)
         for rnd in range(cfg.rounds):
             self._run_phase(data, self.phase_a_step, f"round {rnd} / phase A (DAv2)")
@@ -182,7 +200,7 @@ class AlternatingTrainer:
             logs = step_fn(batch["images"])
             for k, v in logs.items():
                 running[k] = running.get(k, 0.0) + v
-            if (it + 1) % self.cfg.log_every == 0:
+            if _is_main() and (it + 1) % self.cfg.log_every == 0:
                 msg = " ".join(f"{k.split('/')[-1]}={running[k]/self.cfg.log_every:.4f}" for k in logs)
                 print(f"[{tag}] step {it+1}/{self.cfg.steps_per_phase} {msg}")
                 running = {}

@@ -3,17 +3,23 @@
 
 Examples
 --------
-Offline dry run (no checkpoint, no data, CPU/GPU)::
+Single-GPU::
 
-    python finetune/train.py --dummy --rounds 1 --steps-per-phase 20
-
-Real run::
-
-    python -m finetune.train \
+    python finetune/train.py \
         --data-root /path/to/egocentric_frames \
         --vggt-checkpoint checkpoints/vggt_omega_1b_512.pt \
-        --image-resolution 512 --seq-len 8 --batch-size 1 \
-        --rounds 3 --steps-per-phase 500
+        --batch-size 2 --rounds 3 --steps-per-phase 500
+
+Multi-GPU (torchrun)::
+
+    torchrun --nproc_per_node=4 finetune/train.py \
+        --data-root /path/to/egocentric_frames \
+        --vggt-checkpoint checkpoints/vggt_omega_1b_512.pt \
+        --batch-size 1 --rounds 3 --steps-per-phase 500
+
+Offline dry run (no checkpoint, no data)::
+
+    python finetune/train.py --dummy --rounds 1 --steps-per-phase 20
 """
 from __future__ import annotations
 
@@ -23,14 +29,37 @@ if not __package__:
     __package__ = "finetune"
 
 import argparse
+import os
 import random
 
 import numpy as np
 import torch
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data.distributed import DistributedSampler
 
 from .config import FinetuneConfig
 from .data import EgocentricVideoDataset, collate_windows, random_egocentric_batch
 from .engine import AlternatingTrainer
+
+
+def setup_dist():
+    """Init NCCL from torchrun env vars. Returns (rank, world_size, local_rank).
+
+    When not launched by torchrun (RANK not set) returns (0, 1, None) so the
+    rest of the code needs no special-casing for single-GPU runs.
+    """
+    rank = int(os.environ.get("RANK", -1))
+    if rank == -1:
+        return 0, 1, None
+    local_rank = int(os.environ["LOCAL_RANK"])
+    dist.init_process_group(backend="nccl")
+    torch.cuda.set_device(local_rank)
+    return rank, dist.get_world_size(), local_rank
+
+
+def is_main() -> bool:
+    return not dist.is_initialized() or dist.get_rank() == 0
 
 
 def set_seed(seed: int) -> None:
@@ -85,7 +114,7 @@ class _RandomLoader:
             )
 
 
-def build_loader(cfg: FinetuneConfig):
+def build_loader(cfg: FinetuneConfig, rank: int = 0, world_size: int = 1):
     if not cfg.data_root:
         if not (cfg.vggt_dummy or cfg.dav2_dummy):
             raise ValueError("--data-root is required for real runs")
@@ -97,7 +126,19 @@ def build_loader(cfg: FinetuneConfig):
         image_resolution=cfg.image_resolution,
         patch_size=cfg.patch_size,
     )
-    print(f"[finetune] dataset: {len(dataset)} windows from {cfg.data_root}")
+    if is_main():
+        print(f"[finetune] dataset: {len(dataset)} windows from {cfg.data_root}")
+    if world_size > 1:
+        sampler = DistributedSampler(
+            dataset, num_replicas=world_size, rank=rank, shuffle=True, drop_last=True
+        )
+        return torch.utils.data.DataLoader(
+            dataset,
+            batch_size=cfg.batch_size,
+            sampler=sampler,
+            num_workers=cfg.num_workers,
+            collate_fn=collate_windows,
+        )
     return torch.utils.data.DataLoader(
         dataset,
         batch_size=cfg.batch_size,
@@ -150,15 +191,56 @@ def parse_args() -> FinetuneConfig:
     ), a.device
 
 
+def _save_checkpoint(cfg: FinetuneConfig, vggt: torch.nn.Module, dav2: torch.nn.Module) -> None:
+    """Save trainable parameters only (LoRA deltas + prediction heads)."""
+    os.makedirs(cfg.out_dir, exist_ok=True)
+
+    def _trainable_state(m):
+        raw = m.module if hasattr(m, "module") else m
+        return {k: v.cpu() for k, v in raw.state_dict().items() if v.requires_grad or
+                any(tag in k for tag in ("lora_A", "lora_B", "dense_head", "camera_head", "head"))}
+
+    path = os.path.join(cfg.out_dir, "checkpoint.pt")
+    torch.save({"vggt": _trainable_state(vggt), "dav2": _trainable_state(dav2)}, path)
+    print(f"[finetune] checkpoint saved to {path}")
+
+
 def main() -> None:
-    cfg, device = parse_args()
-    set_seed(cfg.seed)
-    vggt = build_vggt(cfg)
-    dav2 = build_dav2(cfg)
+    cfg, cli_device = parse_args()
+    rank, world_size, local_rank = setup_dist()
+
+    # Per-rank seed for data sampling diversity; model init uses base seed
+    set_seed(cfg.seed + rank)
+
+    if local_rank is not None:
+        device = torch.device(f"cuda:{local_rank}")
+    else:
+        device = torch.device(cli_device)
+
+    # Build models on CPU then move to device (avoids double alloc on rank != 0)
+    set_seed(cfg.seed)  # identical init across all ranks
+    vggt = build_vggt(cfg).to(device)
+    dav2 = build_dav2(cfg).to(device)
+
+    if world_size > 1:
+        # VGGT: most params frozen (base weights); only LoRA+heads get gradients
+        # → find_unused_parameters=True required
+        vggt = DDP(vggt, device_ids=[local_rank], find_unused_parameters=True)
+        # DAv2: fully trainable (or LoRA-only, same reason)
+        dav2 = DDP(dav2, device_ids=[local_rank], find_unused_parameters=True)
+        if is_main():
+            print(f"[finetune] DDP enabled: {world_size} GPUs")
+
     trainer = AlternatingTrainer(vggt, dav2, cfg, device=device)
-    loader = build_loader(cfg)
+    loader = build_loader(cfg, rank=rank, world_size=world_size)
     trainer.train(loader)
-    print("[finetune] done.")
+
+    if is_main():
+        _save_checkpoint(cfg, vggt, dav2)
+        print("[finetune] done.")
+
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
 
 if __name__ == "__main__":
