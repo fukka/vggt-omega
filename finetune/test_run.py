@@ -47,6 +47,7 @@ import torch
 
 from .data import EgocentricVideoDataset
 from .geometry import decode_pose_encoding
+from .viz import chw_to_bgr, colorize_depth, label  # shared viz helpers
 
 
 # --------------------------------------------------------------------------- #
@@ -74,35 +75,8 @@ def build_dav2(args):
     return build_depth_anything(use_dummy=args.dav2_dummy, model_name=args.dav2_model_name).eval()
 
 
-# --------------------------------------------------------------------------- #
-# image / depth helpers (OpenCV only)
-# --------------------------------------------------------------------------- #
-def chw_to_bgr(img: torch.Tensor) -> np.ndarray:
-    """[3,H,W] float in [0,1] RGB -> [H,W,3] uint8 BGR."""
-    rgb = (img.clamp(0, 1).permute(1, 2, 0).cpu().numpy() * 255).round().astype(np.uint8)
-    return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-
-
-def colorize(depth_hw: np.ndarray):
-    """[H,W] depth -> ([H,W,3] BGR uint8, (vmin, vmax, median))."""
-    d = np.asarray(depth_hw, dtype=np.float32)
-    valid = np.isfinite(d) & (d > 0)
-    if valid.sum() == 0:
-        return np.zeros((*d.shape, 3), np.uint8), (0.0, 0.0, 0.0)
-    vmin, vmax = float(np.percentile(d[valid], 2)), float(np.percentile(d[valid], 98))
-    if vmax <= vmin:
-        vmax = vmin + 1e-6
-    u8 = (np.clip((d - vmin) / (vmax - vmin), 0, 1) * 255).astype(np.uint8)
-    color = cv2.applyColorMap(u8, cv2.COLORMAP_TURBO)
-    color[~valid] = 0
-    return color, (vmin, vmax, float(np.median(d[valid])))
-
-
-def label(img: np.ndarray, text: str) -> np.ndarray:
-    out = img.copy()
-    cv2.rectangle(out, (0, 0), (max(120, 9 * len(text)), 20), (0, 0, 0), -1)
-    cv2.putText(out, text, (4, 14), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1, cv2.LINE_AA)
-    return out
+# Depth/image viz helpers (chw_to_bgr, colorize_depth, label) are imported from
+# finetune.viz so training and this tool share one implementation.
 
 
 # Aria RGB 214-1 KB4 coefficients fitted from the actual Fisheye624 VRS calibration
@@ -201,10 +175,15 @@ def build_rectifier(args, H: int, W: int, clip_path: str = ""):
 
 
 # --------------------------------------------------------------------------- #
+# Default cluster paths (override on the CLI for other environments).
+_DEFAULT_DATA_ROOT = "/sdp-rgb-perception/tristan-space-s3/egoexo4d/lmeec_data/egoexo_dataset/train"
+_DEFAULT_VGGT_CKPT = "/group-volume/Fengjia/projects/vggt-omega/checkpoints/VGGT-Omega-1B-512/model.pt"
+
+
 def parse_args():
     p = argparse.ArgumentParser(description="VGGT-Omega egocentric finetuning — test/data-check run")
-    p.add_argument("--data-root", required=True)
-    p.add_argument("--vggt-checkpoint", default="")
+    p.add_argument("--data-root", default=_DEFAULT_DATA_ROOT)
+    p.add_argument("--vggt-checkpoint", default=_DEFAULT_VGGT_CKPT)
     p.add_argument("--dav2-model-name", default="depth-anything/Depth-Anything-V2-Small-hf")
     p.add_argument("--dummy", action="store_true", help="shortcut for --vggt-dummy --dav2-dummy")
     p.add_argument("--vggt-dummy", action="store_true")
@@ -295,8 +274,8 @@ def main():
             tag = f"w{wi:02d}_f{s:02d}"
             raw_bgr = chw_to_bgr(images[0, s])
             rect_bgr = rectifier(raw_bgr)
-            dv_color, dv_stats = colorize(depth_v[s].cpu().numpy())
-            dd_color, dd_stats = colorize(depth_d[s].cpu().numpy())
+            dv_color, dv_stats = colorize_depth(depth_v[s].cpu().numpy())
+            dd_color, dd_stats = colorize_depth(depth_d[s].cpu().numpy())
 
             cv2.imwrite(os.path.join(args.out_dir, "raw_input", tag + ".png"), raw_bgr)
             cv2.imwrite(os.path.join(args.out_dir, "raw_input_rectified", tag + ".png"), rect_bgr)

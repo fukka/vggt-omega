@@ -1,26 +1,25 @@
 # Copyright (c) 2026.
 """CLI entry point for alternating egocentric finetuning.
 
+--data-root, --val-data-root, and --vggt-checkpoint default to the user's
+cluster paths, so on that cluster a bare invocation already trains on
+Ego-Exo4D; override them on the CLI elsewhere. Device defaults to ``cuda``.
+
 Examples
 --------
-Single-GPU::
+Single-GPU (uses the default cluster paths + checkpoint)::
 
-    python finetune/train.py \
-        --data-root /path/to/egocentric_frames \
-        --vggt-checkpoint checkpoints/vggt_omega_1b_512.pt \
-        --batch-size 2 --rounds 3 --steps-per-phase 500
+    python finetune/train.py --batch-size 2 --rounds 3 --steps-per-phase 500
 
 Multi-GPU (torchrun) with validation + monitoring::
 
     torchrun --nproc_per_node=4 finetune/train.py \
-        --data-root /path/to/egoexo/train --val-data-root /path/to/egoexo/val \
-        --vggt-checkpoint checkpoints/vggt_omega_1b_512.pt \
         --batch-size 1 --rounds 3 --steps-per-phase 500 \
         --val-every 250 --viz-every 200 --tensorboard
 
-Offline dry run (no checkpoint, no data; exercises val + viz + logging)::
+Offline dry run on CPU (no checkpoint, no data; exercises val + viz + logging)::
 
-    python finetune/train.py --dummy --rounds 1 --steps-per-phase 20 \
+    python finetune/train.py --dummy --device cpu --rounds 1 --steps-per-phase 20 \
         --val-every 10 --viz-every 5
 
 Outputs land under ``--out-dir``:
@@ -50,6 +49,12 @@ from torch.utils.data.distributed import DistributedSampler
 from .config import FinetuneConfig
 from .data import EgocentricVideoDataset, collate_windows, random_egocentric_batch
 from .engine import AlternatingTrainer
+
+# Default cluster paths (override on the CLI for other environments).
+_EGOEXO_ROOT = "/sdp-rgb-perception/tristan-space-s3/egoexo4d/lmeec_data/egoexo_dataset"
+_DEFAULT_DATA_ROOT = _EGOEXO_ROOT + "/train"
+_DEFAULT_VAL_DATA_ROOT = _EGOEXO_ROOT + "/val"
+_DEFAULT_VGGT_CKPT = "/group-volume/Fengjia/projects/vggt-omega/checkpoints/VGGT-Omega-1B-512/model.pt"
 
 
 def setup_dist():
@@ -127,10 +132,12 @@ class _RandomLoader:
 
 
 def build_loader(cfg: FinetuneConfig, rank: int = 0, world_size: int = 1):
-    if not cfg.data_root:
-        if not (cfg.vggt_dummy or cfg.dav2_dummy):
-            raise ValueError("--data-root is required for real runs")
+    # Dummy/dry runs use random windows and ignore --data-root entirely (so the
+    # default cluster path doesn't need to exist locally).
+    if cfg.vggt_dummy or cfg.dav2_dummy:
         return _RandomLoader(cfg.steps_per_phase, cfg)
+    if not cfg.data_root:
+        raise ValueError("--data-root is required for real runs")
     dataset = EgocentricVideoDataset(
         cfg.data_root,
         seq_len=cfg.seq_len,
@@ -168,10 +175,10 @@ def build_val_loader(cfg: FinetuneConfig):
     ``val_steps`` batches and the trainer averages scalars across ranks, so the
     reported val loss is identical and reduction calls stay in lockstep.
     """
+    # Dummy/dry runs exercise the validation path with random windows.
+    if cfg.vggt_dummy or cfg.dav2_dummy:
+        return _RandomLoader(cfg.val_steps, cfg)
     if not cfg.val_data_root:
-        # In dry runs, still exercise the validation path with random windows.
-        if cfg.vggt_dummy or cfg.dav2_dummy:
-            return _RandomLoader(cfg.val_steps, cfg)
         return None
     dataset = EgocentricVideoDataset(
         cfg.val_data_root,
@@ -194,9 +201,10 @@ def build_val_loader(cfg: FinetuneConfig):
 
 def parse_args() -> FinetuneConfig:
     p = argparse.ArgumentParser(description="Alternating DAv2 <-> VGGT-Omega egocentric finetuning")
-    p.add_argument("--data-root", default="")
-    p.add_argument("--val-data-root", default="", help="held-out split for validation (e.g. <root>/val)")
-    p.add_argument("--vggt-checkpoint", default="")
+    p.add_argument("--data-root", default=_DEFAULT_DATA_ROOT)
+    p.add_argument("--val-data-root", default=_DEFAULT_VAL_DATA_ROOT,
+                   help="held-out split for validation (e.g. <root>/val)")
+    p.add_argument("--vggt-checkpoint", default=_DEFAULT_VGGT_CKPT)
     p.add_argument("--dav2-model-name", default="depth-anything/Depth-Anything-V2-Small-hf")
     p.add_argument("--dummy", action="store_true", help="shortcut for --vggt-dummy --dav2-dummy")
     p.add_argument("--vggt-dummy", action="store_true")
@@ -211,7 +219,8 @@ def parse_args() -> FinetuneConfig:
     p.add_argument("--lora-rank", type=int, default=8)
     p.add_argument("--finetune-dav2-lora-only", action="store_true")
     p.add_argument("--ema-teacher", action="store_true")
-    p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--device", default="cuda",
+                   help="cuda (default; real training needs a GPU). Pass 'cpu' for dummy/CPU runs.")
     p.add_argument("--out-dir", default="finetune_outputs")
     p.add_argument("--seed", type=int, default=0)
     # validation
