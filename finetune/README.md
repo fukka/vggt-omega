@@ -130,14 +130,19 @@ logs to TensorBoard (`<out_dir>/tb/`, on by default) + `metrics.jsonl`:
   (structure) cross their pretrained baselines to see exactly when finetuning
   starts to hurt.
 
-This mirrors the standalone report:
+The standalone report takes just the **run name** — it reads everything else
+(VGGT base checkpoint, LoRA rank, ADT root, sizing) from `runs/<name>/config.yaml`
+and evaluates the pretrained models plus the run's **best** and **last**
+checkpoints, writing to `eval_out/<name>/`:
 ```bash
-python -m finetune.eval.run_eval \
-  --vggt-checkpoint .../VGGT-Omega-1B-512/model.pt \
-  --finetune-checkpoint runs/<name>/checkpoint_best.pt \
-  --eval-adt-root /group-volume/Fengjia/data/projectaria_tools_adt_data_clean \
-  --out-dir eval_out
+python -m finetune.eval.run_eval ssi_r8                 # ADT (dense GT)
+# MPS (sparse, in-domain) lives in its own runner (needs paths not in config):
+python -m finetune.eval.mps_depth ssi_r8 \
+  --mps-frame-dir <take>/aria01_214-1 \
+  --mps-traj-csv  <take>/mps/slam/closed_loop_trajectory.csv \
+  --mps-points-gz <take>/mps/slam/semidense_points.csv.gz
 ```
+Overrides are optional (`--adt-root`, `--checkpoints best`, `--no-dav2`, `--device`).
 
 ## Data conventions
 

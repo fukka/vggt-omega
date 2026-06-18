@@ -50,6 +50,12 @@ Usage
 """
 from __future__ import annotations
 
+import sys as _sys, os as _os
+if not __package__:
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))))
+    __package__ = "finetune.eval"
+
+import argparse
 import csv
 import gzip
 import json
@@ -626,3 +632,114 @@ def run_mps_eval(
         print_pose_summary(results["pose"], label=f"{label} [MPS trajectory]")
 
     return results
+
+
+# --------------------------------------------------------------------------- #
+# Main — MPS (sparse GT) runner.
+#
+# Mirrors finetune.eval.run_eval (same run-name → pretrained + best + last
+# variants, results under eval_out/<name>/) but for the MPS source. MPS lives in
+# its own file because it needs frame/trajectory/points paths that are NOT stored
+# in a run's config.yaml, so it cannot be driven by the run name alone.
+#
+#   python -m finetune.eval.mps_depth ssi_r8 \
+#       --mps-frame-dir <take>/aria01_214-1 \
+#       --mps-traj-csv  <take>/mps/slam/closed_loop_trajectory.csv \
+#       --mps-points-gz <take>/mps/slam/semidense_points.csv.gz
+# --------------------------------------------------------------------------- #
+
+def main() -> None:
+    p = argparse.ArgumentParser(
+        description="MPS sparse-depth eval for a finetuning run (pretrained vs best/last)",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    p.add_argument("run", help="experiment name under runs/ (e.g. ssi_r8), or a run-dir path")
+    p.add_argument("--runs-root", default="runs")
+    p.add_argument("--eval-out", default="eval_out", help="results go to <eval-out>/<run>/")
+    p.add_argument("--checkpoints", nargs="+", default=["best", "last"],
+                   choices=["best", "last", "final"],
+                   help="which finetune checkpoints to evaluate (pretrained always included)")
+    p.add_argument("--no-dav2", action="store_true", help="skip DAv2 variants")
+    p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--seq-len", type=int, default=None, help="default: cfg.seq_len")
+    p.add_argument("--image-resolution", type=int, default=None, help="default: cfg.image_resolution")
+    # MPS-specific inputs (not derivable from the run config).
+    p.add_argument("--mps-frame-dir", required=True, help="extracted egocentric RGB frame dir")
+    p.add_argument("--mps-traj-csv", required=True, help="mps/slam/closed_loop_trajectory.csv")
+    p.add_argument("--mps-points-gz", default=None, help="mps/slam/semidense_points.csv.gz")
+    p.add_argument("--mps-calib", default=None, help="mps/online_calibration.jsonl")
+    p.add_argument("--mps-fx", type=float, default=None)
+    p.add_argument("--mps-fy", type=float, default=None)
+    p.add_argument("--mps-cx", type=float, default=None)
+    p.add_argument("--mps-cy", type=float, default=None)
+    p.add_argument("--mps-T-device-cam", default=None,
+                   help="4x4 .npy with T_device_cam (inverted to cam-from-device internally)")
+    p.add_argument("--mps-quality-min", type=float, default=0.5)
+    a = p.parse_args()
+
+    # Reuse run_eval's run-resolution + variant-building (no module-level cycle:
+    # run_eval does not import mps_depth).
+    from .run_eval import (
+        _print_comparison_table, _save_results, build_variants, collect_align_modes,
+        load_run_config, resolve_run,
+    )
+
+    device = torch.device(a.device)
+    run_dir = resolve_run(a.run, a.runs_root)
+    run_name = os.path.basename(os.path.normpath(run_dir))
+    cfg = load_run_config(run_dir)
+    out_dir = os.path.join(a.eval_out, run_name)
+
+    seq_len = a.seq_len or int(cfg.get("seq_len", 8))
+    image_resolution = a.image_resolution or int(cfg.get("image_resolution", 512))
+
+    bundle = MPSBundle(
+        traj_csv=a.mps_traj_csv,
+        points_csv_gz=a.mps_points_gz,
+        calib_jsonl=a.mps_calib,
+        quality_min=a.mps_quality_min,
+    )
+    K: Optional[np.ndarray] = None
+    if all(x is not None for x in (a.mps_fx, a.mps_fy, a.mps_cx, a.mps_cy)):
+        K = np.array([[a.mps_fx, 0.0, a.mps_cx],
+                      [0.0, a.mps_fy, a.mps_cy],
+                      [0.0, 0.0, 1.0]], dtype=np.float64)
+    T_cam_device: Optional[np.ndarray] = None
+    if a.mps_T_device_cam is not None:
+        T_cam_device = _invert_se3(np.load(a.mps_T_device_cam).astype(np.float64))
+
+    print(f"[eval] run={run_name!r}  run_dir={run_dir}")
+    variants = build_variants(
+        cfg, run_dir, device, checkpoints=tuple(a.checkpoints), include_dav2=not a.no_dav2
+    )
+    print(f"[eval] variants: {list(variants)}")
+
+    mps_results: dict = {}
+    for var_key, var in variants.items():
+        print(f"\n[eval] --- {var['label']} ---")
+        modes = tuple(m for m in var["align_modes"] if m in ("none", "scale_only", "scale_shift"))
+        mps_results[var_key] = run_mps_eval(
+            predict_fn=var["predict_fn"],
+            label=var["label"],
+            frame_dir=a.mps_frame_dir,
+            bundle=bundle,
+            device=device,
+            K=K,
+            T_cam_device=T_cam_device,
+            seq_len=seq_len,
+            image_resolution=image_resolution,
+            align_modes=modes,
+            gt_traj_for_ate=var["with_pose"],
+        )
+
+    modes = collect_align_modes(variants, allowed=("none", "scale_only", "scale_shift"))
+    table = _print_comparison_table(
+        mps_results, f"MPS (sparse GT) — {run_name}", modes, list(variants)
+    )
+    _save_results({"mps": mps_results}, out_dir, table,
+                  json_name="eval_results_mps.json", txt_name="eval_summary_mps.txt")
+    print(f"\n[eval] Done. Results in {out_dir}/")
+
+
+if __name__ == "__main__":
+    main()

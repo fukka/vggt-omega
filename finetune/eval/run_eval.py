@@ -1,50 +1,37 @@
 # Copyright (c) 2026.
-"""CLI runner for depth evaluation: VGGT-Omega and DAv2, pretrained vs finetuned.
+"""ADT depth evaluation for a finetuning run — driven by the run NAME alone.
 
-Evaluates up to four model variants side-by-side:
+Point this at an experiment under ``runs/`` and it reconstructs everything from
+that run's ``config.yaml`` (the VGGT base checkpoint, LoRA rank/alpha, DAv2 model
+name, image/seq sizing, and the ADT eval root), evaluates the **pretrained**
+models plus the run's **best** and **last** finetune checkpoints, prints a
+comparison table, and writes the results under ``eval_out/<name>/``.
 
-  vggt_pretrained   VGGT-Omega base weights (metric depth; 'none' alignment meaningful)
-  vggt_finetuned    base + LoRA from --finetune-checkpoint's "vggt" key
-  dav2_pretrained   Depth-Anything-V2 base weights (affine-invariant; scale_shift)
-  dav2_finetuned    DAv2 weights from --finetune-checkpoint's "dav2" key
+    python -m finetune.eval.run_eval ssi_r8
 
-Finetuned variants are only added when --finetune-checkpoint is given.
+is equivalent to the old long form (vggt-checkpoint + finetune-checkpoint + ADT
+root + lora args), with both ``checkpoint_best.pt`` and ``checkpoint_last.pt``
+evaluated in one pass.
 
-Alignment modes per model type
--------------------------------
-  VGGT  → none, scale_only, scale_shift      (none = metric, the key diagnostic)
-  DAv2  → scale_shift, disparity_scale_shift  (relative model; 'none' is meaningless)
+Variants (pretrained loaded once; finetuned per available checkpoint)::
 
-Eval sources
-------------
-  ADT (dense GT) :  --eval-adt-root  /path/to/ADT
-                    auto-picks Apartment_release_clean_seq131_M1292
-  MPS (sparse GT):  --eval-mps-frame-dir  /path/to/aria01_214-1
-                    --eval-mps-traj-csv   .../mps/slam/closed_loop_trajectory.csv
-                    --eval-mps-points-gz  .../mps/slam/semidense_points.csv.gz
+    vggt_pretrained   VGGT-Omega base weights         (metric; 'none' meaningful)
+    vggt_best/last    base + LoRA from checkpoint_{best,last}.pt's "vggt" key
+    dav2_pretrained   Depth-Anything-V2 base weights  (relative; scale_shift)
+    dav2_best/last    DAv2 weights from checkpoint_{best,last}.pt's "dav2" key
 
-Usage examples
---------------
-  # ADT only (dense GT, all 4 variants):
-  python -m finetune.eval.run_eval \\
-    --vggt-checkpoint /path/to/model.pt \\
-    --finetune-checkpoint finetune_outputs/checkpoint_best.pt \\
-    --eval-adt-root /path/to/ADT \\
-    --out-dir eval_out/
+Alignment modes: VGGT → none, scale_shift; DAv2 → scale_shift (relative model).
 
-  # MPS only (sparse, in-domain Ego-Exo4D), pretrained only:
-  python -m finetune.eval.run_eval \\
-    --vggt-checkpoint /path/to/model.pt \\
-    --eval-mps-frame-dir /path/to/take/aria01_214-1 \\
-    --eval-mps-traj-csv .../closed_loop_trajectory.csv \\
-    --eval-mps-points-gz .../semidense_points.csv.gz \\
-    --out-dir eval_out/
+This file handles **ADT (dense GT)** only. The **MPS (sparse GT)** evaluation
+lives in its own runner, :mod:`finetune.eval.mps_depth` (``python -m
+finetune.eval.mps_depth <name> --mps-frame-dir ...``), because MPS needs paths
+that are not stored in a run's config.
 
-Outputs
--------
-  eval_out/
+Outputs (``eval_out/<name>/``)::
+
     eval_results.json      full nested metrics dict
-    eval_summary.txt       human-readable comparison table (key output)
+    eval_summary.txt       human-readable comparison table
+    qual/<variant>/*.png   qualitative depth panels (when --n-qual > 0)
 """
 from __future__ import annotations
 
@@ -54,12 +41,11 @@ if not __package__:
     __package__ = "finetune.eval"
 
 import argparse
+import dataclasses
 import json
 import os
-import sys
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
-import numpy as np
 import torch
 
 
@@ -67,6 +53,7 @@ import torch
 # predict_fn factories
 # Normalise VGGT (dict output) and DAv2 (tensor output) to the same interface:
 #   predict_fn(images [B,S,3,H,W] on device) → (depth_np [B,S,H,W], pose_np or None)
+# (Imported by the in-training eval in finetune/trainers/base.py — keep stable.)
 # --------------------------------------------------------------------------- #
 
 def make_vggt_predict(model: torch.nn.Module, device: torch.device) -> Callable:
@@ -181,6 +168,122 @@ def _apply_dav2_finetune(
 
 
 # --------------------------------------------------------------------------- #
+# Run resolution: name under runs/ → run dir + resolved config + checkpoints
+# --------------------------------------------------------------------------- #
+
+def resolve_run(name: str, runs_root: str = "runs") -> str:
+    """Resolve a run NAME (or a path to a run dir) to its directory."""
+    cand = name if os.path.isdir(name) else os.path.join(runs_root, name)
+    if not os.path.isdir(cand):
+        raise FileNotFoundError(
+            f"run {name!r} not found (looked for {cand!r}). Pass the experiment "
+            f"name under {runs_root}/ (e.g. 'ssi_r8'), or a path to a run dir."
+        )
+    return cand
+
+
+def load_run_config(run_dir: str) -> Dict:
+    """Return the run's resolved config as a dict (FinetuneConfig defaults filled in)."""
+    from ..config import FinetuneConfig
+
+    cfg = dataclasses.asdict(FinetuneConfig())
+    path = os.path.join(run_dir, "config.yaml")
+    if os.path.exists(path):
+        import yaml
+
+        with open(path) as f:
+            loaded = yaml.safe_load(f) or {}
+        cfg.update({k: v for k, v in loaded.items() if k in cfg})
+        print(f"[eval] loaded run config from {path}")
+    else:
+        print(f"[eval] WARNING: no config.yaml under {run_dir!r}; using FinetuneConfig defaults.")
+    return cfg
+
+
+def find_checkpoint(run_dir: str, tag: str) -> Optional[str]:
+    """Resolve a checkpoint tag to a file. 'best'→checkpoint_best.pt;
+    'last'→checkpoint_last.pt, falling back to checkpoint_final.pt."""
+    candidates = {
+        "best": ["checkpoint_best.pt"],
+        "last": ["checkpoint_last.pt", "checkpoint_final.pt"],
+        "final": ["checkpoint_final.pt"],
+    }.get(tag, [f"checkpoint_{tag}.pt"])
+    for fn in candidates:
+        p = os.path.join(run_dir, fn)
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def build_variants(
+    cfg: Dict,
+    run_dir: str,
+    device: torch.device,
+    checkpoints=("best", "last"),
+    include_dav2: bool = True,
+) -> Dict[str, dict]:
+    """Build the evaluation variants from a run's config + checkpoints.
+
+    Returns an ordered dict ``variant_key -> {label, predict_fn, align_modes,
+    with_pose}``. The pretrained base models are loaded once; one finetuned
+    variant is added per checkpoint tag that exists in ``run_dir``.
+    """
+    lora_rank = int(cfg.get("lora_rank", 8))
+    lora_alpha = int(cfg.get("lora_alpha", 16))
+    dav2_name = cfg.get("dav2_model_name", "depth-anything/Depth-Anything-V2-Small-hf")
+    dav2_lora_only = bool(cfg.get("finetune_dav2_lora_only", True))
+
+    variants: Dict[str, dict] = {}
+
+    # VGGT: pretrained (once) + one variant per checkpoint tag.
+    vggt_base = _load_vggt_base(cfg.get("vggt_checkpoint", ""), device)
+    variants["vggt_pretrained"] = {
+        "label": "VGGT pretrained", "predict_fn": make_vggt_predict(vggt_base, device),
+        "align_modes": ("none", "scale_shift"), "with_pose": True,
+    }
+    for tag in checkpoints:
+        ckpt = find_checkpoint(run_dir, tag)
+        if ckpt is None:
+            print(f"[eval] no {tag} checkpoint in {run_dir!r}; skipping vggt_{tag}.")
+            continue
+        print(f"[eval] VGGT {tag}: {ckpt}")
+        m = _apply_vggt_finetune(vggt_base, ckpt, lora_rank, lora_alpha, device)
+        variants[f"vggt_{tag}"] = {
+            "label": f"VGGT ({tag})", "predict_fn": make_vggt_predict(m, device),
+            "align_modes": ("none", "scale_shift"), "with_pose": True,
+        }
+
+    if include_dav2:
+        dav2_base = _load_dav2_base(dav2_name, device)
+        variants["dav2_pretrained"] = {
+            "label": "DAv2 pretrained", "predict_fn": make_dav2_predict(dav2_base, device),
+            "align_modes": ("scale_shift",), "with_pose": False,
+        }
+        for tag in checkpoints:
+            ckpt = find_checkpoint(run_dir, tag)
+            if ckpt is None:
+                continue
+            print(f"[eval] DAv2 {tag}: {ckpt}")
+            m = _apply_dav2_finetune(dav2_base, ckpt, lora_rank, lora_alpha, dav2_lora_only, device)
+            variants[f"dav2_{tag}"] = {
+                "label": f"DAv2 ({tag})", "predict_fn": make_dav2_predict(m, device),
+                "align_modes": ("scale_shift",), "with_pose": False,
+            }
+
+    return variants
+
+
+def collect_align_modes(variants: Dict[str, dict], allowed=None) -> List[str]:
+    """Ordered union of the align modes across variants (optionally filtered)."""
+    modes: List[str] = []
+    for var in variants.values():
+        for m in var["align_modes"]:
+            if (allowed is None or m in allowed) and m not in modes:
+                modes.append(m)
+    return modes
+
+
+# --------------------------------------------------------------------------- #
 # Result serialisation and comparison table
 # --------------------------------------------------------------------------- #
 
@@ -208,7 +311,7 @@ def _print_comparison_table(
     """Return a formatted comparison table string and print it."""
     lines = []
     lines.append(f"\n{'='*78}")
-    lines.append(f"  {source.upper()} — depth evaluation")
+    lines.append(f"  {source}")
     lines.append(f"{'='*78}")
 
     for mode in align_modes:
@@ -245,15 +348,18 @@ def _print_comparison_table(
     return text
 
 
-def _save_results(results: dict, out_dir: str, table_text: str) -> None:
+def _save_results(
+    results: dict, out_dir: str, table_text: str,
+    json_name: str = "eval_results.json", txt_name: str = "eval_summary.txt",
+) -> None:
     os.makedirs(out_dir, exist_ok=True)
 
-    json_path = os.path.join(out_dir, "eval_results.json")
+    json_path = os.path.join(out_dir, json_name)
     with open(json_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\n[eval] full results → {json_path}")
 
-    txt_path = os.path.join(out_dir, "eval_summary.txt")
+    txt_path = os.path.join(out_dir, txt_name)
     with open(txt_path, "w") as f:
         f.write(table_text)
     print(f"[eval] summary table → {txt_path}")
@@ -267,7 +373,7 @@ _DEFAULT_ADT_SEQ = "Apartment_release_clean_seq131_M1292"
 
 
 def _find_adt_seq_dirs(adt_root: str) -> List[str]:
-    if not os.path.isdir(adt_root):
+    if not adt_root or not os.path.isdir(adt_root):
         return []
     default_seq = os.path.join(adt_root, _DEFAULT_ADT_SEQ)
     if (os.path.isdir(os.path.join(default_seq, "videos_rgb")) and
@@ -283,237 +389,94 @@ def _find_adt_seq_dirs(adt_root: str) -> List[str]:
 
 
 # --------------------------------------------------------------------------- #
-# Main
+# Main — single positional arg: the run name under runs/
 # --------------------------------------------------------------------------- #
 
 def main() -> None:
     p = argparse.ArgumentParser(
-        description="Evaluate VGGT-Omega and DAv2 depth quality (pretrained vs finetuned)",
+        description="ADT depth eval for a finetuning run (pretrained vs best/last)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-
-    # ── Checkpoints ────────────────────────────────────────────────────────
-    p.add_argument("--vggt-checkpoint", required=True,
-                   help="Base VGGT-Omega model.pt")
-    p.add_argument("--finetune-checkpoint", default=None,
-                   help="Finetune checkpoint (contains 'vggt' and 'dav2' keys). "
-                        "If omitted, only pretrained variants are evaluated.")
-    p.add_argument("--dav2-model-name",
-                   default="depth-anything/Depth-Anything-V2-Small-hf",
-                   help="HuggingFace model name for DAv2 base weights")
-    p.add_argument("--lora-rank", type=int, default=8)
-    p.add_argument("--lora-alpha", type=int, default=16)
-    p.add_argument("--finetune-dav2-lora-only", action="store_true",
-                   help="Set if DAv2 was finetuned with LoRA only (not full finetune)")
-    p.add_argument("--no-dav2", action="store_true",
-                   help="Skip DAv2 evaluation entirely")
+    p.add_argument("run", help="experiment name under runs/ (e.g. ssi_r8), or a run-dir path")
+    p.add_argument("--runs-root", default="runs", help="parent dir holding run folders")
+    p.add_argument("--eval-out", default="eval_out", help="results go to <eval-out>/<run>/")
+    p.add_argument("--checkpoints", nargs="+", default=["best", "last"],
+                   choices=["best", "last", "final"],
+                   help="which finetune checkpoints to evaluate (pretrained always included)")
+    p.add_argument("--no-dav2", action="store_true", help="skip DAv2 variants")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
-
-    # ── Inference ──────────────────────────────────────────────────────────
-    p.add_argument("--seq-len", type=int, default=8,
-                   help="VGGT window size (DAv2 uses the same window, scores center frame)")
-    p.add_argument("--image-resolution", type=int, default=512)
-    p.add_argument("--batch-size", type=int, default=1)
-
-    # ── ADT eval ───────────────────────────────────────────────────────────
-    p.add_argument("--eval-adt-root", default=None,
-                   help=f"ADT root; auto-selects {_DEFAULT_ADT_SEQ}")
-    p.add_argument("--eval-adt-seq-dirs", nargs="*", default=None,
-                   help="Explicit list of ADT sequence dirs (overrides --eval-adt-root)")
+    p.add_argument("--n-qual", type=int, default=4,
+                   help="qualitative depth panels saved per variant (0 = skip)")
+    # ADT params — default to the run's config; override here if needed.
+    p.add_argument("--adt-root", default=None, help="override cfg.eval_adt_root")
+    p.add_argument("--adt-max-frames", type=int, default=None,
+                   help="cap frames per ADT seq (-1 = all); default cfg.eval_adt_max_frames")
     p.add_argument("--adt-depth-max", type=float, default=10.0)
-    p.add_argument("--adt-max-frames", type=int, default=100,
-                   help="Cap frames per ADT sequence (-1 = use all frames)")
     p.add_argument("--adt-gt-traj-csv", default=None,
                    help="ADT groundtruth/aria_trajectory.csv for pose ATE (VGGT only)")
-
-    # ── MPS eval ───────────────────────────────────────────────────────────
-    p.add_argument("--eval-mps-frame-dir", default=None)
-    p.add_argument("--eval-mps-traj-csv", default=None)
-    p.add_argument("--eval-mps-points-gz", default=None)
-    p.add_argument("--eval-mps-calib", default=None)
-    p.add_argument("--eval-mps-fx", type=float, default=None)
-    p.add_argument("--eval-mps-fy", type=float, default=None)
-    p.add_argument("--eval-mps-cx", type=float, default=None)
-    p.add_argument("--eval-mps-cy", type=float, default=None)
-    p.add_argument("--eval-mps-T-device-cam", default=None,
-                   help="4×4 .npy with T_device_cam (inverted internally)")
-    p.add_argument("--eval-mps-quality-min", type=float, default=0.5)
-
-    # ── Output ─────────────────────────────────────────────────────────────
-    p.add_argument("--out-dir", default="eval_out")
-    p.add_argument("--n-qual", type=int, default=4,
-                   help="Number of qualitative result images to save per variant (0 = skip)")
-
+    p.add_argument("--seq-len", type=int, default=None, help="default: cfg.seq_len")
+    p.add_argument("--image-resolution", type=int, default=None, help="default: cfg.image_resolution")
+    p.add_argument("--batch-size", type=int, default=1)
     a = p.parse_args()
+
     device = torch.device(a.device)
-    os.makedirs(a.out_dir, exist_ok=True)
+    run_dir = resolve_run(a.run, a.runs_root)
+    run_name = os.path.basename(os.path.normpath(run_dir))
+    cfg = load_run_config(run_dir)
+    out_dir = os.path.join(a.eval_out, run_name)
 
-    run_adt = bool(a.eval_adt_root or a.eval_adt_seq_dirs)
-    run_mps = bool(a.eval_mps_frame_dir and a.eval_mps_traj_csv)
-    if not run_adt and not run_mps:
-        p.error("Provide --eval-adt-root or --eval-mps-frame-dir + --eval-mps-traj-csv")
+    # Resolve eval params: CLI override → run config → default.
+    adt_root = a.adt_root or cfg.get("eval_adt_root", "")
+    seq_len = a.seq_len or int(cfg.get("seq_len", 8))
+    image_resolution = a.image_resolution or int(cfg.get("image_resolution", 512))
+    adt_max_frames = (a.adt_max_frames if a.adt_max_frames is not None
+                      else int(cfg.get("eval_adt_max_frames", 100)))
 
-    # ── Build model variants ────────────────────────────────────────────────
-    # variant_order controls table row order; only populated keys are shown.
-    variant_order = ["vggt_pretrained", "vggt_finetuned",
-                     "dav2_pretrained",  "dav2_finetuned"]
-
-    # Each entry: (label, predict_fn, vggt_align_modes, dav2_align_modes)
-    # We use a single dict keyed by variant name.
-    variants: Dict[str, dict] = {}
-
-    # VGGT pretrained
-    vggt_base = _load_vggt_base(a.vggt_checkpoint, device)
-    variants["vggt_pretrained"] = {
-        "label":       "VGGT pretrained",
-        "predict_fn":  make_vggt_predict(vggt_base, device),
-        "align_modes": ("none", "scale_shift"),
-        "with_pose":   True,
-    }
-
-    # VGGT finetuned
-    if a.finetune_checkpoint:
-        vggt_ft = _apply_vggt_finetune(
-            vggt_base, a.finetune_checkpoint, a.lora_rank, a.lora_alpha, device
-        )
-        variants["vggt_finetuned"] = {
-            "label":       "VGGT finetuned",
-            "predict_fn":  make_vggt_predict(vggt_ft, device),
-            "align_modes": ("none", "scale_shift"),
-            "with_pose":   True,
-        }
-
-    if not a.no_dav2:
-        # DAv2 pretrained
-        dav2_base = _load_dav2_base(a.dav2_model_name, device)
-        variants["dav2_pretrained"] = {
-            "label":       "DAv2 pretrained",
-            "predict_fn":  make_dav2_predict(dav2_base, device),
-            # 'none' is meaningless for DAv2 (affine-invariant)
-            "align_modes": ("scale_shift",),
-            "with_pose":   False,
-        }
-
-        # DAv2 finetuned
-        if a.finetune_checkpoint:
-            dav2_ft = _apply_dav2_finetune(
-                dav2_base, a.finetune_checkpoint,
-                a.lora_rank, a.lora_alpha, a.finetune_dav2_lora_only, device,
-            )
-            variants["dav2_finetuned"] = {
-                "label":       "DAv2 finetuned",
-                "predict_fn":  make_dav2_predict(dav2_ft, device),
-                "align_modes": ("scale_shift",),
-                "with_pose":   False,
-            }
-
-    print(f"\n[eval] Evaluating {len(variants)} variant(s): {list(variants)}")
-
-    all_results: dict = {}
-    all_table_lines: List[str] = []
-
-    # ── ADT eval ─────────────────────────────────────────────────────────────
-    if run_adt:
-        from .adt_depth import run_adt_eval
-
-        seq_dirs = list(a.eval_adt_seq_dirs or [])
-        if a.eval_adt_root:
-            seq_dirs += _find_adt_seq_dirs(a.eval_adt_root)
-        if not seq_dirs:
-            print("[eval] WARNING: no ADT sequence dirs found; skipping ADT eval.")
-        else:
-            print(f"\n[eval] === ADT evaluation ({len(seq_dirs)} sequence(s)) ===")
-            adt_results: dict = {}
-            for var_key, var in variants.items():
-                print(f"\n[eval] --- {var['label']} ---")
-                _qual_dir = (
-                    os.path.join(a.out_dir, "qual", var_key)
-                    if a.n_qual > 0 else None
-                )
-                adt_results[var_key] = run_adt_eval(
-                    predict_fn=var["predict_fn"],
-                    label=var["label"],
-                    seq_dirs=seq_dirs,
-                    device=device,
-                    seq_len=a.seq_len,
-                    image_resolution=a.image_resolution,
-                    batch_size=a.batch_size,
-                    depth_max_m=a.adt_depth_max,
-                    align_modes=var["align_modes"],
-                    gt_traj_csv=a.adt_gt_traj_csv if var["with_pose"] else None,
-                    qual_dir=_qual_dir,
-                    n_qual=a.n_qual,
-                    max_frames=(None if a.adt_max_frames < 0 else a.adt_max_frames),
-                )
-            all_results["adt"] = adt_results
-
-            # Collect all alignment modes that appear in any variant
-            all_modes = []
-            for var in variants.values():
-                for m in var["align_modes"]:
-                    if m not in all_modes:
-                        all_modes.append(m)
-            table = _print_comparison_table(adt_results, "ADT (dense GT)", all_modes, variant_order)
-            all_table_lines.append(table)
-
-    # ── MPS eval ─────────────────────────────────────────────────────────────
-    if run_mps:
-        from .mps_depth import MPSBundle, run_mps_eval
-        from .mps_depth import _invert_se3
-
-        print(f"\n[eval] === MPS evaluation ===")
-        bundle = MPSBundle(
-            traj_csv=a.eval_mps_traj_csv,
-            points_csv_gz=a.eval_mps_points_gz,
-            calib_jsonl=a.eval_mps_calib,
-            quality_min=a.eval_mps_quality_min,
+    seq_dirs = _find_adt_seq_dirs(adt_root)
+    if not seq_dirs:
+        p.error(
+            f"no ADT sequences under {adt_root!r} (from "
+            f"{'--adt-root' if a.adt_root else 'cfg.eval_adt_root'}). "
+            f"Pass --adt-root, or use `python -m finetune.eval.mps_depth {a.run} ...` for MPS."
         )
 
-        K: Optional[np.ndarray] = None
-        if all(x is not None for x in [a.eval_mps_fx, a.eval_mps_fy,
-                                         a.eval_mps_cx, a.eval_mps_cy]):
-            K = np.array([
-                [a.eval_mps_fx, 0.0, a.eval_mps_cx],
-                [0.0, a.eval_mps_fy, a.eval_mps_cy],
-                [0.0, 0.0, 1.0],
-            ], dtype=np.float64)
+    print(f"[eval] run={run_name!r}  run_dir={run_dir}")
+    print(f"[eval] ADT: {len(seq_dirs)} seq dir(s), <= {adt_max_frames} frames, "
+          f"seq_len={seq_len}, res={image_resolution}")
 
-        T_cam_device: Optional[np.ndarray] = None
-        if a.eval_mps_T_device_cam is not None:
-            T_cam_device = _invert_se3(np.load(a.eval_mps_T_device_cam).astype(np.float64))
+    variants = build_variants(
+        cfg, run_dir, device, checkpoints=tuple(a.checkpoints), include_dav2=not a.no_dav2
+    )
+    print(f"[eval] variants: {list(variants)}")
 
-        mps_results: dict = {}
-        for var_key, var in variants.items():
-            print(f"\n[eval] --- {var['label']} ---")
-            # MPS eval: only metric-adjacent modes (skip disparity for sparse sparse GT)
-            mps_modes = tuple(m for m in var["align_modes"]
-                              if m in ("none", "scale_only", "scale_shift"))
-            mps_results[var_key] = run_mps_eval(
-                predict_fn=var["predict_fn"],
-                label=var["label"],
-                frame_dir=a.eval_mps_frame_dir,
-                bundle=bundle,
-                device=device,
-                K=K,
-                T_cam_device=T_cam_device,
-                seq_len=a.seq_len,
-                image_resolution=a.image_resolution,
-                align_modes=mps_modes,
-                gt_traj_for_ate=var["with_pose"],
-            )
-        all_results["mps"] = mps_results
+    from .adt_depth import run_adt_eval
 
-        all_mps_modes = []
-        for var in variants.values():
-            for m in var["align_modes"]:
-                if m not in all_mps_modes and m in ("none", "scale_only", "scale_shift"):
-                    all_mps_modes.append(m)
-        table = _print_comparison_table(mps_results, "MPS (sparse GT)", all_mps_modes, variant_order)
-        all_table_lines.append(table)
+    adt_results: dict = {}
+    for var_key, var in variants.items():
+        print(f"\n[eval] --- {var['label']} ---")
+        qual_dir = os.path.join(out_dir, "qual", var_key) if a.n_qual > 0 else None
+        adt_results[var_key] = run_adt_eval(
+            predict_fn=var["predict_fn"],
+            label=var["label"],
+            seq_dirs=seq_dirs,
+            device=device,
+            seq_len=seq_len,
+            image_resolution=image_resolution,
+            batch_size=a.batch_size,
+            depth_max_m=a.adt_depth_max,
+            align_modes=var["align_modes"],
+            gt_traj_csv=a.adt_gt_traj_csv if var["with_pose"] else None,
+            qual_dir=qual_dir,
+            n_qual=a.n_qual,
+            max_frames=(None if adt_max_frames < 0 else adt_max_frames),
+        )
 
-    # ── Save ──────────────────────────────────────────────────────────────────
-    _save_results(all_results, a.out_dir, "\n".join(all_table_lines))
-    print(f"\n[eval] Done. Results in {a.out_dir}/")
+    modes = collect_align_modes(variants)
+    table = _print_comparison_table(
+        adt_results, f"ADT (dense GT) — {run_name}", modes, list(variants)
+    )
+    _save_results({"adt": adt_results}, out_dir, table)
+    print(f"\n[eval] Done. Results in {out_dir}/")
 
 
 if __name__ == "__main__":
