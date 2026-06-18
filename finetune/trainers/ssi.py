@@ -55,7 +55,8 @@ class SSITrainer(BaseAlternatingTrainer):
     def phase_b_losses(self, images, depth, pose_enc, conf, dav2_depth):
         cfg = self.cfg
         ss, dyn = compute_self_supervised_losses(
-            images, depth, pose_enc, conf=conf, offsets=cfg.offsets, alpha=cfg.ssim_alpha
+            images, depth, pose_enc, conf=conf,
+            offsets=getattr(cfg, "offsets", (-1, 1)), alpha=cfg.ssim_alpha
         )
         B, S, _, H, W = images.shape
         v_disp = to_disparity(depth).reshape(B * S, H, W)
@@ -87,7 +88,8 @@ class SSITrainer(BaseAlternatingTrainer):
         #     VGGT poses (DAv2 metric-aligned, scale detached) ---------------- #
         dav2_metric = _metric_align(dav2_depth, depth_v)
         ss, dyn = compute_self_supervised_losses(
-            images, dav2_metric, pose_enc, conf=None, offsets=cfg.offsets, alpha=cfg.ssim_alpha
+            images, dav2_metric, pose_enc, conf=None,
+            offsets=getattr(cfg, "offsets", (-1, 1)), alpha=cfg.ssim_alpha
         )
 
         # --- distill VGGT structure into DAv2 (disparity space), gated by VGGT

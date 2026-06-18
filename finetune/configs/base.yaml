@@ -46,7 +46,6 @@ losses:
   w_a_photometric: 0.5
   w_a_smoothness: 0.05
   a_distill_gate: true
-  offsets: [-1, 1]
   ssim_alpha: 0.85
 
 optim:
