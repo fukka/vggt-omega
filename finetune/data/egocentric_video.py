@@ -150,6 +150,22 @@ def _to_float_array(im: "Image.Image"):
 
 
 def collate_windows(batch):
+    # Each item is [S,3,H,W]; stacking into [B,S,3,H,W] needs identical (H,W)
+    # across the batch. __getitem__ sizes each window from its own source frame
+    # (longest side -> image_resolution, aspect ratio preserved), so a batch that
+    # mixes clips of different aspect ratios has windows of different (H,W) and
+    # would fail deep inside torch.stack with a cryptic message. Uniform-aspect
+    # captures (e.g. square Aria 214-1 -> 512x512) collate fine; for anything
+    # else, fail early with an actionable error.
+    shapes = {tuple(b["images"].shape[-2:]) for b in batch}
+    if len(shapes) > 1:
+        raise ValueError(
+            f"collate_windows received windows of differing (H,W) {sorted(shapes)} "
+            f"in a single batch (batch_size={len(batch)}). The clips have different "
+            f"aspect ratios, which cannot be stacked into one tensor. Either set "
+            f"batch_size=1, or pre-resize the frames to a single resolution. "
+            f"(Uniform square captures like Aria 214-1 already collate fine.)"
+        )
     images = torch.stack([b["images"] for b in batch], dim=0)  # [B,S,3,H,W]
     return {"images": images, "clips": [b["clip"] for b in batch]}
 

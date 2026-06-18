@@ -31,7 +31,9 @@ class FinetuneConfig:
     clip_pattern: str = "*214-1"   # keep only egocentric RGB (aria*_214-1); "" loads every camera
     image_resolution: int = 512
     patch_size: int = 16
-    batch_size: int = 1
+    batch_size: int = 1            # >1 works for uniform-resolution clips (e.g. square
+                                   # Aria 214-1 -> 512x512); mixed aspect ratios cannot
+                                   # be stacked into one batch (see collate_windows).
     num_workers: int = 4
 
     # fisheye rectification (the geometric losses assume a PINHOLE camera).
