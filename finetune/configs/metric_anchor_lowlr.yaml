@@ -1,0 +1,23 @@
+# Direction 2 — gentler adaptation (less drift).
+# In metric_anchor_r8 the metric scale got WORSE through rounds 0-2 (in-training
+# none rose) while the LoRA LR was near its 2e-4 peak, and only recovered as the
+# cosine decayed it to ~3e-5. The 245M fully-trained heads at lr 2e-5 are the bulk
+# of the trainable capacity and the main driver of drift. Lower the peak LRs and
+# lengthen warmup so the update is gentler, and drop the harmful Phase-B distill
+# (Direction 1) so structure is protected. Compare against metric_anchor_r8 and
+# metric_anchor_no_distill to separate "less LR" from "no distill".
+__base__: base.yaml
+
+name: metric_anchor_lowlr
+trainer: metric_anchor
+notes: "metric_anchor, lower LRs + longer warmup + no Phase-B distill."
+
+optim:
+  lr_vggt_lora: 1.0e-4   # half the default 2e-4
+  lr_vggt_head: 5.0e-6   # 4x lower than default 2e-5 (protect pretrained heads)
+  warmup_steps: 400      # 2x default
+
+losses:
+  w_metric_anchor: 0.1
+  w_distill_ssi: 0.0
+  w_distill_grad: 0.0

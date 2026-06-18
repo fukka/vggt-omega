@@ -1,0 +1,21 @@
+# Direction 1 — protect VGGT's already-excellent structure.
+# On the corrected (videos_synthetic + rectified) ADT eval, VGGT structure is
+# already strong (scale_shift AbsRel ~0.059, delta1 97.5%) and far better than
+# DAv2's (~0.097). So distilling DAv2 -> VGGT in Phase B can only drag VGGT down:
+# ssi.yaml (distill on) degraded ss 0.059 -> 0.074, while metric_anchor (anchor
+# resists the drag) stayed ~0.056. This drops the Phase-B DAv2 distillation
+# entirely and keeps only the metric anchor + self-supervision, so VGGT is refined
+# by its own multi-view geometry, not pulled toward a weaker teacher.
+# Phase B = photometric + geometric + smoothness + metric_anchor.
+# Expect >= metric_anchor_r8 on BOTH alignments. Phase A (improve DAv2 from the
+# stronger VGGT) is unchanged.
+__base__: base.yaml
+
+name: metric_anchor_no_distill
+trainer: metric_anchor
+notes: "metric_anchor with Phase-B DAv2->VGGT distillation OFF (protect structure)."
+
+losses:
+  w_metric_anchor: 0.1
+  w_distill_ssi: 0.0
+  w_distill_grad: 0.0
