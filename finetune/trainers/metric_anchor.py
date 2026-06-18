@@ -23,6 +23,7 @@ import copy
 import torch
 
 from ..geometry import EPS, masked_weighted_mean
+from ..losses.distillation import ssi_loss, to_disparity
 from ..registry import TRAINER_REGISTRY
 from .base import _squeeze_depth, _unwrap
 from .ssi import SSITrainer, _conf_weight
@@ -53,6 +54,19 @@ class MetricAnchorTrainer(SSITrainer):
 
     def _metric_anchor_loss(self, images, depth, conf) -> torch.Tensor:
         ref = self._reference_depth(images)                      # detached (no_grad)
+        if self.cfg.metric_anchor_mode == "ssi":
+            # Scale-shift-INVARIANT structure anchor: hold VGGT's structure near
+            # its (excellent) pretrained self WITHOUT pinning absolute scale. This
+            # is the right regularizer when you evaluate under scale_shift — it
+            # stops the Phase-B structure drift that pure ssi showed (ss 0.059 ->
+            # 0.074) while leaving the depth<->pose scale gauge free. Same SSI
+            # distance the distillation uses, but the teacher is the frozen
+            # pretrained VGGT (strong structure) instead of DAv2 (weaker).
+            B, S, H, W = depth.shape
+            return ssi_loss(
+                to_disparity(depth).reshape(B * S, H, W),
+                to_disparity(ref).reshape(B * S, H, W),
+            )
         ld = depth.clamp_min(1e-3).log()
         lr = ref.clamp_min(1e-3).log()
         if self.cfg.metric_anchor_mode == "scale":

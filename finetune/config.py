@@ -71,6 +71,8 @@ class FinetuneConfig:
                                    # frozen pretrained VGGT (preserves metric scale). 0 disables.
     metric_anchor_mode: str = "full"  # "full" = per-pixel log-depth (proximal: scale+structure)
                                       # | "scale" = pin per-frame global scale only (let structure adapt)
+                                      # | "ssi" = scale-shift-invariant STRUCTURE anchor to pretrained
+                                      #   (protect structure, leave scale free; for scale_shift eval)
 
     # loss weights (Phase A: improve DAv2)
     w_a_distill: float = 1.0       # affine-aligned distill from VGGT depth (gated by conf*dyn)

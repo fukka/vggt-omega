@@ -1,0 +1,31 @@
+# Recommended recipe for scale_shift evaluation.
+# Same long schedule + no-distill as ssi_long, PLUS a scale-shift-invariant
+# structure anchor to the frozen pretrained VGGT (metric_anchor_mode: ssi).
+#
+# Why: across the three prior runs, the metric anchor's real benefit under
+# scale_shift eval was STRUCTURE PROTECTION, not metric — it held ss AbsRel at
+# 0.056 while pure ssi drifted to 0.074. The "ssi" anchor mode applies that
+# protection in scale-shift-invariant space, so it stops Phase-B structure drift
+# without pinning absolute scale (scale stays free, matching how we evaluate).
+# Net: self-supervision pushes structure, the anchor keeps it from drifting off
+# the strong pretrained prior, and no weaker-teacher (DAv2) distillation is mixed in.
+#
+# If self-sup genuinely improves structure you may want to relax the anchor
+# (w_metric_anchor 0.1 -> 0.05) so it leashes less; if it drifts, raise it.
+__base__: base.yaml
+
+name: anchor_ssi_long
+trainer: metric_anchor
+notes: "SSI structure anchor + self-sup only, long schedule (3 ep / 10 rounds). Best bet."
+
+losses:
+  w_metric_anchor: 0.1
+  metric_anchor_mode: ssi    # scale-shift-invariant structure anchor (protect structure, free scale)
+  w_distill_ssi: 0.0
+  w_distill_grad: 0.0
+  offsets: [-2, -1, 1, 2]
+
+schedule:
+  epochs: 3.0
+  rounds: 10
+  dav2_steps_mult: 0.5

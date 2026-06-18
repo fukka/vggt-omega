@@ -1,0 +1,28 @@
+# Schedule + loss recipe for SCALE-SHIFT-only evaluation.
+# We judge depth up-to-scale (scale_shift), so absolute metric scale is irrelevant
+# and the SSI trainer is the right choice. Two findings drive this recipe:
+#  - VGGT structure is near-ceiling and DAv2 is a WEAKER teacher on this data
+#    (ss AbsRel 0.097 vs 0.059), so the Phase-B DAv2->VGGT distillation only drags
+#    VGGT's AbsRel down (ssi.yaml went 0.059 -> 0.074). Turn it OFF; VGGT is then
+#    refined purely by its own multi-view geometry (photometric + geometric).
+#  - The previous run was short (1 epoch, 6 rounds). Train ~3x longer with finer
+#    alternation, and spend more of it on VGGT (shorter Phase A) since DAv2 no
+#    longer feeds Phase B.
+# Compare against anchor_ssi_long.yaml (adds a structure anchor) to see whether
+# self-supervision alone holds/improves structure or needs the anchor leash.
+__base__: base.yaml
+
+name: ssi_long
+trainer: ssi
+notes: "scale_shift focus: self-sup only (no distill), 3 epochs, 10 rounds, wider baselines."
+
+losses:
+  w_distill_ssi: 0.0
+  w_distill_grad: 0.0
+  w_metric_anchor: 0.0
+  offsets: [-2, -1, 1, 2]   # wider temporal baselines -> more parallax for multi-view depth
+
+schedule:
+  epochs: 3.0               # ~3x the previous run (the run was too short)
+  rounds: 10                # finer alternation -> fresher mean-teacher per round
+  dav2_steps_mult: 0.5      # Phase A (DAv2) half-length -> ~2x more VGGT (Phase B) steps
