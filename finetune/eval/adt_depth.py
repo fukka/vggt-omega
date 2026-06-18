@@ -1,21 +1,26 @@
 # Copyright (c) 2026.
 """ADT (Aria Digital Twin) dense-GT depth evaluation for VGGT-Omega.
 
-ADT provides real Aria sensor frames with paired dense GT depth maps (from the
-digital-twin simulation), giving absolute-accuracy eval on the same fisheye camera
-that Ego-Exo4D uses.
+ADT provides Aria frames with paired dense GT depth maps (from the digital-twin
+simulation), giving absolute-accuracy eval on the same fisheye camera that
+Ego-Exo4D uses.
 
 Expected ADT sequence layout
 -----------------------------
   <seq_dir>/
-    videos_rgb/   *.jpg | *.png   (real Aria RGB frames; typically 1408×1408)
-    depth_npy/    *.npy           (GT depth maps, matching stems; uint16 millimetres)
+    videos_synthetic/  *.jpg | *.png  (rendered RGB, used by default — pixel-aligned
+                                        with the rendered GT depth; ~1408×1408)
+    videos_rgb/        *.jpg | *.png  (real-sensor RGB — NOT perfectly registered to
+                                        the GT depth; opt in via rgb_subdir=videos_rgb)
+    depth_npy/         *.npy          (GT depth maps, matching stems; uint16 millimetres)
     groundtruth/
-      aria_trajectory.csv         (GT camera pose: world-from-device, XYZW, us timestamps)
+      aria_trajectory.csv            (GT camera pose: world-from-device, XYZW, us timestamps)
 
-Important: real Aria frames are rotated 90° CW in storage; apply 270° CCW rotation
-before use (same as ADT evaluation convention). Depth values are in millimetres —
-pass depth_scale=0.001 to convert to metres (the default).
+Important: Aria frames are rotated 90° CW in storage; apply 270° CCW rotation before
+use (same as ADT evaluation convention). Depth values are in millimetres — pass
+depth_scale=0.001 to convert to metres (the default). The RGB and GT depth are both
+fisheye (KB4); rectify to pinhole (default) so the pinhole-trained model is fed
+pinhole input and scored against pinhole GT (set rectify=False for raw fisheye).
 
 Dataset and eval runner
 -----------------------
@@ -127,16 +132,26 @@ def _collect_paired_frames(rgb_dir: str, depth_dir: str) -> List[Tuple[str, str]
     return pairs
 
 
-def _gather_real_frames(seq_dir: str) -> List[Tuple[str, str]]:
-    """Return paired (rgb, depth) frames from the real ADT sensor data.
+ADT_RGB_SUBDIR = "videos_synthetic"   # GT-aligned rendered RGB (see ADTWindowDataset)
 
-    Layout: <seq_dir>/videos_rgb/*.jpg  +  <seq_dir>/depth_npy/*.npy
+
+def _gather_real_frames(seq_dir: str, rgb_subdir: str = ADT_RGB_SUBDIR) -> List[Tuple[str, str]]:
+    """Return paired (rgb, depth) frames from ADT.
+
+    Layout: <seq_dir>/<rgb_subdir>/*.jpg  +  <seq_dir>/depth_npy/*.npy
     Depth values are uint16 millimetres; caller applies depth_scale=0.001.
+
+    ``rgb_subdir`` defaults to ``videos_synthetic`` — the rendered RGB, which is
+    pixel-exactly aligned with the rendered GT depth. The real-sensor stream
+    (``videos_rgb``) is *not* perfectly registered to the GT depth (small pose /
+    timing / distortion differences), so scoring against it mixes real depth error
+    with registration error. Use ``videos_rgb`` only if you specifically want the
+    real-image domain and accept that misalignment.
     """
-    rgb_dir = os.path.join(seq_dir, "videos_rgb")
+    rgb_dir = os.path.join(seq_dir, rgb_subdir)
     depth_dir = os.path.join(seq_dir, "depth_npy")
     if not os.path.isdir(rgb_dir):
-        print(f"  [ADT] WARN videos_rgb not found: {rgb_dir}")
+        print(f"  [ADT] WARN {rgb_subdir} not found: {rgb_dir}")
         return []
     if not os.path.isdir(depth_dir):
         print(f"  [ADT] WARN depth_npy not found: {depth_dir}")
@@ -147,8 +162,8 @@ def _gather_real_frames(seq_dir: str) -> List[Tuple[str, str]]:
                 + glob.glob(os.path.join(rgb_dir, "*.jpeg")))
     n_depth = len(glob.glob(os.path.join(depth_dir, "*.npy")))
     pairs = _collect_paired_frames(rgb_dir, depth_dir)
-    print(f"  [ADT] {len(pairs)} real frames from {n_depth} depth "
-          f"/ {n_rgb} RGB — {seq_dir}")
+    print(f"  [ADT] {len(pairs)} frames from {n_depth} depth "
+          f"/ {n_rgb} {rgb_subdir} — {seq_dir}")
     if len(pairs) < n_depth:
         print(f"  [ADT] WARN {n_depth - len(pairs)} depth map(s) had no RGB partner")
     # Verification: show the first few pairings so RGB↔depth sync is auditable,
@@ -248,7 +263,7 @@ def _load_gt_trajectory(traj_csv: str) -> np.ndarray:
 # --------------------------------------------------------------------------- #
 
 class ADTWindowDataset(Dataset):
-    """Consecutive windows of seq_len frames from ADT real sensor data.
+    """Consecutive windows of seq_len frames from ADT.
 
     Each item
     ---------
@@ -259,14 +274,19 @@ class ADTWindowDataset(Dataset):
 
     Notes
     -----
-    • Real Aria frames are stored 90° CW; a 270° CCW rotation is applied to both
-      RGB and depth before resizing, matching the ADT evaluation convention.
+    • Input RGB is read from ``rgb_subdir`` (default ``videos_synthetic`` — the
+      rendered RGB that is pixel-aligned with the rendered GT depth).
+    • Aria frames are stored 90° CW; a 270° CCW rotation is applied to both RGB
+      and depth, matching the ADT evaluation convention.
+    • Rectification (default ON): ADT RGB + GT depth are fisheye (KB4). To match
+      training (rectify=true), each frame and its depth are remapped fisheye→pinhole
+      with the SAME maps (RGB bilinear, depth nearest) so they stay aligned and the
+      pinhole-trained model is fed pinhole input. Set rectify=False to evaluate raw
+      fisheye (e.g. for a model trained with rectify=false).
     • Depth values in depth_npy/ are uint16 millimetres; depth_scale=0.001 converts
       them to metres (the default).
     • VGGT-Omega takes [0, 1] images (no ImageNet normalization).
     • Windows within one sequence are non-overlapping by default (stride=seq_len).
-      Use window_stride=1 for maximum overlap, but then evaluate only the center
-      frame to avoid redundant scoring.
     • depth_max_m controls the valid-pixel ceiling (ADT interiors: 10 m is safe).
     """
 
@@ -281,6 +301,11 @@ class ADTWindowDataset(Dataset):
         depth_max_m: float = 10.0,
         rotation: int = 270,          # CCW degrees; corrects Aria sensor orientation
         max_frames: Optional[int] = 100,  # cap frames per sequence (None = all)
+        rgb_subdir: str = ADT_RGB_SUBDIR,
+        rectify: bool = True,             # fisheye→pinhole (match training)
+        camera_preset: str = "aria-214-1",
+        fisheye_k: str = "",
+        fisheye_d: str = "",
     ) -> None:
         self.seq_len = seq_len
         self.resolution = image_resolution
@@ -291,9 +316,16 @@ class ADTWindowDataset(Dataset):
         # Default: non-overlapping windows so each frame is evaluated once
         self.window_stride = window_stride if window_stride is not None else seq_len
 
+        # Fisheye→pinhole rectifier (same class training uses); None = raw fisheye.
+        self.rectifier = None
+        if rectify:
+            from ..data.rectify import FisheyeRectifier
+            self.rectifier = FisheyeRectifier(camera_preset, fisheye_k, fisheye_d)
+            print(f"  [ADT] rectifying fisheye→pinhole (preset={camera_preset!r})")
+
         self.windows: List[List[Tuple[str, str]]] = []
         for seq_dir in seq_dirs:
-            pairs = _gather_real_frames(seq_dir)
+            pairs = _gather_real_frames(seq_dir, rgb_subdir)
             if not pairs:
                 continue
             if max_frames is not None and len(pairs) > max_frames:
@@ -306,7 +338,7 @@ class ADTWindowDataset(Dataset):
             seq_list = "\n  ".join(seq_dirs)
             raise RuntimeError(
                 f"No windows of length {seq_len} found in ADT seq dirs:\n  {seq_list}\n"
-                "Ensure videos_rgb/ and depth_npy/ exist in each sequence dir."
+                f"Ensure {rgb_subdir}/ and depth_npy/ exist in each sequence dir."
             )
         print(f"  [ADT] {len(self.windows)} windows from {len(seq_dirs)} sequence(s)")
 
@@ -350,6 +382,10 @@ class ADTWindowDataset(Dataset):
             img_t = F.interpolate(
                 img_t.unsqueeze(0), size=(th, tw), mode="bilinear", align_corners=False
             ).squeeze(0)
+            if self.rectifier is not None:
+                # Rectify after resize (mirrors training: resize → rectify), HWC float.
+                img_np = self.rectifier(img_t.permute(1, 2, 0).contiguous().numpy())
+                img_t = torch.from_numpy(img_np).permute(2, 0, 1).contiguous()
             images.append(img_t)
 
             # ── Depth ─────────────────────────────────────────────────────────
@@ -363,6 +399,9 @@ class ADTWindowDataset(Dataset):
             d_t = F.interpolate(
                 d_t.unsqueeze(0).unsqueeze(0), size=(th, tw), mode="nearest"
             ).squeeze(0).squeeze(0)
+            if self.rectifier is not None:
+                # Same maps as RGB (nearest) → depth stays pixel-aligned; out-of-FOV → 0.
+                d_t = torch.from_numpy(self.rectifier.rectify_depth(d_t.numpy()))
             depths.append(d_t)
             masks.append((d_t > 0) & (d_t <= self.depth_max_m))
 
@@ -395,8 +434,13 @@ def run_adt_eval(
     qual_dir: Optional[str] = None,
     n_qual: int = 4,
     max_frames: Optional[int] = 100,
+    rgb_subdir: str = ADT_RGB_SUBDIR,
+    rectify: bool = True,
+    camera_preset: str = "aria-214-1",
+    fisheye_k: str = "",
+    fisheye_d: str = "",
 ) -> Dict[str, dict]:
-    """Run depth evaluation against ADT real sensor data with dense GT.
+    """Run depth evaluation against ADT with dense GT.
 
     Parameters
     ----------
@@ -404,7 +448,7 @@ def run_adt_eval(
                     → (depth_np [B,S,H,W], pose_enc_np [B,S,9] or None).
                     Use make_vggt_predict() or make_dav2_predict() from run_eval.
     label         : display name, e.g. "VGGT pretrained" or "DAv2 finetuned".
-    seq_dirs      : list of ADT sequence dirs containing videos_rgb/ and depth_npy/.
+    seq_dirs      : list of ADT sequence dirs containing <rgb_subdir>/ and depth_npy/.
     device        : torch device.
     seq_len       : number of frames per window (must match model training).
     image_resolution : target image resolution.
@@ -416,6 +460,9 @@ def run_adt_eval(
     eval_all_frames : if True, score every frame; if False, only the center frame.
     gt_traj_csv   : optional ADT groundtruth/aria_trajectory.csv for pose ATE
                     (only meaningful when predict_fn returns pose_enc, i.e. VGGT).
+    rgb_subdir    : RGB source dir (default videos_synthetic, GT-aligned rendered RGB).
+    rectify       : fisheye→pinhole rectify RGB+depth to match training (default True).
+    camera_preset : rectification preset (default aria-214-1); with fisheye_k/d overrides.
 
     Returns
     -------
@@ -430,6 +477,11 @@ def run_adt_eval(
         depth_scale=depth_scale,
         depth_max_m=depth_max_m,
         max_frames=max_frames,
+        rgb_subdir=rgb_subdir,
+        rectify=rectify,
+        camera_preset=camera_preset,
+        fisheye_k=fisheye_k,
+        fisheye_d=fisheye_d,
     )
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 

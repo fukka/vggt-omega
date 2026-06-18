@@ -130,6 +130,11 @@ logs to TensorBoard (`<out_dir>/tb/`, on by default) + `metrics.jsonl`:
   (structure) cross their pretrained baselines to see exactly when finetuning
   starts to hurt.
 
+  ADT eval reads the **`videos_synthetic/`** RGB (pixel-aligned with the rendered
+  GT depth; the real `videos_rgb/` is slightly off-registered) and **rectifies both
+  RGB and GT fisheye→pinhole** to match training (`cfg.rectify`), so the
+  pinhole-trained model is fed pinhole input and scored against pinhole GT.
+
 The standalone report takes just the **run name** — it reads everything else
 (VGGT base checkpoint, LoRA rank, ADT root, sizing) from `runs/<name>/config.yaml`
 and evaluates the pretrained models plus the run's **best** and **last**

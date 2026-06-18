@@ -442,6 +442,9 @@ class BaseAlternatingTrainer:
             device=self.device, seq_len=self.cfg.seq_len,
             image_resolution=self.cfg.image_resolution, align_modes=modes,
             qual_dir=None, n_qual=0, max_frames=(None if mf is not None and mf < 0 else mf),
+            # Mirror training: GT-aligned synthetic RGB + same fisheye rectification.
+            rectify=self.cfg.rectify, camera_preset=self.cfg.camera_preset,
+            fisheye_k=self.cfg.fisheye_k, fisheye_d=self.cfg.fisheye_d,
         )
 
     def _quant_eval_adt(self) -> None:

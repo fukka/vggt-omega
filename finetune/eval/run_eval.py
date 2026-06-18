@@ -370,22 +370,24 @@ def _save_results(
 # --------------------------------------------------------------------------- #
 
 _DEFAULT_ADT_SEQ = "Apartment_release_clean_seq131_M1292"
+# RGB source: the rendered stream that is pixel-aligned with the rendered GT depth
+# (see adt_depth.ADT_RGB_SUBDIR / ADTWindowDataset).
+_ADT_RGB_SUBDIR = "videos_synthetic"
+
+
+def _is_adt_seq(seq_dir: str) -> bool:
+    return (os.path.isdir(os.path.join(seq_dir, _ADT_RGB_SUBDIR)) and
+            os.path.isdir(os.path.join(seq_dir, "depth_npy")))
 
 
 def _find_adt_seq_dirs(adt_root: str) -> List[str]:
     if not adt_root or not os.path.isdir(adt_root):
         return []
     default_seq = os.path.join(adt_root, _DEFAULT_ADT_SEQ)
-    if (os.path.isdir(os.path.join(default_seq, "videos_rgb")) and
-            os.path.isdir(os.path.join(default_seq, "depth_npy"))):
+    if _is_adt_seq(default_seq):
         return [default_seq]
-    seq_dirs = []
-    for name in sorted(os.listdir(adt_root)):
-        seq_dir = os.path.join(adt_root, name)
-        if (os.path.isdir(os.path.join(seq_dir, "videos_rgb")) and
-                os.path.isdir(os.path.join(seq_dir, "depth_npy"))):
-            seq_dirs.append(seq_dir)
-    return seq_dirs
+    return [os.path.join(adt_root, name) for name in sorted(os.listdir(adt_root))
+            if _is_adt_seq(os.path.join(adt_root, name))]
 
 
 # --------------------------------------------------------------------------- #
@@ -417,6 +419,15 @@ def main() -> None:
     p.add_argument("--seq-len", type=int, default=None, help="default: cfg.seq_len")
     p.add_argument("--image-resolution", type=int, default=None, help="default: cfg.image_resolution")
     p.add_argument("--batch-size", type=int, default=1)
+    # ADT input + fisheye rectification (default: match the run's training config).
+    p.add_argument("--rgb-subdir", default="videos_synthetic",
+                   help="ADT RGB source dir (videos_synthetic is GT-aligned; videos_rgb is real)")
+    p.add_argument("--rectify", dest="rectify", action="store_true",
+                   help="force fisheye→pinhole rectify RGB+GT (default: follow cfg.rectify)")
+    p.add_argument("--no-rectify", dest="rectify", action="store_false",
+                   help="force raw fisheye (no rectification)")
+    p.set_defaults(rectify=None)
+    p.add_argument("--camera-preset", default=None, help="default: cfg.camera_preset (aria-214-1)")
     a = p.parse_args()
 
     device = torch.device(a.device)
@@ -431,6 +442,12 @@ def main() -> None:
     image_resolution = a.image_resolution or int(cfg.get("image_resolution", 512))
     adt_max_frames = (a.adt_max_frames if a.adt_max_frames is not None
                       else int(cfg.get("eval_adt_max_frames", 100)))
+    # Rectify to match training: ADT RGB+GT are fisheye; the run trained with
+    # cfg.rectify, so eval mirrors it unless --rectify/--no-rectify is given.
+    rectify = bool(cfg.get("rectify", True)) if a.rectify is None else a.rectify
+    camera_preset = a.camera_preset or cfg.get("camera_preset", "aria-214-1")
+    fisheye_k = cfg.get("fisheye_k", "")
+    fisheye_d = cfg.get("fisheye_d", "")
 
     seq_dirs = _find_adt_seq_dirs(adt_root)
     if not seq_dirs:
@@ -442,7 +459,8 @@ def main() -> None:
 
     print(f"[eval] run={run_name!r}  run_dir={run_dir}")
     print(f"[eval] ADT: {len(seq_dirs)} seq dir(s), <= {adt_max_frames} frames, "
-          f"seq_len={seq_len}, res={image_resolution}")
+          f"seq_len={seq_len}, res={image_resolution}, rgb={a.rgb_subdir}, "
+          f"rectify={rectify}{f' ({camera_preset})' if rectify else ''}")
 
     variants = build_variants(
         cfg, run_dir, device, checkpoints=tuple(a.checkpoints), include_dav2=not a.no_dav2
@@ -469,6 +487,11 @@ def main() -> None:
             qual_dir=qual_dir,
             n_qual=a.n_qual,
             max_frames=(None if adt_max_frames < 0 else adt_max_frames),
+            rgb_subdir=a.rgb_subdir,
+            rectify=rectify,
+            camera_preset=camera_preset,
+            fisheye_k=fisheye_k,
+            fisheye_d=fisheye_d,
         )
 
     modes = collect_align_modes(variants)

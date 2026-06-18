@@ -79,6 +79,26 @@ class FisheyeRectifier:
         out = cv2.remap(img_hwc, map1, map2, cv2.INTER_LINEAR, cv2.BORDER_CONSTANT)
         return np.ascontiguousarray(out, dtype=np.float32)
 
+    def rectify_depth(self, depth_hw: np.ndarray) -> np.ndarray:
+        """depth_hw: float32 HxW -> rectified float32 HxW (same units).
+
+        Uses the SAME maps as the RGB path so a rectified depth map stays pixel-
+        aligned with its rectified image. NEAREST interpolation (never blend depth
+        across discontinuities into spurious values) and a 0 border so pixels that
+        fall outside the fisheye field of view become 0 == invalid. The depth value
+        itself is preserved: rectification shares the camera centre/axis (identity
+        rotation), so z-depth / range is unchanged — only the pixel grid is remapped.
+        """
+        import cv2
+
+        H, W = depth_hw.shape[:2]
+        map1, map2 = self._get_maps(H, W)
+        out = cv2.remap(
+            depth_hw.astype(np.float32), map1, map2,
+            cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT, borderValue=0.0,
+        )
+        return np.ascontiguousarray(out, dtype=np.float32)
+
 
 def looks_like_fisheye(clip_pattern: str, data_root: str) -> bool:
     """Heuristic used only to decide whether to warn about missing rectification."""
