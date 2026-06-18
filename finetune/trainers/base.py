@@ -363,14 +363,14 @@ class BaseAlternatingTrainer:
     # quantitative ADT depth metrics (dense GT). Rank-0 only + barrier so DDP
     # ranks stay in lockstep; wrapped in try/except so a flaky eval never kills
     # a long training run.
-    def _periodic_eval(self, val_loader, is_first: bool = False) -> None:
+    def _periodic_eval(self, val_loader) -> None:
         if _is_main():
             try:
                 self._qual_eval(val_loader)
             except Exception as e:  # pragma: no cover - monitoring must not crash training
                 self.logger.text(f"[eval] qualitative val failed: {e}")
             try:
-                self._quant_eval_adt(is_first)
+                self._quant_eval_adt()
             except Exception as e:  # pragma: no cover
                 self.logger.text(f"[eval] quantitative ADT failed: {e}")
         if dist.is_initialized():
@@ -444,21 +444,23 @@ class BaseAlternatingTrainer:
             qual_dir=None, n_qual=0, max_frames=(None if mf is not None and mf < 0 else mf),
         )
 
-    def _quant_eval_adt(self, is_first: bool) -> None:
+    def _quant_eval_adt(self) -> None:
         if not self._resolve_adt_dirs():
             return
         vggt_raw, dav2_raw = _unwrap(self.vggt), _unwrap(self.dav2)
-        if is_first or self._adt_baseline is None:
-            # At step 0 the live models ARE the pretrained models (LoRA delta 0,
-            # heads still pretrained) -> compute the pretrained baseline once.
-            base_v = self._adt_eval_one(vggt_raw, "vggt")
-            base_d = self._adt_eval_one(dav2_raw, "dav2")
-            self._adt_baseline = {"vggt": base_v, "dav2": base_d}
-            self._log_adt(base_v, base_d, base_v, base_d)  # finetuned == pretrained at start
-        else:
-            ft_v = self._adt_eval_one(vggt_raw, "vggt")
-            ft_d = self._adt_eval_one(dav2_raw, "dav2")
-            self._log_adt(self._adt_baseline["vggt"], self._adt_baseline["dav2"], ft_v, ft_d)
+        # Always score the LIVE (currently-finetuned) models.
+        ft_v = self._adt_eval_one(vggt_raw, "vggt")
+        ft_d = self._adt_eval_one(dav2_raw, "dav2")
+        # The pretrained baseline is only valid at step 0, where the live models
+        # ARE the pretrained ones (LoRA delta 0, heads untrained). Snapshot it
+        # exactly there -- never recompute from an already-trained model, which
+        # would mislabel a finetuned result as "*_pretrained". If the step-0 eval
+        # was missed/errored, _adt_baseline stays None and the pretrained columns
+        # are simply omitted (NaN) rather than faked.
+        if self.global_step == 0:
+            self._adt_baseline = {"vggt": ft_v, "dav2": ft_d}
+        base = self._adt_baseline or {}
+        self._log_adt(base.get("vggt"), base.get("dav2"), ft_v, ft_d)
 
     def _log_adt(self, vggt_pre, dav2_pre, vggt_ft, dav2_ft) -> None:
         flat: Dict[str, float] = {}
@@ -549,7 +551,7 @@ class BaseAlternatingTrainer:
         # Step-0 eval: models still == pretrained, so this both captures the
         # pretrained baseline (computed once) and gives every curve a start point.
         if cfg.eval_every > 0:
-            self._periodic_eval(val_loader, is_first=True)
+            self._periodic_eval(val_loader)
 
         data = _cycle(loader)
         for rnd in range(cfg.rounds):
@@ -594,7 +596,7 @@ class BaseAlternatingTrainer:
                 self._do_validation(val_loader, tag)
 
             if cfg.eval_every > 0 and self.global_step % cfg.eval_every == 0:
-                self._periodic_eval(val_loader, is_first=(self._adt_baseline is None))
+                self._periodic_eval(val_loader)
 
             if cfg.save_every > 0 and self.global_step % cfg.save_every == 0:
                 self.save_checkpoint("last")
