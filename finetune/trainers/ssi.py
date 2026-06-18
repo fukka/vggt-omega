@@ -37,6 +37,37 @@ def _conf_weight(conf: torch.Tensor) -> torch.Tensor:
     return conf.detach().clamp(1.0, 50.0).log() + EPS
 
 
+def _distill_gate(mode: str, conf, images, eps: float = 1e-3):
+    """Per-pixel gate ``[B*S,H,W]`` in [0,1] for the Phase-B DAv2->VGGT distillation.
+
+    Directs the (globally weaker) DAv2 teacher to where it actually helps:
+      "conf" — where VGGT is UNcertain (low depth_conf): it needs correcting.
+      "edge" — image edges / depth discontinuities: where DAv2 is sharp.
+      "conf_edge" — a soft OR of the two (gate high if EITHER is high).
+    Returns None for "none" (ungated). All inputs detached (gate is a weight).
+    """
+    if not mode or mode == "none":
+        return None
+    B, S = images.shape[:2]
+    H, W = images.shape[-2:]
+    gates = []
+    if "conf" in mode and conf is not None:
+        c = conf.detach().clamp(1.0, 50.0)
+        gates.append((1.0 - (c - 1.0) / 49.0).reshape(B * S, H, W))  # 1=uncertain, 0=confident
+    if "edge" in mode:
+        g = images.detach().mean(2).reshape(B * S, H, W)             # grayscale
+        gx = torch.zeros_like(g); gy = torch.zeros_like(g)
+        gx[:, :, 1:] = (g[:, :, 1:] - g[:, :, :-1]).abs()
+        gy[:, 1:, :] = (g[:, 1:, :] - g[:, :-1, :]).abs()
+        gates.append(1.0 - torch.exp(-10.0 * (gx + gy)))             # 1=strong edge, 0=flat
+    if not gates:
+        return None
+    gate = gates[0]
+    for g in gates[1:]:                                              # soft OR: a + b - a*b
+        gate = gate + g - gate * g
+    return gate.clamp(eps, 1.0)
+
+
 def _metric_align(dav2_depth: torch.Tensor, vggt_depth: torch.Tensor) -> torch.Tensor:
     """Scale DAv2 (relative) depth to VGGT's metric scale per frame.
 
@@ -56,13 +87,17 @@ class SSITrainer(BaseAlternatingTrainer):
         cfg = self.cfg
         ss, dyn = compute_self_supervised_losses(
             images, depth, pose_enc, conf=conf,
-            offsets=getattr(cfg, "offsets", (-1, 1)), alpha=cfg.ssim_alpha
+            offsets=getattr(cfg, "offsets", (-1, 1)), alpha=cfg.ssim_alpha,
+            dynamic_mask=cfg.use_dynamic_mask, dynamic_pow=cfg.dynamic_mask_pow,
         )
         B, S, _, H, W = images.shape
         v_disp = to_disparity(depth).reshape(B * S, H, W)
         d_disp = to_disparity(dav2_depth).reshape(B * S, H, W)
-        distill_ssi = ssi_loss(v_disp, d_disp)
-        distill_grad = gradient_matching_loss(v_disp, d_disp)
+        # Gate the distillation to where DAv2 helps (VGGT is the better model
+        # globally, so an ungated transfer drags it down). "none" = ungated.
+        gate = _distill_gate(getattr(cfg, "b_distill_gate", "none"), conf, images)
+        distill_ssi = ssi_loss(v_disp, d_disp, mask=gate)
+        distill_grad = gradient_matching_loss(v_disp, d_disp, mask=gate)
         total = (
             cfg.w_photometric * ss["photometric"]
             + cfg.w_geometric * ss["geometric"]
@@ -89,7 +124,8 @@ class SSITrainer(BaseAlternatingTrainer):
         dav2_metric = _metric_align(dav2_depth, depth_v)
         ss, dyn = compute_self_supervised_losses(
             images, dav2_metric, pose_enc, conf=None,
-            offsets=getattr(cfg, "offsets", (-1, 1)), alpha=cfg.ssim_alpha
+            offsets=getattr(cfg, "offsets", (-1, 1)), alpha=cfg.ssim_alpha,
+            dynamic_mask=cfg.use_dynamic_mask, dynamic_pow=cfg.dynamic_mask_pow,
         )
 
         # --- distill VGGT structure into DAv2 (disparity space), gated by VGGT

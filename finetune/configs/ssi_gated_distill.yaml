@@ -1,0 +1,25 @@
+# Feature: confidence/edge-GATED Phase-B distillation.
+# The ungated DAv2->VGGT distillation dragged VGGT down (ss 0.059 -> 0.074) because
+# DAv2 is globally weaker. But DAv2 may still help LOCALLY — on edges/discontinuities
+# (where it's sharp) and where VGGT is uncertain (its weak spots). This re-enables
+# the distillation at HALF weight, gated to exactly those regions (b_distill_gate:
+# conf_edge), so the large planar regions where VGGT already wins are left alone.
+# Question it answers: can DAv2's localized value be extracted net-positively?
+# Long schedule + the (default) stronger dynamic masking apply too.
+__base__: base.yaml
+
+name: ssi_gated_distill
+trainer: ssi
+notes: "Gated DAv2->VGGT distill (conf_edge, half weight) + long schedule."
+
+losses:
+  w_distill_ssi: 0.25        # half the default 0.5 (gentle, localized)
+  w_distill_grad: 0.15
+  b_distill_gate: conf_edge  # distill only where VGGT is uncertain OR at image edges
+  w_metric_anchor: 0.0
+  offsets: [-2, -1, 1, 2]
+
+schedule:
+  epochs: 3.0
+  rounds: 10
+  dav2_steps_mult: 0.5

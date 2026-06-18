@@ -67,6 +67,10 @@ class FinetuneConfig:
     w_smoothness: float = 0.05
     w_distill_ssi: float = 0.5     # structure transfer from DAv2 (scale-shift invariant)
     w_distill_grad: float = 0.25   # gradient matching from DAv2
+    b_distill_gate: str = "none"   # gate the Phase-B DAv2->VGGT distillation to where DAv2
+                                   # actually helps, so a globally-weaker teacher doesn't drag
+                                   # VGGT down: "none" | "conf" (where VGGT is UNcertain) |
+                                   # "edge" (image edges/discontinuities) | "conf_edge" (either).
     w_metric_anchor: float = 0.1   # ONLY used by trainer="metric_anchor": tie depth to the
                                    # frozen pretrained VGGT (preserves metric scale). 0 disables.
     metric_anchor_mode: str = "full"  # "full" = per-pixel log-depth (proximal: scale+structure)
@@ -80,6 +84,14 @@ class FinetuneConfig:
     w_a_photometric: float = 0.5   # NEW: photometric appearance anchor for DAv2 (real-image signal)
     w_a_smoothness: float = 0.05   # edge-aware smoothness on DAv2 depth
     a_distill_gate: bool = True    # gate the A-distill by VGGT confidence * dynamic mask
+
+    # dynamic / occlusion robustness — down-weight the photometric + geometric
+    # terms on pixels whose cross-view depth is inconsistent (moving / occluded),
+    # so the model isn't forced to explain motion as depth. The weight is the
+    # (detached) geometric residual mask M = (1 - r)^pow, an IRLS-style robust
+    # reweighting. Egocentric clips are hand/body-heavy, so this matters here.
+    use_dynamic_mask: bool = True
+    dynamic_mask_pow: float = 1.0  # >1 = sharper (more aggressive masking of inconsistent pixels)
 
     # optimization — AdamW with layer-group LRs. LoRA adapters start at 0 and
     # need a higher LR than the pretrained heads they augment; betas (0.9, 0.95)

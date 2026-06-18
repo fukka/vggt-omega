@@ -80,6 +80,25 @@ subclassing `BaseAlternatingTrainer` and `@TRAINER_REGISTRY.register()`-ing it
 | `metric_anchor_scale.yaml` | anchor pins global scale only, not structure | is the structural constraint needed to hold metric scale? |
 | `no_rectify.yaml` | feed raw fisheye to pinhole losses | how much does in-loader rectification buy? |
 
+**Scale-shift-focused recipes** (judge with `scale_shift`; longer schedule + the
+loss fixes below):
+
+| config | what it changes | for |
+|---|---|---|
+| `ssi_long.yaml` | self-sup only, 3 ep / 10 rounds, wider offsets | longer training, no weak-teacher drag |
+| `anchor_ssi_long.yaml` | + SSI **structure anchor** (`metric_anchor_mode: ssi`) | protect structure while training long (recommended) |
+| `ssi_gated_distill.yaml` | re-enable distill but **gated** (`b_distill_gate: conf_edge`) | can DAv2's *localized* value help VGGT net-positively? |
+| `no_dynamic_mask.yaml` | turn off the default dynamic/occlusion masking | how much does robust motion masking buy? |
+
+Two loss knobs apply to every recipe:
+- **`b_distill_gate`** (`none`/`conf`/`edge`/`conf_edge`) — steer Phase-B distillation
+  to where DAv2 helps (VGGT's uncertain regions and image edges), not the planar
+  regions where VGGT already wins.
+- **`use_dynamic_mask`** (default **on**) + `dynamic_mask_pow` — down-weight the
+  photometric/geometric terms on pixels whose cross-view depth is inconsistent
+  (moving/occluded) via a detached robust weight `M=(1-r)^pow`, so the model isn't
+  forced to explain hand/body motion as depth.
+
 ## Quick start
 
 Offline dry run (no checkpoint, no data — stand-in models on CPU):

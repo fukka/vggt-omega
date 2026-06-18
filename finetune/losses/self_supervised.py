@@ -107,6 +107,8 @@ def compute_self_supervised_losses(
     offsets: Sequence[int] = (-1, 1),
     alpha: float = 0.85,
     extra_static_mask: torch.Tensor | None = None,
+    dynamic_mask: bool = False,
+    dynamic_pow: float = 1.0,
 ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
     """Compute the self-supervised loss dict and the dynamic mask.
 
@@ -155,6 +157,15 @@ def compute_self_supervised_losses(
         weight = conf.reshape(B * S, H, W).detach().clamp(1.0, 50.0).log() + EPS
     if extra_static_mask is not None:
         weight = weight * extra_static_mask.reshape(B * S, H, W).clamp(0, 1)
+
+    # robust dynamic/occlusion reweighting: down-weight pixels whose cross-view
+    # depth is inconsistent (moving / occluded). Detached so it acts as an
+    # IRLS-style robust weight (the model can't game it by predicting bad depth).
+    if dynamic_mask:
+        dyn_w = (1.0 - r_mean).clamp(0.0, 1.0).detach()
+        if dynamic_pow != 1.0:
+            dyn_w = dyn_w.clamp_min(EPS) ** dynamic_pow
+        weight = weight * dyn_w
 
     photo = masked_weighted_mean(pe_min, weight, finite & any_valid)
     geo = masked_weighted_mean(r_mean, weight, any_valid)

@@ -1,0 +1,23 @@
+# Ablation — turn the (now default-on) dynamic/occlusion masking OFF.
+# The photometric + geometric terms normally down-weight pixels whose cross-view
+# depth is inconsistent (moving / occluded) via the detached robust weight
+# M = (1 - r)^pow. Egocentric clips are hand/body-heavy, so this should help; run
+# this against anchor_ssi_long.yaml (same recipe, masking on) to measure how much.
+__base__: base.yaml
+
+name: no_dynamic_mask
+trainer: metric_anchor
+notes: "anchor_ssi_long recipe with use_dynamic_mask=false (ablation)."
+
+losses:
+  w_metric_anchor: 0.1
+  metric_anchor_mode: ssi
+  w_distill_ssi: 0.0
+  w_distill_grad: 0.0
+  offsets: [-2, -1, 1, 2]
+  use_dynamic_mask: false
+
+schedule:
+  epochs: 3.0
+  rounds: 10
+  dav2_steps_mult: 0.5
