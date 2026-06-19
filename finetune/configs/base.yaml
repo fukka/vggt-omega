@@ -27,7 +27,7 @@ data:
 
 model:
   vggt_checkpoint: /group-volume/Fengjia/projects/vggt-omega/checkpoints/VGGT-Omega-1B-512/model.pt
-  dav2_model_name: depth-anything/Depth-Anything-V2-Small-hf
+  dav2_model_name: depth-anything/Depth-Anything-V2-Large-hf
   lora_rank: 8
   lora_alpha: 16
   finetune_dav2_lora_only: true   # safer than full DAv2 finetune

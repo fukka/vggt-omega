@@ -1,0 +1,11 @@
+# Rung 0 (baseline) — VGGT teaches DAv2 everywhere.
+# DAv2 is finetuned ONLY by affine-invariant distillation from the frozen VGGT,
+# ungated. Answers: does distilling the (structurally stronger) VGGT into DAv2
+# help at all? This is the minimal "fix VGGT, just finetune DAv2" run.
+__base__: dav2_base.yaml
+
+name: dav2_a0_distill
+notes: "DAv2 <- VGGT distillation only (ungated)."
+
+losses:
+  w_a_distill: 1.0

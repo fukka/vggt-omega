@@ -47,7 +47,7 @@ class FinetuneConfig:
 
     # models / checkpoints
     vggt_checkpoint: str = ""
-    dav2_model_name: str = "depth-anything/Depth-Anything-V2-Small-hf"
+    dav2_model_name: str = "depth-anything/Depth-Anything-V2-Large-hf"
     dav2_dummy: bool = False
     vggt_dummy: bool = False
 
@@ -84,6 +84,9 @@ class FinetuneConfig:
     w_a_photometric: float = 0.5   # NEW: photometric appearance anchor for DAv2 (real-image signal)
     w_a_smoothness: float = 0.05   # edge-aware smoothness on DAv2 depth
     a_distill_gate: bool = True    # gate the A-distill by VGGT confidence * dynamic mask
+    w_a_anchor: float = 0.0        # ONLY used by trainer="dav2": scale-shift-invariant SELF-anchor
+                                   # to the frozen pretrained DAv2 (protect its strong structure
+                                   # prior while the other terms refine it). 0 disables.
 
     # dynamic / occlusion robustness — down-weight the photometric + geometric
     # terms on pixels whose cross-view depth is inconsistent (moving / occluded),

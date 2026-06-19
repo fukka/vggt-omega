@@ -1,0 +1,15 @@
+# Rung 4 — + edge-aware smoothness (= the FULL original Phase A).
+# This reproduces exactly what the alternating runs did to DAv2, but in isolation
+# (VGGT frozen, no Phase B feedback). If DAv2 is worse here than at a lower rung,
+# the added self-sup terms are the culprits.
+__base__: dav2_base.yaml
+
+name: dav2_a4_full
+notes: "full Phase A: distill(conf) + photometric + multiview + smoothness."
+
+losses:
+  w_a_distill: 1.0
+  a_distill_gate: true
+  w_a_photometric: 0.5
+  w_a_multiview: 0.5
+  w_a_smoothness: 0.05

@@ -1,0 +1,14 @@
+# Rung 3 — + multi-view consistency.
+# Adds cross-view depth consistency (under VGGT poses) on top of distill+photo.
+# Answers: does forcing a MONOCULAR model to be multi-view consistent help, or
+# does it smear its per-frame structure?
+__base__: dav2_base.yaml
+
+name: dav2_a3_multiview
+notes: "distill(conf) + photometric + multiview."
+
+losses:
+  w_a_distill: 1.0
+  a_distill_gate: true
+  w_a_photometric: 0.5
+  w_a_multiview: 0.5

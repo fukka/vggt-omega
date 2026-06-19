@@ -1,0 +1,14 @@
+# Separate baseline — pure self-supervision, NO teacher.
+# DAv2 finetuned only by photometric + multiview + smoothness under VGGT poses,
+# with NO distillation from VGGT. Answers: can DAv2 improve from pixels/geometry
+# alone, or does it need VGGT's structure? Pairs with a0_distill (distill-only) to
+# separate "teacher signal" from "self-sup signal".
+__base__: dav2_base.yaml
+
+name: dav2_photo_only
+notes: "DAv2 self-supervised only (photometric + multiview + smoothness), no distill."
+
+losses:
+  w_a_photometric: 0.5
+  w_a_multiview: 0.5
+  w_a_smoothness: 0.05

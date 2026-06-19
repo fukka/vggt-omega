@@ -1,0 +1,14 @@
+# Rung 2 — + real-image photometric anchor.
+# Adds photometric reprojection of DAv2's (metric-aligned) depth under VGGT poses.
+# Answers: does the raw-pixel signal help DAv2, or corrupt its monocular prior?
+# (Prior experiments suggest the multi-view self-sup terms may HURT — this isolates
+# the photometric one.)
+__base__: dav2_base.yaml
+
+name: dav2_a2_photo
+notes: "distill(conf) + photometric."
+
+losses:
+  w_a_distill: 1.0
+  a_distill_gate: true
+  w_a_photometric: 0.5

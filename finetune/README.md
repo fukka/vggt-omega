@@ -99,6 +99,27 @@ Two loss knobs apply to every recipe:
   (moving/occluded) via a detached robust weight `M=(1-r)^pow`, so the model isn't
   forced to explain hand/body motion as depth.
 
+### DAv2-focused: `trainer: dav2` (freeze VGGT, train only DAv2)
+
+When the goal is improving **DAv2**, the alternation is overkill and harmful
+(Phase B wastes compute and, via the VGGT→DAv2 chain, drags DAv2 down). `trainer:
+dav2` (`trainers/dav2.py`) drops Phase B — VGGT is a **frozen teacher**, every step
+trains DAv2 — so the Phase-A losses can be ablated by **adding one at a time**.
+Best checkpoint is selected by the DAv2 val loss (not VGGT). Default model is now
+**DAv2-Large**.
+
+| config | Phase-A losses on | isolates |
+|---|---|---|
+| `dav2_a0_distill.yaml` | distill (ungated) | does VGGT→DAv2 distillation help at all? |
+| `dav2_a1_distill_conf.yaml` | + confidence gate | does "only where VGGT is confident" beat everywhere? |
+| `dav2_a2_photo.yaml` | + photometric | does the raw-pixel signal help or corrupt? |
+| `dav2_a3_multiview.yaml` | + multiview | does multi-view consistency on a monocular model help? |
+| `dav2_a4_full.yaml` | + smoothness (= full Phase A) | the full stack, in isolation |
+| `dav2_a5_anchor.yaml` | + **SSI self-anchor** to pretrained DAv2 (`w_a_anchor`) | does anchoring stop the drift (DAv2 mirror of the VGGT fix)? |
+| `dav2_photo_only.yaml` | photometric+multiview+smoothness, **no** distill | can DAv2 improve from pixels alone, no teacher? |
+
+All inherit `dav2_base.yaml` (`dav2_steps_mult: 0` → whole epoch budget on DAv2).
+
 ## Quick start
 
 Offline dry run (no checkpoint, no data — stand-in models on CPU):

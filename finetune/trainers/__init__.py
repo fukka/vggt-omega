@@ -12,6 +12,7 @@ import torch.nn as nn
 from ..config import FinetuneConfig
 from ..registry import TRAINER_REGISTRY
 from .base import BaseAlternatingTrainer
+from .dav2 import DAv2Trainer  # noqa: F401       (registers "dav2")
 from .metric_anchor import MetricAnchorTrainer  # noqa: F401  (registers "metric_anchor")
 from .ssi import SSITrainer  # noqa: F401        (registers "ssi")
 
@@ -31,6 +32,7 @@ __all__ = [
     "BaseAlternatingTrainer",
     "SSITrainer",
     "MetricAnchorTrainer",
+    "DAv2Trainer",
     "AlternatingTrainer",
     "build_trainer",
     "TRAINER_REGISTRY",

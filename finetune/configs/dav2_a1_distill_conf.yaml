@@ -1,0 +1,12 @@
+# Rung 1 — distill only WHERE VGGT IS CONFIDENT.
+# Same as a0 but the VGGT->DAv2 distillation is gated by VGGT's depth confidence,
+# so DAv2 is only pulled toward VGGT where VGGT is reliable. Answers: does
+# confidence gating beat distilling everywhere?
+__base__: dav2_base.yaml
+
+name: dav2_a1_distill_conf
+notes: "DAv2 <- VGGT distillation, gated by VGGT confidence."
+
+losses:
+  w_a_distill: 1.0
+  a_distill_gate: true

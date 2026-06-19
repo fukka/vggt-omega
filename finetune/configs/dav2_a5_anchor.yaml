@@ -1,0 +1,18 @@
+# Rung 5 — full Phase A + SSI SELF-ANCHOR to pretrained DAv2.
+# Holds DAv2 near its strong pretrained structure (scale-shift-invariant) while
+# the other terms refine it — the DAv2 mirror of the VGGT structure anchor that
+# turned long VGGT finetuning from a regression into a gain. If the lower rungs
+# regressed via drift, this should recover/improve. Costs one extra frozen DAv2
+# in GPU memory.
+__base__: dav2_base.yaml
+
+name: dav2_a5_anchor
+notes: "full Phase A + SSI self-anchor to frozen pretrained DAv2."
+
+losses:
+  w_a_distill: 1.0
+  a_distill_gate: true
+  w_a_photometric: 0.5
+  w_a_multiview: 0.5
+  w_a_smoothness: 0.05
+  w_a_anchor: 0.1

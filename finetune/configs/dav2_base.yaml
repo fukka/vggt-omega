@@ -1,0 +1,27 @@
+# DAv2-FOCUSED base: freeze VGGT, train ONLY DAv2.
+# Drops the (overkill, and per the experiments harmful) Phase B: VGGT is a frozen
+# teacher and every step trains DAv2. All Phase-A losses start OFF here; the
+# dav2_a*.yaml ladder turns them on ONE AT A TIME so each loss's marginal effect on
+# DAv2 is isolated. Judge under scale_shift. Uses DAv2-Large (base.yaml default).
+#
+#   python -m finetune.train --config finetune/configs/dav2_a1_distill_conf.yaml
+__base__: base.yaml
+
+trainer: dav2
+
+losses:
+  # everything off; rungs add one term each
+  w_a_distill: 0.0
+  w_a_multiview: 0.0
+  w_a_photometric: 0.0
+  w_a_smoothness: 0.0
+  w_a_anchor: 0.0
+  a_distill_gate: false
+
+ema:
+  ema_teacher: false        # EMA is a Phase-B device; unused when only DAv2 trains
+
+schedule:
+  epochs: 3.0
+  rounds: 10
+  dav2_steps_mult: 0.0      # no Phase B -> the whole epoch budget goes to DAv2
