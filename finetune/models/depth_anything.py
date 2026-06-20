@@ -48,14 +48,23 @@ class DepthAnythingV2(nn.Module):
         h14, w14 = self._round14(H), self._round14(W)
         if (h14, w14) != (H, W):
             x = F.interpolate(x, size=(h14, w14), mode="bilinear", align_corners=False)
-        out = self.model(pixel_values=x).predicted_depth  # [B*S, h, w], inverse-depth-like
+        out = self.model(pixel_values=x).predicted_depth  # [B*S, h, w], relative disparity (>=0, higher=nearer)
         if out.dim() == 4:
             out = out.squeeze(1)
         out = out.unsqueeze(1)
         out = F.interpolate(out, size=(H, W), mode="bilinear", align_corners=False)[:, 0]
-        # DAv2 relative output is disparity-like; convert to a positive "depth" so
-        # the rest of the pipeline is uniform. We keep it affine-invariant.
-        depth = 1.0 / (F.softplus(out) + 1e-3)
+        # HF predicted_depth is UNNORMALIZED relative disparity whose MAGNITUDE is
+        # checkpoint-dependent (Small and Large sit in very different ranges). The
+        # old `1/(softplus(out)+1e-3)` is NOT scale-equivariant — softplus's ~0.69
+        # floor distorts small-magnitude disparity, which silently broke DAv2-Large
+        # (AbsRel 0.69 vs Small's 0.097). Normalize per-frame to unit-mean disparity
+        # (scale detached, so it's a stable rescale, not a grad path) and invert to a
+        # bounded positive depth. Structure is preserved up to a global scale, which
+        # the affine-invariant losses and the scale_shift eval absorb.
+        disp = out.clamp_min(0.0)
+        n = disp.shape[0]
+        scale = disp.reshape(n, -1).mean(dim=1).detach().clamp_min(1e-6).reshape(n, 1, 1)
+        depth = 1.0 / (disp / scale).clamp_min(1e-2)
         return depth.reshape(B, S, H, W)
 
 
