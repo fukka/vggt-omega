@@ -20,7 +20,7 @@ from typing import Dict, Tuple
 
 import torch
 
-from ..geometry import EPS
+from ..geometry import EPS, decode_pose_encoding
 from ..losses import (
     affine_invariant_l1,
     compute_self_supervised_losses,
@@ -28,6 +28,7 @@ from ..losses import (
     ssi_loss,
     to_disparity,
 )
+from ..losses.self_supervised import _geometric_residual
 from ..registry import TRAINER_REGISTRY
 from .base import BaseAlternatingTrainer
 
@@ -35,6 +36,73 @@ from .base import BaseAlternatingTrainer
 def _conf_weight(conf: torch.Tensor) -> torch.Tensor:
     """Detached per-pixel weight from VGGT depth confidence (>=1): log-compressed."""
     return conf.detach().clamp(1.0, 50.0).log() + EPS
+
+
+def _gate_mode(val) -> str:
+    """Normalize the ``a_distill_gate`` config (legacy bool OR string) to a mode."""
+    if val is True:
+        return "conf"
+    if val is False or val is None:
+        return "none"
+    s = str(val).strip().lower()
+    if s in ("true", "yes", "on"):
+        return "conf"
+    if s in ("false", "no", "off", ""):
+        return "none"
+    return s
+
+
+def _vggt_consistency(depth_v, pose_enc, offsets, pow: float = 1.0) -> torch.Tensor:
+    """Per-pixel ``[B*S,H,W]`` multi-view consistency of VGGT's OWN depth under its
+    OWN poses: ``g = (1 - r)^pow`` in [0,1], 1 = cross-view consistent (static /
+    non-occluded). A DIRECT teacher-reliability signal (no learned head): high
+    where VGGT's depth agrees across neighbouring views, low on moving/occluded
+    pixels. Detached (used only as a weight)."""
+    B, S = depth_v.shape[:2]
+    H, W = depth_v.shape[-2:]
+    extr, K = decode_pose_encoding(pose_enc.float(), (H, W))
+    r_list, v_list = [], []
+    for off in offsets:
+        _, r, valid, _ = _geometric_residual(depth_v, extr, K, off, images=None)
+        r_list.append(r)
+        v_list.append(valid)
+    r_stack = torch.stack(r_list, 1)
+    v_stack = torch.stack(v_list, 1)
+    cnt = v_stack.float().sum(1).clamp_min(1.0)
+    r_mean = (r_stack * v_stack).sum(1) / cnt
+    g = (1.0 - r_mean).clamp(0.0, 1.0)
+    g = g.masked_fill(~v_stack.any(1), 1.0)        # no neighbour -> don't penalize
+    if pow != 1.0:
+        g = g.clamp_min(EPS) ** pow
+    return g.detach().reshape(B * S, H, W)
+
+
+def _phase_a_distill_gate(mode, conf_v, depth_v, pose_enc, images, offsets, pow=1.0):
+    """WHERE to trust the VGGT teacher in the Phase-A VGGT->DAv2 distillation.
+
+    Modes (see ``config.a_distill_gate``): "none" | "conf" | "static" |
+    "conf_static" | "edge". Components combine multiplicatively. Returns a
+    ``[B*S,H,W]`` per-pixel weight, or ``None`` for "none"/empty.
+    """
+    if mode == "none":
+        return None
+    B, S = depth_v.shape[:2]
+    H, W = depth_v.shape[-2:]
+    g = None
+    if "conf" in mode and conf_v is not None:
+        g = _conf_weight(conf_v).reshape(B * S, H, W)
+    if "static" in mode:
+        s = _vggt_consistency(depth_v, pose_enc, offsets, pow=pow)
+        g = s if g is None else g * s
+    if "edge" in mode:
+        im = images.detach().mean(2).reshape(B * S, H, W)
+        gx = torch.zeros_like(im)
+        gy = torch.zeros_like(im)
+        gx[:, :, 1:] = (im[:, :, 1:] - im[:, :, :-1]).abs()
+        gy[:, 1:, :] = (im[:, 1:, :] - im[:, :-1, :]).abs()
+        e = 1.0 - torch.exp(-10.0 * (gx + gy))
+        g = e if g is None else g * e
+    return g
 
 
 def _distill_gate(mode: str, conf, images, eps: float = 1e-3):
@@ -135,9 +203,10 @@ class SSITrainer(BaseAlternatingTrainer):
         #     it most needs correcting. --------------------------------------- #
         d_disp = to_disparity(dav2_depth).reshape(B * S, H, W)
         v_disp = to_disparity(depth_v).reshape(B * S, H, W)
-        gate = None
-        if cfg.a_distill_gate and conf_v is not None:
-            gate = _conf_weight(conf_v).reshape(B * S, H, W)
+        gate = _phase_a_distill_gate(
+            _gate_mode(cfg.a_distill_gate), conf_v, depth_v, pose_enc, images,
+            offsets=getattr(cfg, "offsets", (-1, 1)), pow=getattr(cfg, "a_gate_pow", 1.0),
+        )
         distill = affine_invariant_l1(d_disp, v_disp, mask=gate)
 
         total = (
@@ -153,4 +222,6 @@ class SSITrainer(BaseAlternatingTrainer):
             "photometric": float(ss["photometric"].detach()),
             "smoothness": float(ss["smoothness"].detach()),
         }
+        if gate is not None:
+            logs["gate"] = float(gate.mean().detach())   # mean teacher-trust coverage
         return total, logs, dyn

@@ -1,0 +1,22 @@
+# DAv2 best recipe (from the corrected dav2_a* ladder).
+# Marginal effects on DAv2-Large (AbsRel, best ckpt):
+#   distillation (ungated)   0.0576 -> 0.0469   (the dominant win)
+#   + confidence gate        0.0469 -> 0.0474   (slightly HURTS -> drop the gate)
+#   + photometric            0.0474 -> 0.0457   (small help)
+#   + multiview              0.0457 -> 0.0496   (HURTS -> drop)
+#   + smoothness             ~neutral           (drop)
+#   + SSI self-anchor        restores delta1 97.1% / best RMSE 0.291 / SqRel 0.024
+# So keep only the proven-helpful terms: ungated VGGT->DAv2 distillation +
+# photometric + SSI self-anchor. No multiview, no confidence gate, no smoothness.
+__base__: dav2_base.yaml
+
+name: dav2_best
+notes: "distill(ungated) + photometric + SSI self-anchor; no multiview/gate/smooth."
+
+losses:
+  w_a_distill: 1.0
+  a_distill_gate: false
+  w_a_photometric: 0.5
+  w_a_multiview: 0.0
+  w_a_smoothness: 0.0
+  w_a_anchor: 0.1

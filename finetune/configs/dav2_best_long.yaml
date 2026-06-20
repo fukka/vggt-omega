@@ -1,0 +1,14 @@
+# Best recipe (distill + photometric + SSI self-anchor) trained 3x LONGER.
+# The practical "train the winner longer" run. The SSI self-anchor leashes DAv2 to
+# its strong pretrained structure, so unlike dav2_a0_long this can use the longer
+# budget to refine without drifting. If a0_long drifts but this one keeps gaining,
+# that confirms the anchor is what makes long DAv2 finetuning safe (the DAv2 mirror
+# of the VGGT anchor_ssi_long result).
+__base__: dav2_best.yaml
+
+name: dav2_best_long
+notes: "best recipe (distill+photo+SSI anchor), long schedule (~9 epochs)."
+
+schedule:
+  epochs: 9.0
+  rounds: 12

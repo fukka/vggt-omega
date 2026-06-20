@@ -1,0 +1,15 @@
+# a0 (ungated distill) trained 3x LONGER.
+# Pure VGGT->DAv2 distillation — the single dominant win — but for ~9 epochs
+# instead of 3. With NO anchor/regularizer, this is the clean test of whether the
+# student keeps improving with more distillation steps or starts to DRIFT off its
+# pretrained prior (compare against dav2_best_long, which adds the SSI anchor).
+# NOTE: for trainer=dav2 the total step budget is epochs*windows (rounds only sets
+# the eval/phase cadence), so "longer" = raise epochs.
+__base__: dav2_a0_distill.yaml
+
+name: dav2_a0_long
+notes: "a0 ungated distill, long schedule (~9 epochs)."
+
+schedule:
+  epochs: 9.0
+  rounds: 12

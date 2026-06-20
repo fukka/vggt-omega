@@ -1,0 +1,14 @@
+# Rung 7 — distill where VGGT is CONFIDENT *and* STATIC.
+# Combines the learned confidence head (a1) with the multi-view consistency gate
+# (a6) multiplicatively: trust the teacher only where it is both self-reported
+# confident AND geometrically cross-view consistent. Answers: do the two
+# reliability signals stack, or is the consistency gate enough on its own?
+__base__: dav2_base.yaml
+
+name: dav2_a7_conf_static
+notes: "DAv2 <- VGGT distillation, gated by confidence AND multi-view consistency."
+
+losses:
+  w_a_distill: 1.0
+  a_distill_gate: conf_static
+  a_gate_pow: 1.0

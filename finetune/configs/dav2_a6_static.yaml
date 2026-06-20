@@ -1,0 +1,17 @@
+# Rung 6 — distill only WHERE VGGT IS STATIC / MULTI-VIEW CONSISTENT.
+# Same as a0 (ungated distill) but the VGGT->DAv2 distillation is gated by VGGT's
+# OWN multi-view geometric consistency g = (1 - r)^pow (r = cross-view depth
+# residual under VGGT's poses). Unlike the learned confidence head (a1), this is
+# a DIRECT reliability signal: high where VGGT's depth actually agrees across
+# neighbouring frames (static, non-occluded), low on moving hands/occlusions.
+# Answers: does trusting the teacher by REAL consistency beat (a) ungated and
+# (b) the confidence head?
+__base__: dav2_base.yaml
+
+name: dav2_a6_static
+notes: "DAv2 <- VGGT distillation, gated by VGGT multi-view consistency (static)."
+
+losses:
+  w_a_distill: 1.0
+  a_distill_gate: static
+  a_gate_pow: 1.0

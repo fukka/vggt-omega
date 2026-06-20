@@ -1,0 +1,38 @@
+# Finetune BOTH VGGT and DAv2, alternating in rounds — but ASYMMETRICALLY.
+# Lesson from the ladder: letting DAv2 teach VGGT (Phase-B DAv2->VGGT distill) and
+# then re-teaching DAv2 from that VGGT dragged DAv2 DOWN (the weaker teacher leaks
+# back). So here the teaching is one-directional and VGGT self-improves:
+#   Phase B (VGGT): self-supervision (photo+geo+smooth) + SSI structure anchor to
+#                   the frozen pretrained VGGT — NO DAv2->VGGT distillation. This
+#                   is the anchor_ssi_long recipe that turned long VGGT finetuning
+#                   into a gain without structure drift.
+#   Phase A (DAv2): the best DAv2 recipe — ungated VGGT->DAv2 distill + photometric.
+# Net: each round VGGT gets a little better, becoming a better teacher for DAv2 the
+# next round, while DAv2 never pollutes VGGT. Uses trainer=metric_anchor (runs both
+# phases; w_metric_anchor>0 keeps the frozen reference VGGT for the anchor).
+#
+#   python -m finetune.train --config finetune/configs/dav2_codistill.yaml
+__base__: base.yaml
+
+name: dav2_codistill
+trainer: metric_anchor
+notes: "asymmetric co-distill in rounds: VGGT self-improves (SSI anchor) -> teaches DAv2 (ungated distill+photo)."
+
+losses:
+  # Phase B (improve VGGT): self-sup + SSI structure anchor, no weaker-teacher distill
+  w_distill_ssi: 0.0
+  w_distill_grad: 0.0
+  w_metric_anchor: 0.1
+  metric_anchor_mode: ssi
+  offsets: [-2, -1, 1, 2]
+  # Phase A (improve DAv2): best recipe — ungated distill + photometric only
+  w_a_distill: 1.0
+  a_distill_gate: none
+  w_a_photometric: 0.5
+  w_a_multiview: 0.0
+  w_a_smoothness: 0.0
+
+schedule:
+  epochs: 3.0
+  rounds: 10
+  dav2_steps_mult: 1.0      # equal A:B so DAv2 fully benefits from each improved VGGT

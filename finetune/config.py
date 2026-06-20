@@ -83,7 +83,17 @@ class FinetuneConfig:
     w_a_multiview: float = 0.5     # multi-view consistency under VGGT poses
     w_a_photometric: float = 0.5   # NEW: photometric appearance anchor for DAv2 (real-image signal)
     w_a_smoothness: float = 0.05   # edge-aware smoothness on DAv2 depth
-    a_distill_gate: bool = True    # gate the A-distill by VGGT confidence * dynamic mask
+    a_distill_gate: str = "conf"   # WHERE to trust the VGGT teacher in the A-distill:
+                                   # "none"        — ungated (every pixel equal)
+                                   # "conf" / true — VGGT depth-head confidence (log) [legacy bool]
+                                   # "static"      — VGGT multi-view geometric consistency (1-r)^pow:
+                                   #                 trust where VGGT depth is cross-view consistent
+                                   #                 (static / non-occluded) — a DIRECT reliability
+                                   #                 signal, not the learned conf head
+                                   # "conf_static" — product of conf AND static
+                                   # "edge"        — image edges (DAv2 already sharp there)
+                                   # legacy booleans still parse: true->"conf", false->"none".
+    a_gate_pow: float = 1.0        # sharpness of the "static" gate ((1-r)^pow); >1 = more aggressive
     w_a_anchor: float = 0.0        # ONLY used by trainer="dav2": scale-shift-invariant SELF-anchor
                                    # to the frozen pretrained DAv2 (protect its strong structure
                                    # prior while the other terms refine it). 0 disables.
