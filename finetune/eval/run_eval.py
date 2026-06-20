@@ -274,7 +274,7 @@ def build_variants(
         dav2_base = _load_dav2_base(dav2_name, device)
         variants["dav2_pretrained"] = {
             "label": "DAv2 pretrained", "predict_fn": make_dav2_predict(dav2_base, device),
-            "align_modes": ("scale_shift",), "with_pose": False,
+            "align_modes": ("disparity_scale_shift",), "with_pose": False,
         }
         for tag in checkpoints:
             ckpt = find_checkpoint(run_dir, tag)
@@ -284,7 +284,7 @@ def build_variants(
             m = _apply_dav2_finetune(dav2_base, ckpt, lora_rank, lora_alpha, dav2_lora_only, device)
             variants[f"dav2_{tag}"] = {
                 "label": f"DAv2 ({tag})", "predict_fn": make_dav2_predict(m, device),
-                "align_modes": ("scale_shift",), "with_pose": False,
+                "align_modes": ("disparity_scale_shift",), "with_pose": False,
             }
 
     return variants

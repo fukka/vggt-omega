@@ -63,11 +63,18 @@ def align_depth(
         return (s * pred + t).astype(np.float32)
 
     if mode == "disparity_scale_shift":
-        g_d = 1.0 / (g + 1e-8)
-        A = np.stack([p, np.ones_like(p)], axis=1)
-        x, _, _, _ = np.linalg.lstsq(A, g_d, rcond=None)
+        # ``pred`` is DEPTH (our pipeline convention). The correct alignment for an
+        # affine-invariant DISPARITY model (MiDaS / Depth-Anything) is in disparity
+        # space: recover disparity = 1/depth, fit s*pred_disp + shift ~= gt_disp,
+        # then invert back. Depth-space 'scale_shift' cannot undo the disparity SHIFT
+        # and scores even a perfect disparity model poorly (the eval_depth_anything_v2
+        # reference uses exactly this disparity-space protocol).
+        p_disp = 1.0 / (p + 1e-8)               # pred disparity (masked)
+        g_disp = 1.0 / (g + 1e-8)               # gt disparity
+        A = np.stack([p_disp, np.ones_like(p_disp)], axis=1)
+        x, _, _, _ = np.linalg.lstsq(A, g_disp, rcond=None)
         s, t = x
-        pred_disp = s * pred.astype(np.float64) + t
+        pred_disp = s * (1.0 / (pred.astype(np.float64) + 1e-8)) + t
         out = np.where(pred_disp > 1e-8, 1.0 / pred_disp, 0.0)
         return out.astype(np.float32)
 

@@ -435,7 +435,7 @@ class BaseAlternatingTrainer:
         if kind == "vggt":
             predict_fn, modes = make_vggt_predict(raw_model, self.device), ("none", "scale_shift")
         else:
-            predict_fn, modes = make_dav2_predict(raw_model, self.device), ("scale_shift",)
+            predict_fn, modes = make_dav2_predict(raw_model, self.device), ("disparity_scale_shift",)
         mf = self.cfg.eval_adt_max_frames
         return run_adt_eval(
             predict_fn=predict_fn, label=f"{kind}", seq_dirs=self._adt_seq_dirs,
@@ -488,7 +488,7 @@ class BaseAlternatingTrainer:
             f"[eval] gstep {self.global_step} ADT AbsRel | "
             f"VGGT(none) pre={grab(vggt_pre,'none'):.4f} ft={grab(vggt_ft,'none'):.4f} | "
             f"VGGT(ss) pre={grab(vggt_pre,'scale_shift'):.4f} ft={grab(vggt_ft,'scale_shift'):.4f} | "
-            f"DAv2(ss) pre={grab(dav2_pre,'scale_shift'):.4f} ft={grab(dav2_ft,'scale_shift'):.4f}"
+            f"DAv2(disp) pre={grab(dav2_pre,'disparity_scale_shift'):.4f} ft={grab(dav2_ft,'disparity_scale_shift'):.4f}"
         )
 
     # ------------------------- checkpoint / viz ----------------------- #

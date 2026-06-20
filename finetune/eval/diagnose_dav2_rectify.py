@@ -90,11 +90,11 @@ def main() -> None:
             res = run_adt_eval(
                 predict_fn=predict, label=tag, seq_dirs=seq_dirs, device=device,
                 seq_len=a.seq_len, image_resolution=a.image_resolution,
-                depth_max_m=a.depth_max, align_modes=("scale_shift",),
+                depth_max_m=a.depth_max, align_modes=("disparity_scale_shift",),
                 qual_dir=qual, n_qual=a.n_qual, max_frames=a.max_frames,
                 rgb_subdir=a.rgb_subdir, rectify=rectify, camera_preset=a.camera_preset,
             )
-            results[tag] = res.get("scale_shift", {})
+            results[tag] = res.get("disparity_scale_shift", {})
         del model, predict
         if device.type == "cuda":
             torch.cuda.empty_cache()
@@ -102,7 +102,7 @@ def main() -> None:
     # -------- comparison table --------
     lines = []
     lines.append("\n" + "=" * 86)
-    lines.append("  DAv2 — rectified vs raw (ADT dense GT, scale_shift alignment)")
+    lines.append("  DAv2 — rectified vs raw (ADT dense GT, disparity-space alignment)")
     lines.append("=" * 86)
     header = f"  {'Model / input':22s}" + "".join(f"  {c:>10s}" for c in _COLS)
     lines.append(header)
