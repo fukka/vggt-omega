@@ -20,3 +20,11 @@ skyseg.onnx.tmp
 # finetune run artifacts (default --out-dir)
 finetune_outputs/
 test_run_outputs/
+runs/
+eval_out/
+
+# macOS / editor junk
+.DS_Store
+*~
+.idea/
+.vscode/
