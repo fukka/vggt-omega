@@ -124,8 +124,18 @@ def _apply_vggt_finetune(
     ckpt = torch.load(finetune_checkpoint, map_location="cpu")
     sd = ckpt.get("vggt", ckpt)
     missing, unexpected = model.load_state_dict(sd, strict=False)
+    # missing is expected (the frozen backbone comes from the base ckpt); but
+    # unexpected != 0 means saved finetune weights did NOT match the model and were
+    # silently dropped (e.g. a lora_rank/architecture mismatch) -> fail loudly.
+    if unexpected:
+        raise RuntimeError(
+            f"VGGT finetune checkpoint {finetune_checkpoint!r} has {len(unexpected)} key(s) "
+            f"that don't match the model — those finetune weights were NOT applied. "
+            f"Likely a config mismatch (lora_rank/alpha or architecture). "
+            f"unexpected[:5]={unexpected[:5]}"
+        )
     print(f"[eval]   VGGT finetune weights loaded "
-          f"(missing={len(missing)}, unexpected={len(unexpected)})")
+          f"({len(sd)} tensors; {len(missing)} frozen-backbone keys from base, unexpected=0)")
     return model.to(device).eval()
 
 
@@ -162,8 +172,15 @@ def _apply_dav2_finetune(
         print(f"[eval]   LoRA applied to {n} DAv2 layers")
 
     missing, unexpected = model.load_state_dict(dav2_sd, strict=False)
+    if unexpected:
+        raise RuntimeError(
+            f"DAv2 finetune checkpoint {finetune_checkpoint!r} has {len(unexpected)} key(s) "
+            f"that don't match the model — those finetune weights were NOT applied. "
+            f"Likely the run used a different dav2_model_name (e.g. Small vs Large) or "
+            f"lora setting. unexpected[:5]={unexpected[:5]}"
+        )
     print(f"[eval]   DAv2 finetune weights loaded "
-          f"(missing={len(missing)}, unexpected={len(unexpected)})")
+          f"({len(dav2_sd)} tensors; {len(missing)} frozen keys from base, unexpected=0)")
     return model.to(device).eval()
 
 

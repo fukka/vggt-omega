@@ -31,7 +31,27 @@ class DepthAnythingV2(nn.Module):
                 "DepthAnythingV2 requires `transformers`. Install it or use "
                 "DummyDepthModel / pass --dav2-dummy for offline runs."
             ) from exc
-        self.model = AutoModelForDepthEstimation.from_pretrained(model_name)
+        # Enforce a clean load: from_pretrained is permissive (it warns, not raises,
+        # if a layer is randomly initialized), so capture the loading info and fail
+        # loudly. A missing/mismatched weight = a randomly-initialized layer = garbage
+        # depth -- the kind of silent failure that can look like a "bad model".
+        self.model, info = AutoModelForDepthEstimation.from_pretrained(
+            model_name, output_loading_info=True
+        )
+        missing = list(info.get("missing_keys", []) or [])
+        mismatched = list(info.get("mismatched_keys", []) or [])
+        unexpected = list(info.get("unexpected_keys", []) or [])
+        if missing or mismatched:
+            raise RuntimeError(
+                f"DAv2 weights for {model_name!r} did NOT load cleanly: "
+                f"{len(missing)} missing, {len(mismatched)} size-mismatched key(s) — "
+                f"those layers are RANDOMLY INITIALIZED (garbage depth). "
+                f"missing[:5]={missing[:5]} mismatched[:5]={mismatched[:5]}. "
+                f"Usually a transformers version that doesn't fully support this "
+                f"checkpoint: `pip install -U transformers`."
+            )
+        print(f"[dav2] loaded {model_name} cleanly (0 missing / 0 mismatched"
+              + (f"; {len(unexpected)} unexpected ignored" if unexpected else "") + ")")
         mean = torch.tensor(_IMAGENET_MEAN).view(1, 3, 1, 1)
         std = torch.tensor(_IMAGENET_STD).view(1, 3, 1, 1)
         self.register_buffer("mean", mean)
