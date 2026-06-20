@@ -109,7 +109,12 @@ def depth_metrics(
         scale_ratio (median(gt/pred) before alignment — 1.0 = perfect metric scale),
         n_valid (number of valid pixels used)
     """
-    combined = mask & (gt > min_depth) & (gt < max_depth) & np.isfinite(gt)
+    # Valid = GT in range AND prediction in range. Excluding out-of-range PRED is
+    # what the official/reference DAv2 eval does: disparity alignment can push a few
+    # pixels' aligned disparity ~0 -> depth -> ~1e6, and without this exclusion those
+    # blow up SqRel/RMSE (e.g. DAv2-small raw measured SqRel 5e6, RMSE 918 m).
+    combined = (mask & np.isfinite(gt) & (gt > min_depth) & (gt < max_depth)
+                & np.isfinite(pred) & (pred > 0) & (pred <= max_depth))
     n_valid = int(combined.sum())
     if n_valid == 0:
         return {k: float("nan") for k in
