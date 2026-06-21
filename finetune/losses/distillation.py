@@ -110,6 +110,44 @@ def gradient_matching_loss(
     return total / scales
 
 
+def ordinal_distill_loss(
+    student: torch.Tensor,
+    teacher: torch.Tensor,
+    mask: torch.Tensor | None = None,
+    n_pairs: int = 4096,
+    deadzone: float = 0.1,
+) -> torch.Tensor:
+    """Ordinal (ranking) distillation: match the TEACHER's depth ORDERING, not its
+    values. For random pixel pairs (a, b) the teacher defines the target order and a
+    logistic ranking loss penalizes the student for disagreeing. Ordering is
+    invariant to any positive affine map, so this transfers structure WITHOUT
+    forcing the student onto the teacher's scale/shift (FisheyeDistill-style ordinal
+    distillation, arXiv 2205.02930).
+
+    ``student, teacher`` are ``[N,H,W]`` (disparity or depth — only order matters).
+    Both are scale-shift normalized per sample so the logistic stays well-conditioned;
+    pairs whose normalized teacher gap < ``deadzone`` are treated as 'equal' (squared
+    penalty) rather than ranked. Returns a scalar.
+    """
+    N = student.shape[0]
+    m_full = (torch.ones_like(student.reshape(N, -1)) if mask is None
+              else mask.reshape(N, -1).to(student.dtype))
+    s = _ssi_normalize(student, m_full)          # [N, K]
+    t = _ssi_normalize(teacher, m_full)
+    K = s.shape[1]
+    a = torch.randint(0, K, (N, n_pairs), device=s.device)
+    b = torch.randint(0, K, (N, n_pairs), device=s.device)
+    sd = torch.gather(s, 1, a) - torch.gather(s, 1, b)
+    td = torch.gather(t, 1, a) - torch.gather(t, 1, b)
+    ordered = td.abs() >= deadzone
+    # ranked pairs: logistic log(1+exp(-sign(td)*sd)); equal pairs: squared diff
+    loss = torch.where(ordered, torch.nn.functional.softplus(-torch.sign(td) * sd), sd * sd)
+    if mask is None:
+        return loss.mean()
+    w = torch.gather(m_full, 1, a) * torch.gather(m_full, 1, b)   # both endpoints valid
+    return (loss * w).sum() / w.sum().clamp_min(1.0)
+
+
 def multiview_consistency_loss(
     depth: torch.Tensor,
     pose_enc: torch.Tensor,

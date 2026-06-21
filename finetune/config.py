@@ -94,6 +94,18 @@ class FinetuneConfig:
                                    # "edge"        — image edges (DAv2 already sharp there)
                                    # legacy booleans still parse: true->"conf", false->"none".
     a_gate_pow: float = 1.0        # sharpness of the "static" gate ((1-r)^pow); >1 = more aggressive
+    # ordinal (ranking) distillation — match the TEACHER's depth ORDERING instead of
+    # its values (invariant to any positive affine map, so it transfers structure
+    # without forcing the teacher's scale/shift). FisheyeDistill-style ordinal
+    # distillation (arXiv 2205.02930). 0 disables (default -> no change).
+    w_a_rank: float = 0.0
+    a_rank_pairs: int = 4096       # random pixel pairs per image for the ranking loss
+    # teacher-weight decay — linearly fade the VGGT->DAv2 distillation weight from
+    # full to (1 - distill_decay) over training, so the model leans on the teacher
+    # early and on its other terms (photometric/anchor) late. Mitigates the
+    # teacher-overfit / homogenization failure mode of long co-distillation
+    # (Decoupled Knowledge for Online KD, arXiv 2312.11218). 0 disables.
+    distill_decay: float = 0.0
     w_a_anchor: float = 0.0        # ONLY used by trainer="dav2": scale-shift-invariant SELF-anchor
                                    # to the frozen pretrained DAv2 (protect its strong structure
                                    # prior while the other terms refine it). 0 disables.

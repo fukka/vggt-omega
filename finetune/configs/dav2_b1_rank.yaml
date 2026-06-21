@@ -1,0 +1,17 @@
+# b1 — best recipe + ONE new thing: ORDINAL (ranking) distillation.
+# Adds FisheyeDistill-style ordinal distillation (arXiv 2205.02930): in addition to
+# the affine-aligned value distillation, also match VGGT's depth ORDERING via a
+# logistic ranking loss on random pixel pairs. Ordering is invariant to any positive
+# affine map, so it transfers structure without forcing VGGT's scale/shift onto DAv2.
+# Everything else is identical to dav2_best -> the AbsRel/RMSE delta vs dav2_best is
+# purely the ordinal term.
+#
+#   python -m finetune.train --config finetune/configs/dav2_b1_rank.yaml
+__base__: dav2_best.yaml
+
+name: dav2_b1_rank
+notes: "dav2_best + ordinal/ranking distillation (only change: w_a_rank)."
+
+losses:
+  w_a_rank: 0.5
+  a_rank_pairs: 4096

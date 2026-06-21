@@ -25,6 +25,7 @@ from ..losses import (
     affine_invariant_l1,
     compute_self_supervised_losses,
     gradient_matching_loss,
+    ordinal_distill_loss,
     ssi_loss,
     to_disparity,
 )
@@ -209,12 +210,21 @@ class SSITrainer(BaseAlternatingTrainer):
         )
         distill = affine_invariant_l1(d_disp, v_disp, mask=gate)
 
+        # optional teacher-weight decay: fade the VGGT->DAv2 distillation over the run
+        w_distill = cfg.w_a_distill * self._distill_decay_mult()
         total = (
-            cfg.w_a_distill * distill
+            w_distill * distill
             + cfg.w_a_multiview * ss["geometric"]
             + cfg.w_a_photometric * ss["photometric"]
             + cfg.w_a_smoothness * ss["smoothness"]
         )
+        # optional ordinal (ranking) distillation: match VGGT's depth ORDERING
+        rank = None
+        if getattr(cfg, "w_a_rank", 0.0) > 0:
+            rank = ordinal_distill_loss(
+                d_disp, v_disp, mask=gate, n_pairs=getattr(cfg, "a_rank_pairs", 4096)
+            )
+            total = total + cfg.w_a_rank * rank
         logs = {
             "total": float(total.detach()),
             "distill": float(distill.detach()),
@@ -222,6 +232,10 @@ class SSITrainer(BaseAlternatingTrainer):
             "photometric": float(ss["photometric"].detach()),
             "smoothness": float(ss["smoothness"].detach()),
         }
+        if rank is not None:
+            logs["rank"] = float(rank.detach())
         if gate is not None:
             logs["gate"] = float(gate.mean().detach())   # mean teacher-trust coverage
+        if w_distill != cfg.w_a_distill:                 # decay active -> show effective weight
+            logs["w_distill"] = float(w_distill)
         return total, logs, dyn

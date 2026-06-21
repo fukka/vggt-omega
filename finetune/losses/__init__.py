@@ -6,6 +6,7 @@ from .distillation import (
     affine_invariant_l1,
     gradient_matching_loss,
     multiview_consistency_loss,
+    ordinal_distill_loss,
     ssi_loss,
     to_disparity,
 )
@@ -21,6 +22,7 @@ __all__ = [
     "ssi_loss",
     "gradient_matching_loss",
     "multiview_consistency_loss",
+    "ordinal_distill_loss",
     "to_disparity",
     "rigid_flow",
     "flow_residual_mask",

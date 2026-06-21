@@ -157,6 +157,10 @@ class BaseAlternatingTrainer:
         # per-phase micro-iteration counts (Phase A can be shortened via dav2_steps_mult)
         self.steps_b = max(1, cfg.steps_per_phase)
         self.steps_a = max(1, int(round(cfg.steps_per_phase * cfg.dav2_steps_mult)))
+        # total micro-steps the loop will run (both phases) — used for time-based
+        # schedules like distill_decay. Subclasses that change the loop (e.g. the
+        # DAv2-only trainer) recompute this after adjusting steps_a/steps_b.
+        self._total_steps = cfg.rounds * (self.steps_a + self.steps_b)
         accum = max(1, cfg.grad_accum)
         opt_steps_v = cfg.rounds * math.ceil(self.steps_b / accum)
         opt_steps_d = cfg.rounds * math.ceil(self.steps_a / accum)
@@ -211,6 +215,16 @@ class BaseAlternatingTrainer:
         if self._amp_dtype is None:
             return nullcontext()
         return torch.autocast(device_type=self.device.type, dtype=self._amp_dtype)
+
+    def _distill_decay_mult(self) -> float:
+        """Linear teacher-weight decay multiplier in ``[1-distill_decay, 1]`` over the
+        run. 1.0 when ``distill_decay==0`` (default), so old training is unchanged."""
+        d = getattr(self.cfg, "distill_decay", 0.0)
+        if d <= 0.0:
+            return 1.0
+        total = max(1, getattr(self, "_total_steps", 1))
+        prog = min(1.0, max(0.0, self.global_step / total))
+        return max(0.0, 1.0 - d * prog)
 
     def _vggt_forward(self, images: torch.Tensor, train: bool):
         self.vggt.train(train)

@@ -1,0 +1,16 @@
+# b2 — best recipe + ONE new thing: TEACHER-WEIGHT DECAY.
+# Linearly fades the VGGT->DAv2 distillation weight from 1.0 to 0.3 over the run
+# (distill_decay: 0.7), so DAv2 leans on the VGGT teacher early and on its own
+# photometric + SSI-anchor terms late. Targets the teacher-overfit / homogenization
+# failure mode of long distillation (Decoupled Knowledge for Online KD, arXiv
+# 2312.11218: teacher weight large at start, decreasing over training). Everything
+# else is identical to dav2_best -> the delta vs dav2_best is purely the decay.
+#
+#   python -m finetune.train --config finetune/configs/dav2_b2_distill_decay.yaml
+__base__: dav2_best.yaml
+
+name: dav2_b2_distill_decay
+notes: "dav2_best + teacher-weight decay (only change: distill_decay 0.7)."
+
+losses:
+  distill_decay: 0.7

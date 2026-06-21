@@ -35,6 +35,7 @@ class DAv2Trainer(SSITrainer):
         # (no Phase B). Configs set dav2_steps_mult: 0 so epoch-sizing routes the
         # whole budget here; then rebuild the DAv2 LR schedule to span it.
         self.steps_a = max(1, cfg.steps_per_phase)
+        self._total_steps = cfg.rounds * self.steps_a   # Phase A only (no Phase B)
         accum = max(1, cfg.grad_accum)
         opt_steps_d = cfg.rounds * math.ceil(self.steps_a / accum)
         self.sched_dav2 = torch.optim.lr_scheduler.LambdaLR(
