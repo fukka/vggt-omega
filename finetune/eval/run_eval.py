@@ -451,7 +451,7 @@ def main() -> None:
     run_dir = resolve_run(a.run, a.runs_root)
     run_name = os.path.basename(os.path.normpath(run_dir))
     cfg = load_run_config(run_dir)
-    out_dir = os.path.join(a.eval_out, run_name)
+    out_dir = os.path.join(a.eval_out, run_name + ("_norectify" if a.rectify is False else ""))
 
     # Resolve eval params: CLI override → run config → default.
     adt_root = a.adt_root or cfg.get("eval_adt_root", "")
