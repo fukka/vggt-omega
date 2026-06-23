@@ -135,11 +135,14 @@ def _collect_paired_frames(rgb_dir: str, depth_dir: str) -> List[Tuple[str, str]
 ADT_RGB_SUBDIR = "videos_synthetic"   # GT-aligned rendered RGB (see ADTWindowDataset)
 
 
-def _gather_real_frames(seq_dir: str, rgb_subdir: str = ADT_RGB_SUBDIR) -> List[Tuple[str, str]]:
-    """Return paired (rgb, depth) frames from ADT.
+def _gather_real_frames(
+    seq_dir: str,
+    rgb_subdir: str = ADT_RGB_SUBDIR,
+    depth_subdir: str = "depth_npy",
+) -> List[Tuple[str, str]]:
+    """Return paired (rgb, depth) frames from a sequence directory.
 
-    Layout: <seq_dir>/<rgb_subdir>/*.jpg  +  <seq_dir>/depth_npy/*.npy
-    Depth values are uint16 millimetres; caller applies depth_scale=0.001.
+    Layout: <seq_dir>/<rgb_subdir>/*.jpg  +  <seq_dir>/<depth_subdir>/*.npy
 
     ``rgb_subdir`` defaults to ``videos_synthetic`` — the rendered RGB, which is
     pixel-exactly aligned with the rendered GT depth. The real-sensor stream
@@ -147,14 +150,17 @@ def _gather_real_frames(seq_dir: str, rgb_subdir: str = ADT_RGB_SUBDIR) -> List[
     timing / distortion differences), so scoring against it mixes real depth error
     with registration error. Use ``videos_rgb`` only if you specifically want the
     real-image domain and accept that misalignment.
+
+    ``depth_subdir`` defaults to ``depth_npy`` (ADT convention, uint16 mm). For
+    blender-rendered pinhole data use ``depth_maps`` (float32 metres).
     """
     rgb_dir = os.path.join(seq_dir, rgb_subdir)
-    depth_dir = os.path.join(seq_dir, "depth_npy")
+    depth_dir = os.path.join(seq_dir, depth_subdir)
     if not os.path.isdir(rgb_dir):
         print(f"  [ADT] WARN {rgb_subdir} not found: {rgb_dir}")
         return []
     if not os.path.isdir(depth_dir):
-        print(f"  [ADT] WARN depth_npy not found: {depth_dir}")
+        print(f"  [ADT] WARN {depth_subdir} not found: {depth_dir}")
         return []
 
     n_rgb = len(glob.glob(os.path.join(rgb_dir, "*.png"))
@@ -162,7 +168,7 @@ def _gather_real_frames(seq_dir: str, rgb_subdir: str = ADT_RGB_SUBDIR) -> List[
                 + glob.glob(os.path.join(rgb_dir, "*.jpeg")))
     n_depth = len(glob.glob(os.path.join(depth_dir, "*.npy")))
     pairs = _collect_paired_frames(rgb_dir, depth_dir)
-    print(f"  [ADT] {len(pairs)} frames from {n_depth} depth "
+    print(f"  [ADT] {len(pairs)} frames from {n_depth} {depth_subdir} "
           f"/ {n_rgb} {rgb_subdir} — {seq_dir}")
     if len(pairs) < n_depth:
         print(f"  [ADT] WARN {n_depth - len(pairs)} depth map(s) had no RGB partner")
@@ -297,12 +303,13 @@ class ADTWindowDataset(Dataset):
         window_stride: Optional[int] = None,
         image_resolution: int = 512,
         patch_size: int = 16,
-        depth_scale: float = 0.001,   # uint16 mm → metres
+        depth_scale: float = 0.001,   # uint16 mm → metres; use 1.0 for float32-metre blender maps
         depth_max_m: float = 10.0,
         rotation: int = 270,          # CCW degrees; corrects Aria sensor orientation
         max_frames: Optional[int] = 100,  # cap frames per sequence (None = all)
         rgb_subdir: str = ADT_RGB_SUBDIR,
-        rectify: bool = True,             # fisheye→pinhole (match training)
+        depth_subdir: str = "depth_npy",  # "depth_maps" for blender-rendered pinhole data
+        rectify: bool = True,             # fisheye→pinhole (match training); False for pinhole data
         camera_preset: str = "aria-214-1",
         fisheye_k: str = "",
         fisheye_d: str = "",
@@ -323,9 +330,11 @@ class ADTWindowDataset(Dataset):
             self.rectifier = FisheyeRectifier(camera_preset, fisheye_k, fisheye_d)
             print(f"  [ADT] rectifying fisheye→pinhole (preset={camera_preset!r})")
 
+        self.depth_subdir = depth_subdir
+
         self.windows: List[List[Tuple[str, str]]] = []
         for seq_dir in seq_dirs:
-            pairs = _gather_real_frames(seq_dir, rgb_subdir)
+            pairs = _gather_real_frames(seq_dir, rgb_subdir, depth_subdir)
             if not pairs:
                 continue
             if max_frames is not None and len(pairs) > max_frames:
@@ -392,6 +401,10 @@ class ADTWindowDataset(Dataset):
             d = np.load(dep_p).astype(np.float32)
             if d.ndim == 3:
                 d = d.squeeze(-1)
+            # Replace inf (blender background) with 0 so interpolation is safe;
+            # they are excluded by the valid-pixel mask (d > 0 & d <= depth_max_m).
+            if np.any(np.isinf(d)):
+                d = np.where(np.isinf(d), 0.0, d)
             if self.rot_k:
                 d = np.rot90(d, k=self.rot_k).copy()
             d = d * self.depth_scale
@@ -426,7 +439,7 @@ def run_adt_eval(
     seq_len: int = 8,
     image_resolution: int = 512,
     batch_size: int = 1,
-    depth_scale: float = 0.001,   # uint16 mm → metres
+    depth_scale: float = 0.001,   # uint16 mm → metres; use 1.0 for float32-metre blender maps
     depth_max_m: float = 10.0,
     align_modes: Tuple[str, ...] = ("none", "scale_shift"),
     eval_all_frames: bool = True,
@@ -435,6 +448,7 @@ def run_adt_eval(
     n_qual: int = 4,
     max_frames: Optional[int] = 100,
     rgb_subdir: str = ADT_RGB_SUBDIR,
+    depth_subdir: str = "depth_npy",
     rectify: bool = True,
     camera_preset: str = "aria-214-1",
     fisheye_k: str = "",
@@ -478,6 +492,7 @@ def run_adt_eval(
         depth_max_m=depth_max_m,
         max_frames=max_frames,
         rgb_subdir=rgb_subdir,
+        depth_subdir=depth_subdir,
         rectify=rectify,
         camera_preset=camera_preset,
         fisheye_k=fisheye_k,
