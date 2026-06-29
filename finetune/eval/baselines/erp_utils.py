@@ -30,14 +30,15 @@ def add_dac_to_path(repo_root: Optional[str]) -> str:
     """Resolve + sys.path-insert the depth_any_camera repo root."""
     root = repo_root or os.environ.get("DAC_ROOT")
     if root is None:
+        # default: <vggt-omega>/third_party/depth_any_camera (in-repo; via setup_baselines.sh)
         here = os.path.dirname(os.path.abspath(__file__))
-        adt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(here))))
-        root = os.path.join(adt, "third_party", "depth_any_camera")
+        repo = os.path.dirname(os.path.dirname(os.path.dirname(here)))  # -> vggt-omega
+        root = os.path.join(repo, "third_party", "depth_any_camera")
     if not os.path.isdir(root):
         raise FileNotFoundError(
-            f"depth_any_camera repo not found at {root!r}. Clone it "
-            f"(git clone https://github.com/yuliangguo/depth_any_camera) and pass "
-            f"--dac-root or set $DAC_ROOT."
+            f"depth_any_camera repo not found at {root!r}. Run "
+            f"`bash finetune/eval/baselines/setup_baselines.sh dac` to clone+install "
+            f"it under the repo, or pass --dac-root / set $DAC_ROOT."
         )
     if root not in sys.path:
         sys.path.insert(0, root)

@@ -29,31 +29,28 @@ DAC's `OPENCV_FISHEYE` cam_params — see [`aria_fisheye.py`](aria_fisheye.py).
 
 ## Setup (GPU box)
 
-Clone both repos somewhere visible (default location: `<ADT>/third_party/`):
+These two baselines are **separate upstream repos**, not vendored here. The setup
+script clones them into `third_party/` **inside this repo** (gitignored) and
+installs them — `run_baselines` then finds them automatically, no flags or env
+vars needed.
+
+UniK3D needs **python ≥3.11, torch ≥2.4** (+ xformers/triton — fine on CUDA); DAC
+needs **numpy<2** + an older torch. These conflict, so install each in its **own
+env** by running the script once per env (it clones once, installs the one you
+name):
 
 ```bash
-cd <ADT>/third_party
-git clone https://github.com/lpiccinelli-eth/UniK3D.git
-git clone https://github.com/yuliangguo/depth_any_camera.git
+# from your vggt-omega checkout, inside your UniK3D env:
+bash finetune/eval/baselines/setup_baselines.sh unik3d   # clone both + pip install -e UniK3D
+
+# inside your DAC env:
+bash finetune/eval/baselines/setup_baselines.sh dac      # + pip install DAC reqs + download weights
 ```
 
-UniK3D needs **python ≥3.11, torch ≥2.4** (+ xformers/triton — fine on CUDA);
-DAC runs on an older stack (`numpy<2`). They have conflicting requirements, so
-use **two environments**, or run the two models in separate passes
-(`--models unik3d` and `--models dac`).
-
-```bash
-# env A — UniK3D
-pip install -e third_party/UniK3D            # weights auto-download on first run
-
-# env B — DAC
-pip install -r third_party/depth_any_camera/requirements.txt
-python -m finetune.eval.baselines.download_weights --variant dac_swinl_indoor
-#   -> checkpoints/dac_swinl_indoor.{json,pt}
-```
-
-Point the scripts at the repos via `--unik3d-root` / `--dac-root`, or
-`$UNIK3D_ROOT` / `$DAC_ROOT` (default: `<ADT>/third_party/{UniK3D,depth_any_camera}`).
+Other targets: `clone` (just clone both, no pip), `both` (install both into the
+current env — only if it happens to satisfy both). The script is re-runnable
+(existing clones are pulled). To install elsewhere instead, pass
+`--unik3d-root` / `--dac-root` per run, or set `$UNIK3D_ROOT` / `$DAC_ROOT`.
 
 ## Run
 

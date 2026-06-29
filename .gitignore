@@ -23,6 +23,9 @@ test_run_outputs/
 runs/
 eval_out/
 
+# cloned upstream baseline repos (see finetune/eval/baselines/setup_baselines.sh)
+third_party/
+
 # macOS / editor junk
 .DS_Store
 *~

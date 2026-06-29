@@ -32,15 +32,15 @@ def _add_repo_to_path(repo_root: Optional[str]) -> str:
     """Resolve + sys.path-insert the UniK3D repo root."""
     root = repo_root or os.environ.get("UNIK3D_ROOT")
     if root is None:
-        # default: <ADT>/third_party/UniK3D, i.e. three levels above vggt-omega
+        # default: <vggt-omega>/third_party/UniK3D (in-repo; created by setup_baselines.sh)
         here = os.path.dirname(os.path.abspath(__file__))
-        adt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(here))))
-        root = os.path.join(adt, "third_party", "UniK3D")
+        repo = os.path.dirname(os.path.dirname(os.path.dirname(here)))  # -> vggt-omega
+        root = os.path.join(repo, "third_party", "UniK3D")
     if not os.path.isdir(root):
         raise FileNotFoundError(
-            f"UniK3D repo not found at {root!r}. Clone it "
-            f"(git clone https://github.com/lpiccinelli-eth/UniK3D) and pass "
-            f"--unik3d-root or set $UNIK3D_ROOT."
+            f"UniK3D repo not found at {root!r}. Run "
+            f"`bash finetune/eval/baselines/setup_baselines.sh unik3d` to clone+install "
+            f"it under the repo, or pass --unik3d-root / set $UNIK3D_ROOT."
         )
     if root not in sys.path:
         sys.path.insert(0, root)
