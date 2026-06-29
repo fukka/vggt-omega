@@ -289,60 +289,90 @@ def run_egoexo(args, unik, dac) -> None:
 # --------------------------------------------------------------------------- #
 
 def run_official(args, unik, dac) -> None:
-    """Run each repo's own demo asset and save our prediction alongside the repo's
-    pre-computed reference, so the two can be compared directly.
+    """Run each repo's fisheye demo asset and save our prediction alongside the
+    repo's pre-computed reference for direct comparison.
 
-    UniK3D reference: ``assets/demo/scannet.npy``  — [H,W,3] point map; z = depth.
-    DAC reference: ``demo/input/scannetpp_depth.png`` (GT, int32 mm) +
-                   ``demo/output/scannetpp_output_subplot.jpg`` (official vis).
+    Camera-type audit of all shipped demo assets:
+
+    UniK3D (assets/demo/):
+      kitti360.png   + kitti360.json  → MEI       **fisheye** ← default
+      equirectangular.jpg + .json     → Spherical  360°
+      dl3dv.png      + dl3dv.json     → OPENCV     perspective
+      scannet.jpg    + scannet.json   → Fisheye624 k≈0 (ScanNet is perspective;
+                                        near-zero k means no real distortion)
+      bears/berzirk/naruto/venice/poorthings/luke → no camera json
+
+    DAC (demo/input/):
+      scannetpp_sample.json  → OPENCV_FISHEYE  **fisheye** ← default
+      kitti360_sample.json   → MEI              fisheye (GT + official output available)
+      matterport3d_sample.json → ERP            360°
+      nyu_sample.json / kitti_sample.json → PINHOLE  perspective
+
+    UniK3D reference: only scannet.npy exists (ships with the repo); it is a
+    [H,W,3] point map where z = planar depth. For kitti360 there is no pre-computed
+    reference — the model output stands on its own.
+    DAC reference: demo/input/<name>_depth.png (GT, int32 mm) and
+                   demo/output/<name>_output_subplot.jpg (official vis).
     """
     import shutil
     from .io_utils import save_depth_png
 
     out_dir = os.path.join(args.out, "official")
     if unik is not None:
-        img = args.unik3d_official_image or os.path.join(unik.root, "assets/demo/scannet.jpg")
-        camj = args.unik3d_official_camera or os.path.join(unik.root, "assets/demo/scannet.json")
-        ref_npy = os.path.join(unik.root, "assets/demo/scannet.npy")
-        print(f"[baselines] UniK3D official: {os.path.relpath(img, unik.root)}")
+        # kitti360 is the genuine fisheye example UniK3D ships (MEI camera, 933×933).
+        # scannet.json is labelled Fisheye624 but k≈0, i.e. effectively perspective.
+        img = args.unik3d_official_image or os.path.join(unik.root, "assets/demo/kitti360.png")
+        camj = args.unik3d_official_camera or os.path.join(unik.root, "assets/demo/kitti360.json")
+        stem = os.path.splitext(os.path.basename(img))[0]
+        print(f"[baselines] UniK3D official: {os.path.relpath(img, unik.root)} (fisheye MEI)")
         o = unik.predict_official(img, camj)
         udir = os.path.join(out_dir, "unik3d")
-        save_sample(udir, "scannet", o["rgb"], o["depth"], o["points"], o["rgb"])
-        # Reference: repo-shipped pre-computed 3D point map → z component = planar depth
+        save_sample(udir, stem, o["rgb"], o["depth"], o["points"], o["rgb"])
+        # Reference: repo ships scannet.npy (z = depth); no npy for kitti360 — skip if absent.
+        ref_npy = os.path.join(os.path.dirname(img), f"{stem}.npy")
         if os.path.isfile(ref_npy):
             ref_pts = np.load(ref_npy)                      # [H,W,3] float32
             ref_depth = ref_pts[:, :, 2]                    # z = planar depth (metres)
             ref_mask = ref_depth > 0
-            np.save(os.path.join(udir, "scannet_ref_depth.npy"), ref_depth.astype(np.float32))
-            save_depth_png(os.path.join(udir, "scannet_ref_depth.png"), ref_depth, ref_mask)
-            print(f"[baselines]   UniK3D ref saved (from repo scannet.npy, z channel)")
+            np.save(os.path.join(udir, f"{stem}_ref_depth.npy"), ref_depth.astype(np.float32))
+            save_depth_png(os.path.join(udir, f"{stem}_ref_depth.png"), ref_depth, ref_mask)
+            print(f"[baselines]   UniK3D ref depth saved (from {stem}.npy, z channel)")
+        else:
+            print(f"[baselines]   no reference npy for {stem} — prediction only")
 
     if dac is not None:
+        # scannetpp uses OPENCV_FISHEYE (same model family as Aria KB4): genuine fisheye.
+        # kitti360 uses MEI fisheye and also ships GT depth + official output if preferred.
         sample = args.dac_official_sample or os.path.join(dac.root, "demo/input/scannetpp_sample.json")
-        print(f"[baselines] DAC official: {os.path.relpath(sample, dac.root)}")
+        import json as _json
+        with open(sample) as _f:
+            _s = _json.load(_f)
+        stem = _s.get("dataset_name", os.path.splitext(os.path.basename(sample))[0].replace("_sample", ""))
+        cam_model = _s.get("cam_params", {}).get("camera_model", "?")
+        print(f"[baselines] DAC official: {os.path.relpath(sample, dac.root)} ({cam_model})")
         o = dac.predict_official(None, sample)
         ddir = os.path.join(out_dir, "dac")
-        save_sample(ddir, "scannetpp",
+        save_sample(ddir, stem,
                     o["image_u8"], o["depth"], o["points"], o["image_u8"], o["active"] > 0.5)
-        # GT depth: repo ships scannetpp_depth.png (int32, mm) → metres + colorization
-        gt_png = os.path.join(dac.root, "demo/input/scannetpp_depth.png")
+        # GT depth: repo ships <stem>_depth.png (int32, mm) → metres
+        gt_png = os.path.join(dac.root, f"demo/input/{stem}_depth.png")
         if os.path.isfile(gt_png):
             from PIL import Image as _Image
             gt_m = np.array(_Image.open(gt_png)).astype(np.float32) / 1000.0
             os.makedirs(ddir, exist_ok=True)
-            np.save(os.path.join(ddir, "scannetpp_gt_depth.npy"), gt_m)
-            save_depth_png(os.path.join(ddir, "scannetpp_gt_depth.png"), gt_m, gt_m > 0)
-            print(f"[baselines]   DAC GT depth saved (from repo scannetpp_depth.png)")
-        # Official output visualization the repo ships
-        off_jpg = os.path.join(dac.root, "demo/output/scannetpp_output_subplot.jpg")
+            np.save(os.path.join(ddir, f"{stem}_gt_depth.npy"), gt_m)
+            save_depth_png(os.path.join(ddir, f"{stem}_gt_depth.png"), gt_m, gt_m > 0)
+            print(f"[baselines]   DAC GT depth saved (from {stem}_depth.png)")
+        # Official output visualization
+        off_jpg = os.path.join(dac.root, f"demo/output/{stem}_output_subplot.jpg")
         if os.path.isfile(off_jpg):
             os.makedirs(ddir, exist_ok=True)
-            shutil.copy(off_jpg, os.path.join(ddir, "scannetpp_official_output.jpg"))
+            shutil.copy(off_jpg, os.path.join(ddir, f"{stem}_official_output.jpg"))
             print(f"[baselines]   DAC official output viz copied")
 
     print(f"\n[baselines] official sanity-check outputs → {out_dir}/")
-    print(f"[baselines]   unik3d/: scannet_{{input,depth,pcd}}.* + scannet_ref_depth.{{npy,png}}")
-    print(f"[baselines]   dac/:    scannetpp_{{input,depth,pcd}}.* + scannetpp_{{gt_depth,official_output}}.*")
+    print(f"[baselines]   unik3d/: {{stem}}_{{input,depth,pcd}}.* (+ ref_depth if npy available)")
+    print(f"[baselines]   dac/:    {{stem}}_{{input,depth,pcd,gt_depth,official_output}}.*")
 
 
 # --------------------------------------------------------------------------- #
@@ -389,9 +419,9 @@ def main() -> None:
     p.add_argument("--no-unik3d-camera", action="store_true",
                    help="withhold the fisheye camera (UniK3D predicts rays itself)")
     p.add_argument("--unik3d-official-image", default=None,
-                   help="official-mode image (default <repo>/assets/demo/scannet.jpg)")
+                   help="official-mode image (default <repo>/assets/demo/kitti360.png, MEI fisheye)")
     p.add_argument("--unik3d-official-camera", default=None,
-                   help="official-mode camera json (default <repo>/assets/demo/scannet.json)")
+                   help="official-mode camera json (default <repo>/assets/demo/kitti360.json)")
     # DAC
     p.add_argument("--dac-root", default=None, help="repo root (else $DAC_ROOT / third_party)")
     p.add_argument("--dac-config", default="checkpoints/dac_swinl_indoor.json")

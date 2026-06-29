@@ -110,12 +110,12 @@ adt_results.json          {fisheye_planar, erp_range} → variant → mode → m
 adt_summary.txt           the two comparison tables
 qual/{unik3d,dac}/        ADT samples — <i>_input.png, _depth.npy, _depth.png, _pcd.ply
 egoexo/{unik3d,dac}/      EgoExo samples — <clip>_f####_{input.png,depth.npy,depth.png,pcd.ply}
-official/unik3d/          sanity-check outputs:
-  scannet_input.png           the demo image the repo ships
-  scannet_depth.{npy,png}     our prediction
-  scannet_pcd.ply             our point cloud
-  scannet_ref_depth.{npy,png} repo's pre-computed depth (scannet.npy, z-channel)
-official/dac/
+official/unik3d/          sanity-check on kitti360 (MEI fisheye, 933×933):
+  kitti360_input.png          the demo image the repo ships
+  kitti360_depth.{npy,png}    our prediction (planar z)
+  kitti360_pcd.ply            our point cloud
+  (UniK3D only ships scannet.npy as reference; no npy for kitti360)
+official/dac/             sanity-check on scannetpp (OPENCV_FISHEYE — same family as Aria KB4):
   scannetpp_input.png           the demo image
   scannetpp_depth.{npy,png}     our prediction (ERP, euclidean range)
   scannetpp_pcd.ply             our point cloud
@@ -123,9 +123,18 @@ official/dac/
   scannetpp_official_output.jpg repo's own demo output visualization
 ```
 
-To compare the sanity-check results: open `official/{unik3d,dac}/` and put
-`scannet_depth.png` next to `scannet_ref_depth.png` (UniK3D) or
-`scannetpp_depth.png` next to `scannetpp_gt_depth.png` + `scannetpp_official_output.jpg` (DAC).
+**Why these demo assets?** — camera-type audit of all shipped demo assets:
+
+| Asset | Camera model | Type |
+|-------|-------------|------|
+| UniK3D `kitti360` | MEI | **fisheye** ← default |
+| UniK3D `equirectangular` | Spherical | 360° |
+| UniK3D `dl3dv` | OPENCV | perspective |
+| UniK3D `scannet` | Fisheye624, k≈0 | *effectively perspective* (ScanNet uses pinhole-class lenses; near-zero distortion coefficients) |
+| DAC `scannetpp` | OPENCV_FISHEYE | **fisheye** ← default (same distortion family as Aria KB4) |
+| DAC `kitti360` | MEI | fisheye (GT depth + official output available; pass `--dac-official-sample demo/input/kitti360_sample.json`) |
+| DAC `matterport3d` | ERP | 360° |
+| DAC `nyu`, `kitti` | PINHOLE | perspective |
 
 UniK3D outputs are in the **fisheye image frame** (depth = planar z, point cloud
 from its 3D point map); DAC outputs are in **ERP** (depth = euclidean range, point
