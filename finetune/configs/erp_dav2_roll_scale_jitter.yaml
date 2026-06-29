@@ -1,0 +1,24 @@
+# Variant: broad viewpoint equivariance — wide roll + zoom + input-FOV jitter.
+#
+# The aggressive-augmentation setting: large in-plane roll and zoom for the
+# consistency T, PLUS DAC `scale_fac` jitter applied at warp time so the network
+# also sees genuinely different ERP unwrappings of each frame (input variety, not
+# just an on-GPU 2-D warp). Closest to DAC's full pitch/roll/scale sphere
+# augmentation that we can do without the cross-view sphere remap. Stronger
+# equivariance pressure; lean on the anchor to keep it from drifting.
+__base__: erp_dav2_base.yaml
+
+name: erp_dav2_roll_scale_jitter
+notes: "ERP DAv2: wide roll+scale equivariance + DAC scale_fac input jitter."
+
+erp:
+  erp_input_scale_jitter: 0.25   # warp-time FOV jitter (sphere-side input variety)
+
+losses:
+  erp_roll_deg: 35.0
+  erp_scale_lo: 0.7
+  erp_scale_hi: 1.45
+  erp_trans_frac: 0.08
+  w_erp_consistency: 1.25
+  w_erp_anchor: 0.5
+  w_erp_smooth: 0.05

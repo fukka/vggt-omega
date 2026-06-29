@@ -1,0 +1,83 @@
+# DAC-style UNSUPERVISED ERP finetuning of DAv2 on EgoExo4D fisheye.
+#
+# Idea (the DAC novelty, applied to DAv2): unwrap every fisheye frame into DAC's
+# ERP canonical space and finetune DAv2 to reason there, made robust by an
+# *equivariance* objective (DAv2(T·I) ≈ T·DAv2(I) for an in-plane roll + zoom/FOV
+# T) plus a scale-shift anchor to the frozen pretrained DAv2. No depth GT — the
+# signal is consistency + the model's own prior. See trainers/erp_distill.py.
+#
+# Launch with the DEDICATED entry (not finetune.train):
+#   python -m finetune.train_erp_dav2 --config finetune/configs/erp_dav2_base.yaml
+#
+# This file is the shared base; erp_dav2_*.yaml pull it in via __base__ and change
+# only what differs.
+
+trainer: erp_distill
+notes: "ERP DAv2 base: LoRA, roll+scale equivariance, EMA teacher, frozen anchor."
+
+data:
+  # Point this at the EgoExo4D ego videos (videos/<clip>/ego_GT.mp4). Defaults to
+  # the in-repo example; override --set egoexo_root=/path/to/full/egoexo4D for real runs.
+  egoexo_root: ../EgoX/example/egoexo4D
+  egoexo_stream: ego_GT
+  egoexo_frames_per_clip: 16
+  batch_size: 4
+  num_workers: 8
+  val_data_root: ""            # optional held-out EgoExo root; "" disables val
+
+erp:
+  erp_cano: 1400               # ERP canonical height (DAC cano_sz)
+  erp_fwd_h: 500               # ERP patch fed to DAv2 (rounded to /14 internally)
+  erp_fwd_w: 750
+  erp_crop_wfov: 180.0         # cone mask trims to the real lens FOV (~125deg for Aria)
+  erp_focal_scale: 1.0         # tune modelled ego FOV if the centred-KB4 approx looks off
+  erp_input_scale_jitter: 0.0  # extra DAC scale_fac jitter at warp time (0 = off)
+
+model:
+  dav2_model_name: depth-anything/Depth-Anything-V2-Large-hf
+  lora_rank: 8
+  lora_alpha: 16
+  finetune_dav2_lora_only: true
+
+losses:
+  w_erp_consistency: 1.0       # DAv2(T·I) ≈ T·teacher(I), SSI
+  w_erp_anchor: 0.5            # SSI anchor to frozen pretrained DAv2 (anti-drift)
+  w_erp_smooth: 0.05           # edge-aware smoothness on ERP depth
+  erp_teacher: ema             # equivariance target: ema | frozen | self
+  # equivariance augmentation T (2-D similarity on the ERP patch)
+  erp_roll_deg: 20.0
+  erp_scale_lo: 0.8
+  erp_scale_hi: 1.25
+  erp_trans_frac: 0.05
+
+optim:
+  lr_dav2: 5.0e-5
+  weight_decay: 0.05
+  grad_clip: 1.0
+  grad_accum: 1
+  warmup_steps: 200
+  lr_schedule: cosine
+  min_lr_ratio: 0.05
+  amp_dtype: bf16
+
+schedule:
+  epochs: 0.0                  # ERP entry uses rounds * steps_per_phase as the total
+  rounds: 1
+  steps_per_phase: 4000
+
+ema:
+  ema_teacher: true
+  ema_decay: 0.999
+
+val:
+  val_every: 0                 # no held-out EgoExo split by default
+  val_steps: 50
+  eval_every: 0                # the ERP trainer has no ADT GT eval arm
+
+monitor:
+  log_every: 50
+  save_every: 1000
+  viz_every: 500
+  num_viz_frames: 1
+  tensorboard: true
+  seed: 0

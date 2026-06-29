@@ -65,6 +65,10 @@ def fisheye_to_erp_fwd(
     fwd_sz: Tuple[int, int],
     crop_wFoV: float,
     max_incidence_deg: Optional[float] = None,
+    theta: float = 0.0,
+    phi: float = 0.0,
+    roll: Optional[float] = None,
+    scale_fac: Optional[float] = None,
 ) -> dict:
     """Warp a fisheye frame (+depth+mask) to the ERP ``fwd_sz`` grid DAC predicts on.
 
@@ -83,6 +87,15 @@ def fisheye_to_erp_fwd(
                 axis exceeds this are dropped from ``active`` (see below). Default
                 ``None`` → auto-computed from the KB4 turnover for OPENCV_FISHEYE
                 cameras (no cutoff for other models).
+    theta, phi : ERP patch centre (longitude, latitude) in radians — DAC's
+                viewpoint augmentation. ``phi`` is a pitch on the sphere (places the
+                content at a different latitude), ``theta`` a yaw. Default ``0, 0``
+                (centred on the optical axis, the eval setting).
+    roll      : in-plane camera roll in radians (rotation about the optical axis),
+                or ``None`` for no roll.
+    scale_fac : FOV-align / zoom factor on the gnomonic coords (DAC's
+                ``scale_fac``); also scales the warped depth so metric range stays
+                consistent. ``None`` = 1.0.
 
     Returns a dict with everything on the ``fwd_sz`` grid::
 
@@ -119,19 +132,23 @@ def fisheye_to_erp_fwd(
 
     erp_img, erp_depth, erp_valid, erp_active, lat, lon = cam_to_erp_patch_fast(
         img_hwc01.astype(np.float32), depth3, valid3,
-        0.0, 0.0, crop_h, crop_w, cano, cano * 2, dict(cam_params), roll=None, scale_fac=None,
+        float(theta), float(phi), crop_h, crop_w, cano, cano * 2, dict(cam_params),
+        roll=roll, scale_fac=scale_fac,
     )
 
     # Cone mask: exclude rays beyond the lens's valid FOV (fold-back ghosting).
-    # The patch is centred on the optical axis (theta=phi=0 above), so the
-    # incidence angle from the axis is arccos(cos(lat)·cos(lon)).
+    # Incidence angle is measured from the optical axis = the patch CENTRE
+    # (theta, phi); cos of it is the gnomonic cosine cos_c. For an un-augmented
+    # patch (theta=phi=0) this reduces to arccos(cos(lat)·cos(lon)).
     if max_incidence_deg is None and str(cam_params.get("camera_model")) == "OPENCV_FISHEYE":
         from .aria_fisheye import kb4_max_incidence
         max_incidence_deg = float(np.degrees(kb4_max_incidence(
             (float(cam_params["k1"]), float(cam_params["k2"]),
              float(cam_params["k3"]), float(cam_params["k4"])))))
     if max_incidence_deg is not None:
-        incidence = np.degrees(np.arccos(np.clip(np.cos(lat) * np.cos(lon), -1.0, 1.0)))
+        cos_c = (np.sin(phi) * np.sin(lat)
+                 + np.cos(phi) * np.cos(lat) * np.cos(lon - theta))
+        incidence = np.degrees(np.arccos(np.clip(cos_c, -1.0, 1.0)))
         erp_active = (erp_active * (incidence <= max_incidence_deg)).astype(np.float32)
 
     lat_range = torch.tensor([float(np.min(lat)), float(np.max(lat))], dtype=torch.float32)

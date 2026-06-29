@@ -1,0 +1,33 @@
+# Variant: FULL DAv2 finetune (not LoRA), anchor-protected — the "go big" run.
+#
+# Unfreezes all of DAv2 (finetune_dav2_lora_only=false) for maximum capacity to
+# adapt to the fisheye/ERP domain, but pairs it with a STRONG frozen-pretrained
+# anchor and a low LR so the strong structure prior is not destroyed. Heavier and
+# more prone to overfit than the LoRA base — use a real (large) EgoExo4D split and
+# watch val/qual closely. EMA teacher for a stable equivariance target.
+__base__: erp_dav2_base.yaml
+
+name: erp_dav2_full_ft
+notes: "ERP DAv2: FULL finetune, strong anchor + low LR (capacity, protected)."
+
+model:
+  finetune_dav2_lora_only: false   # train all of DAv2
+
+losses:
+  w_erp_consistency: 1.0
+  w_erp_anchor: 1.0                 # strong anti-drift anchor (full FT needs more protection)
+  w_erp_smooth: 0.05
+  erp_teacher: ema
+  erp_roll_deg: 20.0
+  erp_scale_lo: 0.8
+  erp_scale_hi: 1.25
+
+optim:
+  lr_dav2: 1.0e-5                   # ~5x lower than the LoRA base for full-model FT
+  weight_decay: 0.05
+  grad_accum: 2                     # larger effective batch for full-FT stability
+  warmup_steps: 400
+
+schedule:
+  rounds: 1
+  steps_per_phase: 8000             # full FT benefits from a longer run

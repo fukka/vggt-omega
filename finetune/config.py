@@ -167,6 +167,34 @@ class FinetuneConfig:
     eval_adt_max_frames: int = 100  # cap ADT depth frames per quantitative eval (-1 = all)
     val_qual_n: int = 2            # qualitative val montages saved per eval (~"sequences")
 
+    # ---- DAC-style ERP finetuning of DAv2 (trainer="erp_distill") --------- #
+    # Unsupervised finetuning of DAv2 in DAC's ERP canonical space on EgoExo4D
+    # fisheye (no depth GT). See trainers/erp_distill.py + data/erp_egoexo.py +
+    # losses/erp_consistency.py. These fields are ignored by the other trainers.
+    egoexo_root: str = "../EgoX/example/egoexo4D"   # dir with videos/<clip>/<stream>.mp4
+    egoexo_stream: str = "ego_GT"                   # "ego_GT" | "ego_Prior"
+    egoexo_frames_per_clip: int = 16                # evenly-sampled frames per clip
+    erp_cano: int = 1400                            # ERP canonical height (DAC cano_sz)
+    erp_fwd_h: int = 500                            # ERP patch fed to DAv2 (rounded to /14 inside)
+    erp_fwd_w: int = 750
+    erp_crop_wfov: float = 180.0                    # ERP crop FOV (cone mask trims to the real lens)
+    erp_focal_scale: float = 1.0                    # tune modelled ego FOV (<1 widens) — intrinsics
+                                                    # are a centred Aria-KB4 approx (see erp_egoexo.py)
+    erp_input_scale_jitter: float = 0.0             # DAC scale_fac jitter at warp time (input variety)
+    # equivariance augmentation (2-D similarity on the ERP patch, applied on-GPU)
+    erp_roll_deg: float = 20.0                      # in-plane roll range (±)
+    erp_scale_lo: float = 0.8                       # zoom (≈FOV) range for the consistency T
+    erp_scale_hi: float = 1.25
+    erp_trans_frac: float = 0.05                    # small normalized translation (±)
+    erp_pitch_deg: float = 0.0                      # reserved: sphere-pitch aug (dataset-side; 0=off)
+    # teacher for the equivariance target: "ema" (mean-teacher) | "frozen"
+    # (pretrained) | "self" (live student, pure consistency)
+    erp_teacher: str = "ema"
+    # unsupervised loss weights
+    w_erp_consistency: float = 1.0                  # DAv2(T·I) ≈ T·teacher(I), SSI
+    w_erp_anchor: float = 0.5                       # SSI anchor to frozen pretrained DAv2 (anti-drift)
+    w_erp_smooth: float = 0.05                      # edge-aware smoothness on ERP depth
+
     # io / monitoring
     out_dir: str = ""              # resolved to <runs_root>/<name> by options.py (leave "" to auto-set)
     log_every: int = 50            # steps between train-loss console/JSONL logs

@@ -13,6 +13,8 @@ from ..config import FinetuneConfig
 from ..registry import TRAINER_REGISTRY
 from .base import BaseAlternatingTrainer
 from .dav2 import DAv2Trainer  # noqa: F401       (registers "dav2")
+from .erp_distill import ErpDistillTrainer  # noqa: F401  (registers "erp_distill"; uses
+#                                              the dedicated `train_erp_dav2` entry, NOT build_trainer)
 from .metric_anchor import MetricAnchorTrainer  # noqa: F401  (registers "metric_anchor")
 from .ssi import SSITrainer  # noqa: F401        (registers "ssi")
 

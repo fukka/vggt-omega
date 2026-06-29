@@ -1,0 +1,27 @@
+# Variant: consistency-heavy, anchor-free — aggressive domain adaptation.
+#
+# Drops the frozen-pretrained anchor (w_erp_anchor=0) and leans almost entirely on
+# the equivariance consistency, with a SELF teacher (live student, detached) rather
+# than EMA — pure self-consistency, no external target. This is the most adaptive
+# (and least protected) setting: it will move DAv2 furthest toward the fisheye/ERP
+# domain, at the risk of drifting from its pretrained structure prior. Watch the
+# qualitative viz for collapse; compare against the anchored base.
+__base__: erp_dav2_base.yaml
+
+name: erp_dav2_consistency_heavy
+notes: "ERP DAv2: strong self-consistency, NO anchor (aggressive adaptation)."
+
+losses:
+  w_erp_consistency: 1.5
+  w_erp_anchor: 0.0            # no anti-drift anchor
+  w_erp_smooth: 0.1           # a touch more smoothness to stabilise the unanchored fit
+  erp_teacher: self           # live student (detached) — pure consistency, no EMA/frozen target
+  erp_roll_deg: 25.0
+  erp_scale_lo: 0.75
+  erp_scale_hi: 1.35
+
+ema:
+  ema_teacher: false          # not needed when teacher=self
+
+optim:
+  lr_dav2: 3.0e-5             # lower LR to compensate for the missing anchor

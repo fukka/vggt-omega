@@ -1,0 +1,19 @@
+# Variant: SCALE-only equivariance — isolate DAC's FOV-align signal.
+#
+# Turns off roll/translation so the only augmentation T is an isotropic zoom
+# (≈ a field-of-view change). This is the cleanest analog of DAC's `scale_fac`
+# FOV-alignment: it asks DAv2 to be consistent across the FOV variation that a
+# fisheye lens produces toward its periphery, nothing else. Use it to read how
+# much of the benefit comes from FOV-equivariance alone.
+__base__: erp_dav2_base.yaml
+
+name: erp_dav2_scale_only
+notes: "ERP DAv2: scale/FOV equivariance only (no roll/translation)."
+
+losses:
+  erp_roll_deg: 0.0
+  erp_trans_frac: 0.0
+  erp_scale_lo: 0.7
+  erp_scale_hi: 1.4            # a bit wider to make the FOV signal strong
+  w_erp_consistency: 1.0
+  w_erp_anchor: 0.5

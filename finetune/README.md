@@ -120,6 +120,42 @@ Best checkpoint is selected by the DAv2 val loss (not VGGT). Default model is no
 
 All inherit `dav2_base.yaml` (`dav2_steps_mult: 0` → whole epoch budget on DAv2).
 
+### DAC-style ERP DAv2: `trainer: erp_distill` (single model, unsupervised, EgoExo4D)
+
+A separate line of work that does **not** use VGGT at all: finetune DAv2 in
+**Depth-Any-Camera's ERP canonical space** so it handles the raw fisheye field of
+view, trained **unsupervised** on EgoExo4D ego frames (no depth GT). Each fisheye
+frame is unwrapped to a cone-masked ERP patch (`fisheye_to_erp_fwd`); the signal is
+
+* **equivariance consistency** — `DAv2(T·I) ≈ T·DAv2(I)` for an in-plane roll +
+  zoom/FOV `T` (the DAC pitch/roll/FOV augmentation, as self-supervision),
+* an **SSI anchor** to the frozen pretrained DAv2 (anti-drift), and
+* edge-aware smoothness.
+
+It has its **own entry point** (`finetune.train_erp_dav2`, not `finetune.train`)
+and `trainers/erp_distill.py` + `data/erp_egoexo.py` + `losses/erp_consistency.py`.
+
+| config | isolates |
+|---|---|
+| `erp_dav2_base.yaml` | LoRA, roll+scale equivariance, EMA teacher, frozen anchor (the reference recipe) |
+| `erp_dav2_scale_only.yaml` | scale/FOV equivariance alone (the clean DAC FOV-align analog) |
+| `erp_dav2_roll_scale_jitter.yaml` | wide roll+scale + DAC `scale_fac` input jitter (broad viewpoint) |
+| `erp_dav2_consistency_heavy.yaml` | strong self-consistency, **no** anchor (aggressive adaptation) |
+| `erp_dav2_full_ft.yaml` | **full** DAv2 finetune, strong anchor + low LR (capacity, protected) |
+
+```bash
+python -m finetune.train_erp_dav2 --config finetune/configs/erp_dav2_base.yaml \
+    --set egoexo_root=/path/to/egoexo4D          # full dataset for a real run
+python -m finetune.train_erp_dav2 --dummy --device cpu --name erp_smoke \
+    --set rounds=1 --set steps_per_phase=8 --set num_workers=0   # CPU dry run
+```
+
+> EgoExo4D ego frames are genuine fisheye (verified: circular vignette + barrel),
+> centred and upright, but ship only a canonical pinhole placeholder intrinsic — so
+> the warp uses a centred Aria-KB4 model (`aria_centered`) with `erp_focal_scale` to
+> tune the FOV. The objective is scale-shift invariant, so the exact focal is
+> non-critical (consistency only needs a *self-consistent* model).
+
 ## Quick start
 
 Offline dry run (no checkpoint, no data — stand-in models on CPU):
