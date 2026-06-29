@@ -149,7 +149,19 @@ def fisheye_to_erp_fwd(
         cos_c = (np.sin(phi) * np.sin(lat)
                  + np.cos(phi) * np.cos(lat) * np.cos(lon - theta))
         incidence = np.degrees(np.arccos(np.clip(cos_c, -1.0, 1.0)))
-        erp_active = (erp_active * (incidence <= max_incidence_deg)).astype(np.float32)
+        cone = (incidence <= max_incidence_deg).astype(np.float32)
+        erp_active = erp_active * cone
+        # Blank the RGB/depth/valid outside the cone too — not just ``active``.
+        # Past the KB4 turnover the raw fisheye polynomial folds back and paints
+        # GHOST content into the periphery; that content lands in [-1,1] so
+        # ``mask_active`` keeps it. Leaving it in the RGB means (a) the saved
+        # visualisation shows the fold smear and, worse, (b) the DAC network is fed
+        # an out-of-distribution input (DAC trains with ``erp_img *= mask_active``,
+        # i.e. a black periphery). Zeroing here makes the network input and the viz
+        # match the physically-imaged cone.
+        erp_img = erp_img * cone[..., None]
+        erp_depth = erp_depth * cone
+        erp_valid = erp_valid * cone
 
     lat_range = torch.tensor([float(np.min(lat)), float(np.max(lat))], dtype=torch.float32)
     long_range = torch.tensor([float(np.min(lon)), float(np.max(lon))], dtype=torch.float32)
