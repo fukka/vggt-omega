@@ -53,6 +53,12 @@ install_unik3d () {
 install_dac () {
   echo "[setup] pip install DAC requirements"
   pip install -r "$DAC_DIR/requirements.txt"
+  echo "[setup] patching MultiScaleDeformableAttention for newer PyTorch API"
+  # .type() was removed; AT_DISPATCH needs scalar_type(); .type().is_cuda() -> .is_cuda()
+  local CU="$DAC_DIR/dac/models/ops/src/cuda/ms_deform_attn_cuda.cu"
+  local HH="$DAC_DIR/dac/models/ops/src/ms_deform_attn.h"
+  sed -i 's/AT_DISPATCH_FLOATING_TYPES(value\.type(),/AT_DISPATCH_FLOATING_TYPES(value.scalar_type(),/g' "$CU"
+  sed -i 's/\.type()\.is_cuda()/.is_cuda()/g' "$CU" "$HH"
   echo "[setup] building MultiScaleDeformableAttention CUDA extension"
   ( cd "$DAC_DIR/dac/models/ops" && python setup.py build install )
   echo "[setup] downloading DAC weights -> $REPO_ROOT/checkpoints/"
