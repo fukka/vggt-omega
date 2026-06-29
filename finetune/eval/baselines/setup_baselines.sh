@@ -53,6 +53,8 @@ install_unik3d () {
 install_dac () {
   echo "[setup] pip install DAC requirements"
   pip install -r "$DAC_DIR/requirements.txt"
+  echo "[setup] building MultiScaleDeformableAttention CUDA extension"
+  ( cd "$DAC_DIR/dac/models/ops" && python setup.py build install )
   echo "[setup] downloading DAC weights -> $REPO_ROOT/checkpoints/"
   ( cd "$REPO_ROOT" && python -m finetune.eval.baselines.download_weights --variant dac_swinl_indoor )
 }
