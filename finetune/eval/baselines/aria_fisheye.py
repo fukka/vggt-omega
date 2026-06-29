@@ -162,6 +162,26 @@ def _kb4_unproject_theta(theta_d: np.ndarray, k: Tuple[float, float, float, floa
     return np.interp(np.clip(theta_d, 0.0, td[-1]), td, tg)
 
 
+def kb4_max_incidence(k: Tuple[float, float, float, float], n: int = 8192) -> float:
+    """Max valid incidence angle (radians) for a KB4 lens = the forward turnover.
+
+    ``θ_d = θ + k1θ³ + k2θ⁵ + k3θ⁷ + k4θ⁹`` is only monotonic up to the lens's
+    maximum incidence angle (~62° for the Aria 214-1 coeffs). Beyond it the
+    polynomial folds back — the projection is non-injective, so any ray past this
+    angle *cannot be imaged* and must be excluded from an ERP warp (otherwise it
+    aliases onto a wrong, in-cone source pixel → ghosting). Returns the turnover
+    angle, or the table's upper bound (~π/2) if the polynomial stays monotonic.
+    """
+    k1, k2, k3, k4 = k
+    tg = np.linspace(0.0, np.pi / 2 + 0.2, n)
+    t2 = tg * tg
+    td = tg * (1 + t2 * (k1 + t2 * (k2 + t2 * (k3 + t2 * k4))))
+    dec = np.diff(td) <= 0
+    if dec.any():
+        return float(tg[int(np.argmax(dec))])
+    return float(tg[-1])
+
+
 def aria_ray_z(cam: AriaFisheye) -> np.ndarray:
     """Per-pixel ray z-component ``cos(θ)`` for an ``H×W`` Aria frame.
 

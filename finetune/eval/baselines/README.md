@@ -156,6 +156,15 @@ would unfairly penalise one. We report both:
 
 Both use alignment modes `none` (metric, absolute scale) and `scale_shift`.
 
+**Cone mask (ERP domain).** `crop_wFoV=180` makes the ERP patch span ±90°
+longitude, but the Aria lens only images ±62° (the KB4 forward polynomial turns
+over there). `cam_to_erp_patch_fast` applies the raw polynomial, which past the
+turnover *folds back* and samples wrong, in-cone source pixels — ghosting that the
+`active`/`valid` masks miss (~40% of the patch for Aria). `fisheye_to_erp_fwd`
+therefore zeroes `active` beyond the per-camera turnover (`kb4_max_incidence`), so
+GT, UniK3D and DAC are all scored only inside the physically imaged cone. It
+auto-adapts per camera (Aria → 62°; ScanNet++ → ~101°, effectively no-op).
+
 **GT convention.** ADT `depth_npy` is treated as **planar z** (matching the
 existing VGGT eval) and converted to euclidean range for the ERP domain via the
 Aria KB4 ray grid. If your ADT depth is actually along-ray distance, pass

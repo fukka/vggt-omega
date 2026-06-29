@@ -64,6 +64,7 @@ def fisheye_to_erp_fwd(
     cano: int,
     fwd_sz: Tuple[int, int],
     crop_wFoV: float,
+    max_incidence_deg: Optional[float] = None,
 ) -> dict:
     """Warp a fisheye frame (+depth+mask) to the ERP ``fwd_sz`` grid DAC predicts on.
 
@@ -78,15 +79,30 @@ def fisheye_to_erp_fwd(
     cano      : ERP canonical height the model trained on (model config ``cano_sz``).
     fwd_sz    : network input (h, w).
     crop_wFoV : crop field-of-view in degrees (demo uses 180).
+    max_incidence_deg : cone cutoff. Rays whose incidence angle from the optical
+                axis exceeds this are dropped from ``active`` (see below). Default
+                ``None`` → auto-computed from the KB4 turnover for OPENCV_FISHEYE
+                cameras (no cutoff for other models).
 
     Returns a dict with everything on the ``fwd_sz`` grid::
 
         image_u8     [fh,fw,3] uint8     (ERP RGB, network input pre-normalisation)
         depth        [fh,fw]   float32   (ERP range GT, metres)
         valid        [fh,fw]   float32   (valid-depth mask)
-        active       [fh,fw]   float32   (in-FOV region after ERP warp)
+        active       [fh,fw]   float32   (in-FOV region after ERP warp, cone-limited)
         lat_range    (2,) / long_range (2,)  torch tensors (IDiscERP inputs)
         pred_scale_factor  float         (multiply network depth output by this)
+
+    Cone mask
+    ---------
+    ``crop_wFoV`` (180 in the demo) makes the ERP patch span ±90° longitude — far
+    wider than a real fisheye cone (~±62° for Aria). ``cam_to_erp_patch_fast``
+    applies the *raw* fisheye polynomial, which past the KB4 forward turnover folds
+    back and samples a wrong, in-cone source pixel (ghosting). Neither ``active``
+    nor ``valid`` catches that fold, so we additionally zero ``active`` wherever the
+    ray's incidence angle exceeds ``max_incidence_deg``. Every consumer (GT,
+    UniK3D, DAC) goes through this same path, so all three are scored only inside
+    the physically imaged cone.
     """
     try:
         from dac.utils.erp_geometry import cam_to_erp_patch_fast
@@ -105,6 +121,19 @@ def fisheye_to_erp_fwd(
         img_hwc01.astype(np.float32), depth3, valid3,
         0.0, 0.0, crop_h, crop_w, cano, cano * 2, dict(cam_params), roll=None, scale_fac=None,
     )
+
+    # Cone mask: exclude rays beyond the lens's valid FOV (fold-back ghosting).
+    # The patch is centred on the optical axis (theta=phi=0 above), so the
+    # incidence angle from the axis is arccos(cos(lat)·cos(lon)).
+    if max_incidence_deg is None and str(cam_params.get("camera_model")) == "OPENCV_FISHEYE":
+        from .aria_fisheye import kb4_max_incidence
+        max_incidence_deg = float(np.degrees(kb4_max_incidence(
+            (float(cam_params["k1"]), float(cam_params["k2"]),
+             float(cam_params["k3"]), float(cam_params["k4"])))))
+    if max_incidence_deg is not None:
+        incidence = np.degrees(np.arccos(np.clip(np.cos(lat) * np.cos(lon), -1.0, 1.0)))
+        erp_active = (erp_active * (incidence <= max_incidence_deg)).astype(np.float32)
+
     lat_range = torch.tensor([float(np.min(lat)), float(np.max(lat))], dtype=torch.float32)
     long_range = torch.tensor([float(np.min(lon)), float(np.max(lon))], dtype=torch.float32)
 

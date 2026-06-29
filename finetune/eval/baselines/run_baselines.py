@@ -189,7 +189,10 @@ def run_adt(args, unik, dac) -> None:
         else:
             gt_planar = gt; gt_range = planar_to_range(gt, cos_map)
 
-        # GT warped once to the ERP head-to-head grid (euclidean range).
+        # GT warped once to the ERP head-to-head grid (euclidean range). The warp
+        # cone-masks rays beyond the lens FOV (KB4 turnover ~62° for Aria), so the
+        # active mask below — and thus every model's scored region — excludes the
+        # fold-back ghost the wide crop_wFoV would otherwise introduce.
         gt_warp = fisheye_to_erp_fwd(img01, gt_range, mask.astype(np.float32),
                                      cam.opencv_fisheye_params(), erp_cano, erp_fwd, erp_wfov)
         gt_erp = gt_warp["depth"]
