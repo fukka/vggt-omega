@@ -91,15 +91,41 @@ Useful flags: `--unik3d-backbone {vits,vitb,vitl}`, `--no-unik3d-camera`
 * `videos_rgb` — the real Aria sensor stream; slightly mis-registered to the GT
   (= `run_eval --real-norectify`). Use it for the true real-image domain.
 
-## Output (`--out`, default `eval_out/baselines/`)
+## Output
+
+`--out` is **auto-generated** from the active models and their key settings if not
+given explicitly, e.g.:
+
+```
+eval_out/unik3d-vitl_dac-swinl_indoor/   # both models, default variant
+eval_out/unik3d-vitl/                     # unik3d only
+eval_out/dac-swinl_indoor/               # dac only
+eval_out/unik3d-vitl-nocam_dac-swinl_indoor/  # unik3d without intrinsics
+```
+
+Contents:
 
 ```
 adt_results.json          {fisheye_planar, erp_range} → variant → mode → metrics
 adt_summary.txt           the two comparison tables
 qual/{unik3d,dac}/        ADT samples — <i>_input.png, _depth.npy, _depth.png, _pcd.ply
 egoexo/{unik3d,dac}/      EgoExo samples — <clip>_f####_{input.png,depth.npy,depth.png,pcd.ply}
-official/{unik3d,dac}/    sanity-check outputs — same input/depth/pcd triple
+official/unik3d/          sanity-check outputs:
+  scannet_input.png           the demo image the repo ships
+  scannet_depth.{npy,png}     our prediction
+  scannet_pcd.ply             our point cloud
+  scannet_ref_depth.{npy,png} repo's pre-computed depth (scannet.npy, z-channel)
+official/dac/
+  scannetpp_input.png           the demo image
+  scannetpp_depth.{npy,png}     our prediction (ERP, euclidean range)
+  scannetpp_pcd.ply             our point cloud
+  scannetpp_gt_depth.{npy,png}  GT depth (repo's scannetpp_depth.png, mm→m)
+  scannetpp_official_output.jpg repo's own demo output visualization
 ```
+
+To compare the sanity-check results: open `official/{unik3d,dac}/` and put
+`scannet_depth.png` next to `scannet_ref_depth.png` (UniK3D) or
+`scannetpp_depth.png` next to `scannetpp_gt_depth.png` + `scannetpp_official_output.jpg` (DAC).
 
 UniK3D outputs are in the **fisheye image frame** (depth = planar z, point cloud
 from its 3D point map); DAC outputs are in **ERP** (depth = euclidean range, point

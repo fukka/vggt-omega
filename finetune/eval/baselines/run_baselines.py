@@ -77,6 +77,28 @@ def _to_uint8_hwc(img_chw01: torch.Tensor) -> np.ndarray:
     return (img_chw01.permute(1, 2, 0).clamp(0, 1).cpu().numpy() * 255).astype(np.uint8)
 
 
+def _build_out_tag(a) -> str:
+    """Descriptive output path derived from active models and their key settings.
+
+    Examples::
+
+        eval_out/unik3d-vitl_dac-swinl_indoor   # both
+        eval_out/unik3d-vitl                     # unik3d only
+        eval_out/dac-swinl_indoor                # dac only
+    """
+    want = {m.strip() for m in a.models.split(",") if m.strip()}
+    parts: list[str] = []
+    if "unik3d" in want:
+        tag = f"unik3d-{a.unik3d_backbone}"
+        if a.no_unik3d_camera:
+            tag += "-nocam"
+        parts.append(tag)
+    if "dac" in want and a.dac_config:
+        stem = os.path.splitext(os.path.basename(a.dac_config))[0]  # dac_swinl_indoor
+        parts.append(stem)
+    return os.path.join("eval_out", "_".join(parts) if parts else "baselines")
+
+
 def _fmt(v, key) -> str:
     if not isinstance(v, (int, float)) or v != v:
         return "  N/A  "
@@ -267,21 +289,60 @@ def run_egoexo(args, unik, dac) -> None:
 # --------------------------------------------------------------------------- #
 
 def run_official(args, unik, dac) -> None:
+    """Run each repo's own demo asset and save our prediction alongside the repo's
+    pre-computed reference, so the two can be compared directly.
+
+    UniK3D reference: ``assets/demo/scannet.npy``  — [H,W,3] point map; z = depth.
+    DAC reference: ``demo/input/scannetpp_depth.png`` (GT, int32 mm) +
+                   ``demo/output/scannetpp_output_subplot.jpg`` (official vis).
+    """
+    import shutil
+    from .io_utils import save_depth_png
+
     out_dir = os.path.join(args.out, "official")
     if unik is not None:
         img = args.unik3d_official_image or os.path.join(unik.root, "assets/demo/scannet.jpg")
         camj = args.unik3d_official_camera or os.path.join(unik.root, "assets/demo/scannet.json")
+        ref_npy = os.path.join(unik.root, "assets/demo/scannet.npy")
         print(f"[baselines] UniK3D official: {os.path.relpath(img, unik.root)}")
         o = unik.predict_official(img, camj)
-        save_sample(os.path.join(out_dir, "unik3d"), "scannet",
-                    o["rgb"], o["depth"], o["points"], o["rgb"])
+        udir = os.path.join(out_dir, "unik3d")
+        save_sample(udir, "scannet", o["rgb"], o["depth"], o["points"], o["rgb"])
+        # Reference: repo-shipped pre-computed 3D point map → z component = planar depth
+        if os.path.isfile(ref_npy):
+            ref_pts = np.load(ref_npy)                      # [H,W,3] float32
+            ref_depth = ref_pts[:, :, 2]                    # z = planar depth (metres)
+            ref_mask = ref_depth > 0
+            np.save(os.path.join(udir, "scannet_ref_depth.npy"), ref_depth.astype(np.float32))
+            save_depth_png(os.path.join(udir, "scannet_ref_depth.png"), ref_depth, ref_mask)
+            print(f"[baselines]   UniK3D ref saved (from repo scannet.npy, z channel)")
+
     if dac is not None:
         sample = args.dac_official_sample or os.path.join(dac.root, "demo/input/scannetpp_sample.json")
         print(f"[baselines] DAC official: {os.path.relpath(sample, dac.root)}")
         o = dac.predict_official(None, sample)
-        save_sample(os.path.join(out_dir, "dac"), "scannetpp",
+        ddir = os.path.join(out_dir, "dac")
+        save_sample(ddir, "scannetpp",
                     o["image_u8"], o["depth"], o["points"], o["image_u8"], o["active"] > 0.5)
-    print(f"\n[baselines] official sanity-check outputs (input/depth/pcd) → {out_dir}/")
+        # GT depth: repo ships scannetpp_depth.png (int32, mm) → metres + colorization
+        gt_png = os.path.join(dac.root, "demo/input/scannetpp_depth.png")
+        if os.path.isfile(gt_png):
+            from PIL import Image as _Image
+            gt_m = np.array(_Image.open(gt_png)).astype(np.float32) / 1000.0
+            os.makedirs(ddir, exist_ok=True)
+            np.save(os.path.join(ddir, "scannetpp_gt_depth.npy"), gt_m)
+            save_depth_png(os.path.join(ddir, "scannetpp_gt_depth.png"), gt_m, gt_m > 0)
+            print(f"[baselines]   DAC GT depth saved (from repo scannetpp_depth.png)")
+        # Official output visualization the repo ships
+        off_jpg = os.path.join(dac.root, "demo/output/scannetpp_output_subplot.jpg")
+        if os.path.isfile(off_jpg):
+            os.makedirs(ddir, exist_ok=True)
+            shutil.copy(off_jpg, os.path.join(ddir, "scannetpp_official_output.jpg"))
+            print(f"[baselines]   DAC official output viz copied")
+
+    print(f"\n[baselines] official sanity-check outputs → {out_dir}/")
+    print(f"[baselines]   unik3d/: scannet_{{input,depth,pcd}}.* + scannet_ref_depth.{{npy,png}}")
+    print(f"[baselines]   dac/:    scannetpp_{{input,depth,pcd}}.* + scannetpp_{{gt_depth,official_output}}.*")
 
 
 # --------------------------------------------------------------------------- #
@@ -296,7 +357,9 @@ def main() -> None:
                    default="both",
                    help="adt/egoexo eval; 'official' = each repo's own demo as a "
                         "sanity check; 'both' = adt+egoexo; 'all' = +official")
-    p.add_argument("--out", default="eval_out/baselines")
+    p.add_argument("--out", default=None,
+                   help="output root (default: auto from model+variant, "
+                        "e.g. eval_out/unik3d-vitl_dac-swinl_indoor)")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     # which models
     p.add_argument("--models", default="unik3d,dac",
@@ -339,6 +402,10 @@ def main() -> None:
     p.add_argument("--dac-official-sample", default=None,
                    help="official-mode sample json (default <repo>/demo/input/scannetpp_sample.json)")
     a = p.parse_args()
+
+    if a.out is None:
+        a.out = _build_out_tag(a)
+    print(f"[baselines] output dir: {a.out}")
 
     device = torch.device(a.device)
     want = {m.strip() for m in a.models.split(",") if m.strip()}
