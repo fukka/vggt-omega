@@ -222,6 +222,17 @@ load/eval failure is caught and reported. `--dav3-id` overrides the experimental
 DAv3 id; `--allow-cpu` runs the scaffolding without a GPU (no real timings).
 Requires CUDA otherwise (latency/FLOPs are meaningless on CPU).
 
+**Weights are cached *in the repo* (`checkpoints/hf/`), not `~/.cache`.** The GPU
+box runs from a container image whose `~/.cache` is wiped on reload, so HF weights
+there would re-download every time. `model_zoo` points `HF_HOME`/`HF_HUB_CACHE` at
+`<repo>/checkpoints/hf` before HuggingFace is imported, so transformers **and**
+UniK3D land in the (persistent) working dir — same as DAC's `checkpoints/`.
+`--download` first checks the repo cache, then **copies from `~/.cache` if the
+model is already there** (no re-download), else fetches into the repo. Override
+with `VGGT_HF_HOME=/path`; an existing user `HF_HOME`/`HF_HUB_CACHE` is respected.
+Gated repos (DAv2-metric, DAv3) still need `huggingface-cli login` + accepting the
+model card; the download error prints the exact steps.
+
 Validated locally (CPU, no weights): the full numeric path — real-ADT load → ERP
 common-space warp → per-model alignment → metrics → table + CSV/JSON. The model
 forwards (transformers/DAC/UniK3D/Metric3D-hub) run on the GPU box; the

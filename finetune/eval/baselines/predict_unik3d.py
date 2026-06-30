@@ -67,10 +67,14 @@ class UniK3DPredictor:
         self.use_camera = use_camera
         self.backbone = backbone
 
+        # Honor a repo-local HF cache when one is configured (benchmark_adt sets
+        # HF_HUB_CACHE so weights persist across image reloads); None = HF default.
+        cache_dir = os.environ.get("HF_HUB_CACHE") or None
         model = None
         if hasattr(_UniK3D, "from_pretrained"):
             try:
-                model = _UniK3D.from_pretrained(f"lpiccinelli/unik3d-{backbone}")
+                model = _UniK3D.from_pretrained(
+                    f"lpiccinelli/unik3d-{backbone}", cache_dir=cache_dir)
             except Exception as e:  # noqa: BLE001 - fall back to manual hub load
                 print(f"[unik3d] from_pretrained failed ({e}); using hubconf path")
         if model is None:
@@ -80,7 +84,7 @@ class UniK3DPredictor:
             model = _UniK3D(config)
             path = huggingface_hub.hf_hub_download(
                 repo_id=f"lpiccinelli/unik3d-{backbone}",
-                filename="pytorch_model.bin", repo_type="model")
+                filename="pytorch_model.bin", repo_type="model", cache_dir=cache_dir)
             info = model.load_state_dict(torch.load(path, map_location="cpu"), strict=False)
             print(f"[unik3d] loaded unik3d-{backbone} "
                   f"(missing={len(info.missing_keys)}, unexpected={len(info.unexpected_keys)})")

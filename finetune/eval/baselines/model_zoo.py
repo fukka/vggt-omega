@@ -44,6 +44,48 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _REPO = os.path.dirname(os.path.dirname(os.path.dirname(_HERE)))
 _CKPT = os.path.join(_REPO, "checkpoints")
 
+
+# --------------------------------------------------------------------------- #
+# Persistent HuggingFace cache (repo-local)
+# --------------------------------------------------------------------------- #
+# The GPU box runs from a container image: ``~/.cache`` is wiped whenever the
+# image reloads, but the repo (working dir) persists. DAC weights already live
+# under ``<repo>/checkpoints/``; mirror that for every HF model (Depth-Anything,
+# MiDaS, ZoeDepth, UniK3D, …) by pointing HuggingFace at ``<repo>/checkpoints/hf``.
+# We set HF_HOME/HF_HUB_CACHE *before* huggingface_hub is imported anywhere
+# (model_zoo is benchmark_adt's first import), so transformers AND UniK3D's
+# internal ``from_pretrained`` land in the repo automatically. ``download()`` still
+# *searches* the old default cache and copies from it instead of re-downloading.
+def _default_hf_hub_cache() -> str:
+    """Where HF would cache by default — mirror huggingface_hub's resolution
+    WITHOUT importing it (importing freezes the constant before we can redirect)."""
+    if os.environ.get("HF_HUB_CACHE"):
+        return os.path.expanduser(os.environ["HF_HUB_CACHE"])
+    if os.environ.get("HF_HOME"):
+        return os.path.join(os.path.expanduser(os.environ["HF_HOME"]), "hub")
+    base = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
+    return os.path.join(os.path.expanduser(base), "huggingface", "hub")
+
+
+_DEFAULT_HF_HUB = _default_hf_hub_cache()   # often ~/.cache/huggingface/hub (ephemeral)
+if os.environ.get("VGGT_HF_HOME"):                       # explicit override → redirect
+    _HF_HOME, _redirect = os.path.expanduser(os.environ["VGGT_HF_HOME"]), True
+elif os.environ.get("HF_HOME") or os.environ.get("HF_HUB_CACHE"):
+    # user already picked a cache (assumed persistent) — respect it, don't redirect
+    _HF_HOME, _redirect = (os.environ.get("HF_HOME") or os.path.dirname(_DEFAULT_HF_HUB)), False
+else:
+    _HF_HOME, _redirect = os.path.join(_REPO, "checkpoints", "hf"), True
+if _redirect:
+    os.environ["HF_HOME"] = _HF_HOME
+    _HF_HUB = os.path.join(_HF_HOME, "hub")
+    os.environ["HF_HUB_CACHE"] = _HF_HUB
+else:
+    _HF_HUB = _DEFAULT_HF_HUB
+try:
+    os.makedirs(_HF_HUB, exist_ok=True)
+except Exception:
+    pass
+
 _IMAGENET_MEAN = (0.485, 0.456, 0.406)
 _IMAGENET_STD = (0.229, 0.224, 0.225)
 
@@ -161,12 +203,65 @@ def _have(mod: str) -> bool:
     return importlib.util.find_spec(mod) is not None
 
 
-def _hf_cached(repo_id: str) -> bool:
+def _repo_dir_name(repo_id: str) -> str:
+    """HF hub-cache folder for a repo id (``org/name`` → ``models--org--name``)."""
+    return "models--" + repo_id.replace("/", "--")
+
+
+def _disp(path: str) -> str:
+    """Repo-relative path for display when under the repo, else the abs path."""
+    try:
+        rel = os.path.relpath(path, _REPO)
+        return rel if not rel.startswith("..") else path
+    except Exception:
+        return path
+
+
+def _hf_cached_in(repo_id: str, cache_dir: str) -> bool:
+    """True if ``repo_id`` is materialised in the given hub cache dir."""
     try:
         from huggingface_hub import try_to_load_from_cache
-        return isinstance(try_to_load_from_cache(repo_id, "config.json"), str)
     except Exception:
         return False
+    try:
+        return isinstance(
+            try_to_load_from_cache(repo_id, "config.json", cache_dir=cache_dir), str)
+    except Exception:
+        return False
+
+
+def _hf_locate(repo_id: str) -> Optional[str]:
+    """Hub cache dir holding ``repo_id`` — prefer the repo-local cache, then the
+    (possibly ephemeral) default. ``None`` if not downloaded anywhere."""
+    if _hf_cached_in(repo_id, _HF_HUB):
+        return _HF_HUB
+    if _DEFAULT_HF_HUB != _HF_HUB and _hf_cached_in(repo_id, _DEFAULT_HF_HUB):
+        return _DEFAULT_HF_HUB
+    return None
+
+
+def _hf_status(repo_id: str) -> Tuple[str, str]:
+    """Shared (state, detail) for HF-cache models (hf_depth + unik3d)."""
+    loc = _hf_locate(repo_id)
+    if loc == _HF_HUB:
+        return "ready", _disp(os.path.join(_HF_HUB, _repo_dir_name(repo_id)))
+    if loc is not None:  # in the ephemeral default cache only
+        return "download", (f"in {loc} only — --download copies it into "
+                            f"{_disp(_HF_HUB)} (persistent)")
+    return "download", repo_id
+
+
+def _copy_repo_cache(repo_id: str, src_hub: str, dst_hub: str) -> str:
+    """Copy a model's ``models--org--name`` tree between hub caches. HF stores each
+    blob once and points ``snapshots/<rev>/<file>`` at it via a *relative* symlink
+    (``../../blobs/<sha>``); copying with ``symlinks=True`` preserves that layout so
+    the destination is self-contained (real blobs + relative links within the tree)."""
+    import shutil
+    name = _repo_dir_name(repo_id)
+    src, dst = os.path.join(src_hub, name), os.path.join(dst_hub, name)
+    os.makedirs(dst_hub, exist_ok=True)
+    shutil.copytree(src, dst, symlinks=True, dirs_exist_ok=True)
+    return dst
 
 
 def _dac_files(spec: ModelSpec) -> Tuple[str, str]:
@@ -192,14 +287,12 @@ def status(spec: ModelSpec) -> Tuple[str, str]:
     if spec.kind == "unik3d":
         if not os.path.isdir(os.path.join(_REPO, "third_party", "UniK3D")):
             return "unavailable", "clone UniK3D: bash finetune/eval/baselines/setup_baselines.sh unik3d"
-        # weights auto-download on first build via huggingface_hub
-        return ("ready" if _hf_cached(f"lpiccinelli/unik3d-{spec.ref}") else "download",
-                f"lpiccinelli/unik3d-{spec.ref}")
+        return _hf_status(f"lpiccinelli/unik3d-{spec.ref}")
 
     if spec.kind == "hf_depth":
         if not _have("transformers"):
             return "unavailable", "pip install -U transformers"
-        return ("ready" if _hf_cached(spec.ref) else "download", spec.ref)
+        return _hf_status(spec.ref)
 
     if spec.kind == "metric3d_hub":
         if not _have("torch"):
@@ -232,10 +325,18 @@ def download(spec: ModelSpec) -> Tuple[bool, str]:
                                 repo_type="model", local_dir=_CKPT)
             return True, f"downloaded DAC config+weights → {_CKPT}"
         if spec.kind in ("unik3d", "hf_depth"):
-            from huggingface_hub import snapshot_download
             repo = (f"lpiccinelli/unik3d-{spec.ref}" if spec.kind == "unik3d" else spec.ref)
-            cache_path = snapshot_download(repo_id=repo, repo_type="model")
-            return True, f"downloaded {repo} → {cache_path}"
+            # 1) already repo-local — nothing to do (survives image reloads)
+            if _hf_cached_in(repo, _HF_HUB):
+                return True, f"already in {_disp(_HF_HUB)}"
+            # 2) present only in the ephemeral default cache — copy, don't re-download
+            if _DEFAULT_HF_HUB != _HF_HUB and _hf_cached_in(repo, _DEFAULT_HF_HUB):
+                dst = _copy_repo_cache(repo, _DEFAULT_HF_HUB, _HF_HUB)
+                return True, f"copied {repo}: {_DEFAULT_HF_HUB} → {_disp(dst)}"
+            # 3) nowhere yet — download straight into the repo-local cache
+            from huggingface_hub import snapshot_download
+            path = snapshot_download(repo_id=repo, repo_type="model", cache_dir=_HF_HUB)
+            return True, f"downloaded {repo} → {_disp(path)}"
         if spec.kind == "metric3d_hub":
             import torch
             torch.hub.load("yvanyin/metric3d", spec.ref, pretrain=True)
@@ -302,9 +403,10 @@ class HFDepthAdapter(Adapter):
         import torch
         from transformers import AutoImageProcessor, AutoModelForDepthEstimation
         ref = self.spec.ref
-        self.model = AutoModelForDepthEstimation.from_pretrained(ref).to(device).eval()
+        self.model = AutoModelForDepthEstimation.from_pretrained(
+            ref, cache_dir=_HF_HUB).to(device).eval()
         try:
-            self.proc = AutoImageProcessor.from_pretrained(ref)
+            self.proc = AutoImageProcessor.from_pretrained(ref, cache_dir=_HF_HUB)
         except Exception:
             self.proc = None
         self.device = device
