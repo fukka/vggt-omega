@@ -77,6 +77,13 @@ def _to_uint8_hwc(img_chw01: torch.Tensor) -> np.ndarray:
     return (img_chw01.permute(1, 2, 0).clamp(0, 1).cpu().numpy() * 255).astype(np.uint8)
 
 
+def _passthrough_collate(batch):
+    """batch_size=1 passthrough so a DataLoader's ``num_workers`` can prefetch the
+    next ADT frame (disk read + 270° rotate + resize) while the GPU runs the
+    current one. Module-level (not a lambda) so worker processes can pickle it."""
+    return batch[0]
+
+
 def _build_out_tag(a) -> str:
     """Descriptive output path derived from active models and their key settings.
 
@@ -171,8 +178,15 @@ def run_adt(args, unik, dac) -> None:
 
     qdir = os.path.join(args.out, "qual")
     n_saved = 0
-    for idx in range(len(ds)):
-        item = ds[idx]
+    # Prefetch frames (disk read + 270° rotate + resize) in worker processes so they
+    # overlap the GPU forward + ERP sampling on the main thread.
+    from torch.utils.data import DataLoader
+    nw = max(0, int(getattr(args, "num_workers", 0)))
+    loader = DataLoader(
+        ds, batch_size=1, shuffle=False, num_workers=nw,
+        collate_fn=_passthrough_collate, pin_memory=False,
+        persistent_workers=nw > 0, **({"prefetch_factor": 2} if nw > 0 else {}))
+    for idx, item in enumerate(loader):
         img_chw = item["images"][0]
         gt = item["depths"][0].numpy().astype(np.float32)
         mask = item["valid_masks"][0].numpy().astype(bool)
@@ -394,6 +408,12 @@ def main() -> None:
                    help="output root (default: auto from model+variant, "
                         "e.g. eval_out/unik3d-vitl_dac-swinl_indoor)")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--allow-cpu", action="store_true",
+                   help="permit running on CPU/MPS. Default: hard error on non-CUDA — "
+                        "these any-camera baselines (DAC's deformable-attention is a CUDA "
+                        "op) are GPU-only and far too slow otherwise.")
+    p.add_argument("--num-workers", type=int, default=4,
+                   help="DataLoader workers prefetching ADT frames (0 = main thread)")
     # which models
     p.add_argument("--models", default="unik3d,dac",
                    help="comma list: any of unik3d,dac")
@@ -441,6 +461,20 @@ def main() -> None:
     print(f"[baselines] output dir: {a.out}")
 
     device = torch.device(a.device)
+    # Fail loudly rather than silently crawling on CPU (the common trap: the driver/
+    # nvidia-smi shows a GPU but the installed torch is a CPU-only build, so
+    # torch.cuda.is_available() is False and --device falls back to cpu).
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise SystemExit(
+            "[baselines] --device cuda but torch.cuda.is_available() is False — likely a "
+            "CPU-only torch build (nvidia-smi can still show a GPU). Install a CUDA-enabled "
+            "torch, or pass --allow-cpu to override.")
+    if device.type != "cuda" and not a.allow_cpu:
+        raise SystemExit(
+            f"[baselines] refusing to run on device={device.type!r}: these baselines are "
+            f"GPU-only (DAC's deformable-attention is a CUDA op) and far too slow on CPU. "
+            f"Run on a GPU box with --device cuda, or pass --allow-cpu to override (debug).")
+    print(f"[baselines] device = {device}")
     want = {m.strip() for m in a.models.split(",") if m.strip()}
 
     unik = None
