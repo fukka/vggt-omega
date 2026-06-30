@@ -78,18 +78,40 @@ def _erp_gt(cam, gt_z: np.ndarray, valid: np.ndarray, ray_z: np.ndarray
 # Profiling
 # --------------------------------------------------------------------------- #
 def _flops_g(adapter: zoo.Adapter, rgb01: np.ndarray) -> Optional[float]:
-    """Best-effort GFLOPs via fvcore for the transformers depth path; else None."""
-    if adapter.spec.kind != "hf_depth" or not zoo._have("fvcore"):
+    """Best-effort GFLOPs for hf_depth adapters.
+
+    Primary: ``torch.profiler(with_flops=True)`` — built-in, handles matmul /
+    linear / conv / scaled_dot_product_attention in PyTorch ≥ 2.0.
+    Fallback: fvcore if profiler total is 0 (e.g. all ops unsupported).
+    """
+    if adapter.spec.kind != "hf_depth":
         return None
     try:
-        from fvcore.nn import FlopCountAnalysis
+        import torch
         px = adapter._pixel_values(rgb01)
-        flops = FlopCountAnalysis(adapter.model, (px,))
-        flops.unsupported_ops_warnings(False)
-        flops.uncalled_modules_warnings(False)
-        return float(flops.total()) / 1e9
+        dev = getattr(adapter, "device", None)
+        acts = [torch.profiler.ProfilerActivity.CPU]
+        if dev is not None and dev.type == "cuda":
+            acts.append(torch.profiler.ProfilerActivity.CUDA)
+        with torch.no_grad():
+            with torch.profiler.profile(activities=acts, with_flops=True,
+                                        record_shapes=True) as prof:
+                adapter.model(pixel_values=px)
+        total = sum(getattr(e, "flops", 0) or 0 for e in prof.key_averages())
+        if total > 0:
+            return float(total) / 1e9
+        # fvcore fallback — catches conv/linear for models not traced by profiler
+        if zoo._have("fvcore"):
+            from fvcore.nn import FlopCountAnalysis
+            fa = FlopCountAnalysis(adapter.model, (px,))
+            fa.unsupported_ops_warnings(False)
+            fa.uncalled_modules_warnings(False)
+            t = float(fa.total())
+            if t > 0:
+                return t / 1e9
     except Exception:
-        return None
+        pass
+    return None
 
 
 def _latency_ms(adapter: zoo.Adapter, rgb01: np.ndarray, cam, device, iters: int) -> float:

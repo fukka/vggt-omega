@@ -210,7 +210,14 @@ def status(spec: ModelSpec) -> Tuple[str, str]:
 
 
 def download(spec: ModelSpec) -> Tuple[bool, str]:
-    """Fetch weights for a ``download``-state spec. Returns (ok, message)."""
+    """Fetch weights for a ``download``-state spec. Returns (ok, message).
+
+    HuggingFace models land in ``~/.cache/huggingface/hub/`` (the default HF
+    cache); they are NOT re-downloaded on subsequent runs because
+    :func:`_hf_cached` finds them there via ``try_to_load_from_cache``.
+
+    DAC weights go to ``<repo>/checkpoints/``.
+    """
     st, _ = status(spec)
     if st == "ready":
         return True, "already present"
@@ -223,18 +230,26 @@ def download(spec: ModelSpec) -> Tuple[bool, str]:
             for fn in (f"{spec.ref}.json", f"{spec.ref}.pt"):
                 hf_hub_download(repo_id="yuliangguo/depth-any-camera", filename=fn,
                                 repo_type="model", local_dir=_CKPT)
-            return True, "downloaded DAC config+weights"
+            return True, f"downloaded DAC config+weights → {_CKPT}"
         if spec.kind in ("unik3d", "hf_depth"):
             from huggingface_hub import snapshot_download
             repo = (f"lpiccinelli/unik3d-{spec.ref}" if spec.kind == "unik3d" else spec.ref)
-            snapshot_download(repo_id=repo, repo_type="model")
-            return True, f"downloaded {repo}"
+            cache_path = snapshot_download(repo_id=repo, repo_type="model")
+            return True, f"downloaded {repo} → {cache_path}"
         if spec.kind == "metric3d_hub":
             import torch
             torch.hub.load("yvanyin/metric3d", spec.ref, pretrain=True)
             return True, "cached via torch.hub"
     except Exception as exc:  # noqa: BLE001
-        return False, f"{type(exc).__name__}: {exc}"
+        msg = str(exc)
+        auth_hint = ""
+        if "401" in msg or "Invalid username" in msg or "GatedRepo" in type(exc).__name__:
+            repo_url = (f"https://huggingface.co/{spec.ref}"
+                        if spec.kind == "hf_depth" else "https://huggingface.co")
+            auth_hint = (f"\n    → gated repo — fix:\n"
+                         f"      1. huggingface-cli login   (or set HF_TOKEN env var)\n"
+                         f"      2. accept model card at {repo_url}")
+        return False, f"{type(exc).__name__}: {exc}{auth_hint}"
     return False, "nothing to do"
 
 
