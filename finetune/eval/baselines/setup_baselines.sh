@@ -11,6 +11,7 @@
 #
 #   bash finetune/eval/baselines/setup_baselines.sh unik3d   # run in your UniK3D env
 #   bash finetune/eval/baselines/setup_baselines.sh dac      # run in your DAC env (also fetches weights)
+#   bash finetune/eval/baselines/setup_baselines.sh zoo      # deps for benchmark_adt's HF models (transformers/timm/fvcore)
 #   bash finetune/eval/baselines/setup_baselines.sh clone    # just clone both, no pip
 #   bash finetune/eval/baselines/setup_baselines.sh both     # clone + install both (only if one env supports both)
 #
@@ -65,6 +66,17 @@ install_dac () {
   ( cd "$REPO_ROOT" && python -m finetune.eval.baselines.download_weights --variant dac_swinl_indoor )
 }
 
+install_zoo () {
+  # Deps for benchmark_adt's transformers-based models (Depth-Anything V2/V3,
+  # MiDaS/DPT, ZoeDepth, Depth Pro) + best-effort FLOPs. The benchmark also reuses
+  # DAC's ERP warp (third_party/depth_any_camera, cloned below), so run this in the
+  # same env as DAC.
+  echo "[setup] pip install benchmark (model-zoo) deps: transformers timm fvcore einops"
+  pip install -U "transformers>=4.45" timm fvcore einops huggingface_hub
+  echo "[setup] zoo deps ready — list models with:"
+  echo "[setup]   python -m finetune.eval.baselines.benchmark_adt --list"
+}
+
 # Always clone both so either model — and `--mode official` — can import them.
 clone_repo "$UNIK3D_URL" "$UNIK3D_DIR"
 clone_repo "$DAC_URL"    "$DAC_DIR"
@@ -73,6 +85,7 @@ case "$TARGET" in
   clone)  echo "[setup] clone-only; skipping pip install" ;;
   unik3d) install_unik3d ;;
   dac)    install_dac ;;
+  zoo)    install_zoo ;;
   both)
     echo "[setup] WARNING: UniK3D and DAC have conflicting deps (numpy>=2 vs <2,"
     echo "[setup]          torch>=2.4 vs older) — installing both into ONE env may"
@@ -81,7 +94,7 @@ case "$TARGET" in
     install_unik3d
     install_dac
     ;;
-  *) echo "[setup] usage: $0 [unik3d|dac|both|clone]"; exit 2 ;;
+  *) echo "[setup] usage: $0 [unik3d|dac|zoo|both|clone]"; exit 2 ;;
 esac
 
 case "$TARGET" in

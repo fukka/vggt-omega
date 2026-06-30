@@ -177,3 +177,52 @@ KB4 ray grid and z↔range round-trip, and DAC's fisheye→ERP warp + `resize_fo
 on real EgoExo fisheye frames (geometrically correct ERP unwrapping). The model
 **forward passes** (UniK3D needs py3.11/torch2.4; DAC needs its weights) run on
 your GPU box — everything feeding them is exercised.
+
+## Whole-zoo leaderboard: `benchmark_adt` (many models at once)
+
+`run_baselines` compares UniK3D vs DAC. To put **every** monocular depth model on
+ADT side-by-side — with **runtime, params, FLOPs** and the right alignment per
+model — use [`benchmark_adt.py`](benchmark_adt.py), driven by a registry in
+[`model_zoo.py`](model_zoo.py).
+
+**Registry** (19 variants; `--list` prints them + availability):
+DAC (Swin-L / RN101 indoor) · UniK3D (ViT-S/B/L) · Depth-Anything **V2** (Small/
+Base/Large + metric Hypersim/VKITTI) · Depth-Anything **V3** (best-effort id) ·
+MiDaS/DPT (Large/Hybrid/SwinV2-Tiny) · ZoeDepth (NYU / NYU+KITTI) · Apple **Depth
+Pro** · **Metric3D** v2 (ViT-S/L). On-device-friendly variants are tagged 📱.
+
+**Two leaderboards** (`--domains both`):
+* **common** — one apples-to-apples space: **ERP euclidean-range** (DAC-native).
+  Every other model runs on the raw fisheye frame; its planar-z is converted to
+  range (`z/cosθ`) and warped into the same ERP grid as GT via the tested
+  `fisheye_to_erp_fwd`. Pinhole nets degrade here — that's the fisheye gap.
+* **native** — each model at its best: pinhole nets on **rectified pinhole** vs
+  pinhole GT, DAC in ERP, UniK3D in fisheye planar-z. Not cross-comparable.
+
+**Alignment per model** (always plus `none`): relative nets (DAv2/MiDaS/DAv3) →
+`disparity_scale_shift` (MiDaS protocol); metric nets (DAC/UniK3D/ZoeDepth/
+Metric3D/Depth Pro/DAv2-metric) → `scale_only` (median). This matches each model's
+official eval — see [`metrics.py`](../metrics.py).
+
+**Availability / download.** Each variant self-reports `ready` / `download` /
+`unavailable`. HF models (DAv2/V3, MiDaS, ZoeDepth, Depth Pro) need `transformers`;
+FLOPs needs `fvcore`:
+
+```bash
+bash finetune/eval/baselines/setup_baselines.sh zoo   # transformers + timm + fvcore (run in the DAC env)
+python -m finetune.eval.baselines.benchmark_adt --list                 # registry + availability
+python -m finetune.eval.baselines.benchmark_adt --download --models all # fetch missing weights
+python -m finetune.eval.baselines.benchmark_adt --models all --domains both \
+    --adt-root /group-volume/Fengjia/data/projectaria_tools_adt_data_clean \
+    --max-frames 100 --out eval_out/benchmark_adt        # → benchmark.{json,csv} + two tables
+```
+
+Missing/incompatible models are **skipped with a reason**, never fatal; a per-model
+load/eval failure is caught and reported. `--dav3-id` overrides the experimental
+DAv3 id; `--allow-cpu` runs the scaffolding without a GPU (no real timings).
+Requires CUDA otherwise (latency/FLOPs are meaningless on CPU).
+
+Validated locally (CPU, no weights): the full numeric path — real-ADT load → ERP
+common-space warp → per-model alignment → metrics → table + CSV/JSON. The model
+forwards (transformers/DAC/UniK3D/Metric3D-hub) run on the GPU box; the
+Metric3D/DepthPro/DAv3 adapters are best-effort and confirmed there.
