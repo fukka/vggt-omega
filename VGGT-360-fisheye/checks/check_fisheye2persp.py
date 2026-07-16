@@ -285,14 +285,14 @@ def test_c_fusion_roundtrip(cam, views, out_dir) -> bool:
                         & (np.abs(yc) <= t) & cone).astype(np.int32)
     layout_holes = int(np.count_nonzero(inner & (frustum_cov == 0)))
 
-    # 2) fusion-path coverage: holes allowed only in the rim band the valid-
-    #    mask erosion retires (erode_px view pixels ~ erode_px * fov/518 deg)
-    #    and within erode_px+1 px of the frame border (cone overhang).
-    rim_deg = 1.0 + erode_px * views[0][2] / 518.0
+    # 2) fusion-path coverage: with the rim-rescue tier (un-eroded fallback,
+    #    see fuse_views_to_fisheye) the WHOLE cone must be covered, up to one
+    #    view pixel (~fov/518 deg) of nearest-neighbour quantisation at the
+    #    very rim and 1 px at the frame border.
+    rim_deg = 2.0 * views[0][2] / 518.0
     core = theta <= math.degrees(cam.theta_max()) - rim_deg
-    b = erode_px + 1
-    core[:b, :] = core[-b:, :] = False
-    core[:, :b] = core[:, -b:] = False
+    core[:1, :] = core[-1:, :] = False
+    core[:, :1] = core[:, -1:] = False
     holes = int(np.count_nonzero(core & (coverage == 0)))
 
     save(os.path.join(out_dir, "C_fused_field.png"), colorize(fused * cone, 2.2))

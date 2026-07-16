@@ -54,6 +54,7 @@ def fuse_views_to_fisheye(
     interp: str = "linear",
     min_weight: float = 0.0,
     erode_valid_px: int = 3,
+    rescue_rim: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Weighted-average fusion of per-view maps onto the fisheye pixel grid.
 
@@ -75,11 +76,21 @@ def fuse_views_to_fisheye(
     min_weight  : drop samples whose weight falls below this (upstream knob).
     erode_valid_px : erosion radius applied to view_valids before use, so
                   bilinear value samples never straddle the invalid boundary.
+    rescue_rim  : two-tier fallback (default True).  Eroding the valid masks
+                  retires a thin band at the cone rim in EVERY view at once
+                  (all views share the same theta_max), which would leave
+                  ~0.1-0.4%% of the imaged cone with zero coverage — enlarging
+                  or re-tilting the views cannot fix this (measured: the miss
+                  is erosion-, not layout-, driven).  Instead, pixels whose
+                  *eroded*-weight sum is empty fall back to the un-eroded
+                  weights: full coverage, with the slightly riskier
+                  boundary-adjacent samples confined to the rim band only.
 
     Returns
     -------
     fused    : ``(H, W)`` or ``(H, W, C)`` — weighted mean, 0 where no data.
-    coverage : ``(H, W)`` int32 — number of views contributing per pixel.
+    coverage : ``(H, W)`` int32 — number of views contributing per pixel
+               (counted on whichever tier the pixel used).
     """
     assert len(values) == len(view_params)
     rays, cone = fisheye_ray_lut(cam)              # (H, W, 3), (H, W)
@@ -92,6 +103,10 @@ def fuse_views_to_fisheye(
     erp_num = np.zeros((H, W, C), dtype=np.float64)
     erp_den = np.zeros((H, W), dtype=np.float64)
     coverage = np.zeros((H, W), dtype=np.int32)
+    # rim-rescue tier: same sums with UN-eroded validity (see docstring)
+    num_loose = np.zeros((H, W, C), dtype=np.float64)
+    den_loose = np.zeros((H, W), dtype=np.float64)
+    cov_loose = np.zeros((H, W), dtype=np.int32)
 
     for i, (val, (psi, tilt, fov)) in enumerate(zip(values, view_params)):
         val = np.asarray(val, dtype=np.float32)
@@ -131,21 +146,41 @@ def fuse_views_to_fisheye(
                 w_i = w_i[0] if w_i.shape[0] == 1 else w_i[..., 0]
             w = cv2.remap(w_i, mapx, mapy, interpolation=cv2.INTER_LINEAR,
                           borderMode=cv2.BORDER_CONSTANT, borderValue=0.0)
+        w_loose = w
         if view_valids is not None and view_valids[i] is not None:
             vv = np.asarray(view_valids[i], dtype=np.float32)
+            vv_raw = cv2.remap(vv, mapx, mapy, interpolation=cv2.INTER_NEAREST,
+                               borderMode=cv2.BORDER_CONSTANT, borderValue=0.0)
             if erode_valid_px > 0:
                 kernel = np.ones((2 * erode_valid_px + 1,) * 2, np.uint8)
-                vv = cv2.erode(vv, kernel)
-            vv_s = cv2.remap(vv, mapx, mapy, interpolation=cv2.INTER_NEAREST,
-                             borderMode=cv2.BORDER_CONSTANT, borderValue=0.0)
+                vv_er = cv2.erode(vv, kernel)
+                vv_s = cv2.remap(vv_er, mapx, mapy,
+                                 interpolation=cv2.INTER_NEAREST,
+                                 borderMode=cv2.BORDER_CONSTANT, borderValue=0.0)
+            else:
+                vv_s = vv_raw
+            w_loose = w * vv_raw
             w = w * vv_s
         w = np.where(vis, w, 0.0)
+        w_loose = np.where(vis, w_loose, 0.0)
         if min_weight > 0:
             w = np.where(w >= min_weight, w, 0.0)
+            w_loose = np.where(w_loose >= min_weight, w_loose, 0.0)
 
         coverage += (w > 0).astype(np.int32)
         erp_num += (w[..., None] * sampled).astype(np.float64)
         erp_den += w.astype(np.float64)
+        if rescue_rim:
+            cov_loose += (w_loose > 0).astype(np.int32)
+            num_loose += (w_loose[..., None] * sampled).astype(np.float64)
+            den_loose += w_loose.astype(np.float64)
+
+    if rescue_rim:
+        # rim band: pixels the eroded tier left empty but the raw tier covers
+        rim = (erp_den <= 0) & (den_loose > 0)
+        erp_num[rim] = num_loose[rim]
+        erp_den[rim] = den_loose[rim]
+        coverage[rim] = cov_loose[rim]
 
     fused = np.zeros((H, W, C), dtype=np.float32)
     nz = erp_den > 0

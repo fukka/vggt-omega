@@ -73,13 +73,23 @@ All geometry is proven before any GPU run; current status **PASS**:
   analytic render of every view (catches any flip/rotation/scale bug).
 - **C. fusion round-trip + coverage** — a synthetic range field pushed through
   per-view grids and fused back matches the ground-truth field to **0.000%**;
-  the layout has **0 coverage holes** inside the cone.
+  the layout has **0 coverage holes** inside the cone (asserted over the full
+  cone up to ~1 view-pixel of rim quantisation).
 - **D. real ADT frame** — view montage, footprint overlay (θ_max circle lands
   on the physical image circle), coverage map, and an RGB re-fusion of the 9
   views reproducing the original photo at **46.6 dB PSNR**.
 
 ## Notes / knobs
 
+- **Rim coverage** is erosion-, not layout-, driven: the view-frustum union
+  already covers 100.000% of imaged pixels, but eroding the per-view valid
+  masks (which protects fusion from boundary-bleed) retires the same
+  `θ_max`-rim band in *every* view at once — enlarging or re-tilting the ring
+  views does not help (measured 0.36–0.46% miss across tilt 32–36 / FOV 60–66 /
+  8–12 views, while per-view wasted pixels grow 5.5%→17%). The fix is the
+  **two-tier rim rescue** in `fuse_views_to_fisheye`: eroded weights
+  everywhere, un-eroded fallback only where the eroded tier is empty →
+  0.000% miss at 512², 0.005% at native 1408².
 - The fused quantity is euclidean **range** ‖world_points‖; `--pred-domain z`
   (default) converts to planar z via cos θ — a >2× factor at the FOV edge, so
   match this to your GT's convention deliberately.
