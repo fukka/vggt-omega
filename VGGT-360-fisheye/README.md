@@ -106,10 +106,11 @@ Decision tree:
      attention layers; a Sobel-shaped bias applied 24× can imprint image
      texture into the depth (check whether bumps follow texture/edges!).
      With this flag the attention path is bit-identical to vanilla VGGT.
-  2. `--head depth` — the point head (`||world_points||`, upstream's choice)
-     is empirically noisier than the depth head; this switches to per-view
-     z × secant.
-  3. `--dtype fp32` — rules out bf16/fp16 autocast noise in the aggregator.
+  2. `--head` — CONFIRMED on ADT: the point head (`||world_points||`,
+     upstream's choice) is much bumpier than the depth head; `depth`
+     (z × secant) is now the default.  `--head point` reproduces upstream.
+  3. `--dtype fp32` — rules out bf16/fp16 autocast noise in the aggregator
+     (tested on ADT: no visible effect, precision is not a factor).
   4. `--fov 45 --ring-tilt 25` — a corner-free layout (max corner incidence
      ~55° < θ_max): every view has zero invalid pixels, isolating black-
      corner poisoning of the DPT head (costs rim coverage 55–62°, fine for

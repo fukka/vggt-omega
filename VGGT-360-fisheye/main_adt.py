@@ -398,9 +398,10 @@ def main() -> None:
                    help="cap after adaptive augmentation (9 base + 4)")
     p.add_argument("--fuse", choices=["attn", "mean"], default="attn",
                    help="attention-weighted fusion (paper) or uniform (ablation)")
-    p.add_argument("--head", choices=["point", "depth"], default="point",
-                   help="range source: point head ||world_points|| (upstream) "
-                        "or depth head z * secant (often less noisy)")
+    p.add_argument("--head", choices=["point", "depth"], default="depth",
+                   help="range source: depth head z * secant (default — "
+                        "measurably less bumpy on ADT) or point head "
+                        "||world_points|| (upstream's choice; noisier)")
     p.add_argument("--dtype", choices=["bf16", "fp16", "fp32"], default="bf16",
                    help="aggregator autocast dtype; fp32 disables autocast "
                         "(rules out mixed-precision noise)")
