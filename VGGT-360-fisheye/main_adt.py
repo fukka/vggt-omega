@@ -139,6 +139,16 @@ def _dump_debug(debug_dir: str, idx: int, view_params, persp_imgs, radial,
                              labels=labels)
                     ).save(os.path.join(debug_dir, f"{idx:04d}_views_range.png"))
 
+    # Planar z per view (= range / secant).  Range of a FLAT wall is radially
+    # "bowl-shaped" by construction (up to +15% at FOV-60 corners) — judge
+    # smoothness on this z montage instead to avoid mistaking that geometry
+    # for an artifact.
+    z_views = [radial[i] / _view_secant(view_params[i][2], *radial[i].shape)
+               for i in range(S)]
+    Image.fromarray(_montage([_colorize(z, lo, hi) for z in z_views],
+                             labels=labels)
+                    ).save(os.path.join(debug_dir, f"{idx:04d}_views_z.png"))
+
     tiles = []
     for i in range(S):
         m = maps[i].copy()
@@ -206,6 +216,12 @@ def run(args: argparse.Namespace) -> dict:
             and torch.cuda.get_device_capability()[0] < 8:
         dtype = torch.float16
     use_autocast = device == "cuda" and dtype is not torch.float32
+    # fp16 quality is a KNOWN VGGT failure mode (official repo recommends
+    # bf16); make any silent bf16->fp16 fallback loudly visible.
+    print(f"autocast: {'OFF (fp32)' if not use_autocast else str(dtype)}"
+          + ("   <-- fp16 fallback: pre-Ampere GPU; expect noisy depth, "
+             "try --dtype fp32" if use_autocast and dtype is torch.float16
+             and args.dtype == "bf16" else ""))
 
     print(f"loading {args.model_path} ...")
     model = VGGT.from_pretrained(args.model_path).to(device).eval()
