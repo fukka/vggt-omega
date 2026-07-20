@@ -73,6 +73,27 @@ def _colorize(x: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
         return np.stack([g, g, g], axis=-1)
 
 
+_SECANT_CACHE = {}
+
+
+def _view_secant(fov_deg: float, H: int, W: int) -> np.ndarray:
+    """Per-pixel ``sqrt(1 + x^2 + y^2)`` of a view's tangent grid.
+
+    Converts the depth head's planar z (distance along the VIEW axis) to
+    euclidean range along each pixel ray: ``r = z * secant``.  The point
+    head needs no such conversion (``||world_points||`` is already range),
+    but is empirically noisier — hence the ``--head`` ablation.
+    """
+    key = (round(fov_deg, 3), H, W)
+    if key not in _SECANT_CACHE:
+        t = np.tan(np.radians(fov_deg) / 2.0)
+        xs = np.linspace(-t, t, W, dtype=np.float32)
+        ys = np.linspace(-t, t, H, dtype=np.float32)
+        xv, yv = np.meshgrid(xs, ys)
+        _SECANT_CACHE[key] = np.sqrt(1.0 + xv * xv + yv * yv).astype(np.float32)
+    return _SECANT_CACHE[key]
+
+
 def _montage(images, cols=4, pad=4, labels=None) -> np.ndarray:
     """Tile equally-sized HxWx3 uint8 images into a labeled grid."""
     import cv2
@@ -179,12 +200,35 @@ def _save_qual(path: str, rgb: np.ndarray, pred: np.ndarray, gt: np.ndarray,
 def run(args: argparse.Namespace) -> dict:
     device = args.device
     use_attn_fusion = args.fuse == "attn"
-    dtype = torch.bfloat16
-    if device == "cuda" and torch.cuda.get_device_capability()[0] < 8:
+    dtype = {"bf16": torch.bfloat16, "fp16": torch.float16,
+             "fp32": torch.float32}[args.dtype]
+    if dtype is torch.bfloat16 and device == "cuda" \
+            and torch.cuda.get_device_capability()[0] < 8:
         dtype = torch.float16
+    use_autocast = device == "cuda" and dtype is not torch.float32
 
     print(f"loading {args.model_path} ...")
     model = VGGT.from_pretrained(args.model_path).to(device).eval()
+
+    # Weight-loading sanity: PyTorchModelHubMixin can load non-strictly, so a
+    # key mismatch (e.g. after code edits to vggt_visfeat) would silently
+    # leave layers at random init -> garbage/bumpy predictions.  Compare the
+    # checkpoint's keys against the model's and shout if anything is off.
+    try:
+        from huggingface_hub import hf_hub_download
+        from safetensors.torch import load_file
+        ckpt = load_file(hf_hub_download(args.model_path, "model.safetensors"))
+        model_keys = set(model.state_dict().keys())
+        missing = sorted(model_keys - set(ckpt.keys()))
+        unexpected = sorted(set(ckpt.keys()) - model_keys)
+        if missing or unexpected:
+            print(f"  WEIGHT CHECK FAILED: {len(missing)} model keys not in "
+                  f"checkpoint (random init!), {len(unexpected)} checkpoint "
+                  f"keys unused. First few missing: {missing[:5]}")
+        else:
+            print(f"  weight check OK: all {len(model_keys)} keys matched")
+    except Exception as e:  # local path / no safetensors — non-fatal
+        print(f"  weight check skipped ({type(e).__name__}: {e})")
 
     seq_dirs = find_adt_sequences(args.adt_root, args.rgb_subdir, args.depth_subdir)
     if not seq_dirs:
@@ -233,14 +277,22 @@ def run(args: argparse.Namespace) -> dict:
         persp_masks = None if args.no_sa_mask else torch.from_numpy(np.array(sa_masks))
         rgb_masks = None if args.no_sa_mask else torch.from_numpy(np.array(valid_masks))
 
-        with torch.autocast(device_type=device, dtype=dtype, enabled=device == "cuda"):
+        with torch.autocast(device_type=device, dtype=dtype, enabled=use_autocast):
             predictions, attention_maps = model(
                 images=images, persp_masks=persp_masks, rgb_masks=rgb_masks,
                 save_attn=use_attn_fusion)
 
         # ── module 3: fuse radial distances back onto the fisheye grid ──────
-        world_points = predictions["world_points"][0].float().cpu().numpy()  # [S,h,w,3]
-        radial = np.linalg.norm(world_points, axis=-1).astype(np.float32)
+        if args.head == "depth":
+            # depth head: per-view planar z along the view axis -> range
+            depth_z = predictions["depth"][0, ..., 0].float().cpu().numpy()  # [S,h,w]
+            radial = np.stack([
+                depth_z[i] * _view_secant(view_params[i][2], *depth_z[i].shape)
+                for i in range(depth_z.shape[0])]).astype(np.float32)
+        else:
+            # point head (upstream's choice): ||world_points|| is range directly
+            world_points = predictions["world_points"][0].float().cpu().numpy()
+            radial = np.linalg.norm(world_points, axis=-1).astype(np.float32)
         pose_enc = (predictions["pose_enc"][0].float().cpu().numpy()
                     if "pose_enc" in predictions else None)
 
@@ -330,6 +382,12 @@ def main() -> None:
                    help="cap after adaptive augmentation (9 base + 4)")
     p.add_argument("--fuse", choices=["attn", "mean"], default="attn",
                    help="attention-weighted fusion (paper) or uniform (ablation)")
+    p.add_argument("--head", choices=["point", "depth"], default="point",
+                   help="range source: point head ||world_points|| (upstream) "
+                        "or depth head z * secant (often less noisy)")
+    p.add_argument("--dtype", choices=["bf16", "fp16", "fp32"], default="bf16",
+                   help="aggregator autocast dtype; fp32 disables autocast "
+                        "(rules out mixed-precision noise)")
     p.add_argument("--harmonize-scales", action="store_true",
                    help="least-squares per-view scale correction from overlap "
                         "regions before fusion (fixes seams caused by VGGT "

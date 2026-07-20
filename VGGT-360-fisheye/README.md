@@ -98,9 +98,24 @@ Decision tree:
   (half a ViT patch — DPT decodes garbage near cone-clipped black corners),
   and compare `--fisheye-size 512` vs native 1408 (518-res views upsampled
   ~2.7× make small artifacts visible).
-- bumps within single views (visible already in the per-view range montage)
-  → the problem is VGGT's per-view prediction itself, not the port: try
-  larger `--fov` (fewer, wider views) or a different backbone.
+- bumps within single views (visible already in the per-view range montage,
+  while `*_views_rgb.png` inputs are clean) → the problem is inside the VGGT
+  forward, not projection/fusion.  Our forward differs from vanilla VGGT
+  inference in exactly four ways — ablate them in this order:
+  1. `--no-sa-mask` — the module-2 log-bias is injected into ALL 24 frame-
+     attention layers; a Sobel-shaped bias applied 24× can imprint image
+     texture into the depth (check whether bumps follow texture/edges!).
+     With this flag the attention path is bit-identical to vanilla VGGT.
+  2. `--head depth` — the point head (`||world_points||`, upstream's choice)
+     is empirically noisier than the depth head; this switches to per-view
+     z × secant.
+  3. `--dtype fp32` — rules out bf16/fp16 autocast noise in the aggregator.
+  4. `--fov 45 --ring-tilt 25` — a corner-free layout (max corner incidence
+     ~55° < θ_max): every view has zero invalid pixels, isolating black-
+     corner poisoning of the DPT head (costs rim coverage 55–62°, fine for
+     an ablation).
+  The model loader also self-checks checkpoint↔model key matching at start
+  ("weight check OK") to rule out silently-unloaded weights.
 
 ## Notes / knobs
 
