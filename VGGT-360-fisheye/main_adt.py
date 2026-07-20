@@ -50,7 +50,11 @@ from PIL import Image
 from datasets.adt import ADTFisheyeFrames, find_adt_sequences
 from utils.att_utils import SA_confidence
 from utils.fisheye_cam import aria_intrinsics, fisheye_ray_lut, ray_cos_incidence
-from utils.fisheye_fusion import depth_set_to_fisheye_attention
+from utils.fisheye_fusion import (build_selfview_confidence,
+                                  fuse_views_to_fisheye,
+                                  harmonize_view_scales,
+                                  pairwise_scale_stats,
+                                  per_view_fisheye_ranges)
 from utils.fisheye_views import fisheye_to_persp, view_generation_fisheye
 from utils.metrics_adt import (aggregate_metrics, align_depth, depth_metrics,
                                print_summary)
@@ -67,6 +71,91 @@ def _colorize(x: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
     except ImportError:
         g = (normed * 255).astype(np.uint8)
         return np.stack([g, g, g], axis=-1)
+
+
+def _montage(images, cols=4, pad=4, labels=None) -> np.ndarray:
+    """Tile equally-sized HxWx3 uint8 images into a labeled grid."""
+    import cv2
+    H, W = images[0].shape[:2]
+    rows = (len(images) + cols - 1) // cols
+    out = np.full((rows * (H + pad) - pad, cols * (W + pad) - pad, 3), 30, np.uint8)
+    for i, img in enumerate(images):
+        r, c = divmod(i, cols)
+        img = np.ascontiguousarray(img)
+        if labels:
+            cv2.putText(img, labels[i], (6, 22), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7, (255, 255, 60), 2, cv2.LINE_AA)
+        out[r * (H + pad): r * (H + pad) + H,
+            c * (W + pad): c * (W + pad) + W] = img
+    return out
+
+
+def _dump_debug(debug_dir: str, idx: int, view_params, persp_imgs, radial,
+                maps, ratio, n_ov, weights, pose_enc, fused,
+                coverage) -> None:
+    """Per-frame diagnostics for seam/bumpiness debugging (see README).
+
+    Dumps, per frame:
+      * per-view inputs and per-view predicted radial depth (view space),
+      * each view's range re-projected ALONE onto the fisheye grid — seams in
+        the fused map are disagreements visible directly between these tiles,
+      * attention fusion weights (if used),
+      * the pairwise overlap median-ratio matrix (text) + pose translations,
+      * a gradient map of the fused depth (seams/bumps highlighter).
+    """
+    import cv2
+    os.makedirs(debug_dir, exist_ok=True)
+    labels = [f"az{int(p)} t{int(t)}" for (p, t, _) in view_params]
+    S = len(persp_imgs)
+
+    Image.fromarray(_montage([np.clip(p, 0, 255).astype(np.uint8)
+                              for p in persp_imgs], labels=labels)
+                    ).save(os.path.join(debug_dir, f"{idx:04d}_views_rgb.png"))
+
+    finite = radial[np.isfinite(radial) & (radial > 0)]
+    lo, hi = (np.percentile(finite, 2), np.percentile(finite, 98)) if finite.size else (0, 1)
+    Image.fromarray(_montage([_colorize(radial[i], lo, hi) for i in range(S)],
+                             labels=labels)
+                    ).save(os.path.join(debug_dir, f"{idx:04d}_views_range.png"))
+
+    tiles = []
+    for i in range(S):
+        m = maps[i].copy()
+        bad = ~np.isfinite(m)
+        m[bad] = 0.0
+        tile = _colorize(m, lo, hi)
+        tile[bad] = 24
+        tiles.append(tile)
+    Image.fromarray(_montage(tiles, labels=labels)
+                    ).save(os.path.join(debug_dir, f"{idx:04d}_perview_fisheye.png"))
+
+    if weights is not None:
+        Image.fromarray(_montage([_colorize(w, 0.0, 1.0) for w in weights],
+                                 labels=labels)
+                        ).save(os.path.join(debug_dir, f"{idx:04d}_attn_weights.png"))
+
+    gx = cv2.Sobel(fused, cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(fused, cv2.CV_32F, 0, 1, ksize=3)
+    grad = np.sqrt(gx * gx + gy * gy)
+    grad[coverage == 0] = 0
+    Image.fromarray(_colorize(grad, 0.0, float(np.percentile(grad, 99) + 1e-6))
+                    ).save(os.path.join(debug_dir, f"{idx:04d}_fused_seams.png"))
+
+    with open(os.path.join(debug_dir, f"{idx:04d}_consistency.txt"), "w") as f:
+        f.write("pairwise median range ratio maps_i/maps_j (rows=i, cols=j):\n")
+        for i in range(S):
+            f.write(" ".join("  .  " if not np.isfinite(ratio[i, j])
+                             else f"{ratio[i, j]:5.3f}" for j in range(S)) + "\n")
+        f.write("\noverlap pixel counts:\n")
+        for i in range(S):
+            f.write(" ".join(f"{n_ov[i, j]:7d}" for j in range(S)) + "\n")
+        if pose_enc is not None:
+            f.write("\nVGGT per-view translation norms (should be ~0 — shared "
+                    "optical center; large values = scale/seam trouble):\n")
+            for i in range(S):
+                t = pose_enc[i, :3]
+                f.write(f"  view {i:2d} {labels[i]:<12} |t| = {np.linalg.norm(t):.4f}"
+                        f"   t = [{t[0]:+.4f} {t[1]:+.4f} {t[2]:+.4f}]\n")
 
 
 def _save_qual(path: str, rgb: np.ndarray, pred: np.ndarray, gt: np.ndarray,
@@ -152,14 +241,46 @@ def run(args: argparse.Namespace) -> dict:
         # ── module 3: fuse radial distances back onto the fisheye grid ──────
         world_points = predictions["world_points"][0].float().cpu().numpy()  # [S,h,w,3]
         radial = np.linalg.norm(world_points, axis=-1).astype(np.float32)
-        fused_range, coverage = depth_set_to_fisheye_attention(
-            depths=[radial[i] for i in range(radial.shape[0])],
-            view_params=view_params, cam=cam,
-            attention_maps=attention_maps if use_attn_fusion else None,
-            view_valids=valid_masks, interp="linear")
+        pose_enc = (predictions["pose_enc"][0].float().cpu().numpy()
+                    if "pose_enc" in predictions else None)
+
+        weights = None
+        if use_attn_fusion:
+            w = build_selfview_confidence(attention_maps)[:, 0, :, :].cpu().numpy()
+            weights = [w[i] for i in range(w.shape[0])]
         del predictions, attention_maps
         if device == "cuda":
             torch.cuda.empty_cache()
+
+        # Cross-view consistency: all views share one optical center, so their
+        # ranges must agree on overlapping rays.  Measured at 512 (scale-free).
+        maps = ratio = n_ov = None
+        if args.debug_dir or args.harmonize_scales:
+            dbg_cam = aria_intrinsics(512, 512, rotated=True)
+            maps, ok = per_view_fisheye_ranges(
+                [radial[i] for i in range(radial.shape[0])], view_params,
+                dbg_cam, view_valids=valid_masks)
+            ratio, n_ov = pairwise_scale_stats(maps, ok)
+            fin = np.isfinite(ratio) & ~np.eye(ratio.shape[0], dtype=bool)
+            if fin.any():
+                spread = float(np.max(np.abs(np.log(ratio[fin]))))
+                print(f"  [{idx}] cross-view scale spread: max |log ratio| = "
+                      f"{spread:.3f} ({(np.exp(spread) - 1) * 100:.1f}%)")
+            if args.harmonize_scales:
+                s = harmonize_view_scales(maps, ok)
+                radial = radial * s[:, None, None]
+                print(f"  [{idx}] harmonized view scales: "
+                      + " ".join(f"{v:.3f}" for v in s))
+
+        fused_range, coverage = fuse_views_to_fisheye(
+            [radial[i] for i in range(radial.shape[0])], view_params, cam,
+            weights=weights, view_valids=valid_masks, interp="linear",
+            erode_valid_px=args.erode_valid_px)
+
+        if args.debug_dir and idx < args.n_qual:
+            _dump_debug(args.debug_dir, idx, view_params, persp_imgs, radial,
+                        maps, ratio, n_ov, weights, pose_enc, fused_range,
+                        coverage)
 
         pred = fused_range * cos_lut if args.pred_domain == "z" else fused_range
         mask = gt_valid & cone & (coverage > 0) & np.isfinite(pred) & (pred > 0)
@@ -209,6 +330,18 @@ def main() -> None:
                    help="cap after adaptive augmentation (9 base + 4)")
     p.add_argument("--fuse", choices=["attn", "mean"], default="attn",
                    help="attention-weighted fusion (paper) or uniform (ablation)")
+    p.add_argument("--harmonize-scales", action="store_true",
+                   help="least-squares per-view scale correction from overlap "
+                        "regions before fusion (fixes seams caused by VGGT "
+                        "per-view scale drift)")
+    p.add_argument("--erode-valid-px", type=int, default=3,
+                   help="valid-mask erosion at fusion; raise to ~7 (half a "
+                        "ViT patch) if rim/corner garbage bleeds into seams")
+    p.add_argument("--debug-dir", default=None,
+                   help="dump per-view diagnostics for the first --n-qual "
+                        "frames: inputs, per-view depths, per-view fisheye "
+                        "reprojections, attention weights, seam map, pairwise "
+                        "consistency matrix, pose translations")
     p.add_argument("--no-adaptive", action="store_true",
                    help="disable uncertainty-guided neighbor views (module 1 ablation)")
     p.add_argument("--no-sa-mask", action="store_true",

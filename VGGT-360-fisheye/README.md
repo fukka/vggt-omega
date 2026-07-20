@@ -79,6 +79,29 @@ All geometry is proven before any GPU run; current status **PASS**:
   on the physical image circle), coverage map, and an RGB re-fusion of the 9
   views reproducing the original photo at **46.6 dB PSNR**.
 
+## Debugging bumpy / seamy fused depth
+
+Run with `--debug-dir <dir>` — per frame it dumps: per-view inputs,
+per-view predicted range (view space), **each view re-projected alone onto
+the fisheye grid** (seams in the fused map are disagreements visible directly
+between these tiles), attention weights, a gradient "seam map" of the fused
+depth, the **pairwise overlap median-ratio matrix** and VGGT's per-view
+translation norms (all views share one optical center, so ‖t‖ should be ≈0).
+
+Decision tree:
+- pairwise ratios ≫ 1 (>5–10% spread) → VGGT gave the views inconsistent
+  monocular scales (pure-rotation input is triangulation-degenerate).
+  Mitigate with `--harmonize-scales` (least-squares per-view log-scale
+  correction on the overlap graph; validated by checks test E).
+- ratios ≈ 1 but fused map bumpy → fusion side: compare `--fuse mean` vs
+  `attn` (patch-level weight blockiness), raise `--erode-valid-px` toward 7
+  (half a ViT patch — DPT decodes garbage near cone-clipped black corners),
+  and compare `--fisheye-size 512` vs native 1408 (518-res views upsampled
+  ~2.7× make small artifacts visible).
+- bumps within single views (visible already in the per-view range montage)
+  → the problem is VGGT's per-view prediction itself, not the port: try
+  larger `--fov` (fewer, wider views) or a different backbone.
+
 ## Notes / knobs
 
 - **Rim coverage** is erosion-, not layout-, driven: the view-frustum union

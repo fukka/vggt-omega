@@ -144,11 +144,20 @@ def fuse_views_to_fisheye(
             w_i = np.asarray(weights[i], dtype=np.float32)
             if w_i.ndim == 3:
                 w_i = w_i[0] if w_i.shape[0] == 1 else w_i[..., 0]
+            if w_i.shape != (Hc, Wc):   # same value-grid guard as the masks
+                w_i = cv2.resize(w_i, (Wc, Hc), interpolation=cv2.INTER_LINEAR)
             w = cv2.remap(w_i, mapx, mapy, interpolation=cv2.INTER_LINEAR,
                           borderMode=cv2.BORDER_CONSTANT, borderValue=0.0)
         w_loose = w
         if view_valids is not None and view_valids[i] is not None:
             vv = np.asarray(view_valids[i], dtype=np.float32)
+            # mapx/mapy are in the VALUE map's pixel coords (Hc, Wc).  The
+            # valid masks typically come from fisheye_to_persp at persp_size
+            # (512) while VGGT outputs 518 — resample the mask onto the value
+            # grid first, or the remap below would read it misaligned by
+            # ~Hc/Hv (a ~6 px skew at the rim; real bug found in GPU runs).
+            if vv.shape != (Hc, Wc):
+                vv = cv2.resize(vv, (Wc, Hc), interpolation=cv2.INTER_NEAREST)
             vv_raw = cv2.remap(vv, mapx, mapy, interpolation=cv2.INTER_NEAREST,
                                borderMode=cv2.BORDER_CONSTANT, borderValue=0.0)
             if erode_valid_px > 0:
@@ -188,6 +197,126 @@ def fuse_views_to_fisheye(
     if C == 1:
         fused = fused[..., 0]
     return fused, coverage
+
+
+# --------------------------------------------------------------------------- #
+# Cross-view consistency diagnostics + scale harmonisation
+#
+# Why: seams at view boundaries in the fused depth mean the per-view radial
+# distances DISAGREE where views overlap.  Since all views share one optical
+# center, overlapping rays must have identical range — any systematic ratio
+# between two views is VGGT scale drift (pure-rotation multi-view is a
+# degenerate case for triangulation, so per-view monocular scale can wander).
+# These helpers (a) measure that disagreement directly and (b) optionally
+# correct it with a least-squares per-view scale before fusion.
+# --------------------------------------------------------------------------- #
+
+def per_view_fisheye_ranges(
+    values: Sequence[np.ndarray],
+    view_params: Sequence[ViewParam],
+    cam: FisheyeCam,
+    view_valids: Optional[Sequence[np.ndarray]] = None,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Each view's value map resampled alone onto the fisheye grid.
+
+    Returns ``maps (S, H, W) float32`` (NaN where the view does not see the
+    ray) and ``ok (S, H, W) bool``.  This is the single most useful debugging
+    artifact: a montage of these shows exactly which view disagrees where,
+    before any weighting can blur the story.
+    """
+    rays, cone = fisheye_ray_lut(cam)
+    S = len(values)
+    maps = np.full((S, cam.H, cam.W), np.nan, dtype=np.float32)
+    ok = np.zeros((S, cam.H, cam.W), dtype=bool)
+    for i, (val, (psi, tilt, fov)) in enumerate(zip(values, view_params)):
+        val = np.asarray(val, dtype=np.float32)
+        Hc, Wc = val.shape[:2]
+        R = view_rotation(psi, tilt).astype(np.float32)
+        d_v = rays @ R
+        zc = d_v[..., 2]
+        t = np.float32(np.tan(np.radians(fov) * 0.5))
+        with np.errstate(divide="ignore", invalid="ignore"):
+            xc = d_v[..., 0] / zc
+            yc = d_v[..., 1] / zc
+        vis = (zc > 1e-6) & (np.abs(xc) <= t) & (np.abs(yc) <= t) & cone
+        mapx = ((xc / t + 1.0) * 0.5 * (Wc - 1)).astype(np.float32)
+        mapy = ((yc / t + 1.0) * 0.5 * (Hc - 1)).astype(np.float32)
+        mapx[~vis] = -1.0
+        mapy[~vis] = -1.0
+        sampled = cv2.remap(val, mapx, mapy, interpolation=cv2.INTER_LINEAR,
+                            borderMode=cv2.BORDER_CONSTANT, borderValue=0.0)
+        good = vis & (sampled > 0)
+        if view_valids is not None and view_valids[i] is not None:
+            vv = np.asarray(view_valids[i], dtype=np.float32)
+            if vv.shape != (Hc, Wc):
+                vv = cv2.resize(vv, (Wc, Hc), interpolation=cv2.INTER_NEAREST)
+            vv_s = cv2.remap(vv, mapx, mapy, interpolation=cv2.INTER_NEAREST,
+                             borderMode=cv2.BORDER_CONSTANT, borderValue=0.0)
+            good &= vv_s > 0.5
+        maps[i][good] = sampled[good]
+        ok[i] = good
+    return maps, ok
+
+
+def pairwise_scale_stats(maps: np.ndarray, ok: np.ndarray,
+                         min_overlap: int = 500):
+    """Median range ratio between every overlapping view pair.
+
+    Returns ``(ratio (S, S), n_overlap (S, S))`` with ``ratio[i, j] =
+    median(maps_i / maps_j)`` over their shared pixels (NaN if the overlap is
+    below ``min_overlap``).  On a healthy reconstruction every ratio is ~1;
+    ratios off by >5-10%% mean VGGT gave the views inconsistent scales and the
+    fused depth WILL show seams — fix upstream (masks/views) or harmonise.
+    """
+    S = maps.shape[0]
+    ratio = np.full((S, S), np.nan, dtype=np.float64)
+    n_ov = np.zeros((S, S), dtype=np.int64)
+    for i in range(S):
+        ratio[i, i] = 1.0
+        for j in range(i + 1, S):
+            both = ok[i] & ok[j]
+            n = int(both.sum())
+            n_ov[i, j] = n_ov[j, i] = n
+            if n < min_overlap:
+                continue
+            r = float(np.median(maps[i][both] / np.clip(maps[j][both], 1e-9, None)))
+            ratio[i, j] = r
+            ratio[j, i] = 1.0 / r if r > 0 else np.nan
+    return ratio, n_ov
+
+
+def harmonize_view_scales(maps: np.ndarray, ok: np.ndarray,
+                          min_overlap: int = 500) -> np.ndarray:
+    """Per-view scales ``s (S,)`` making overlaps agree: ``s_i*m_i ~= s_j*m_j``.
+
+    Weighted least squares on the overlap graph in log space:
+    ``log s_i - log s_j = -log median(m_i/m_j)`` for every pair with enough
+    overlap, weight ``sqrt(n_overlap)``; gauge fixed by ``mean(log s) = 0`` so
+    the global (free) scale is untouched.  Views with no usable overlap keep
+    ``s = 1``.  Apply by scaling each view's radial map before fusion.
+    """
+    S = maps.shape[0]
+    ratio, n_ov = pairwise_scale_stats(maps, ok, min_overlap)
+    rows, rhs, wts = [], [], []
+    for i in range(S):
+        for j in range(i + 1, S):
+            if not np.isfinite(ratio[i, j]) or ratio[i, j] <= 0:
+                continue
+            row = np.zeros(S)
+            row[i], row[j] = 1.0, -1.0
+            rows.append(row)
+            rhs.append(-np.log(ratio[i, j]))
+            wts.append(np.sqrt(float(n_ov[i, j])))
+    if not rows:
+        return np.ones(S, dtype=np.float32)
+    # gauge row: sum(log s) = 0, weighted strongly
+    rows.append(np.ones(S))
+    rhs.append(0.0)
+    wts.append(float(np.sum(wts)))
+    A = np.asarray(rows) * np.asarray(wts)[:, None]
+    b = np.asarray(rhs) * np.asarray(wts)
+    logs, *_ = np.linalg.lstsq(A, b, rcond=None)
+    return np.exp(logs).astype(np.float32)
 
 
 # --------------------------------------------------------------------------- #

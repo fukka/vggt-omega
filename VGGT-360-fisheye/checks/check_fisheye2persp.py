@@ -64,7 +64,10 @@ if _PKG not in sys.path:
 
 from utils.fisheye_cam import (aria_intrinsics, fisheye_ray_lut,
                                kb4_forward_theta, kb4_unproject_theta)
-from utils.fisheye_fusion import fuse_views_to_fisheye
+from utils.fisheye_fusion import (fuse_views_to_fisheye,
+                                  harmonize_view_scales,
+                                  pairwise_scale_stats,
+                                  per_view_fisheye_ranges)
 from utils.fisheye_views import (base_views, fisheye_to_persp, view_rotation)
 
 PASS, FAIL = "\033[92mPASS\033[0m", "\033[91mFAIL\033[0m"
@@ -309,6 +312,52 @@ def test_c_fusion_roundtrip(cam, views, out_dir) -> bool:
     return good
 
 
+def test_e_scale_harmonization(cam, views) -> bool:
+    """Known per-view scale drift must be measured and recovered exactly.
+
+    Simulates the failure mode behind fused-depth seams: every view carries
+    the same true range field but with a different multiplicative scale (VGGT
+    per-view monocular scale drift).  ``pairwise_scale_stats`` must report the
+    injected ratios and ``harmonize_view_scales`` must recover the inverse
+    scales up to the (unobservable) global gauge.
+    """
+    print("\n[E] cross-view scale drift: measure + harmonize")
+
+    def f(rays):
+        return (1.5 + 0.3 * np.sin(3.0 * rays[..., 0])
+                + 0.2 * np.cos(2.0 * rays[..., 1])).astype(np.float32)
+
+    rng = np.random.RandomState(7)
+    s_true = np.exp(rng.uniform(-0.15, 0.15, len(views))).astype(np.float64)
+
+    values, valids = [], []
+    for k, (psi, tilt, fov) in enumerate(views):
+        R = view_rotation(psi, tilt)
+        values.append(f(view_ray_grid(fov, 518, 518, R)) * s_true[k])
+        _, valid = fisheye_to_persp(np.zeros((cam.H, cam.W), np.float32),
+                                    cam, psi, tilt, fov, 518, 518)
+        valids.append(valid)
+
+    maps, ok = per_view_fisheye_ranges(values, views, cam, view_valids=valids)
+    ratio, _ = pairwise_scale_stats(maps, ok)
+    # measured pairwise ratios must equal the injected ones
+    meas_err = 0.0
+    for i in range(len(views)):
+        for j in range(len(views)):
+            if i != j and np.isfinite(ratio[i, j]):
+                meas_err = max(meas_err,
+                               abs(math.log(ratio[i, j] / (s_true[i] / s_true[j]))))
+    s_rec = harmonize_view_scales(maps, ok).astype(np.float64)
+    # compare up to global gauge (geometric mean)
+    corr = s_rec * s_true
+    corr /= np.exp(np.mean(np.log(corr)))
+    rec_err = float(np.max(np.abs(np.log(corr))))
+    good = meas_err < 5e-3 and rec_err < 5e-3
+    print(f"    pairwise-ratio error {meas_err:.5f}, recovery error {rec_err:.5f} "
+          f"(log-space, < 0.005)   {PASS if good else FAIL}")
+    return good
+
+
 def test_d_real_frame(cam_native, views, adt_root, rgb_subdir, frame_idx,
                       out_dir) -> None:
     """Visual sanity on a real ADT frame (no pass/fail — for human eyes)."""
@@ -412,11 +461,12 @@ def main() -> None:
     ok_a = test_a_ray_roundtrip(cam, views)
     ok_b = test_b_synthetic_views(cam, views, args.out)
     ok_c = test_c_fusion_roundtrip(cam, views, args.out)
+    ok_e = test_e_scale_harmonization(cam, views)
     if args.adt_root:
         test_d_real_frame(cam, views, args.adt_root, args.rgb_subdir,
                           args.frame, args.out)
 
-    all_ok = ok_a and ok_b and ok_c
+    all_ok = ok_a and ok_b and ok_c and ok_e
     print(f"\n== geometry checks: {PASS if all_ok else FAIL} ==")
     sys.exit(0 if all_ok else 1)
 
