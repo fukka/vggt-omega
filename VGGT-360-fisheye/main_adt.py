@@ -421,8 +421,13 @@ def main() -> None:
                    help="disable uncertainty-guided neighbor views (module 1 ablation)")
     p.add_argument("--no-sa-mask", action="store_true",
                    help="disable structure-saliency attention bias (module 2 ablation)")
-    p.add_argument("--pred-domain", choices=["z", "range"], default="z",
-                   help="score planar z-depth (range*cos(theta)) or raw range")
+    p.add_argument("--pred-domain", choices=["z", "range"], default="range",
+                   help="GT depth convention to score in. ADT GT is euclidean "
+                        "range (verified empirically by checks/"
+                        "check_gt_depth_domain.py: planes look planar only "
+                        "under the range hypothesis), so the default compares "
+                        "fused range directly; 'z' multiplies by cos(theta) "
+                        "first (up to 2x at the FOV edge — only for z-domain GT)")
     p.add_argument("--align-modes", nargs="+",
                    default=["scale_shift", "median"],
                    choices=["scale_shift", "median", "none"])

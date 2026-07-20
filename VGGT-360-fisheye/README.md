@@ -129,9 +129,13 @@ Decision tree:
   **two-tier rim rescue** in `fuse_views_to_fisheye`: eroded weights
   everywhere, un-eroded fallback only where the eroded tier is empty →
   0.000% miss at 512², 0.005% at native 1408².
-- The fused quantity is euclidean **range** ‖world_points‖; `--pred-domain z`
-  (default) converts to planar z via cos θ — a >2× factor at the FOV edge, so
-  match this to your GT's convention deliberately.
+- The fused quantity is euclidean **range**.  ADT GT is *also* range —
+  verified empirically by `checks/check_gt_depth_domain.py`, which slices the
+  GT into the same per-view montage under both conventions: planes look
+  planar only under the range hypothesis.  So `--pred-domain range` (default)
+  compares directly; the same script also shows that GROUND-TRUTH range
+  montages have curved iso-depth bands on flat walls — "curvy" per-view depth
+  is geometry, not a bug (use `*_views_z.png` to judge smoothness).
 - Output is up-to-scale (VGGT); the default `scale_shift` alignment matches
   the repo's ADT baseline protocol (`finetune/eval/baselines/benchmark_adt.py`),
   so results can be tabled next to DAC / UniK3D.
