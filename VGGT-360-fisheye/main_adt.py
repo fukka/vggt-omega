@@ -160,23 +160,37 @@ def _dump_debug(debug_dir: str, idx: int, view_params, persp_imgs, radial,
     #   * red straight but cyan (depth) curved / displaced            -> VGGT is
     #     bending structure relative to its input (a real model/registration
     #     problem to chase upstream).
+    # The depth edges are taken on PLANAR Z (range/secant), not range, so the
+    # radial "bowl" of a flat surface is removed and cyan marks true depth
+    # discontinuities — the fair comparison against the RGB edges.
     ov_tiles = []
     for i in range(S):
         d = radial[i]
+        z = d / _view_secant(view_params[i][2], *d.shape)
         Hd, Wd = d.shape
         rgb_i = cv2.resize(np.clip(persp_imgs[i], 0, 255).astype(np.uint8),
                            (Wd, Hd), interpolation=cv2.INTER_LINEAR)
         gray = cv2.cvtColor(rgb_i, cv2.COLOR_RGB2GRAY).astype(np.float32)
         rgb_e = np.hypot(cv2.Sobel(gray, cv2.CV_32F, 1, 0, 3),
                          cv2.Sobel(gray, cv2.CV_32F, 0, 1, 3))
-        dep_e = np.hypot(cv2.Sobel(d, cv2.CV_32F, 1, 0, 3),
-                         cv2.Sobel(d, cv2.CV_32F, 0, 1, 3))
-        tile = (_colorize(d, lo, hi).astype(np.float32) * 0.45).astype(np.uint8)
+        dep_e = np.hypot(cv2.Sobel(z, cv2.CV_32F, 1, 0, 3),
+                         cv2.Sobel(z, cv2.CV_32F, 0, 1, 3))
+        tile = (_colorize(z, lo, hi).astype(np.float32) * 0.45).astype(np.uint8)
         tile[rgb_e > np.percentile(rgb_e, 96)] = (255, 40, 40)   # RGB edges red
-        tile[dep_e > np.percentile(dep_e, 96)] = (0, 230, 230)   # depth edges cyan
+        tile[dep_e > np.percentile(dep_e, 96)] = (0, 230, 230)   # z-depth edges cyan
         ov_tiles.append(tile)
     Image.fromarray(_montage(ov_tiles, labels=labels)
                     ).save(os.path.join(debug_dir, f"{idx:04d}_edge_overlay.png"))
+
+    # Export each perspective crop as a standalone PNG so the EXACT input can be
+    # fed to the official VGGT (`pip install vggt`) for an apples-to-apples
+    # check: if official VGGT curves the depth of this same crop, the curviness
+    # is VGGT's behavior on fisheye-derived tangent views, not this port.
+    crop_dir = os.path.join(debug_dir, f"{idx:04d}_crops")
+    os.makedirs(crop_dir, exist_ok=True)
+    for i in range(S):
+        Image.fromarray(np.clip(persp_imgs[i], 0, 255).astype(np.uint8)
+                        ).save(os.path.join(crop_dir, f"view{i:02d}_{labels[i].replace(' ', '_')}.png"))
 
     tiles = []
     for i in range(S):
