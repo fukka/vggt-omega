@@ -149,6 +149,35 @@ def _dump_debug(debug_dir: str, idx: int, view_params, persp_imgs, radial,
                              labels=labels)
                     ).save(os.path.join(debug_dir, f"{idx:04d}_views_z.png"))
 
+    # RGB-edge vs depth-edge overlay — the decisive "is that curvy line a real
+    # depth edge or just a smooth iso-range band?" test.  Per view, the input
+    # RGB's Sobel edges are drawn RED and the depth's own Sobel edges CYAN, on
+    # top of the (dimmed) depth colormap, all on the depth pixel grid.
+    #   * a "curvy edge" that has NO red line under it  -> it is a smooth
+    #     range/z contour on a flat surface (geometry, not a bug),
+    #   * red and cyan lines COINCIDE and both curve                 -> the
+    #     input itself is curved (intrinsics/OOD) — depth faithfully follows it,
+    #   * red straight but cyan (depth) curved / displaced            -> VGGT is
+    #     bending structure relative to its input (a real model/registration
+    #     problem to chase upstream).
+    ov_tiles = []
+    for i in range(S):
+        d = radial[i]
+        Hd, Wd = d.shape
+        rgb_i = cv2.resize(np.clip(persp_imgs[i], 0, 255).astype(np.uint8),
+                           (Wd, Hd), interpolation=cv2.INTER_LINEAR)
+        gray = cv2.cvtColor(rgb_i, cv2.COLOR_RGB2GRAY).astype(np.float32)
+        rgb_e = np.hypot(cv2.Sobel(gray, cv2.CV_32F, 1, 0, 3),
+                         cv2.Sobel(gray, cv2.CV_32F, 0, 1, 3))
+        dep_e = np.hypot(cv2.Sobel(d, cv2.CV_32F, 1, 0, 3),
+                         cv2.Sobel(d, cv2.CV_32F, 0, 1, 3))
+        tile = (_colorize(d, lo, hi).astype(np.float32) * 0.45).astype(np.uint8)
+        tile[rgb_e > np.percentile(rgb_e, 96)] = (255, 40, 40)   # RGB edges red
+        tile[dep_e > np.percentile(dep_e, 96)] = (0, 230, 230)   # depth edges cyan
+        ov_tiles.append(tile)
+    Image.fromarray(_montage(ov_tiles, labels=labels)
+                    ).save(os.path.join(debug_dir, f"{idx:04d}_edge_overlay.png"))
+
     tiles = []
     for i in range(S):
         m = maps[i].copy()

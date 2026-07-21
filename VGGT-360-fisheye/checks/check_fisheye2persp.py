@@ -68,7 +68,8 @@ from utils.fisheye_fusion import (fuse_views_to_fisheye,
                                   harmonize_view_scales,
                                   pairwise_scale_stats,
                                   per_view_fisheye_ranges)
-from utils.fisheye_views import (base_views, fisheye_to_persp, view_rotation)
+from utils.fisheye_views import (base_views, fisheye_to_persp,
+                                 view_center_dir, view_rotation)
 
 PASS, FAIL = "\033[92mPASS\033[0m", "\033[91mFAIL\033[0m"
 
@@ -312,6 +313,61 @@ def test_c_fusion_roundtrip(cam, views, out_dir) -> bool:
     return good
 
 
+def test_f_straight_lines(cam, views) -> bool:
+    """fisheye_to_persp must map straight 3D lines to straight image lines.
+
+    A rectilinear (gnomonic) perspective view of a straight 3D line is a
+    straight image line — if the warp violated this, planar edges (a table
+    edge, a wall corner) would bow in every perspective crop and, downstream,
+    in the depth.  Rather than rasterise (sparse, alias-prone), this checks it
+    analytically: for each view it takes the warp's own sampling maps
+    (``return_maps``), and for a family of straight 3D lines finds, per line,
+    the output pixels that sample the lines' fisheye positions; a straight
+    output means those pixels are collinear.  Reports the worst bow in pixels.
+    """
+    print("\n[F] straight-line preservation (planar edges stay straight)")
+    worst = 0.0
+    for (psi, tilt, fov) in views:
+        _, _, mapx, mapy = fisheye_to_persp(
+            np.zeros((cam.H, cam.W), np.float32), cam, psi, tilt, fov,
+            256, 256, return_maps=True)
+        mp = np.stack([mapx, mapy], -1).reshape(-1, 2)
+        R = view_rotation(psi, tilt)
+        # 3D lines on the plane 2 m in front of the VIEW axis (fronto-parallel
+        # to this view), so a correct view shows a straight grid.
+        axis = view_center_dir(psi, tilt)
+        e1 = np.cross(axis, [0, 0, 1.0]);
+        e1 = e1 / (np.linalg.norm(e1) + 1e-9) if np.linalg.norm(e1) > 1e-6 else np.array([1.0, 0, 0])
+        e2 = np.cross(axis, e1)
+        for a in np.linspace(-0.8, 0.8, 5):            # one family of || lines
+            rows = []
+            for b in np.linspace(-0.8, 0.8, 21):
+                P = 2.0 * axis + a * e1 + b * e2
+                r = P / np.linalg.norm(P)
+                d_v = r @ R
+                if d_v[2] <= 0:
+                    continue
+                # fisheye coord of this 3D point (same model as the warp)
+                z = np.clip(r[2], -1, 1)
+                td = kb4_forward_theta(np.array(math.acos(z)), cam.k)
+                rxy = math.hypot(r[0], r[1]); inv = 1 / rxy if rxy > 1e-9 else 0
+                fu = cam.cx + cam.fx * td * r[0] * inv
+                fv = cam.cy + cam.fy * td * r[1] * inv
+                k = np.argmin(np.hypot(mp[:, 0] - fu, mp[:, 1] - fv))
+                if np.hypot(mp[k, 0] - fu, mp[k, 1] - fv) < 2:
+                    rows.append((k // 256, k % 256))
+            if len(rows) >= 8:
+                pts = np.array(rows, float)
+                # perpendicular deviation from the best-fit line
+                d = pts - pts.mean(0)
+                _, _, vh = np.linalg.svd(d, full_matrices=False)
+                worst = max(worst, float(np.abs(d @ vh[1]).max()))
+    good = worst < 2.0
+    print(f"    worst line bow over all views: {worst:.2f}px / 256  "
+          f"{PASS if good else FAIL} (< 2)")
+    return good
+
+
 def test_e_scale_harmonization(cam, views) -> bool:
     """Known per-view scale drift must be measured and recovered exactly.
 
@@ -462,11 +518,12 @@ def main() -> None:
     ok_b = test_b_synthetic_views(cam, views, args.out)
     ok_c = test_c_fusion_roundtrip(cam, views, args.out)
     ok_e = test_e_scale_harmonization(cam, views)
+    ok_f = test_f_straight_lines(cam, views)
     if args.adt_root:
         test_d_real_frame(cam, views, args.adt_root, args.rgb_subdir,
                           args.frame, args.out)
 
-    all_ok = ok_a and ok_b and ok_c and ok_e
+    all_ok = ok_a and ok_b and ok_c and ok_e and ok_f
     print(f"\n== geometry checks: {PASS if all_ok else FAIL} ==")
     sys.exit(0 if all_ok else 1)
 
