@@ -110,7 +110,8 @@ def fisheye_to_persp(img: np.ndarray,
                      height: int = 512,
                      width: int = 512,
                      theta_max: Optional[float] = None,
-                     return_maps: bool = False):
+                     return_maps: bool = False,
+                     supersample: int = 1):
     """Render one perspective (tangent) view from a KB4 fisheye frame.
 
     Mirrors upstream ``ERP2Persp`` structure — build the tangent-plane ray
@@ -128,6 +129,15 @@ def fisheye_to_persp(img: np.ndarray,
                   FOV and lands on the 518x518 / 37x37-token grid).
     theta_max   : incidence cone cutoff; default = the lens turnover.
     return_maps : also return the ``(u, v)`` sampling maps (for checkers).
+    supersample : anti-aliasing factor.  ``cv2.remap`` with INTER_LINEAR only
+                  reads a 2x2 neighbourhood, so rendering a view DIRECTLY at
+                  518 from a 1408 fisheye point-samples (aliases) — the
+                  fisheye region feeding one output pixel spans several source
+                  pixels that never get averaged.  With ``supersample=s`` the
+                  view is rendered at ``s*height x s*width`` then INTER_AREA-
+                  downsampled to ``height x width`` (proper box filter), giving
+                  a clean anti-aliased crop.  ``return_maps`` forces s=1 (the
+                  maps must be at output resolution).  s=2..3 is plenty.
 
     Returns
     -------
@@ -143,6 +153,11 @@ def fisheye_to_persp(img: np.ndarray,
     """
     if theta_max is None:
         theta_max = cam.theta_max()
+
+    # Anti-aliasing: render at s x resolution, box-downsample at the end.
+    s = 1 if return_maps else max(1, int(supersample))
+    out_h, out_w = height, width
+    height, width = height * s, width * s
 
     # Tangent-plane ray grid; y down to match image row order (row 0 = top).
     t = math.tan(math.radians(fov_deg) / 2.0)
@@ -184,6 +199,10 @@ def fisheye_to_persp(img: np.ndarray,
         persp = persp * valid_f
     if return_maps:
         return persp, valid_f, mapx, mapy
+    if s > 1:
+        # Box-filter downsample to the requested output size (anti-alias).
+        persp = cv2.resize(persp, (out_w, out_h), interpolation=cv2.INTER_AREA)
+        valid_f = cv2.resize(valid_f, (out_w, out_h), interpolation=cv2.INTER_AREA)
     return persp, valid_f
 
 

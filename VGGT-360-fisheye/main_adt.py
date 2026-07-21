@@ -323,7 +323,8 @@ def run(args: argparse.Namespace) -> dict:
         for (psi, tilt, fov) in view_params:
             persp, valid = fisheye_to_persp(rgb, cam, psi, tilt, fov,
                                             height=args.persp_size,
-                                            width=args.persp_size)
+                                            width=args.persp_size,
+                                            supersample=args.crop_supersample)
             sa, vm = SA_confidence(persp, valid_mask=valid > 0.5)
             persp_imgs.append(persp)
             sa_masks.append(sa)
@@ -433,6 +434,10 @@ def main() -> None:
     p.add_argument("--persp-size", type=int, default=512,
                    help="perspective view size fed to VGGT (518 after its preprocessing)")
     p.add_argument("--fov", type=float, default=60.0, help="per-view FOV (deg)")
+    p.add_argument("--crop-supersample", type=int, default=3,
+                   help="anti-aliasing factor for the tangent-view render "
+                        "(render at Nx then box-downsample); 1 = the old "
+                        "aliased direct render")
     p.add_argument("--ring-tilt", type=float, default=32.0,
                    help="ring-view tilt from the optical axis (deg); "
                         "design rule tilt + fov/2 ~= 62.3 (the Aria cone)")

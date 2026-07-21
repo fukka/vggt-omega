@@ -105,9 +105,14 @@ def main() -> None:
     ap.add_argument("--adt-root", default=None,
                     help="if set, also generate a fisheye center crop from a "
                          "real ADT frame and test it")
-    ap.add_argument("--rgb-subdir", default="videos_rgb")
+    ap.add_argument("--rgb-subdir", default="videos_synthetic",
+                    help="videos_synthetic = sharp, GT-aligned rendered RGB "
+                         "(recommended); videos_rgb = real sensor, MOTION-BLURRED "
+                         "(a confound — VGGT can't localise depth on a blurry image)")
     ap.add_argument("--frame", type=int, default=6)
     ap.add_argument("--fov", type=float, default=60.0)
+    ap.add_argument("--crop-supersample", type=int, default=3,
+                    help="anti-alias factor for the tangent render (1 = old)")
     ap.add_argument("--model-path", default="facebook/VGGT-1B")
     ap.add_argument("--out", default=os.path.join(_PKG, "outputs", "vggt_single"))
     args = ap.parse_args()
@@ -138,7 +143,8 @@ def main() -> None:
         ds = ADTFisheyeFrames(seqs[:1], rgb_subdir=args.rgb_subdir, max_frames=args.frame + 1)
         rgb = ds[min(args.frame, len(ds) - 1)]["rgb"]
         cam = aria_intrinsics(*rgb.shape[:2], rotated=True)
-        crop, _ = fisheye_to_persp(rgb, cam, 0.0, 0.0, args.fov, 518, 518)
+        crop, _ = fisheye_to_persp(rgb, cam, 0.0, 0.0, args.fov, 518, 518,
+                                   supersample=args.crop_supersample)
         pil_list.append(Image.fromarray(np.clip(crop, 0, 255).astype(np.uint8)))
         tags.append(f"adt_fisheye_center_f{args.frame}")
 
