@@ -113,6 +113,13 @@ def main() -> None:
     ap.add_argument("--fov", type=float, default=60.0)
     ap.add_argument("--crop-supersample", type=int, default=3,
                     help="anti-alias factor for the tangent render (1 = old)")
+    ap.add_argument("--view-mode", choices=["tangent", "rectifier"],
+                    default="tangent",
+                    help="how to make the ADT view: 'tangent' = our 60deg "
+                         "fisheye_to_persp crop; 'rectifier' = the repo's "
+                         "validated FisheyeRectifier wide (~85deg) pinhole of "
+                         "the WHOLE frame — feed both to VGGT to test whether "
+                         "it's the narrow tangent crop specifically")
     ap.add_argument("--model-path", default="facebook/VGGT-1B")
     ap.add_argument("--out", default=os.path.join(_PKG, "outputs", "vggt_single"))
     args = ap.parse_args()
@@ -142,11 +149,20 @@ def main() -> None:
         seqs = find_adt_sequences(args.adt_root, rgb_subdir=args.rgb_subdir)
         ds = ADTFisheyeFrames(seqs[:1], rgb_subdir=args.rgb_subdir, max_frames=args.frame + 1)
         rgb = ds[min(args.frame, len(ds) - 1)]["rgb"]
-        cam = aria_intrinsics(*rgb.shape[:2], rotated=True)
-        crop, _ = fisheye_to_persp(rgb, cam, 0.0, 0.0, args.fov, 518, 518,
-                                   supersample=args.crop_supersample)
+        if args.view_mode == "rectifier":
+            # repo's validated wide (~85deg) fisheye->pinhole, whole frame
+            sys.path.insert(0, os.path.dirname(_PKG))  # repo root
+            from finetune.data.rectify import FisheyeRectifier
+            rect = FisheyeRectifier("aria-214-1")
+            crop = rect(rgb.astype(np.float32) / 255.0) * 255.0
+            tag = f"adt_rectifier_f{args.frame}"
+        else:
+            cam = aria_intrinsics(*rgb.shape[:2], rotated=True)
+            crop, _ = fisheye_to_persp(rgb, cam, 0.0, 0.0, args.fov, 518, 518,
+                                       supersample=args.crop_supersample)
+            tag = f"adt_tangent{int(args.fov)}_f{args.frame}"
         pil_list.append(Image.fromarray(np.clip(crop, 0, 255).astype(np.uint8)))
-        tags.append(f"adt_fisheye_center_f{args.frame}")
+        tags.append(tag)
 
     if not pil_list:
         raise SystemExit("give --images and/or --adt-root")
