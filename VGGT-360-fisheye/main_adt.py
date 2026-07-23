@@ -289,14 +289,20 @@ def run(args: argparse.Namespace) -> dict:
     except Exception as e:  # local path / no safetensors — non-fatal
         print(f"  weight check skipped ({type(e).__name__}: {e})")
 
-    seq_dirs = find_adt_sequences(args.adt_root, args.rgb_subdir, args.depth_subdir)
+    seq_dirs = find_adt_sequences(args.adt_root, args.rgb_subdir,
+                                  args.depth_subdir,
+                                  require_subdirs=args.require_streams)
     if not seq_dirs:
         raise SystemExit(f"no ADT sequences with {args.rgb_subdir}/ + "
                          f"{args.depth_subdir}/ under {args.adt_root}")
+    # For a fair synthetic-vs-real (blur) A/B, --require-streams restricts both
+    # sequences AND (per-sequence) frames to the set common to all streams, so
+    # the two runs score identical frames — the only difference being the pixels.
     dataset = ADTFisheyeFrames(
         seq_dirs, rgb_subdir=args.rgb_subdir, depth_subdir=args.depth_subdir,
         depth_max_m=args.depth_max_m, max_frames=args.max_frames,
-        frame_stride=args.frame_stride, working_size=args.fisheye_size)
+        frame_stride=args.frame_stride, common_streams=args.require_streams,
+        working_size=args.fisheye_size)
 
     frame_metrics = {m: [] for m in args.align_modes}
     cam = None
@@ -426,7 +432,14 @@ def main() -> None:
     p.add_argument("--adt-root", required=True,
                    help="dir containing ADT sequence folders")
     p.add_argument("--rgb-subdir", default="videos_synthetic",
-                   help="videos_synthetic (GT-aligned) or videos_rgb (real sensor)")
+                   help="videos_synthetic (sharp, GT-aligned) or videos_rgb "
+                        "(real sensor, motion-blurred)")
+    p.add_argument("--require-streams", nargs="*", default=None,
+                   help="extra RGB stream dirs a sequence must ALSO have; "
+                        "restricts sequences AND frames to the common set so a "
+                        "synthetic-vs-real blur A/B scores identical frames. "
+                        "E.g. --rgb-subdir videos_synthetic "
+                        "--require-streams videos_rgb (and vice-versa).")
     p.add_argument("--depth-subdir", default="depth_npy")
     p.add_argument("--model-path", default="facebook/VGGT-1B")
     p.add_argument("--fisheye-size", type=int, default=None,

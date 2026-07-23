@@ -118,6 +118,27 @@ Decision tree:
   The model loader also self-checks checkpoint↔model key matching at start
   ("weight check OK") to rule out silently-unloaded weights.
 
+## Synthetic-vs-real (blur) A/B
+
+To test whether distorted depth is caused by real-sensor motion blur, run the
+same frames through the sharp rendered stream and the blurred real stream.
+`--require-streams` restricts both runs to the sequences AND (per-sequence)
+frames common to both streams, so the only difference is the pixels:
+
+```bash
+# sharp (synthetic) — scores exactly the frames real also has
+python VGGT-360-fisheye/main_adt.py --adt-root <ROOT> \
+    --rgb-subdir videos_synthetic --require-streams videos_rgb --max-frames 50
+# blurred (real) — same frame set
+python VGGT-360-fisheye/main_adt.py --adt-root <ROOT> \
+    --rgb-subdir videos_rgb --require-streams videos_synthetic --max-frames 50
+```
+
+Sequence discovery is transparent: `find_adt_sequences` logs every sequence it
+skips and why (missing/empty stream or depth dir), so a stream that is absent
+for some sequences is never dropped silently — the reason a `videos_rgb` run
+and a `videos_synthetic` run could otherwise cover different sequences.
+
 ## Notes / knobs
 
 - **Rim coverage** is erosion-, not layout-, driven: the view-frustum union
