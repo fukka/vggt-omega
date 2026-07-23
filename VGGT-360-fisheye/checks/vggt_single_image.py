@@ -110,7 +110,13 @@ def main() -> None:
                          "(recommended); videos_rgb = real sensor, MOTION-BLURRED "
                          "(a confound — VGGT can't localise depth on a blurry image)")
     ap.add_argument("--frame", type=int, default=6)
-    ap.add_argument("--fov", type=float, default=60.0)
+    ap.add_argument("--fov", type=float, default=60.0,
+                    help="render FoV for the --adt-root tangent view (known "
+                         "exactly, since this script renders it)")
+    ap.add_argument("--assume-fov", type=float, default=None,
+                    help="reference 'true' FoV to print for --images inputs "
+                         "whose real FoV this script cannot know (e.g. pass 60 "
+                         "if you know a --images crop was rendered at 60deg)")
     ap.add_argument("--crop-supersample", type=int, default=3,
                     help="anti-alias factor for the tangent render (1 = old)")
     ap.add_argument("--view-mode", choices=["tangent", "rectifier"],
@@ -137,10 +143,16 @@ def main() -> None:
 
     os.makedirs(args.out, exist_ok=True)
     pil_list, tags = [], []
+    true_fovs = []   # per input: known render FoV (deg), or None if unknown
 
     for p in args.images:
         pil_list.append(Image.open(p).convert("RGB"))
         tags.append(os.path.splitext(os.path.basename(p))[0])
+        # We did NOT render these, so their FoV is UNKNOWN. (A crop exported by
+        # main_adt is a base_views tangent view = --fov, but this script cannot
+        # know that from the file alone — don't claim a "true" FoV we can't
+        # verify. Pass --assume-fov to set a reference for --images inputs.)
+        true_fovs.append(args.assume_fov)
 
     if args.adt_root:
         from datasets.adt import ADTFisheyeFrames, find_adt_sequences
@@ -156,13 +168,17 @@ def main() -> None:
             rect = FisheyeRectifier("aria-214-1")
             crop = rect(rgb.astype(np.float32) / 255.0) * 255.0
             tag = f"adt_rectifier_f{args.frame}"
+            # rectifier focal_out = 0.55*max(H,W) -> FoV = 2*atan((W/2)/focal)
+            true_fov = float(np.degrees(2 * np.arctan(0.5 / 0.55)))  # ~84.6
         else:
             cam = aria_intrinsics(*rgb.shape[:2], rotated=True)
             crop, _ = fisheye_to_persp(rgb, cam, 0.0, 0.0, args.fov, 518, 518,
                                        supersample=args.crop_supersample)
             tag = f"adt_tangent{int(args.fov)}_f{args.frame}"
+            true_fov = args.fov   # we rendered it -> FoV is known exactly
         pil_list.append(Image.fromarray(np.clip(crop, 0, 255).astype(np.uint8)))
         tags.append(tag)
+        true_fovs.append(true_fov)
 
     if not pil_list:
         raise SystemExit("give --images and/or --adt-root")
@@ -181,11 +197,14 @@ def main() -> None:
     pose = pred.get("pose_enc")
     if pose is not None:
         fov = pose[0, :, 7:9].float().cpu().numpy()  # [S,2] radians (h,w)
-        print("\nVGGT inferred FoV per image (deg; ADT crop true FoV = "
-              f"{args.fov:.0f}):")
+        print("\nVGGT inferred FoV per image (deg). 'true' is the render FoV "
+              "when known (rendered by this script); for --images inputs it is "
+              "UNKNOWN unless you pass --assume-fov:")
         for i, tag in enumerate(tags):
+            tf = true_fovs[i]
+            ref = f"true={tf:.0f}" if tf is not None else "true=unknown"
             print(f"  {tag:<28} fov_h={np.degrees(fov[i,0]):5.1f}  "
-                  f"fov_w={np.degrees(fov[i,1]):5.1f}")
+                  f"fov_w={np.degrees(fov[i,1]):5.1f}   ({ref})")
 
     print("\nedge-alignment (RGB edges that have a depth edge within 2px; "
           "high = depth structure follows the image):")
