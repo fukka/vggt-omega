@@ -157,6 +157,20 @@ def main() -> None:
         pred, _ = model(images=images, save_attn=False)   # plain vanilla path
     depth = pred["depth"][0, ..., 0].float().cpu().numpy()   # [S,H,W] planar z
 
+    # VGGT's INFERRED camera FoV per image (pose_enc[7]=fov_h, [8]=fov_w, rad).
+    # VGGT couples depth to this estimate; DAv2 (which aligns) has no such
+    # coupling.  If the inferred FoV is far from the crop's true render FoV,
+    # VGGT is mis-estimating the camera and bending the geometry to match ->
+    # the mechanism behind "DAv2 aligns but VGGT does not" on the same crop.
+    pose = pred.get("pose_enc")
+    if pose is not None:
+        fov = pose[0, :, 7:9].float().cpu().numpy()  # [S,2] radians (h,w)
+        print("\nVGGT inferred FoV per image (deg; ADT crop true FoV = "
+              f"{args.fov:.0f}):")
+        for i, tag in enumerate(tags):
+            print(f"  {tag:<28} fov_h={np.degrees(fov[i,0]):5.1f}  "
+                  f"fov_w={np.degrees(fov[i,1]):5.1f}")
+
     print("\nedge-alignment (RGB edges that have a depth edge within 2px; "
           "high = depth structure follows the image):")
     for i, tag in enumerate(tags):
