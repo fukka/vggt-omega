@@ -69,7 +69,18 @@ from utils.fisheye_views import fisheye_to_persp
 # scripts this module replaces used 96 / 96 / 90 and were silently incomparable.
 EDGE_PERCENTILE = 96.0
 
-DEFAULT_OUT_SIZE = 518          # VGGT's native token grid
+DEFAULT_OUT_SIZE = 518          # VGGT-1B's native token grid (patch 14 -> 37x37)
+
+# Render size that lands exactly on each backend's token grid, so nothing is
+# resampled between our renderer and the model:
+#   vggt1b / official : patch 14, 518 -> 37x37 tokens
+#   vggt_omega        : patch 16, 512 -> 32x32 tokens
+# Rendering at the native size is preferable to cropping a 518 render down to
+# 512: a crop silently shrinks the view's field of view by 512/518 (~1.2%),
+# which would corrupt the true-vs-inferred FoV comparison this probe exists to
+# make.  Render size is a free parameter, so just render at the right one.
+NATIVE_SIZE = {"vggt1b": 518, "official": 518, "vggt_omega": 512}
+
 _RECTIFIER_FOCAL_FRAC = 0.55    # finetune/data/rectify.py: focal_out = 0.55*max(H,W)
 
 
@@ -605,7 +616,9 @@ def main() -> None:
                          "real FoV cannot be recovered from pixels")
     ap.add_argument("--enhance", choices=["none", "clahe", "sharpen", "blur"],
                     default="none", help="'clearness' axis on the ADT view")
-    ap.add_argument("--out-size", type=int, default=DEFAULT_OUT_SIZE)
+    ap.add_argument("--out-size", type=int, default=None,
+                    help="render size; default = the backend's native token "
+                         f"grid ({NATIVE_SIZE}), so the model resamples nothing")
     ap.add_argument("--crop-supersample", type=int, default=3,
                     help="anti-alias factor for the tangent render (1 = aliased)")
     ap.add_argument("--edge-percentile", type=float, default=EDGE_PERCENTILE,
@@ -617,6 +630,11 @@ def main() -> None:
                          "sharing an optical centre — never for unrelated images.")
     ap.add_argument("--out", default=os.path.join(_PKG, "outputs", "depth_probe"))
     args = ap.parse_args()
+
+    if args.out_size is None:
+        args.out_size = NATIVE_SIZE[args.backend]
+        print(f"render size {args.out_size} (native token grid for "
+              f"{args.backend}; override with --out-size)")
 
     views = build_views(args)
     if not views:

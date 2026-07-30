@@ -796,6 +796,434 @@ I3 and I2 together decide which of the three you are in, and both are cheap. Do 
 
 ---
 
+## VGGT-Omega input contract and the scale/FoV question
+
+Written to explain the center-view sweep on one ADT Aria frame (tangent crops peak in edge
+alignment near FoV 100 and fall off on both sides; `raw_roi` is worse than tangent everywhere;
+the ~84.5° rectifier view is best). Everything below is from the VGGT-Ω paper
+([arXiv:2605.15195](https://arxiv.org/abs/2605.15195), CVPR 2026 Oral), the official repo
+[facebookresearch/vggt-omega](https://github.com/facebookresearch/vggt-omega), or the vendored
+source in this repo — which is a byte-identical clone of upstream for the files quoted here
+(verified: `vggt_omega/utils/load_fn.py` at `39a0cb8 Initial commit`, never touched since, and
+matches
+[raw.githubusercontent.com/.../vggt_omega/utils/load_fn.py](https://raw.githubusercontent.com/facebookresearch/vggt-omega/main/vggt_omega/utils/load_fn.py)).
+
+### The documented input contract
+
+There are exactly **three** places the contract is written down. The Hugging Face model card
+([huggingface.co/facebook/VGGT-Omega](https://huggingface.co/facebook/VGGT-Omega)) is gated and
+carries **no** technical content — no resolution, no preprocessing, no training-data or camera
+statement (verified by fetching it). The project page
+([vggt-omega.github.io](https://vggt-omega.github.io/)) likewise documents no input constraints
+(verified). So:
+
+**(1) The checkpoint table** (`README.md` lines 30-33) names resolution as a *property of the
+weights*, not a runtime flag: `VGGT-Omega-1B-512` → Resolution **512**; the text-alignment
+checkpoint is a separate **256** model. The README's own benchmark (lines 119-123) states that
+`mode="balanced"` with `image_resolution=512` on 3:2 landscape images "produces 624x416 inputs" —
+i.e. **the model is not fed 512×512; it is fed whatever shape carries the 512² token budget.**
+
+**(2) `vggt_omega/utils/load_fn.py`** — the actual contract. Signature and docstring, lines 15-21:
+
+```python
+def load_and_preprocess_images(image_path_list, mode="balanced", image_resolution=512, patch_size=16):
+    """Load images for VGGT-Omega inference.
+
+    `balanced` keeps the total token count close to image_resolution**2.
+```
+
+The docstring is loose; the code is exact. Line 86 defines the budget as a **token count**, not a
+pixel count:
+
+```python
+token_number = (image_resolution // patch_size) ** 2     # = (512//16)**2 = 1024
+w_patches = np.sqrt(token_number / aspect_ratio)
+h_patches = token_number / w_patches
+```
+
+1024 tokens × 16² px = **262,144 px = 512² of image area**, distributed to match the aspect ratio
+and snapped to whole patches. Two hard constraints are enforced (lines 30-31):
+`image_resolution % patch_size != 0` raises, and extreme aspect ratios are **center-cropped** into
+`[0.5, 2.0]` before anything else (line 68, `_crop_to_supported_aspect_ratio`). The resize itself is
+`Image.Resampling.BICUBIC` (line 47).
+
+**(3) Paper §4.1, Implementation Details** — the reason the loader is shaped that way:
+
+> "We augment images by randomly varying the aspect ratio within [0.33,1.33], keeping the image area
+> approximately 512 × 512 pixels, and applying color jittering, grayscale conversion, and random
+> patch masking."
+
+So `mode="balanced"` is **not a heuristic — it reproduces the training-time area budget exactly**
+(262,144 px, both at train and at test). This is the single most important sentence in the paper for
+our purposes: the invariant VGGT-Ω was trained under is **constant image *area* with varying aspect
+ratio**, not constant side length.
+
+**Patch size and backbone.** §4.1: variants are 200M/500M/1B/10B with 12/12/24/16
+alternating-attention blocks and hidden sizes 384/768/1024/4096; "The vision transformer is
+initialized from DINOv3 [147] and is not frozen during training." Patch size 16 is confirmed in the
+efficiency section: "512 × 336 for VGGT-Ω with 16-pixel patches", against "518 × 336 for VGGT and
+DA3 with 14-pixel patches". So the local defaults (`image_resolution=512`, `patch_size=16`,
+`mode="balanced"`) are **correct and match upstream**; nothing to fix there.
+
+**Minimum/maximum resolution: not documented, and structurally unnecessary.** There is no stated min
+or max and no resolution ablation anywhere in the paper (§4.3 ablates model size, data size, register
+attention, multi-task losses, and self-supervision — *not* resolution, and *not* out-of-distribution
+cameras). Structurally there is no learned absolute position embedding to break: the backbone uses
+**RoPE on normalized coordinates**, `vggt_omega/models/layers/rope_position_encoding.py` lines
+70-73 and 85:
+
+```python
+if self.normalize_coords == "max":
+    max_HW = max(H, W)
+    coords_h = torch.arange(0.5, H, **dd) / max_HW
+    coords_w = torch.arange(0.5, W, **dd) / max_HW
+...
+coords = 2.0 * coords - 1.0  # Shift range [0, 1] to [-1, +1]
+```
+
+and `vggt_omega/models/aggregator.py` line 40 / lines 226-228 both set `normalize_coords="max"`.
+The model even guards this: `vggt_omega/models/vggt_omega.py` lines 80-89 warn
+`"the released VGGT-Omega checkpoint was trained with 'max'"` if it is anything else. This is
+DINOv3's scheme, described in its §"Updated Model Architecture"
+([arXiv:2508.10104](https://arxiv.org/abs/2508.10104)):
+
+> "our base implementation assigns coordinates in a normalized [−1, 1] box to each patch... In order
+> to improve the robustness of the model to resolutions, scales and aspect ratios, we employ
+> RoPE-box jittering. The coordinate box [−1, 1] is randomly scaled to [−s, s], where s ∈ [0.5, 2]."
+
+and later, explicitly: "our model can seamlessly process images at varying resolutions without
+requiring adaptation, thanks to the adoption of Rotary Positional Embeddings (RoPE)."
+
+**A consequence worth internalising:** because coordinates are normalised to [−1,1] *regardless of
+token-grid size*, and because the backbone was additionally jittered over a 4× coordinate-scale
+range, the positional encoding carries **no information about angular scale**. VGGT-Ω cannot tell a
+40° crop from a 120° crop positionally — it must read FoV out of image *content*. That is why the
+FoV estimate is a learned prior over appearance, and why it should be expected to regress toward the
+training distribution whenever the content is unfamiliar.
+
+**Camera estimation, and whether intrinsics can be supplied.** §3.1:
+
+> "gi = (qi, ti, fi) ∈ R⁹ is the concatenation of the rotation quaternion qi ∈ R⁴, the translation
+> vector ti ∈ R³, and the field of view fi ∈ R² ... As is commonly done, we **assume that the
+> principal point is at the center of the image**."
+
+Confirmed in `vggt_omega/utils/pose_enc.py` lines 41-49: `fy = (H/2)/tan(fov_h/2)`,
+`fx = (W/2)/tan(fov_w/2)`, `cx = W/2`, `cy = H/2`, and **zero distortion parameters**. The head is
+"a lightweight transformer to the camera tokens and registers... followed by an MLP on each updated
+camera token... predicts camera parameters in a single pass, without iterative refinement" (§3.1.3),
+with "a ReLU activation for the focal length" (Appendix A.2).
+
+**There is no supported way to supply known intrinsics.** `vggt_omega/models/vggt_omega.py` line 36
+is `def forward(self, images: torch.Tensor)` — images and nothing else. And the depth head does not
+consume the camera prediction: `dense_head(aggregated_tokens_list, ...)` and
+`camera_head(aggregated_tokens_list, ...)` are **parallel** readouts of the same aggregator. This is
+a sharper constraint than it first looks, and it differs from Depth Pro. Depth Pro predicts a
+*canonical* inverse depth C and recovers metric depth by an explicit rescale
+(§3.2, [arXiv:2410.02073](https://arxiv.org/abs/2410.02073)): "To obtain a dense metric depth map
+Dm, we scale by the horizontal field of view, represented by the focal length fpx and the width w:
+Dm = fpx/(w·C)", with the FoV head existing only "to handle images that may have inaccurate or
+missing EXIF metadata" (§3.3). For Depth Pro, substituting a known focal length **corrects the
+depth**. For VGGT-Ω, substituting a known FoV corrects only the *unprojection* — the predicted depth
+map is already committed and cannot be repaired that way.
+
+The paper does, however, address this directly, in §5 "Further Insights" under **Auxiliary Inputs**
+— this is the most actionable paragraph in the paper for us:
+
+> "Theoretically, incorporating auxiliary inputs, such as temporal order, **camera parameters**,
+> depth maps, or scale factors, can further enhance performance. However, we empirically observe
+> that introducing these priors during pretraining, even when applied randomly or masked across
+> training iterations, is often **detrimental**. Conversely, our preliminary experiments indicate
+> that providing conditional auxiliary inputs **exclusively during the fine-tuning phase is highly
+> effective**, improving task-specific performance without compromising the integrity of the learned
+> representations."
+
+i.e. the authors tried camera conditioning, and their guidance is: inject it at **fine-tune** time,
+not pretrain time. That is exactly the regime we are in, and it is a first-party endorsement of the
+"condition on known Aria intrinsics during finetuning" plan rather than a test-time override.
+
+### Does feeding 518×518 violate the contract? No — and the model never sees 518
+
+This turns out to be a non-issue, for a concrete reason: **`load_and_preprocess_images` silently
+resizes our crops to 512 before the model sees them.** Trace it for a square input:
+`aspect_ratio = 518/518 = 1.0` → `token_number = 1024` → `w_patches = sqrt(1024/1.0) = 32`,
+`h_patches = 32` → target `(32·16, 32·16) = (512, 512)` → `image.resize((512,512), BICUBIC)`
+(line 47). Our tester does go through this path: `VGGT-360-fisheye/checks/depth_probe.py` lines
+315/333-334 call the official `vggt_omega.utils.load_fn.load_and_preprocess_images(...,
+image_resolution=image_resolution)`, and `center_view_sweep.py` line 127 defaults
+`--image-resolution 512`. So the 518 in `--persp-size` is a *rendering* size only; the network is
+fed a 512×512, 1024-token image in every row of the sweep table.
+
+What that costs is a **518→512 bicubic downsample, a ratio of 1.0117** — a ~1.2% non-integer
+resample. It is a mild low-pass, applied *identically to every row of the sweep*, so it cannot
+produce the non-monotonicity we observed. It is not free (a non-integer bicubic resample does
+attenuate the top of the spectrum, which is where an edge-alignment metric lives), and the tidy fix
+is to render crops at 512 directly and skip the round trip — but it is a second-order effect, not
+the explanation.
+
+Two related things that are **not** problems, worth ruling out explicitly:
+
+- **No positional-embedding interpolation happens.** The classic hazard is the ViT one
+  ([arXiv:2010.11929](https://arxiv.org/abs/2010.11929), §3.2): "The Vision Transformer can handle
+  arbitrary sequence lengths (up to memory constraints), however, the pre-trained position
+  embeddings may no longer be meaningful. We therefore perform 2D interpolation of the pre-trained
+  position embeddings... Note that this resolution adjustment and patch extraction are the only
+  points at which an inductive bias about the 2D structure of the images is manually injected."
+  VGGT-Ω has no such embedding to interpolate — see the RoPE code above. (Incidentally the number
+  518 traces to that same paper: it is ViT-H/**14**'s fine-tuning resolution, 518/14 = 37 tokens
+  across, which is why VGGT-1B uses it. It has no meaning for a patch-16 model — 518/16 = 32.375.)
+- **Off-native inference is not automatically lossy, but native-size patching does measurably win on
+  boundaries.** Depth Pro's Table 9 is the cleanest primary comparison, because it holds training
+  identical and varies only the architecture: a plain **ViT-L DINOv2 run at 1536×1536 with bicubic
+  interpolated position embeddings** versus **Depth Pro's 35 patches at the ViT's native 384×384**.
+  Metric depth is a wash (NYUv2 δ1 96.5 vs 96.1; iBims δ1 90.3 vs **91.3**), but boundaries are not:
+  iBims F1 0.161 → **0.177** (+9.9%) and DIS R 0.065 → **0.080** (+23%), *and* Depth Pro is faster
+  (392 → 341 ms). Their text: "our architecture improves the boundary recall by relative 23% over
+  DINOv2." Since our `align%` is a boundary metric, this is the most relevant number in this whole
+  document: **the native-resolution-patch design buys roughly 10-23% on exactly the quantity we are
+  measuring, while barely moving global depth accuracy.**
+
+### What is known about VGGT-Ω's training FoV distribution
+
+The **distribution** is not published. The **bounds on half of the data** are, and they are sharp.
+
+Training data comes in two halves (§3.5). The public half (§3.5.1) lists ~3M sequences from Aria
+series, Bedlam, BEHAVIOR-1K, Co3Dv2, uCo3D, DL3DV, Dynamic Replica, EDEN, EFM3D, HOT3D, Habitat,
+Hypersim, Mapfree, Mapillary Metropolis, MPSD, Megadepth, Megasynth, Mid-Air, Mvssynth,
+ParallelDomain-4D, Replica, SAIL-VOS, ScanNet series, TartanAirV2, TartanGround, Taskonomy,
+UnrealStereo4K, Virtual KITTI, Waymo, WildRGBD, plus unspecified internal datasets. **No FoV or
+camera-model statement is made about this half.** Note that Aria data *is* in there (Aria series,
+HOT3D, EFM3D) — but in whatever projection those releases ship, which for the standard distributions
+is rectified/pinhole, not raw fisheye.
+
+The annotated half (§3.5.2, ~40M internet videos → ~800K kept sequences) has explicit filters, and
+they are the load-bearing evidence. Under "Reconstruction and filtering":
+
+> "For successful reconstructions, we discard sequences that fail heuristic checks, e.g., an image
+> registration ratio < 99.5%, **a field of view outside [30°, 120°]**, or a **distortion ratio >
+> 0.1**. These criteria aggressively remove cases with degenerate motion or extreme zoom."
+
+And upstream of that, the VLM pre-filter prompt (Appendix A.3) makes it a **Step 1 hard reject**,
+alongside cartoons and corrupted footage:
+
+> "5. Non-Pinhole Projections: Is the footage 360° equirectangular or heavily distorted fisheye
+> without calibration?"
+
+Finally, Appendix C, Limitations, states the failure mode in the authors' own words:
+
+> "reconstruction quality often degrades if the **field of view changes abruptly** (e.g., shifting
+> from 10° to 160° in a few seconds) **or the camera is highly distorted**... These limitations are
+> **primarily attributable to the distribution of our training data**."
+
+**Verdict on the brief's key question.** A 120° input is at the exact upper filter bound — the last
+FoV that survived annotation, and therefore the thinnest part of the prior. A 40° input is inside
+[30°,120°] but near the lower bound and additionally in "extreme zoom" territory, which the same
+sentence says was aggressively removed. Neither is nominally out of distribution; both are at the
+edges of it. **Raw, un-undistorted fisheye is unambiguously out of distribution** — rejected twice
+over (VLM hard reject; distortion ratio > 0.1) — and, independently of any training statistics, is
+**unrepresentable** by the R⁹ pinhole-with-centered-principal-point parameterization in
+`pose_enc.py`. That is a complete and sufficient explanation for `raw_roi` being worse than `tangent`
+at every FoV, and it needs no appeal to scale at all.
+
+This also predicts the FoV read-outs we saw. The model is biased toward the interior of [30°,120°],
+so it should under-report at the top (tangent 120 → 105.8) and under-report worst when distortion is
+present (raw_roi 120 → 91.5, a −24% error, versus tangent's −12%). The 84.5° rectifier view sits
+mid-distribution and is recovered to 84.0 — a 0.6% error, the best in the table — while also scoring
+the best `align%`. Accuracy of the FoV read-out and quality of the depth track together, which is
+what you expect if both are governed by proximity to the training prior.
+
+### The angular-resolution hypothesis: the evidence runs against it
+
+The hypothesis is that a 518 px crop at FoV 40 (~13 px/deg, above the sensor's ~11.35 px/deg)
+supplies interpolated, information-free detail that hurts dense prediction. Two independent lines of
+primary evidence say the sign of that effect is **the opposite**, and the arithmetic of our own
+sweep says it is not the driver.
+
+**(a) Upsampling with zero new information measurably *helps* dense depth.** BoostingMonocularDepth
+([arXiv:2105.14021](https://arxiv.org/abs/2105.14021)) ran precisely this control, §3 with Fig. 5:
+
+> "We use an original input image of 192 × 192 pixels and simply upsample it to generate higher
+> resolution results. This way, **the amount of high-frequency information remains the same in the
+> input but we still see an increase in the high-resolution details in the result**, demonstrating a
+> limit in the network capacity."
+
+Their conclusion in §7: "upscaling low-resolution images does help in generating more high-frequency
+details. Hence, our estimation resolution depends mainly on the **image content and not on the
+original input resolution**." The bottleneck they identify is *how much detail the network can emit
+per forward pass*, not how much detail the input contains. Interpolated pixels are not inert — they
+buy the decoder more output capacity for the same scene.
+
+**(b) The same paper shows the *real* mechanism is context density, and it is non-monotonic.** §3:
+
+> "when these cues in the image gets further apart than the receptive field, the network is not able
+> to generate a coherent depth estimation around pixels that do not receive enough information"
+
+and, in the other direction, §5:
+
+> "**Resolutions below the receptive field size do not improve the structure and in fact reduce the
+> performance as the full capacity of the network is not utilized.**"
+
+Too little context density under-uses the model; too much overwhelms it. They operationalise this
+with an edge map as a proxy for contextual cues, dilate it by a receptive-field-sized kernel, and
+define **R₀** as "the maximum resolution where every pixel will receive context information in a
+forward pass", with **R₂₀** the resolution leaving 20% of pixels without nearby edges. The quality
+curve peaks near R₀-R₂₀ and degrades past it: "beyond (c), the estimates become unstable in terms of
+the overall structure" (Fig. 6). **That is the same shape as our FoV sweep** — a hump with a peak
+away from the obvious choice — and it is driven by edge/context density, which is exactly what
+changes when you vary FoV at a fixed token budget.
+
+Their Table 1 also carries a warning we should heed. Adaptive resolution (Single-est R₀) versus the
+original model, MiDaS: on high-resolution **Middlebury2014** everything improves (ORD 0.3840→0.3554,
+D³R 0.3343→0.2504, RMSE 0.1708→0.1481). But on **Ibims-1**, whose originals are only 640×480, the
+boundary metric improves while the global metrics get *worse* (D³R 0.3698→**0.3269** better; ORD
+0.4002→0.4504, RMSE 0.1596→0.1687, δ1.25 0.6345→0.6633 all worse). **Pushing resolution/detail up
+can improve a boundary metric while degrading global geometry.** `align%` is a boundary metric. We
+should not conclude from `align%` alone that a configuration is geometrically better.
+
+**(c) The classic non-monotonic train/test scale result.** "Fixing the train-test resolution
+discrepancy" ([arXiv:1906.06423](https://arxiv.org/abs/1906.06423)) §3.3 shows a ResNet-50 trained at
+224 peaking at test resolution **288**, not 224:
+
+| K_test | 64 | 128 | 224 | 256 | **288** | 320 | 384 | 448 |
+|---|---|---|---|---|---|---|---|---|
+| top-1 | 29.4 | 65.4 | 77.0 | 78.0 | **78.4** | 78.3 | 77.7 | 76.6 |
+
+The mechanism (§3.1) is **apparent object size**: train-time RandomResizedCrop zooms in, so the
+optimum at test is whatever setting reproduces the *apparent scale statistics of training* — not
+whatever matches the nominal training resolution. Read across: for VGGT-Ω at a fixed 1024-token
+budget, the apparent-scale knob **is** FoV. A peak at some FoV other than "the one that matches the
+sensor" is the expected result, not an anomaly.
+
+**(d) Our own numbers do not fit the angular-resolution story.** The source is 1408 px over ~124°
+≈ 11.35 px/deg. A 512 px input (post-loader) matches that at **FoV ≈ 45°**. If matching native
+sensor detail drove `align%`, the peak would sit near 45-60°. It sits at **100°**, where the crop is
+5.12 px/deg — a **2.2× downsample** below sensor detail — and 40° (the *only* upsampling row) is the
+worst tangent score in the table. The observed ordering is inconsistent with an angular-resolution
+explanation and consistent with the training-prior/context-density explanation given under *What is
+known about VGGT-Ω's training FoV distribution* and in (b) above: 100° is comfortably interior to
+[30°,120°], 120° is at the filter bound, 40° is near the lower bound and
+in the "extreme zoom" regime the pipeline removed.
+
+**One confound to control before trusting the shape of the curve.** `align%` is normalised by the
+count of input Sobel edges, and both the numerator and denominator change with FoV: a narrow crop
+upsampled from the sensor has fewer, softer edges (a weaker, noisier denominator), while a 120° crop
+has many edges compressed near the periphery. Boosting's design makes exactly this control explicit
+— they select patches by "comparing the density of the edges in the patch to the density of the
+edges in the whole image". Before drawing conclusions from the hump, re-run the sweep with the edge
+threshold set to hold **edge count** (not percentile) roughly constant across FoV, or report
+`align%` against a matched-edge-count baseline. A meaningful part of the 17→28 spread could be the
+metric.
+
+### Patch-based inference: what the field actually does, and the few-large vs many-small numbers
+
+Three primary systems, and they agree on the design rule that matters most to us.
+
+**The shared rule: never change the pixel size the backbone sees.** PatchFusion
+([arXiv:2312.02284](https://arxiv.org/abs/2312.02284)), §3.1: "We use a **fixed patch size that is
+equal to or similar to the native resolution of the base depth model**." Depth Pro, §3.1: the canvas
+is fixed at 1536×1536 "chosen as a multiple of the ViT's 384×384", and "the input image is split into
+patches of **384 × 384 at each scale**" — patch size is constant across the pyramid, only the
+*downsampling of the canvas* changes, and "the patch encoder shares weights across all scales, [so]
+it may intuitively learn a scale-invariant representation." Boosting fixes its tile size to the
+network's receptive field. **All three vary which part of the world lands in the window; none vary
+the window's pixel size.** Our sweep does the opposite — it holds pixels fixed at 512 and varies the
+world content, i.e. it varies angular resolution, which is the one knob these systems deliberately
+freeze.
+
+**Geometry of each scheme.**
+
+| system | patch size | how chosen | overlap | fusion |
+|---|---|---|---|---|
+| Depth Pro | 384² (= ViT native) | fixed; canvas 1536² downsampled to 3 scales → 25 + 9 + 1 = **35 patches** | **25%** intersection (two finest scales only, "to avoid seams") | merged to feature maps by a **Voronoi partition** of the target area, then upsampled and fused by a DPT decoder; a separate image encoder on the whole image at 384² "anchors the patch predictions in a global context" |
+| PatchFusion | fixed at base model's native res (e.g. 540×960 on UnrealStereo4K) | P=16 non-overlapping grid; +33 shifted → P=49; +N random → R=N | shifted/random placement rather than a fixed fraction | end-to-end, no post-hoc optimisation: a coarse global branch + fine patch branch with **consistency-aware training/inference** (L2 loss on overlapping regions of intermediate *features* and depth). Explicitly "freedom from heuristic patch selection and post-processing" |
+| Boosting | = receptive field size, **grown per-tile** | tile at base res with **1/3 overlap**; discard tiles whose edge density is *below* the whole image's; **grow** any tile whose edge density is *above* the image's until it matches | 1/3 | trained Pix2Pix/10-layer-U-Net merging network at 672², merging patch estimates onto a double-estimation base at R₂₀ |
+
+Boosting's selection rule is the one to steal: **choose the crop size that equalises edge density
+against the full image**, "This makes sure that each patch estimate has a stable structure." It is an
+edge-density criterion, and our alignment metric is edge-based, so the two are directly compatible.
+
+**The few-large vs many-small numbers.** PatchFusion's Table 3 (supplementary; trained on
+UnrealStereo4K, zero-shot to Middlebury 2014) is the only clean patch-count sweep I found:
+
+| config | RMS ↓ | SEE ↓ |
+|---|---|---|
+| ZoeDepth COARSE (no tiling) | 1.0777 | 0.8326 |
+| + PatchFusion P=16 | 1.0743 | 0.8284 |
+| + PatchFusion P=40 | 1.0678 | 0.8219 |
+| + PatchFusion R=128 | 1.0620 | 0.8195 |
+| + PatchFusion R=256 | 1.0580 | 0.8194 |
+| + PatchFusion R=1024 | 1.0536 | 0.8178 |
+
+Monotone in patch count, and **brutally diminishing**: 16 → 1024 patches is 64× the compute for
+**1.9% relative RMS** and **1.3% relative SEE**; 128 → 1024 is 8× the compute for 0.8%. Most of the
+value is in the first few dozen patches; there is no cliff and no reversal.
+
+Their in-domain Table 1 adds a caveat that matters for us. On UnrealStereo4K, P=16 → P=49 → R=128
+improves every *global* metric monotonically (δ1 98.419→98.450→98.469, REL 0.0399→0.0392→0.0388, RMS
+1.0878→1.0747→1.0655) while the **boundary metric moves the wrong way**: SEE
+0.8382→0.8462→**0.8488**. On MVS-Synth SEE is non-monotonic (1.0759→1.0700→1.0833). So **more, more
+overlapped patches reliably helps global geometry but does not reliably help the boundary metric** —
+the two can and do dissociate, in both directions (compare with the Ibims-1 result above). Since `align%` is a boundary
+metric, "add more crops" is not guaranteed to move it.
+
+Depth Pro's Table 9, quoted earlier, is the complementary result and points the other way on
+boundaries: **35 native-384 patches beat one interpolated 1536 ViT by +9.9% F1 and +23% DIS R** at
+equal metric accuracy and lower latency. The distinction between the two results is worth holding
+onto: Depth Pro's gain comes from **patching at native resolution instead of stretching the
+backbone**; PatchFusion's SEE wobble comes from **adding ever more redundant patches at an already
+correct scale**. The first is a large, reliable effect; the second is small and sign-unstable.
+
+**Reading this back onto the sweep.** The literature's consistent recommendation would be: stop
+sweeping FoV at fixed pixels. Instead fix the window at VGGT-Ω's native budget (1024 tokens,
+262,144 px area, aspect ratio inside the training band), and vary **how many such windows tile the
+fisheye cone and how much they overlap** — i.e. move along the raw_roi/tangent/rectifier axis and the
+tile-count axis, not the angular-resolution axis. The rectifier row already being the best in the
+table (30.1) is consistent with this: it is the one configuration whose FoV (84.5°) sits
+mid-distribution *and* whose projection the R⁹ pinhole camera model can actually represent. Depth
+Pro's global "image encoder" anchor also has an obvious analogue here — one whole-cone view for
+global consistency plus N native-budget windows for detail — and VGGT-Ω is natively multi-frame, so
+the windows can be passed as frames of one sequence and let register/global attention do the fusion
+rather than a hand-built merge.
+
+### Unverified / could not confirm (this section)
+
+- **VGGT-Ω's actual training FoV *distribution*.** Genuinely not documented. Only a hard bound
+  (`[30°, 120°]` + distortion ratio ≤ 0.1) on the ~800K annotated internet-video sequences; the ~3M
+  public-dataset sequences carry **no** stated FoV or camera-model constraint. No histogram, no mean,
+  no per-dataset breakdown. Treat "peak near 100° reflects the training prior" as a plausible
+  inference, not a documented fact.
+- **The convention of `[30°, 120°]`** — horizontal, vertical, or diagonal FoV — is not stated in the
+  paper. This matters: 120° diagonal on a 4:3 frame is only ~98° horizontal, which would move where
+  our 120° tangent crop sits relative to the bound.
+- **The convention of the training aspect-ratio band `[0.33, 1.33]`** (§4.1) is likewise unstated
+  (h/w or w/h). Either way it does **not** coincide with the loader's `[0.5, 2.0]` crop band
+  (`load_fn.py` line 68) — the loader admits shapes the paper does not claim to have trained on.
+  Irrelevant to the current square-crop sweep (aspect 1.0 is inside both), but a live hazard the
+  moment we feed non-square crops.
+- **Whether the released 1B checkpoint's DINOv3 ViT-L init inherits the full high-resolution
+  adaptation.** DINOv3 §5.1 describes high-res adaptation (global crops from {512, 768}) applied to
+  the **7B**, and §5.2 distills the 7B into ViT-S/B/L. I did not confirm that the distilled ViT-L
+  retains the 512-768 robustness, nor which exact DINOv3 checkpoint VGGT-Ω initialises from — the
+  paper cites [147] generically.
+- **The exact cost of the 518→512 bicubic resample** on `align%`. I established the resample happens
+  and is uniform across the sweep; I did **not** measure it. Re-rendering at 512 and re-scoring is a
+  cheap control that would settle it.
+- **No resolution ablation and no OOD-camera ablation exist in the VGGT-Ω paper.** §4.3 ablates model
+  size, data size, register attention, multi-task losses, self-supervision, and annotation quality
+  only. So there is no first-party number for "how much does VGGT-Ω degrade off 512" or "how much on
+  a wide-FoV camera". Anything we say there is our own measurement.
+- **Depth Pro's Table 9 ViT-L DINOv2 baseline** is trained under Depth Pro's Stage 1 protocol, not
+  the released Depth Pro recipe, and it is a *monocular metric depth* model, not a multi-view
+  feed-forward reconstructor. The +23% boundary-recall transfer to VGGT-Ω is an analogy, not a
+  measured result.
+- **Whether register/global attention actually fuses multi-window inputs the way a hand-built merge
+  would.** The suggestion at the end of *Patch-based inference* is mine; no paper I read tests
+  feeding overlapping crops of one image to a multi-frame reconstructor as if they were separate
+  views. VGGT-Ω §3.5.2 filters
+  training sequences for "Insufficient Parallax", which is a reason to expect trouble: overlapping
+  crops of a *single* frame have exactly zero baseline.
+
+---
+
 ## 5. Unverified / could not confirm
 
 Statements I could **not** trace to a primary source. Treat as open questions, not facts.
