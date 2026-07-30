@@ -78,9 +78,9 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
-from depth_probe import (BACKENDS, EDGE_PERCENTILE, adt_frame, enhance_view,
-                        load_backend, materialize, probe, view_raw_roi,
-                        view_rectifier, view_tangent)
+from depth_probe import (BACKENDS, EDGE_PERCENTILE, NATIVE_SIZE, adt_frame,
+                        enhance_view, load_backend, materialize, probe,
+                        view_raw_roi, view_rectifier, view_tangent)
 
 
 def build_view(mode, rgb, cam, fov, enh, out_size, supersample):
@@ -117,7 +117,10 @@ def main():
                     choices=["tangent", "raw_roi", "rectifier"])
     ap.add_argument("--enhance", nargs="+", default=["none"],
                     choices=["none", "clahe", "sharpen", "blur"])
-    ap.add_argument("--persp-size", type=int, default=518)
+    ap.add_argument("--persp-size", type=int, default=None,
+                    help="render size; default = the backend's native token "
+                         "grid (vggt1b/official 518, vggt_omega 512) so the "
+                         "model resamples nothing")
     ap.add_argument("--crop-supersample", type=int, default=3)
     ap.add_argument("--backend", choices=BACKENDS, default="vggt1b",
                     help="which model to sweep (the probe's backend seam)")
@@ -137,6 +140,11 @@ def main():
                     default=os.path.join(os.path.dirname(_HERE), "outputs",
                                          "center_view_sweep"))
     args = ap.parse_args()
+
+    if args.persp_size is None:
+        args.persp_size = NATIVE_SIZE[args.backend]
+        print(f"render size {args.persp_size} (native token grid for "
+              f"{args.backend}; override with --persp-size)")
 
     os.makedirs(args.out, exist_ok=True)
     rgb, cam = adt_frame(args.adt_root, rgb_subdir=args.rgb_subdir,
