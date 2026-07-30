@@ -18,10 +18,15 @@ Design
 Total coverage is held FIXED (``--total-fov``, default 100 deg).  Only the
 tiling changes:
 
-    1x1  -> one patch at 100 deg          (the baseline: today's behaviour)
-    2x2  -> four patches at ~62 deg
-    3x3  -> nine patches at ~45 deg
-    4x4  -> sixteen at ~34 deg
+    1x1  ->  1 patch  at 100.0 deg        (the baseline: today's behaviour)
+    2x2  ->  4 patches at  79.7 deg
+    3x3  ->  9 patches at  58.2 deg
+    4x4  -> 16 patches at  45.3 deg
+
+(per-patch FoV includes the --overlap growth; coverage of the cone verified at
+100.00% with zero holes for every tiling.  At 4x4 a 512px patch is 11.31 px/deg
+against the sensor's ~11.35, so that is the finest tiling that still carries
+real detail -- beyond it the patches only interpolate.)
 
 Every patch is rendered at the backend's NATIVE token grid (512 for
 VGGT-Omega's patch-16, 518 for VGGT-1B's patch-14), so the model resamples
@@ -77,8 +82,8 @@ for _p in (_HERE, _PKG, _REPO):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from depth_probe import (BACKENDS, NATIVE_SIZE, adt_frame, load_backend,
-                         materialize, predict_depth, View)
+from depth_probe import (BACKENDS, NATIVE_SIZE, load_backend, materialize,
+                         predict_depth, View)
 from utils.fisheye_cam import aria_intrinsics, fisheye_ray_lut, ray_cos_incidence
 from utils.fisheye_fusion import (fuse_views_to_fisheye, harmonize_view_scales,
                                   pairwise_scale_stats, per_view_fisheye_ranges)
@@ -137,10 +142,22 @@ def boundary_displacement(rgb_fisheye, fused, cone, deg_per_px, pct=96.0):
     return float(np.median(dist[dm])) * deg_per_px, recall * 100.0
 
 
+def _save_fused(fused: np.ndarray, mask: np.ndarray, path: str) -> None:
+    """Percentile-normalised viridis view of the fused map, blanked off-mask."""
+    vals = fused[mask]
+    lo, hi = float(np.percentile(vals, 2)), float(np.percentile(vals, 98))
+    norm = np.clip((fused - lo) / max(hi - lo, 1e-6), 0.0, 1.0)
+    col = cv2.applyColorMap((norm * 255).astype(np.uint8), cv2.COLORMAP_VIRIDIS)
+    col = cv2.cvtColor(col, cv2.COLOR_BGR2RGB)
+    col[~mask] = 24
+    Image.fromarray(col).save(path)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="E1: angular size vs depth quality")
     ap.add_argument("--adt-root", required=True)
     ap.add_argument("--rgb-subdir", default="videos_synthetic")
+    ap.add_argument("--depth-subdir", default="depth_npy")
     ap.add_argument("--frame", type=int, default=1)
     ap.add_argument("--backend", choices=BACKENDS, default="vggt_omega")
     ap.add_argument("--model-path", default="facebook/VGGT-1B")
@@ -168,24 +185,35 @@ def main() -> None:
         args.patch_size = NATIVE_SIZE[args.backend]
     os.makedirs(args.out, exist_ok=True)
 
-    rgb, cam_native = adt_frame(args.adt_root, rgb_subdir=args.rgb_subdir,
-                                frame=args.frame)
+    # ONE dataset load, at native resolution, so the RGB we cut patches from and
+    # the GT we score against are guaranteed to be the SAME frame.  (Loading the
+    # image and the GT through two separate discovery calls risks them resolving
+    # to different sequences, which would corrupt every number silently.)
+    from datasets.adt import ADTFisheyeFrames, find_adt_sequences
+    seqs = find_adt_sequences(args.adt_root, rgb_subdir=args.rgb_subdir,
+                              depth_subdir=args.depth_subdir)
+    if not seqs:
+        raise SystemExit(f"no ADT sequences with {args.rgb_subdir}/ + "
+                         f"{args.depth_subdir}/ under {args.adt_root}")
+    ds = ADTFisheyeFrames(seqs[:1], rgb_subdir=args.rgb_subdir,
+                          depth_subdir=args.depth_subdir,
+                          depth_max_m=args.depth_max_m,
+                          max_frames=args.frame + 1)          # native 1408
+    item = ds[min(args.frame, len(ds) - 1)]
+    rgb = item["rgb"]                                          # patches cut from this
+    cam_native = aria_intrinsics(*rgb.shape[:2], rotated=True)
+
     S = args.fisheye_size
     rgb_s = cv2.resize(rgb, (S, S), interpolation=cv2.INTER_AREA)
+    gt_z = cv2.resize(item["depth"], (S, S), interpolation=cv2.INTER_NEAREST)
+    gt_valid = cv2.resize(item["valid"].astype(np.uint8), (S, S),
+                          interpolation=cv2.INTER_NEAREST) > 0
     cam = aria_intrinsics(S, S, rotated=True)
     _, cone = fisheye_ray_lut(cam)
     cos_lut = ray_cos_incidence(cam)
-    deg_per_px = math.degrees(2 * math.atan(0.5 / cam.fx))   # approx, on-axis
-
-    # GT on the same grid (ADT GT is planar z -> convert to range for scoring)
-    from datasets.adt import ADTFisheyeFrames, find_adt_sequences
-    seqs = find_adt_sequences(args.adt_root, rgb_subdir=args.rgb_subdir,
-                              depth_subdir="depth_npy")
-    ds = ADTFisheyeFrames(seqs[:1], rgb_subdir=args.rgb_subdir,
-                          depth_max_m=args.depth_max_m,
-                          max_frames=args.frame + 1, working_size=S)
-    item = ds[min(args.frame, len(ds) - 1)]
-    gt_z, gt_valid = item["depth"], item["valid"]
+    # KB4 near the axis: u = cx + fx*theta, so one pixel spans 1/fx radians.
+    deg_per_px = math.degrees(1.0 / cam.fx)
+    # ADT GT is planar z; score in the range domain the fusion produces.
     gt_range = gt_z / np.clip(cos_lut, 1e-3, None)
 
     backend = load_backend(args.backend, model_path=args.model_path,
@@ -202,20 +230,26 @@ def main() -> None:
 
     for n in args.tilings:
         views = tiling_views(n, args.total_fov, args.overlap)
-        crops, valids, paths = [], [], []
+        valids, paths = [], []
         for i, (az, tilt, fov) in enumerate(views):
             crop, valid = fisheye_to_persp(rgb, cam_native, az, tilt, fov,
                                            height=args.patch_size,
                                            width=args.patch_size, supersample=3)
             crop = np.clip(crop, 0, 255).astype(np.uint8)
             if args.match_detail and fov < widest_fov:
-                # equalise effective angular detail with the widest patch
-                sigma = 0.6 * (widest_fov / fov - 1.0)
+                # Equalise effective angular detail with the widest patch.  A
+                # patch at FoV f rendered to P px carries P/f px/deg, so it is
+                # sharper than the widest patch by r = widest_fov / fov.  Blur
+                # it by the standard anti-alias sigma for a decimation by r,
+                # 0.5*sqrt(r^2 - 1), which matches the MTF rather than merely
+                # softening it.
+                r = widest_fov / fov
+                sigma = 0.5 * math.sqrt(max(r * r - 1.0, 0.0))
                 if sigma > 0.3:
                     crop = cv2.GaussianBlur(crop, (0, 0), sigma)
             v = View(crop=crop, tag=f"n{n}_p{i:02d}", true_fov=fov,
                      valid=valid.astype(np.float32))
-            crops.append(crop); valids.append(v.valid)
+            valids.append(v.valid)
             paths.append(materialize(v, os.path.join(args.out, f"tiling{n}")))
 
         preds = predict_depth(backend, paths)          # independent 1-view scenes
@@ -234,17 +268,19 @@ def main() -> None:
         fused, cover = fuse_views_to_fisheye(ranges, views, cam,
                                              view_valids=valids, interp="linear")
         mask = gt_valid & cone & (cover > 0) & np.isfinite(fused) & (fused > 0)
+        if mask.sum() < 100:
+            print(f"{f'{n}x{n}':>7s} {len(views):8d} {views[0][2]:9.1f}d  "
+                  f"SKIPPED (only {int(mask.sum())} valid px)")
+            continue
         disp, align = boundary_displacement(rgb_s, fused, mask, deg_per_px)
         m = depth_metrics(align_depth(fused, gt_range, mask, "scale_shift"),
                           gt_range, mask)
         rows.append((n, len(views), views[0][2], spread, disp, align,
                      m["AbsRel"], m["delta1"]))
-        print(f"{n}x{n:>4s} {len(views):8d} {views[0][2]:9.1f}d "
-              f"{(np.exp(spread)-1)*100:12.1f}% {disp:10.3f} {align:7.1f} "
-              f"{m['AbsRel']:8.4f} {m['delta1']:8.4f}".replace("x   ", "x  "))
-        Image.fromarray(np.uint8(np.clip((fused - np.percentile(fused[mask], 2)) /
-                        max(np.ptp(fused[mask]), 1e-6) * 255, 0, 255))).save(
-                        os.path.join(args.out, f"fused_{n}x{n}.png"))
+        print(f"{f'{n}x{n}':>7s} {len(views):8d} {views[0][2]:9.1f}d "
+              f"{(math.exp(spread) - 1) * 100:12.1f}% {disp:10.3f} "
+              f"{align:7.1f} {m['AbsRel']:8.4f} {m['delta1']:8.4f}")
+        _save_fused(fused, mask, os.path.join(args.out, f"fused_{n}x{n}.png"))
 
     with open(os.path.join(args.out, "summary.csv"), "w") as f:
         f.write("tiling,n_patches,patch_fov,scale_spread_pct,disp_deg,align_pct,"
