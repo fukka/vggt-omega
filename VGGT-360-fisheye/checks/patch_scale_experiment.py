@@ -34,6 +34,27 @@ nothing and every patch costs the same tokens.  Patch centres are laid out on
 the reference view's tangent plane and converted to (azimuth, tilt); the per
 patch FoV is grown by ``--overlap`` so the union covers the cone with no seams.
 
+All patches of a tiling go through the model in ONE forward pass
+---------------------------------------------------------------
+This is the whole premise of VGGT-360 and it is not optional.  The patches
+share an optical centre, so cross-view attention can reconcile them into a
+single scale-consistent 3D model.  Feeding them separately and merging
+afterwards fails badly: each patch has a different FoV, so the model infers a
+different camera for each one, and its metric depth scales with that inferred
+focal length.  Measured on a real ADT frame with independent passes:
+
+    tiling   scale spread   AbsRel   delta1
+    1x1            0.00%    0.0389   0.9755
+    2x2          179.11%    0.4047   0.1438
+    3x3          284.68%    0.8047   0.2377
+    4x4          490.00%    0.9275   0.0928
+
+The single 100-deg view is excellent (AbsRel 0.039); tiling with independent
+passes destroys it purely through scale disagreement, because a global
+scale_shift on the fused map cannot repair a spatially varying scale error.
+``--separate`` reproduces that failure on purpose -- the gap between it and the
+default measures exactly what cross-view attention contributes.
+
 What this does and does NOT isolate
 -----------------------------------
 Because the source fisheye has finite resolution (~11.35 px/deg), a narrow
@@ -175,8 +196,17 @@ def main() -> None:
     ap.add_argument("--match-detail", action="store_true",
                     help="CONTROL: pre-blur every patch to the effective angular "
                          "detail of the widest tiling, so only angular size varies")
+    ap.add_argument("--separate", action="store_true",
+                    help="ABLATION: run each patch as an independent 1-view "
+                         "scene instead of one joint multi-view pass. This is "
+                         "the wrong way round -- without cross-view attention "
+                         "each patch gets its own scale (up to 490%% spread at "
+                         "4x4) and fusion produces rectangular seams. Kept "
+                         "because the gap quantifies what joint inference buys.")
     ap.add_argument("--harmonize", action="store_true",
-                    help="least-squares per-patch scale correction before fusion")
+                    help="least-squares per-patch scale correction before "
+                         "fusion; a post-hoc patch for scale drift, which joint "
+                         "inference should make unnecessary")
     ap.add_argument("--depth-max-m", type=float, default=10.0)
     ap.add_argument("--out", default=os.path.join(_PKG, "outputs", "patch_scale"))
     args = ap.parse_args()
@@ -223,8 +253,16 @@ def main() -> None:
     widest_fov = tiling_views(min(args.tilings), args.total_fov, args.overlap)[0][2]
 
     rows = []
+    mode = ("SEPARATE 1-view passes (ablation: no cross-view attention)"
+            if args.separate else "ONE joint multi-view pass per tiling")
     print(f"\ncoverage held at {args.total_fov:.0f} deg; patches rendered at "
-          f"{args.patch_size}px ({args.backend} native)\n")
+          f"{args.patch_size}px ({args.backend} native)")
+    print(f"inference: {mode}")
+    if not args.separate and max(args.tilings) ** 2 > 9:
+        print(f"  note: the largest tiling sends {max(args.tilings) ** 2} views "
+              f"through one pass — reduce --tilings if this runs out of VRAM\n")
+    else:
+        print()
     print(f"{'tiling':>7s} {'patches':>8s} {'patch FoV':>10s} {'scale spread':>13s} "
           f"{'disp(deg)':>10s} {'align%':>7s} {'AbsRel':>8s} {'delta1':>8s}")
 
@@ -252,7 +290,16 @@ def main() -> None:
             valids.append(v.valid)
             paths.append(materialize(v, os.path.join(args.out, f"tiling{n}")))
 
-        preds = predict_depth(backend, paths)          # independent 1-view scenes
+        # ONE forward pass over all patches (VGGT-360's premise): the patches
+        # share an optical centre, so cross-view attention resolves the per-view
+        # scale ambiguity and the outputs land in a single consistent 3D model.
+        # Running them separately is measurably wrong here -- each patch has a
+        # different FoV, so the model infers a different camera per patch, its
+        # metric depth scales with that inferred focal, and the scales disagree
+        # (measured: up to 490% spread at 4x4).  A single global scale_shift on
+        # the fused map cannot repair a spatially varying scale error, which is
+        # what produced the rectangular tiling seams.
+        preds = predict_depth(backend, paths, multiview=not args.separate)
         ranges = [p.depth_z * _secant(views[i][2], *p.depth_z.shape)
                   for i, p in enumerate(preds)]
 
