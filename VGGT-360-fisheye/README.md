@@ -26,7 +26,8 @@ model; the attention machinery is untouched.
 | adaptive views (module 1) | yaw/pitch neighbors, pole special-case | (azimuth, tilt) neighbors, one cone clamp — no poles on a cone |
 | SA attention (module 2) | unchanged | unchanged (only the valid mask is analytic) |
 | fusion (module 3) | ERP lon/lat ray grid | fisheye KB4 ray LUT (`utils/fisheye_fusion.py`); attention-metric weights (`build_selfview_confidence`) vendored **verbatim** |
-| output / eval | ERP depth, median align, crop 68 pole rows | fisheye depth vs ADT GT, scale-shift (affine-invariant) align, cone∧GT validity mask (`utils/metrics_adt.py`) |
+| output / eval | ERP depth, median align, crop 68 pole rows | fisheye depth vs ADT GT, scale-shift (affine-invariant) align, cone∧GT validity mask; metrics shared with the baselines (`finetune/eval/metrics.py`) |
+| depth convention | ERP depth **is** range — no conversion needed | GT is planar **z**, prediction is **range** → one side always converted (`--eval-domains`) |
 | dataset | `Datasets.Stanford2D3D` (not shipped upstream) | `datasets/adt.py` (raw fisheye, 270° CCW rotation, mm→m) |
 
 Bug fixes applied to the upstream copy (documented inline):
@@ -52,6 +53,13 @@ on the attention-save path (now device-safe). Upstream `main.py` is kept as
 python VGGT-360-fisheye/checks/check_fisheye2persp.py \
     [--adt-root <ADT_ROOT> --rgb-subdir videos_rgb]     # optional real-frame visuals
 
+# 1b) is a model's depth actually following its input? (one model x one view)
+python VGGT-360-fisheye/checks/depth_probe.py --backend vggt1b \
+    --images room.png --adt-root <ADT_ROOT> --view tangent
+#    swap --backend {vggt1b,vggt_omega,official} on the SAME inputs to tell a
+#    checkpoint flaw from a VGGT-family trait; --view {tangent,raw_roi,rectifier}
+#    tells the view construction from the model.
+
 # 2) full eval on the GPU box
 python VGGT-360-fisheye/main_adt.py \
     --adt-root <ADT_ROOT> --max-frames 100 \
@@ -61,7 +69,7 @@ python VGGT-360-fisheye/main_adt.py \
 Ablations: `--fuse mean` (uniform vs attention-weighted fusion),
 `--no-adaptive` (module 1), `--no-sa-mask` (module 2),
 `--n-ring 6 --ring-tilt 32` (7-view budget layout),
-`--pred-domain range` (score euclidean range instead of planar z).
+`--eval-domains z` (score only planar z instead of both conventions).
 
 ## Correctness checks (`checks/check_fisheye2persp.py`)
 
@@ -150,16 +158,30 @@ and a `videos_synthetic` run could otherwise cover different sequences.
   **two-tier rim rescue** in `fuse_views_to_fisheye`: eroded weights
   everywhere, un-eroded fallback only where the eroded tier is empty →
   0.000% miss at 512², 0.005% at native 1408².
-- The fused quantity is euclidean **range**.  ADT GT is *also* range —
-  verified empirically by `checks/check_gt_depth_domain.py`, which slices the
-  GT into the same per-view montage under both conventions: planes look
-  planar only under the range hypothesis.  So `--pred-domain range` (default)
-  compares directly; the same script also shows that GROUND-TRUTH range
-  montages have curved iso-depth bands on flat walls — "curvy" per-view depth
-  is geometry, not a bug (use `*_views_z.png` to judge smoothness).
-- Output is up-to-scale (VGGT); the default `scale_shift` alignment matches
-  the repo's ADT baseline protocol (`finetune/eval/baselines/benchmark_adt.py`),
-  so results can be tabled next to DAC / UniK3D.
+- The fused quantity is euclidean **range**; **ADT GT is planar z**.  They
+  differ by `cos(theta)` — 1.0 on axis, up to **2.15x** at the 62.3° rim — so
+  one side must always be converted.  `--eval-domains` (default: both) scores
+  in each convention on the fisheye grid: `z` scales the *prediction* by
+  `cos`, `range` scales the *GT* by `1/cos` (Depth-Any-Camera's protocol; its
+  fisheye loader calls the z→euclid conversion "critical").  Both share one
+  validity mask defined on the z-domain GT, matching `benchmark_adt.py`, so
+  the two rows isolate the domain and not a different pixel set.
+  > Earlier versions defaulted to `--pred-domain range`, which compared range
+  > against z-GT with *neither* side converted.  The error is radial, so
+  > affine alignment cannot absorb it: a **perfect** reconstruction scored
+  > AbsRel 0.146 / δ1 0.79 under that default.  Any number produced before
+  > this change should be regenerated.
+  `check_gt_depth_domain.py` now settles the convention numerically (RANSAC
+  plane fit over the full cone, peak at `a=1.00` ⇒ planar z) and exits
+  non-zero if it ever flips.  The same script also shows that GROUND-TRUTH
+  range montages have curved iso-depth bands on flat walls — "curvy" per-view
+  depth is geometry, not a bug (use `*_views_z.png` to judge smoothness).
+- Output is up-to-scale (VGGT); metrics and alignment come from
+  `finetune/eval/metrics.py` — the *same* module the DAC / UniK3D / DAv2 rows
+  use — so results table directly next to them.  `--depth-max-m` (GT validity
+  cap, 10 m) and `--metric-max-depth` (prediction exclusion, 100 m) are
+  deliberately separate; the latter matches the baselines and should not be
+  set to the former.
 - KB4 constants are vendored from `finetune/eval/baselines/aria_fisheye.py`
   (single source of truth for the calibration; keep in sync).
 

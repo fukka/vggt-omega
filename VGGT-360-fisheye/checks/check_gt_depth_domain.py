@@ -16,16 +16,28 @@ geometry, not a bug:
   * planar z (per-view, ``range / sec``) of the same wall is constant: planes
     look flat.
 
-Bonus: the same montages settle the ADT GT depth *convention* empirically.
-The GT values are either euclidean range or planar z of the fisheye frame —
-we render the per-view z montage under BOTH hypotheses:
+It also settles the ADT GT depth *convention*, which decides how main_adt
+scores.  The GT values are either euclidean range or planar z of the fisheye
+frame.  Two independent answers are produced:
 
-  hypothesis R (GT = range):  z_view = warp(GT) / sec_view
-  hypothesis Z (GT = z):      z_view = warp(GT / cos(theta_fisheye)) / sec_view
+  1. **Montages** (illustrative).  Per-view planar z is rendered under both
+     hypotheses — hypR: ``warp(GT) / sec``; hypZ: ``warp(GT / cos) / sec`` —
+     and under the correct one, planes look planar.  Inside a 60-deg view
+     ``1/cos`` spans only ~1.15, so this is a WEAK signal: judging it by eye is
+     what led to the range hypothesis being adopted in error.
 
-Under the correct hypothesis planes look planar; under the wrong one they
-bow by up to 2x at the FOV edge.  Whichever wins tells us what
-``--pred-domain`` must default to for the eval to be apples-to-apples.
+  2. **Numeric verdict** (authoritative, ``numeric_domain_verdict``).  Over the
+     whole imaged cone ``1/cos`` reaches 2.15x.  Back-projecting GT under
+     ``P(a) = ray * D / cos^a`` and RANSAC-fitting the dominant plane gives an
+     inlier fraction that peaks at the true convention.
+
+**Measured result: the peak is at a=1.00 — ADT GT is planar z**, with fall-off
+on both sides (so it is a real optimum, not a warp artifact).  This agrees with
+``finetune/eval/baselines/benchmark_adt.py``, which converts GT z->range, and
+with Depth-Any-Camera's own fisheye loader (``dac/dataloders/scannetpp.py``:
+"convert depth from zbuffer to euclid ... critical for fisheye dataset").
+
+Exit code 0 iff the numeric verdict still says planar z.
 
 Usage:
     python VGGT-360-fisheye/checks/check_gt_depth_domain.py \
@@ -77,12 +89,92 @@ def montage(images, cols=3, pad=4, labels=None) -> np.ndarray:
     return out
 
 
+def _ransac_plane_inliers(P: np.ndarray, seed: int, iters: int = 400,
+                          thresh: float = 0.02) -> float:
+    """Inlier fraction of the dominant plane in a point cloud ``P`` (N,3).
+
+    Fixed seed, so the same triplets are tried for every hypothesis and the
+    comparison is apples-to-apples.
+    """
+    rng = np.random.default_rng(seed)
+    N, best = len(P), 0
+    for _ in range(iters):
+        i = rng.choice(N, 3, replace=False)
+        a, b, c = P[i]
+        nrm = np.cross(b - a, c - a)
+        ln = np.linalg.norm(nrm)
+        if ln < 1e-9:
+            continue
+        best = max(best, int((np.abs((P - a) @ (nrm / ln)) < thresh).sum()))
+    return best / N
+
+
+def numeric_domain_verdict(ds, cam, rays, cone, n_frames: int = 4,
+                           n_px: int = 6000) -> bool:
+    """Decide the GT convention by NUMBER, not by eye.  True iff GT is planar z.
+
+    The per-view montages below span only +-30 deg from each view centre, where
+    ``1/cos`` reaches just ~1.15 — too subtle to call by eye, which is how the
+    range hypothesis was mistakenly adopted.  Over the FULL imaged cone the
+    factor reaches 2.15x, so a whole-frame test has far more leverage.
+
+    Method: real scenes contain large planes.  Back-project GT to 3D under a
+    family of hypotheses ``P(a) = ray * D / cos(theta)**a`` and RANSAC the
+    dominant plane in each.  A plane is only planar under the correct
+    convention, so the inlier fraction peaks at the true ``a``:
+
+        a = 0 -> GT is euclidean range      a = 1 -> GT is planar z
+
+    Sweeping ``a`` rather than testing two points guards against a monotonic
+    artifact of the warp: a genuine optimum falls off on BOTH sides.
+    """
+    alphas = [0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5]
+    rng = np.random.default_rng(0)
+    curves = []
+    for idx in range(min(n_frames, len(ds))):
+        it = ds[idx]
+        D, valid = it["depth"], it["valid"]
+        m = valid & cone & (D > 0.3) & (D < 8.0)
+        if m.sum() < 5000:
+            continue
+        ys, xs = np.nonzero(m)
+        sel = rng.choice(len(ys), min(n_px, len(ys)), replace=False)
+        ys, xs = ys[sel], xs[sel]
+        d = D[ys, xs].astype(np.float64)
+        r = rays[ys, xs].astype(np.float64)
+        rz = np.clip(r[:, 2], 1e-3, None)
+        curves.append([_ransac_plane_inliers(r * (d / rz ** a)[:, None], seed=42)
+                       for a in alphas])
+    if not curves:
+        print("  numeric verdict SKIPPED (no frame with enough valid depth)")
+        return True
+
+    mean = np.mean(curves, axis=0)
+    peak = alphas[int(np.argmax(mean))]
+    print("\nNumeric verdict — dominant-plane inlier fraction vs correction "
+          "exponent a  (P = ray * D / cos^a):")
+    print("  " + "  ".join(f"a={a:.2f}:{v * 100:4.1f}%"
+                           for a, v in zip(alphas, mean)))
+    is_z = peak >= 0.5
+    print(f"  peak at a={peak:.2f}  =>  ADT GT is "
+          f"{'PLANAR Z' if is_z else 'EUCLIDEAN RANGE'}")
+    if is_z:
+        print("  => main_adt.py must convert one side: --eval-domains z scales "
+              "the prediction by cos(theta); 'range' scales the GT by 1/cos.")
+    else:
+        print("  !! This contradicts the measured result (peak expected at "
+              "a=1.00, i.e. planar z). Investigate before trusting any metric.")
+    return is_z
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--adt-root", required=True)
     ap.add_argument("--rgb-subdir", default="videos_rgb")
     ap.add_argument("--frame", type=int, default=6)
     ap.add_argument("--view-size", type=int, default=384)
+    ap.add_argument("--frames-numeric", type=int, default=4,
+                    help="frames used by the numeric plane-fit verdict")
     ap.add_argument("--out", default=os.path.join(_PKG, "outputs", "gt_domain"))
     args = ap.parse_args()
 
@@ -133,14 +225,22 @@ def main() -> None:
         Image.fromarray(montage(tiles, labels=labels)).save(p)
         print(f"saved {p}")
 
-    print("\nHow to read:")
+    print("\nHow to read the montages:")
     print(" * gt_views_range_hypR = GROUND TRUTH shown exactly like main_adt's")
     print("   *_views_range.png.  Curved iso-depth bands on flat walls here are")
     print("   geometry, not a bug — compare against your model montage.")
     print(" * gt_views_z_hypR vs gt_views_z_hypZ: planes look planar only under")
-    print("   the CORRECT GT-depth convention -> sets --pred-domain:")
-    print("     hypR planar  => GT is euclidean range  => --pred-domain range")
-    print("     hypZ planar  => GT is planar z         => --pred-domain z")
+    print("   the correct convention.  These are ILLUSTRATIVE only — inside a")
+    print("   60-deg view 1/cos spans just ~1.15, too subtle to call by eye.")
+    print("   The numeric verdict below is what settles it.")
+
+    # Separate load: the montage only needs frame --frame, the numeric verdict
+    # wants the first --frames-numeric frames.
+    ds_num = ADTFisheyeFrames(seqs[:1], rgb_subdir=args.rgb_subdir,
+                              max_frames=args.frames_numeric)
+    ok = numeric_domain_verdict(ds_num, cam, rays, cone,
+                                n_frames=args.frames_numeric)
+    raise SystemExit(0 if ok else 1)
 
 
 if __name__ == "__main__":

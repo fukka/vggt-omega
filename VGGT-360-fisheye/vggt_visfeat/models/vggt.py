@@ -11,7 +11,13 @@ from huggingface_hub import PyTorchModelHubMixin  # used for model hub
 from vggt_visfeat.models.aggregator import Aggregator
 from vggt_visfeat.heads.camera_head import CameraHead
 from vggt_visfeat.heads.dpt_head import DPTHead
-from vggt_visfeat.heads.track_head import TrackHead
+
+# NOTE(fisheye port): the point-track head (``track_head`` + ``heads/track_modules``
+# + the ``vggt_visfeat/dependency`` vggsfm tree) has been removed — this port only
+# consumes the camera / depth / point-map heads for depth fusion, and the tracker
+# pulled in a large SfM dependency that was never exercised.  The pretrained
+# checkpoint still carries ``track_head.*`` weights; ``from_pretrained`` below
+# loads non-strictly so those extra keys are simply ignored.
 
 
 class VGGT(nn.Module, PyTorchModelHubMixin):
@@ -22,18 +28,26 @@ class VGGT(nn.Module, PyTorchModelHubMixin):
         self.camera_head = CameraHead(dim_in=2 * embed_dim)
         self.point_head = DPTHead(dim_in=2 * embed_dim, output_dim=4, activation="inv_log", conf_activation="expp1")
         self.depth_head = DPTHead(dim_in=2 * embed_dim, output_dim=2, activation="exp", conf_activation="expp1")
-        self.track_head = TrackHead(dim_in=2 * embed_dim, patch_size=patch_size, is_all_frames=is_all_frames)
 
-    def forward(self, images, query_points=None, persp_masks=None, rgb_masks=None, save_attn=True):
+    @classmethod
+    def from_pretrained(cls, *args, **kwargs):
+        """Load non-strictly so the removed ``track_head.*`` checkpoint keys are
+        ignored instead of raising.  Falls back gracefully if the installed
+        ``huggingface_hub`` does not accept a ``strict`` kwarg."""
+        kwargs.setdefault("strict", False)
+        try:
+            return super().from_pretrained(*args, **kwargs)
+        except TypeError:
+            kwargs.pop("strict", None)
+            return super().from_pretrained(*args, **kwargs)
+
+    def forward(self, images, persp_masks=None, rgb_masks=None, save_attn=True):
         """
         Forward pass of the VGGT model.
 
         Args:
             images (torch.Tensor): Input images with shape [S, 3, H, W] or [B, S, 3, H, W], in range [0, 1].
                 B: batch size, S: sequence length, 3: RGB channels, H: height, W: width
-            query_points (torch.Tensor, optional): Query points for tracking, in pixel coordinates.
-                Shape: [N, 2] or [B, N, 2], where N is the number of query points.
-                Default: None
 
         Returns:
             dict: A dictionary containing the following predictions:
@@ -43,23 +57,11 @@ class VGGT(nn.Module, PyTorchModelHubMixin):
                 - world_points (torch.Tensor): 3D world coordinates for each pixel with shape [B, S, H, W, 3]
                 - world_points_conf (torch.Tensor): Confidence scores for world points with shape [B, S, H, W]
                 - images (torch.Tensor): Original input images, preserved for visualization
-
-                If query_points is provided, also includes:
-                - track (torch.Tensor): Point tracks with shape [B, S, N, 2] (from the last iteration), in pixel coordinates
-                - vis (torch.Tensor): Visibility scores for tracked points with shape [B, S, N]
-                - conf (torch.Tensor): Confidence scores for tracked points with shape [B, S, N]
         """
 
         # If without batch dimension, add it
         if len(images.shape) == 4:
             images = images.unsqueeze(0)
-
-        if query_points is None:
-            B, S, _, H, W = images.shape
-            query_points = generate_all_pixel_queries(H, W, stride=10, device=images.device).unsqueeze(0)
-
-        if query_points is not None and len(query_points.shape) == 2:
-            query_points = query_points.unsqueeze(0)
 
         aggregated_tokens_list, patch_start_idx, att = self.aggregator(
             images, persp_masks, rgb_masks, save_attn
@@ -90,17 +92,3 @@ class VGGT(nn.Module, PyTorchModelHubMixin):
         predictions["images"] = images
 
         return predictions, att
-
-def generate_all_pixel_queries(H, W, device, stride=8):
-    """
-    Generate [N, 2] query points covering all pixel coordinates in image of shape H x W.
-
-    Returns:
-        torch.Tensor: [N, 2], where N = H * W, coordinates in (x, y) = (W, H) format.
-    """
-    # y_coords, x_coords = torch.meshgrid(torch.arange(H).to(device), torch.arange(W).to(device), indexing='ij')
-    y_coords = torch.arange(0, H, stride, device=device)
-    x_coords = torch.arange(0, W, stride, device=device)
-    grid_y, grid_x = torch.meshgrid(y_coords, x_coords, indexing='ij')
-    coords = torch.stack([grid_x, grid_y], dim=-1).reshape(-1, 2)  # [N, 2]
-    return coords

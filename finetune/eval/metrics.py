@@ -4,7 +4,8 @@
 Depth
 -----
   align_depth(pred, gt, mask, mode)  -- four alignment modes
-  depth_metrics(pred_aligned, gt, mask)  -- AbsRel / SqRel / RMSE / RMSElog / δ1/2/3
+  depth_metrics(pred_aligned, gt, mask)  -- AbsRel / SqRel / RMSE / RMSElog /
+                                            log10 / δ1/2/3
   aggregate_metrics(list_of_dicts)  -- mean across frames
 
 Pose
@@ -118,7 +119,7 @@ def depth_metrics(
     n_valid = int(combined.sum())
     if n_valid == 0:
         return {k: float("nan") for k in
-                ["AbsRel", "SqRel", "RMSE", "RMSElog",
+                ["AbsRel", "SqRel", "RMSE", "RMSElog", "log10",
                  "delta1", "delta2", "delta3", "scale_ratio", "n_valid"]}
 
     p = np.clip(pred[combined].astype(np.float64), 1e-6, None)
@@ -135,6 +136,7 @@ def depth_metrics(
         "SqRel":       float(np.mean(diff2 / g)),
         "RMSE":        float(np.sqrt(np.mean(diff2))),
         "RMSElog":     float(np.sqrt(np.mean((np.log(p) - np.log(g)) ** 2))),
+        "log10":       float(np.mean(np.abs(np.log10(p) - np.log10(g)))),
         "delta1":      float(np.mean(ratio < 1.25)),
         "delta2":      float(np.mean(ratio < 1.25 ** 2)),
         "delta3":      float(np.mean(ratio < 1.25 ** 3)),
@@ -162,7 +164,7 @@ def print_depth_summary(summary: dict, label: str = "", align: str = "") -> None
     print(f"\n{'='*60}")
     print(f"  {tag or 'depth metrics'}  (n_frames={summary.get('n_frames', '?')})")
     print(f"{'='*60}")
-    for k in ["AbsRel", "SqRel", "RMSE", "RMSElog"]:
+    for k in ["AbsRel", "SqRel", "RMSE", "RMSElog", "log10"]:
         print(f"  {k:10s}: {summary.get(k, float('nan')):.4f}")
     for k in ["delta1", "delta2", "delta3"]:
         print(f"  {k:10s}: {summary.get(k, float('nan'))*100:.2f}%")

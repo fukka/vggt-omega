@@ -239,9 +239,10 @@ class Aggregator(nn.Module):
 
     def _collect_last_frame_attn(self, B, S, P, k=1):
         bufs = getattr(self, "_last_frame_attn_buffers", None)
-        # if not bufs:
-        #     raise RuntimeError(
-        #         "帧内 attention 缓存为空：检查 1) attention.forward 是否实现 save_attn/topk；2) block/agg 是否透传；3) 是否在 forward 开头重置了 _last_global_attn_buffers。")
+        # NOTE(fisheye port): the ``topk`` kwarg was threaded through the whole
+        # attention stack but never used in the SDPA path (no top-k sparse
+        # attention was ever computed), and ``last_topk_idx``/``last_topk_val``
+        # were never written — both removed as dead code.
         if not bufs:
             raise RuntimeError("帧内 attention 缓存为空：确认 save_attn=True 且至少有一层 frame block 被设置为保存注意力。")
 
@@ -254,7 +255,7 @@ class Aggregator(nn.Module):
                 unmasked_list.append(buf["attn_unmasked"])
 
         if not attn_list:
-            raise RuntimeError("目标帧内 block 没有写出注意力：确认 save_attn=True 且 topk!=0。")
+            raise RuntimeError("目标帧内 block 没有写出注意力：确认 save_attn=True 且至少有一层 frame block 保存了注意力。")
 
         masked  = attn_list[0]  if len(attn_list)   == 1 else attn_list
         # Fall back to masked when unmasked not available (e.g., no att_mask was used)
@@ -328,11 +329,11 @@ class Aggregator(nn.Module):
 
                 if attn_type == "frame":
                     tokens, frame_idx, frame_intermediates = self._process_frame_attention(
-                        tokens, B, S, P, C, frame_idx, pos=pos, save_attn=save_frame_attn, topk=12, att_mask=persp_masks_tokens, rgb_mask = rgb_masks_tokens
+                        tokens, B, S, P, C, frame_idx, pos=pos, save_attn=save_frame_attn, att_mask=persp_masks_tokens, rgb_mask = rgb_masks_tokens
                     )
                 elif attn_type == "global":
                     tokens, global_idx, global_intermediates = self._process_global_attention(
-                        tokens, B, S, P, C, global_idx, pos=pos, save_attn=False, topk=12, rgb_mask = rgb_masks_tokens
+                        tokens, B, S, P, C, global_idx, pos=pos, save_attn=False, rgb_mask = rgb_masks_tokens
                     )
                 else:
                     raise ValueError(f"Unknown attention type: {attn_type}")
@@ -348,7 +349,7 @@ class Aggregator(nn.Module):
             attention_map=None
         return output_list, self.patch_start_idx, attention_map
 
-    def _process_frame_attention(self, tokens, B, S, P, C, frame_idx, pos=None, save_attn=None, topk=None, att_mask=None, rgb_mask = None):
+    def _process_frame_attention(self, tokens, B, S, P, C, frame_idx, pos=None, save_attn=None, att_mask=None, rgb_mask = None):
         """
         Process frame attention blocks. We keep tokens in shape (B*S, P, C).
         """
@@ -368,7 +369,7 @@ class Aggregator(nn.Module):
             else:
                 # import pdb
                 # pdb.set_trace()
-                tokens = self.frame_blocks[frame_idx](tokens, pos=pos, save_attn=save_attn, topk=topk, att_mask=att_mask, rgb_mask=rgb_mask)
+                tokens = self.frame_blocks[frame_idx](tokens, pos=pos, save_attn=save_attn, att_mask=att_mask, rgb_mask=rgb_mask)
 
             if save_attn:
                 attn_mod = getattr(self.frame_blocks[frame_idx], "attn", None) or getattr(self.frame_blocks[frame_idx], "attention", None)
@@ -377,16 +378,13 @@ class Aggregator(nn.Module):
                     buf["attn"] = attn_mod.last_attn  # [B*S,H,P,P] masked
                 if getattr(attn_mod, "last_attn_unmasked", None) is not None:
                     buf["attn_unmasked"] = attn_mod.last_attn_unmasked  # [B*S,H,P,P] unmasked
-                if getattr(attn_mod, "last_topk_idx", None) is not None:
-                    buf["topk_idx"] = attn_mod.last_topk_idx  # [B*S,H,P,k]
-                    buf["topk_val"] = attn_mod.last_topk_val
                 self._last_frame_attn_buffers.append(buf)
             frame_idx += 1
             intermediates.append(tokens.view(B, S, P, C))
 
         return tokens, frame_idx, intermediates
 
-    def _process_global_attention(self, tokens, B, S, P, C, global_idx, pos=None, save_attn=None, topk=None, rgb_mask=None):
+    def _process_global_attention(self, tokens, B, S, P, C, global_idx, pos=None, save_attn=None, rgb_mask=None):
         """
         Process global attention blocks. We keep tokens in shape (B, S*P, C).
         """
@@ -403,15 +401,12 @@ class Aggregator(nn.Module):
             if self.training:
                 tokens = checkpoint(self.global_blocks[global_idx], tokens, pos, use_reentrant=self.use_reentrant)
             else:
-                tokens = self.global_blocks[global_idx](tokens, pos=pos, save_attn=save_attn, topk=topk, rgb_mask=rgb_mask)
+                tokens = self.global_blocks[global_idx](tokens, pos=pos, save_attn=save_attn, rgb_mask=rgb_mask)
             if save_attn:
                 attn_mod = getattr(self.global_blocks[global_idx], "attn", None) or getattr(self.global_blocks[global_idx], "attention", None)
                 buf = {}
                 if getattr(attn_mod, "last_attn", None) is not None:
                     buf["attn"] = attn_mod.last_attn
-                if getattr(attn_mod, "last_topk_idx", None) is not None:
-                    buf["topk_idx"] = attn_mod.last_topk_idx
-                    buf["topk_val"] = attn_mod.last_topk_val
                 self._last_global_attn_buffers.append(buf)
 
 

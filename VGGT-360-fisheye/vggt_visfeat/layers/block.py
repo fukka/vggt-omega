@@ -74,10 +74,10 @@ class Block(nn.Module):
 
         self.sample_drop_ratio = drop_path
 
-    def forward(self, x: Tensor, pos=None, save_attn=None, topk=None, att_mask=None,rgb_mask=None) -> Tensor:
+    def forward(self, x: Tensor, pos=None, save_attn=None, att_mask=None, rgb_mask=None) -> Tensor:
         def attn_residual_func(x: Tensor, pos=None) -> Tensor:
 
-            return self.ls1(self.attn(self.norm1(x), pos=pos, save_attn=save_attn, topk=topk, att_mask=att_mask, rgb_mask=rgb_mask))
+            return self.ls1(self.attn(self.norm1(x), pos=pos, save_attn=save_attn, att_mask=att_mask, rgb_mask=rgb_mask))
 
         def ffn_residual_func(x: Tensor) -> Tensor:
             return self.ls2(self.mlp(self.norm2(x)))
@@ -201,7 +201,7 @@ class NestedTensorBlock(Block):
         """
         x_list contains a list of tensors to nest together and run
         """
-        assert isinstance(self.attn, MemEffAttention)
+        assert isinstance(self.attn, Attention)
 
         if self.training and self.sample_drop_ratio > 0.0:
 

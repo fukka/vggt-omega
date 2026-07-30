@@ -188,10 +188,13 @@ def ray_cos_incidence(cam: FisheyeCam) -> np.ndarray:
     """Per-pixel ``cos(theta)`` — converts euclidean range <-> planar z-depth.
 
     VGGT-360 fuses the *radial distance* ``||world_points||`` (euclidean range
-    along the ray).  If the evaluation GT is planar z-depth, convert with
-    ``z = range * cos(theta)`` before scoring (``main_adt.py --pred-domain z``).
-    At the Aria FOV edge ``cos(62 deg) ~ 0.47``, i.e. a >2x difference — this
-    conversion is NOT optional if the domains differ.
+    along the ray), while **ADT GT is planar z** (measured — see
+    ``checks/check_gt_depth_domain.py``).  One side must therefore always be
+    converted before scoring: ``z = range * cos(theta)`` to bring the
+    prediction down, or ``range = z / cos(theta)`` to bring the GT up
+    (``main_adt.py --eval-domains``, which does both by default).  At the Aria
+    FOV edge ``cos(62 deg) ~ 0.47``, i.e. a >2x difference — the conversion is
+    NOT optional, and being radial it cannot be absorbed by affine alignment.
     """
     rays, _ = fisheye_ray_lut(cam)
     return rays[..., 2].astype(np.float32)

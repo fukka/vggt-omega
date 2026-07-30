@@ -17,12 +17,29 @@ Per frame, the pipeline mirrors the paper's three training-free modules:
      by attention-derived confidences and analytic validity
      (``utils/fisheye_fusion.py``), then scored against ADT GT depth.
 
-Depth-domain note: the fused quantity is euclidean *range* along each ray.
-``--pred-domain z`` (default) converts to planar z-depth via ``cos(theta)``
-before scoring — at the Aria FOV edge this is a >2x factor, so pick the
-domain that matches your GT convention consciously (``--pred-domain range``
-to score raw range).  Alignment is affine-invariant (scale+shift) by default,
-matching this repo's ADT baseline protocol.
+Depth-domain note: the fused quantity is euclidean *range* along each ray,
+whereas **ADT GT is planar z-buffer** (measured, not assumed — see
+``checks/check_gt_depth_domain.py``, which RANSAC-fits scene planes under both
+hypotheses and finds a clear optimum at the z hypothesis).  The two differ by
+``cos(theta)``: 1.0 on axis rising to ~2.1x at the 62.3-deg rim.  The mismatch
+is radial, so affine alignment cannot absorb it.
+
+``--eval-domains`` therefore scores in BOTH conventions (default), each on the
+fisheye grid:
+
+  * ``z``     — ``pred = range * cos(theta)`` vs GT as stored.  The dataset's
+                native convention.
+  * ``range`` — ``pred = range`` vs ``gt / cos(theta)``.  Depth-Any-Camera's
+                published protocol: its fisheye loader converts GT z-buffer to
+                euclidean range and calls it "critical for fisheye dataset"
+                (``dac/dataloders/scannetpp.py``).
+
+Both use ONE validity mask defined on the z-domain GT, matching
+``finetune/eval/baselines/benchmark_adt.py``, so the two rows isolate the
+domain effect instead of scoring different pixel populations.  Metrics and
+alignment come from ``finetune/eval/metrics.py`` — the same code the DAC /
+UniK3D / DAv2 baseline rows use, so a VGGT-360-fisheye row is directly
+comparable to them.
 
 Example (GPU box)
 -----------------
@@ -42,6 +59,9 @@ import sys
 _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:              # make `utils`, `vggt_visfeat`, `datasets`
     sys.path.insert(0, _HERE)          # importable when run from anywhere
+_ROOT = os.path.dirname(_HERE)         # repo root: `finetune.eval.metrics` is the
+if _ROOT not in sys.path:              # shared scoring protocol (see module docstring)
+    sys.path.insert(0, _ROOT)
 
 import numpy as np
 import torch
@@ -56,8 +76,8 @@ from utils.fisheye_fusion import (build_selfview_confidence,
                                   pairwise_scale_stats,
                                   per_view_fisheye_ranges)
 from utils.fisheye_views import fisheye_to_persp, view_generation_fisheye
-from utils.metrics_adt import (aggregate_metrics, align_depth, depth_metrics,
-                               print_summary)
+from finetune.eval.metrics import (aggregate_metrics, align_depth,
+                                   depth_metrics, print_depth_summary)
 from vggt_visfeat.models.vggt import VGGT
 from vggt_visfeat.utils.load_fn2 import load_and_preprocess_images
 
@@ -92,6 +112,30 @@ def _view_secant(fov_deg: float, H: int, W: int) -> np.ndarray:
         xv, yv = np.meshgrid(xs, ys)
         _SECANT_CACHE[key] = np.sqrt(1.0 + xv * xv + yv * yv).astype(np.float32)
     return _SECANT_CACHE[key]
+
+
+def _to_domain(fused_range: np.ndarray, gt_z: np.ndarray, cos_lut: np.ndarray,
+               domain: str) -> "tuple[np.ndarray, np.ndarray]":
+    """Put prediction and GT into a common depth convention for scoring.
+
+    The fused prediction is euclidean *range*; ADT GT is planar *z*.  Whichever
+    convention we score in, exactly one side must be converted — scoring range
+    against z-GT (this script's old ``--pred-domain range`` default) compares
+    two different quantities and inflates the error radially, by up to ~2.1x at
+    the 62.3-deg rim.
+
+      ``z``     : convert the PREDICTION down to planar z (``range * cos``).
+      ``range`` : convert the GT up to euclidean range (``z / cos``) — the
+                  Depth-Any-Camera protocol for fisheye GT.
+
+    ``cos_lut`` is clamped away from zero; pixels near the turnover are outside
+    the imaged cone and are masked out by the caller anyway.
+    """
+    if domain == "z":
+        return fused_range * cos_lut, gt_z
+    if domain == "range":
+        return fused_range, gt_z / np.clip(cos_lut, 1e-3, None)
+    raise ValueError(f"unknown eval domain: {domain!r}")
 
 
 def _montage(images, cols=4, pad=4, labels=None) -> np.ndarray:
@@ -279,7 +323,10 @@ def run(args: argparse.Namespace) -> dict:
         ckpt = load_file(hf_hub_download(args.model_path, "model.safetensors"))
         model_keys = set(model.state_dict().keys())
         missing = sorted(model_keys - set(ckpt.keys()))
-        unexpected = sorted(set(ckpt.keys()) - model_keys)
+        # ``track_head.*`` is deliberately absent from the model (removed with the
+        # unused tracker); don't flag those checkpoint keys as an error.
+        unexpected = sorted(k for k in set(ckpt.keys()) - model_keys
+                            if not k.startswith("track_head."))
         if missing or unexpected:
             print(f"  WEIGHT CHECK FAILED: {len(missing)} model keys not in "
                   f"checkpoint (random init!), {len(unexpected)} checkpoint "
@@ -304,7 +351,8 @@ def run(args: argparse.Namespace) -> dict:
         frame_stride=args.frame_stride, common_streams=args.require_streams,
         working_size=args.fisheye_size)
 
-    frame_metrics = {m: [] for m in args.align_modes}
+    frame_metrics = {(d, m): [] for d in args.eval_domains
+                     for m in args.align_modes}
     cam = None
     cone = cos_lut = None
 
@@ -400,30 +448,44 @@ def run(args: argparse.Namespace) -> dict:
                         maps, ratio, n_ov, weights, pose_enc, fused_range,
                         coverage)
 
-        pred = fused_range * cos_lut if args.pred_domain == "z" else fused_range
-        mask = gt_valid & cone & (coverage > 0) & np.isfinite(pred) & (pred > 0)
+        # ONE validity mask, defined on the z-domain GT (as stored), shared by
+        # every eval domain — matching benchmark_adt._erp_gt, which likewise
+        # derives its mask from the dataset's z-based validity and never
+        # re-caps after converting.  Re-capping in range space would drop rim
+        # pixels that the z eval keeps, and the rim is exactly where the two
+        # domains differ — that would confound the very comparison we want.
+        mask = (gt_valid & cone & (coverage > 0)
+                & np.isfinite(fused_range) & (fused_range > 0))
         if mask.sum() < 10:
             print(f"  [{idx}] skipped (no valid overlap)")
             continue
 
-        for mode in args.align_modes:
-            aligned = align_depth(pred, gt, mask, mode=mode)
-            frame_metrics[mode].append(depth_metrics(aligned, gt, mask,
-                                                     max_depth=args.depth_max_m))
+        for domain in args.eval_domains:
+            pred_d, gt_d = _to_domain(fused_range, gt, cos_lut, domain)
+            for mode in args.align_modes:
+                aligned = align_depth(pred_d, gt_d, mask, mode=mode)
+                frame_metrics[(domain, mode)].append(
+                    depth_metrics(aligned, gt_d, mask,
+                                  max_depth=args.metric_max_depth))
         if args.qual_dir and idx < args.n_qual:
-            aligned = align_depth(pred, gt, mask, mode="scale_shift")
-            _save_qual(os.path.join(args.qual_dir, f"{idx:04d}.png"),
-                       rgb, aligned, gt, mask)
+            dom = args.eval_domains[0]
+            pred_d, gt_d = _to_domain(fused_range, gt, cos_lut, dom)
+            aligned = align_depth(pred_d, gt_d, mask, mode="scale_shift")
+            _save_qual(os.path.join(args.qual_dir, f"{idx:04d}_{dom}.png"),
+                       rgb, aligned, gt_d, mask)
         if (idx + 1) % 10 == 0 or idx == 0:
-            m = frame_metrics[args.align_modes[0]][-1]
+            m = frame_metrics[(args.eval_domains[0], args.align_modes[0])][-1]
             print(f"  [{idx + 1}/{len(dataset)}] views={len(view_params)}  "
-                  f"abs_rel={m['abs_rel']:.4f}  d1={m['d1']:.4f}")
+                  f"AbsRel={m['AbsRel']:.4f}  delta1={m['delta1']:.4f}")
 
     results = {}
-    for mode in args.align_modes:
-        results[mode] = aggregate_metrics(frame_metrics[mode])
-        print_summary(results[mode], label=f"VGGT-360-fisheye ({args.fuse})",
-                      align=mode)
+    for domain in args.eval_domains:
+        for mode in args.align_modes:
+            agg = aggregate_metrics(frame_metrics[(domain, mode)])
+            results[f"{domain}/{mode}"] = agg
+            print_depth_summary(
+                agg, label=f"VGGT-360-fisheye ({args.fuse}) [{domain}-domain]",
+                align=mode)
     return results
 
 
@@ -482,17 +544,30 @@ def main() -> None:
                    help="disable uncertainty-guided neighbor views (module 1 ablation)")
     p.add_argument("--no-sa-mask", action="store_true",
                    help="disable structure-saliency attention bias (module 2 ablation)")
-    p.add_argument("--pred-domain", choices=["z", "range"], default="range",
-                   help="GT depth convention to score in. ADT GT is euclidean "
-                        "range (verified empirically by checks/"
-                        "check_gt_depth_domain.py: planes look planar only "
-                        "under the range hypothesis), so the default compares "
-                        "fused range directly; 'z' multiplies by cos(theta) "
-                        "first (up to 2x at the FOV edge — only for z-domain GT)")
+    p.add_argument("--eval-domains", nargs="+", default=["z", "range"],
+                   choices=["z", "range"],
+                   help="depth convention(s) to score in, both by default. "
+                        "ADT GT is planar z (measured by checks/"
+                        "check_gt_depth_domain.py), the fused prediction is "
+                        "euclidean range, so one side is always converted: "
+                        "'z' scales the PREDICTION by cos(theta); 'range' "
+                        "scales the GT by 1/cos(theta) (the Depth-Any-Camera "
+                        "protocol). Both share one z-domain validity mask.")
     p.add_argument("--align-modes", nargs="+",
-                   default=["scale_shift", "median"],
-                   choices=["scale_shift", "median", "none"])
-    p.add_argument("--depth-max-m", type=float, default=10.0)
+                   default=["scale_shift", "scale_only"],
+                   choices=["scale_shift", "scale_only",
+                            "disparity_scale_shift", "none"],
+                   help="alignment protocol, from finetune/eval/metrics.py "
+                        "(shared with the DAC / UniK3D / DAv2 baseline rows)")
+    p.add_argument("--depth-max-m", type=float, default=10.0,
+                   help="GT validity cap (m): the dataset marks depth outside "
+                        "(0, this] invalid. Distinct from --metric-max-depth.")
+    p.add_argument("--metric-max-depth", type=float, default=100.0,
+                   help="metric-side cap (m): PREDICTIONS above this are "
+                        "excluded from the metrics, as the official DAv2 eval "
+                        "does. Left at the baselines' default so rows stay "
+                        "comparable — do NOT set this to --depth-max-m, which "
+                        "is the GT validity cap and a different concept.")
     p.add_argument("--max-frames", type=int, default=100,
                    help="frames per sequence (None-like: pass a huge number)")
     p.add_argument("--frame-stride", type=int, default=1)

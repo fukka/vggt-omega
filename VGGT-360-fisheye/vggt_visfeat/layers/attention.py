@@ -18,8 +18,8 @@ import torch
 # NOTE(fisheye port): upstream imports ``per_image_confidence_minmem`` from
 # ``vggt_visfeat.layers.attention_utils`` — a module the upstream release does
 # not ship, and the symbol is never used.  Import removed so the package loads.
-
-XFORMERS_AVAILABLE = False
+# The xFormers ``MemEffAttention`` subclass has also been removed (xFormers was
+# never available here, so it only ever fell back to this ``Attention``).
 
 
 class Attention(nn.Module):
@@ -51,7 +51,7 @@ class Attention(nn.Module):
         self.proj_drop = nn.Dropout(proj_drop)
         self.rope = rope
 
-    def forward(self, x: Tensor, pos=None, save_attn=None, topk=None, att_mask=None, rgb_mask=None) -> Tensor:
+    def forward(self, x: Tensor, pos=None, save_attn=None, att_mask=None, rgb_mask=None) -> Tensor:
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
         q, k, v = qkv.unbind(0)
@@ -106,27 +106,6 @@ class Attention(nn.Module):
             x = attn @ v
 
         x = x.transpose(1, 2).reshape(B, N, C)
-        x = self.proj(x)
-        x = self.proj_drop(x)
-        return x
-
-
-class MemEffAttention(Attention):
-    def forward(self, x: Tensor, attn_bias=None, pos=None,save_attn=None,  topk=None, att_mask=None, rgb_mask=None) -> Tensor:
-        assert pos is None
-        if not XFORMERS_AVAILABLE:
-            if attn_bias is not None:
-                raise AssertionError("xFormers is required for using nested tensors")
-            return super().forward(x)
-
-        B, N, C = x.shape
-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads)
-
-        q, k, v = unbind(qkv, 2)
-
-        x = memory_efficient_attention(q, k, v, attn_bias=attn_bias)
-        x = x.reshape([B, N, C])
-
         x = self.proj(x)
         x = self.proj_drop(x)
         return x
