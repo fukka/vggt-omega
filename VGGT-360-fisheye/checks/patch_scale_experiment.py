@@ -78,12 +78,40 @@ boundary metric moves the other way, so one number cannot settle this:
 Per-patch scale drift is reported, and ``--harmonize`` applies the least-squares
 per-view scale correction; run both so fusion cannot hide a scale problem.
 
+Coarse-plus-fine: the ``A+B`` spec
+----------------------------------
+``--tilings 1+4`` feeds the global 100-deg view AND the 16 local patches through
+the model TOGETHER (17 views, one pass).  VGGT-Omega only accepts pinhole-like
+input, so covering a wide fisheye cone requires tiling; the open question is
+whether the fine views can inherit layout and scale from a coarse view present
+in the same attention pass.  That is PatchFusion's coarse-plus-fine structure,
+done inside attention rather than by a learned merge network.
+
+``--center-weight K`` fuses with weight cos(angle from view axis)**K, so each
+view contributes mostly at its centre.  It is the direct consequence of the
+measurement above: wide views are faithful at the centre and stretched at the
+rim, and uniform fusion averages one view's bad rim into its neighbour's good
+centre.
+
+Artefacts written per config (so results can be ANALYSED, not just eyeballed)
+----------------------------------------------------------------------------
+    fused_<spec>.npy     fused euclidean range, NaN outside the valid mask
+    aligned_<spec>.npy   the same after scale_shift alignment to GT
+    overlay_<spec>.png   RGB | depth | edge-overlay strip (red = image edges,
+                         cyan = depth edges) on the fisheye grid
+    fused_<spec>.png     colourised fused depth
+    gt_range.npy         GT in the same domain, on the same grid
+    overlay_GT.png       the SAME overlay for ground truth -- its align% is the
+                         ceiling the metric can reach on this frame, since most
+                         strong RGB edges are texture and have no depth edge at
+                         all.  Read every align% against that number, not 100.
+
 Usage
 -----
     python VGGT-360-fisheye/checks/patch_scale_experiment.py \
         --adt-root <ROOT> --backend vggt_omega \
         --checkpoint checkpoints/VGGT-Omega-1B-512/model.pt \
-        --tilings 1 2 3 4 --total-fov 100
+        --tilings 1 4 1+4 --total-fov 100
 """
 from __future__ import annotations
 
@@ -103,7 +131,8 @@ for _p in (_HERE, _PKG, _REPO):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from depth_probe import (BACKENDS, NATIVE_SIZE, load_backend, materialize,
+from depth_probe import (BACKENDS, EDGE_PERCENTILE, NATIVE_SIZE,
+                         edge_alignment, load_backend, materialize,
                          predict_depth, View)
 from utils.fisheye_cam import aria_intrinsics, fisheye_ray_lut, ray_cos_incidence
 from utils.fisheye_fusion import (fuse_views_to_fisheye, harmonize_view_scales,
@@ -134,6 +163,39 @@ def tiling_views(n: int, total_fov: float, overlap: float):
             azim = math.degrees(math.atan2(d[1], d[0])) % 360.0
             views.append((azim, tilt, fov))
     return views
+
+
+def views_for_spec(spec: str, total_fov: float, overlap: float):
+    """Parse a tiling spec into the view list fed through the model together.
+
+    ``"4"``   -> a 4x4 tiling (16 views).
+    ``"1+4"`` -> the 1x1 GLOBAL view **plus** the 4x4 tiling (17 views), all in
+                 one forward pass.  This is the coarse-plus-fine arrangement:
+                 the global view carries scene layout and scale, the local
+                 patches carry detail, and cross-view attention is what lets
+                 the fine views inherit the coarse view's geometry.  It is the
+                 same structure PatchFusion and BoostingMonocularDepth use,
+                 except done inside one attention pass instead of by a learned
+                 merge network.
+    """
+    views = []
+    for part in str(spec).split("+"):
+        views.extend(tiling_views(int(part), total_fov, overlap))
+    return views
+
+
+def center_weights(fov_deg: float, h: int, w: int, k: float):
+    """``cos(angle from the view axis)**k`` over a view's tangent grid.
+
+    Measured on ADT: a tangent view's depth is most faithful at its centre and
+    degrades toward the rim, where the gnomonic projection stretches hardest.
+    Uniform fusion averages a view's bad rim into its neighbour's good centre;
+    this weighting lets every view contribute mostly where it is reliable.
+    ``k=0`` disables it (uniform), ``k~4`` is strongly centre-biased.
+    """
+    if k <= 0:
+        return None
+    return ((1.0 / _secant(fov_deg, h, w)) ** k).astype(np.float32)
 
 
 def _secant(fov_deg: float, h: int, w: int) -> np.ndarray:
@@ -183,8 +245,15 @@ def main() -> None:
     ap.add_argument("--backend", choices=BACKENDS, default="vggt_omega")
     ap.add_argument("--model-path", default="facebook/VGGT-1B")
     ap.add_argument("--checkpoint", default=None)
-    ap.add_argument("--tilings", type=int, nargs="+", default=[1, 2, 3, 4],
-                    help="N for each NxN tiling of the same cone")
+    ap.add_argument("--tilings", nargs="+", default=["1", "2", "3", "4"],
+                    help="tiling specs. 'N' = an NxN tiling; 'A+B' = tilings A "
+                         "and B fed through the model TOGETHER in one pass "
+                         "(e.g. '1+4' = global 100deg view + 16 local patches, "
+                         "the coarse-plus-fine arrangement)")
+    ap.add_argument("--center-weight", type=float, default=0.0,
+                    help="fuse with weight cos(angle from view axis)**k, so "
+                         "each view contributes most at its centre where it is "
+                         "most reliable. 0 = uniform (default), ~4 = strong")
     ap.add_argument("--total-fov", type=float, default=100.0,
                     help="total coverage held fixed across tilings (deg)")
     ap.add_argument("--overlap", type=float, default=0.4,
@@ -207,6 +276,8 @@ def main() -> None:
                     help="least-squares per-patch scale correction before "
                          "fusion; a post-hoc patch for scale drift, which joint "
                          "inference should make unnecessary")
+    ap.add_argument("--edge-percentile", type=float, default=EDGE_PERCENTILE,
+                    help="edge-strength percentile for align%% and the overlay")
     ap.add_argument("--depth-max-m", type=float, default=10.0)
     ap.add_argument("--out", default=os.path.join(_PKG, "outputs", "patch_scale"))
     args = ap.parse_args()
@@ -246,11 +317,23 @@ def main() -> None:
     # ADT GT is planar z; score in the range domain the fusion produces.
     gt_range = gt_z / np.clip(cos_lut, 1e-3, None)
 
+    # GT reference on the same grid, so every fused_*.npy can be diffed against
+    # a ground truth in the SAME domain without re-deriving it.
+    _gt_mask = gt_valid & cone
+    np.save(os.path.join(args.out, "gt_range.npy"),
+            np.where(_gt_mask, gt_range, np.nan).astype(np.float32))
+    _gt_strip, _gt_align = edge_alignment(rgb_s, gt_range,
+                                          valid=_gt_mask.astype(np.float32))
+    Image.fromarray(_gt_strip).save(os.path.join(args.out, "overlay_GT.png"))
+    print(f"\nGT reference written (its own align% = {_gt_align * 100:.1f}% — "
+          f"the ceiling this metric can reach on this frame)")
+
     backend = load_backend(args.backend, model_path=args.model_path,
                            checkpoint=args.checkpoint)
 
-    # widest tiling sets the detail floor for --match-detail
-    widest_fov = tiling_views(min(args.tilings), args.total_fov, args.overlap)[0][2]
+    # the widest patch anywhere sets the detail floor for --match-detail
+    widest_fov = max(v[2] for spec in args.tilings
+                     for v in views_for_spec(spec, args.total_fov, args.overlap))
 
     rows = []
     mode = ("SEPARATE 1-view passes (ablation: no cross-view attention)"
@@ -258,16 +341,18 @@ def main() -> None:
     print(f"\ncoverage held at {args.total_fov:.0f} deg; patches rendered at "
           f"{args.patch_size}px ({args.backend} native)")
     print(f"inference: {mode}")
-    if not args.separate and max(args.tilings) ** 2 > 9:
-        print(f"  note: the largest tiling sends {max(args.tilings) ** 2} views "
-              f"through one pass — reduce --tilings if this runs out of VRAM\n")
+    _biggest = max(len(views_for_spec(s_, args.total_fov, args.overlap))
+                   for s_ in args.tilings)
+    if not args.separate and _biggest > 9:
+        print(f"  note: the largest spec sends {_biggest} views through one "
+              f"pass — reduce --tilings if this runs out of VRAM\n")
     else:
         print()
     print(f"{'tiling':>7s} {'patches':>8s} {'patch FoV':>10s} {'scale spread':>13s} "
           f"{'disp(deg)':>10s} {'align%':>7s} {'AbsRel':>8s} {'delta1':>8s}")
 
-    for n in args.tilings:
-        views = tiling_views(n, args.total_fov, args.overlap)
+    for spec in args.tilings:
+        views = views_for_spec(spec, args.total_fov, args.overlap)
         valids, paths = [], []
         for i, (az, tilt, fov) in enumerate(views):
             crop, valid = fisheye_to_persp(rgb, cam_native, az, tilt, fov,
@@ -285,10 +370,10 @@ def main() -> None:
                 sigma = 0.5 * math.sqrt(max(r * r - 1.0, 0.0))
                 if sigma > 0.3:
                     crop = cv2.GaussianBlur(crop, (0, 0), sigma)
-            v = View(crop=crop, tag=f"n{n}_p{i:02d}", true_fov=fov,
+            v = View(crop=crop, tag=f"n{spec}_p{i:02d}", true_fov=fov,
                      valid=valid.astype(np.float32))
             valids.append(v.valid)
-            paths.append(materialize(v, os.path.join(args.out, f"tiling{n}")))
+            paths.append(materialize(v, os.path.join(args.out, f"tiling{spec}")))
 
         # ONE forward pass over all patches (VGGT-360's premise): the patches
         # share an optical centre, so cross-view attention resolves the per-view
@@ -312,28 +397,47 @@ def main() -> None:
             s = harmonize_view_scales(maps, ok)
             ranges = [r * s[i] for i, r in enumerate(ranges)]
 
-        fused, cover = fuse_views_to_fisheye(ranges, views, cam,
+        wts = None
+        if args.center_weight > 0:
+            wts = [center_weights(views[i][2], *ranges[i].shape,
+                                  args.center_weight)
+                   for i in range(len(views))]
+        fused, cover = fuse_views_to_fisheye(ranges, views, cam, weights=wts,
                                              view_valids=valids, interp="linear")
         mask = gt_valid & cone & (cover > 0) & np.isfinite(fused) & (fused > 0)
         if mask.sum() < 100:
-            print(f"{f'{n}x{n}':>7s} {len(views):8d} {views[0][2]:9.1f}d  "
+            print(f"{spec:>7s} {len(views):8d} {views[0][2]:9.1f}d  "
                   f"SKIPPED (only {int(mask.sum())} valid px)")
             continue
-        disp, align = boundary_displacement(rgb_s, fused, mask, deg_per_px)
+        disp, _ = boundary_displacement(rgb_s, fused, mask, deg_per_px)
+        # canonical align% + the RGB|depth|overlay strip, same definition the
+        # probe CLI uses, so numbers here are comparable to numbers there
+        strip, align = edge_alignment(rgb_s, fused, valid=mask.astype(np.float32),
+                                      percentile=args.edge_percentile)
+        align *= 100.0
         m = depth_metrics(align_depth(fused, gt_range, mask, "scale_shift"),
                           gt_range, mask)
-        rows.append((n, len(views), views[0][2], spread, disp, align,
+        rows.append((spec, len(views), views[0][2], spread, disp, align,
                      m["AbsRel"], m["delta1"]))
-        print(f"{f'{n}x{n}':>7s} {len(views):8d} {views[0][2]:9.1f}d "
+        print(f"{spec:>7s} {len(views):8d} {views[0][2]:9.1f}d "
               f"{(math.exp(spread) - 1) * 100:12.1f}% {disp:10.3f} "
               f"{align:7.1f} {m['AbsRel']:8.4f} {m['delta1']:8.4f}")
-        _save_fused(fused, mask, os.path.join(args.out, f"fused_{n}x{n}.png"))
+
+        # ---- per-config artefacts, so the result can be ANALYSED not just eyeballed
+        tag = spec.replace("+", "plus")
+        _save_fused(fused, mask, os.path.join(args.out, f"fused_{tag}.png"))
+        Image.fromarray(strip).save(os.path.join(args.out, f"overlay_{tag}.png"))
+        np.save(os.path.join(args.out, f"fused_{tag}.npy"),
+                np.where(mask, fused, np.nan).astype(np.float32))
+        np.save(os.path.join(args.out, f"aligned_{tag}.npy"),
+                np.where(mask, align_depth(fused, gt_range, mask, "scale_shift"),
+                         np.nan).astype(np.float32))
 
     with open(os.path.join(args.out, "summary.csv"), "w") as f:
         f.write("tiling,n_patches,patch_fov,scale_spread_pct,disp_deg,align_pct,"
                 "AbsRel,delta1\n")
         for r in rows:
-            f.write(f"{r[0]}x{r[0]},{r[1]},{r[2]:.2f},{(math.exp(r[3])-1)*100:.2f},"
+            f.write(f"{r[0]},{r[1]},{r[2]:.2f},{(math.exp(r[3])-1)*100:.2f},"
                     f"{r[4]:.4f},{r[5]:.2f},{r[6]:.4f},{r[7]:.4f}\n")
     print(f"\nwrote {args.out}/summary.csv")
     print("Read: if disp falls with more/smaller patches, angular size drives it. "
