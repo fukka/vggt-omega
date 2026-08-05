@@ -1,0 +1,21 @@
+{
+  "n_pairs": 300,
+  "n_frames": 250,
+  "extrinsics_source": "projectaria_tools",
+  "extrinsics_exact": true,
+  "trained": true,
+  "resolution": 512,
+  "depth_align_mode": "scale_only",
+  "RRA@5": 0.0,
+  "RTA@5": 0.0,
+  "RRA@15": 0.0033,
+  "RTA@15": 0.0567,
+  "RRA@30": 0.51,
+  "RTA@30": 0.4233,
+  "mAA@30": 0.04,
+  "rot_err_deg_median": 29.752,
+  "tra_err_deg_median": 34.032,
+  "ray_err_deg_mean": 0.049,
+  "radial_AbsRel": 0.2631,
+  "radial_delta1": 0.5441
+}

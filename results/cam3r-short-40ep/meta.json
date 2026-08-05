@@ -1,0 +1,69 @@
+{
+  "run_id": "cam3r-short-40ep",
+  "date": "2026-08-05",
+  "commit": "0d12b8b",
+  "commit_note": "remote working tree verified byte-identical to this commit before the run",
+  "box": "lambda_63",
+  "gpu": "1x NVIDIA RTX 6000 Ada Generation (48 GB)",
+  "cuda": "12.8",
+  "torch": "2.11.0+cu128",
+  "conda_env": "cam3r (python 3.11.15)",
+
+  "purpose": "First CAM3R training run after the paper-fidelity pass. Proves the pipeline trains and evaluates end to end on real ADT with the paper's prescribed initialization, and measures how far 40 epochs on one GPU gets.",
+
+  "init": {
+    "dust3r": "DUSt3R_ViTLarge_BaseDecoder_512_dpt.pth",
+    "unik3d": "lpiccinelli/unik3d-vitl pytorch_model.bin",
+    "ray_module_tensors": "506/506 (100% of 318.6M params)",
+    "cross_view_tensors": "1016/1128 (98% of 542.8M params; dec_blocks.*.norm_ctx has no CroCo counterpart)",
+    "model_initialized_pct": 98.6,
+    "shape_mismatches": 0
+  },
+
+  "train": {
+    "sequences": [
+      "Apartment_release_clean_seq131_M1292",
+      "Apartment_release_clean_seq133_M1292",
+      "Apartment_release_clean_seq134_M1292",
+      "Apartment_release_clean_seq135_M1292",
+      "Apartment_release_decoration_seq132_M1292"
+    ],
+    "held_out": "Apartment_release_clean_seq136_M1292",
+    "frames": 1250,
+    "pairs": 2000,
+    "phase": 1,
+    "phase2_note": "not run; no source declares supports_heterogeneous, so phase 2 would degenerate to phase 1",
+    "epochs": 40,
+    "steps_per_epoch": 100,
+    "batch": 1,
+    "accum": 2,
+    "resolution": 512,
+    "lr": 5e-05,
+    "warmup_epochs": 10,
+    "min_lr": 1e-06,
+    "weight_decay": 0.05,
+    "conf_mode": "dust3r",
+    "sec_per_epoch": 89.1,
+    "sec_per_step": 0.89,
+    "wall_clock_min": 60,
+    "peak_vram_gb": 26.2
+  },
+
+  "eval": {
+    "sequence": "Apartment_release_clean_seq136_M1292 (held out from training)",
+    "n_frames": 250,
+    "n_pairs": 300,
+    "resolution": 512,
+    "extrinsics_source": "projectaria_tools",
+    "extrinsics_exact": true,
+    "multi_view": false,
+    "note": "results_init.json is the same eval on the same held-out pairs with the pretrained backbones but no CAM3R training -- the before to results.json's after."
+  },
+
+  "caveats": [
+    "Eq. 10 degenerates during this run. L_trans = s^2 ||u_pred - u_gt||^2 with s = eta_pred/eta_gt detached; nothing in Eq. 11 anchors the pointmap magnitude (Eq. 7 divides it out), so s drifted 0.090 -> 0.006 and the translation-direction term lost ~3 orders of magnitude of weight. See train_log.json pose/scale. RTA numbers here are therefore weakly supervised, and the translation improvement that did happen came mostly from the first few epochs while s was still large.",
+    "Pointmaps are up to scale by construction, so predicted radial distance is ~0.008 in arbitrary units, not metres. Every metric reported is scale-free (RRA/RTA angular, mAA@30 angular, depth via scale_only alignment).",
+    "loss/total is not a progress metric: the DUSt3R confidence term sigma*L - alpha*log(sigma) is unbounded below and drove total negative. Read loss/angular and pose/rot_rad instead. Learned confidences were healthy (min 2.2, median ~10, none below 1).",
+    "40 epochs on 1 GPU vs the paper's 300-500 on 4xH200, and ADT only vs the paper's five corpora."
+  ]
+}
