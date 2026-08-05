@@ -38,6 +38,14 @@ D. **Real ADT frame** (visual; needs --adt-root): view montage, view-footprint
    RGB re-fusion — the 9 views fused back to the fisheye grid should
    reproduce the original photo (PSNR reported; interpolation-only losses).
 
+G. **Usable-FOV photometry** (numeric; needs a real frame — a live ADT one with
+   --adt-root, else the checked-in ``outputs/sweep_omega/raw_fisheye.png``):
+   ``theta_max`` is derived from geometry, so this pins it to the actual pixels
+   by binning p90 brightness by incidence angle and asserting the cutoff sits on
+   the vignette shoulder.  It is what stops the cone from silently drifting back
+   onto the KB4 fold-back turnover, which is ~7.5 deg wider than the imaged
+   circle.
+
 Usage
 -----
     python VGGT-360-fisheye/checks/check_fisheye2persp.py \
@@ -414,18 +422,86 @@ def test_e_scale_harmonization(cam, views) -> bool:
     return good
 
 
+def load_adt_frame(adt_root, rgb_subdir, frame_idx) -> np.ndarray:
+    """One upright raw fisheye frame from an ADT sequence (tests D and G)."""
+    from datasets.adt import ADTFisheyeFrames, find_adt_sequences
+    seqs = find_adt_sequences(adt_root, rgb_subdir=rgb_subdir)
+    if not seqs:  # sequences with RGB but maybe no depth pairing
+        raise SystemExit(f"no sequences with {rgb_subdir}/ + depth_npy/ under {adt_root}")
+    ds = ADTFisheyeFrames(seqs[:1], rgb_subdir=rgb_subdir,
+                          max_frames=frame_idx + 1)
+    return ds[min(frame_idx, len(ds) - 1)]["rgb"]
+
+
+def test_g_usable_fov_photometry(rgb, out_dir,
+                                 fall_frac: float = 0.85,
+                                 keep_frac: float = 0.70,
+                                 dark_frac: float = 0.25) -> bool:
+    """Is ``theta_max`` where the image actually ends?  (needs a real frame)
+
+    ``FisheyeCam.theta_max()`` is derived from geometry (the inscribed image
+    circle).  This pins that derivation to the *pixels*, so the cutoff can never
+    drift back onto the KB4 fold-back turnover unnoticed: bin a real frame's p90
+    brightness by incidence angle and assert the cutoff sits on the vignette
+    shoulder — not inside the bright plateau, and not deep in the black.
+
+      1. just OUTSIDE  [tm, tm+3]   : p90 < ``fall_frac`` x on-axis
+         -> catches a cutoff that is too NARROW (still discarding lit content).
+      2. just INSIDE   [tm-4, tm]   : p90 >= ``keep_frac`` x on-axis
+         -> catches a cutoff that is too WIDE, e.g. a regression to the 62.33-deg
+            turnover, whose inside-band is already down at ~15% of on-axis.
+      3. well beyond   [tm+5, tm+9] : p90 < ``dark_frac`` x on-axis
+         -> confirms the region the old turnover-based cutoff admitted is dead.
+
+    Together these accept roughly 54-58 deg on Aria and reject both the plateau
+    and the black, so the thresholds have margin rather than sitting on the
+    measurement (the 54.83-deg cutoff lands at 69% against a 85% bound).
+
+    p90 (not the mean) is the "is there any lit content here" statistic — a dim
+    scene or a dark wall moves the mean, not the 90th percentile.
+    """
+    print("\n[G] usable-FOV cutoff vs measured vignette")
+    H, W = rgb.shape[:2]
+    cam = aria_intrinsics(H, W, rotated=True)
+    tm = math.degrees(cam.theta_max())
+
+    gray = rgb.mean(axis=-1).astype(np.float32)
+    us, vs = np.meshgrid(np.arange(W, dtype=np.float64),
+                         np.arange(H, dtype=np.float64))
+    theta_d = np.sqrt(((us - cam.cx) / cam.fx) ** 2 + ((vs - cam.cy) / cam.fy) ** 2)
+    theta = np.degrees(kb4_unproject_theta(theta_d, cam.k))
+
+    def p90(lo, hi):
+        m = (theta >= lo) & (theta < hi)
+        return float(np.percentile(gray[m], 90)) if m.sum() > 100 else float("nan")
+
+    on_axis = p90(0.0, 10.0)
+    inside, outside, beyond = p90(tm - 4, tm), p90(tm, tm + 3), p90(tm + 5, tm + 9)
+    print(f"    theta_max = {tm:.2f} deg;  p90 on-axis = {on_axis:.1f}")
+    for lo in range(int(tm) - 8, int(tm) + 10, 2):
+        v = p90(lo, lo + 2)
+        if np.isfinite(v):
+            print(f"      {lo:3d}-{lo + 2:3d} deg  p90 = {v:6.1f}  "
+                  f"({100 * v / on_axis:5.1f}% of on-axis)")
+
+    ok1 = outside < fall_frac * on_axis
+    ok2 = inside >= keep_frac * on_axis
+    ok3 = (not np.isfinite(beyond)) or beyond < dark_frac * on_axis
+    print(f"    outside [{tm:.1f},{tm + 3:.1f}]: {100 * outside / on_axis:.1f}% "
+          f"(< {100 * fall_frac:.0f}%)  {PASS if ok1 else FAIL}")
+    print(f"    inside  [{tm - 4:.1f},{tm:.1f}]: {100 * inside / on_axis:.1f}% "
+          f"(>= {100 * keep_frac:.0f}%)  {PASS if ok2 else FAIL}")
+    if np.isfinite(beyond):
+        print(f"    beyond  [{tm + 5:.1f},{tm + 9:.1f}]: {100 * beyond / on_axis:.1f}% "
+              f"(< {100 * dark_frac:.0f}%)  {PASS if ok3 else FAIL}")
+    return bool(ok1 and ok2 and ok3)
+
+
 def test_d_real_frame(cam_native, views, adt_root, rgb_subdir, frame_idx,
                       out_dir) -> None:
     """Visual sanity on a real ADT frame (no pass/fail — for human eyes)."""
     print("\n[D] real ADT frame visuals")
-    from datasets.adt import ADTFisheyeFrames, find_adt_sequences
-    seqs = find_adt_sequences(adt_root, rgb_subdir=rgb_subdir)
-    if not seqs:  # fall back: sequences with RGB but maybe no depth pairing
-        raise SystemExit(f"no sequences with {rgb_subdir}/ + depth_npy/ under {adt_root}")
-    ds = ADTFisheyeFrames(seqs[:1], rgb_subdir=rgb_subdir,
-                          max_frames=frame_idx + 1)
-    item = ds[min(frame_idx, len(ds) - 1)]
-    rgb = item["rgb"]
+    rgb = load_adt_frame(adt_root, rgb_subdir, frame_idx)
     H, W = rgb.shape[:2]
     from utils.fisheye_cam import aria_intrinsics as _ai
     cam = _ai(H, W, rotated=True)
@@ -504,6 +580,11 @@ def main() -> None:
     ap.add_argument("--rgb-subdir", default="videos_rgb",
                     help="RGB stream for test D (videos_rgb needs no GT alignment)")
     ap.add_argument("--frame", type=int, default=0)
+    ap.add_argument("--photometry-frame",
+                    default=os.path.join(_PKG, "outputs", "sweep_omega",
+                                         "raw_fisheye.png"),
+                    help="real fisheye frame for test G; ignored when "
+                         "--adt-root is given (a live frame is used instead)")
     ap.add_argument("--out", default=os.path.join(_PKG, "outputs", "fisheye_checks"))
     ap.add_argument("--size", type=int, default=704,
                     help="synthetic fisheye frame size (native geometry, scaled)")
@@ -519,11 +600,24 @@ def main() -> None:
     ok_c = test_c_fusion_roundtrip(cam, views, args.out)
     ok_e = test_e_scale_harmonization(cam, views)
     ok_f = test_f_straight_lines(cam, views)
+
+    # G needs real pixels: prefer a live ADT frame, else a checked-in one.
+    # Skipped (not failed) when neither is available.
+    ok_g, real_rgb = True, None
+    if args.adt_root:
+        real_rgb = load_adt_frame(args.adt_root, args.rgb_subdir, args.frame)
+    elif os.path.exists(args.photometry_frame):
+        real_rgb = np.asarray(Image.open(args.photometry_frame).convert("RGB"))
+    if real_rgb is not None:
+        ok_g = test_g_usable_fov_photometry(real_rgb, args.out)
+    else:
+        print("\n[G] usable-FOV photometry: SKIPPED (no real frame available)")
+
     if args.adt_root:
         test_d_real_frame(cam, views, args.adt_root, args.rgb_subdir,
                           args.frame, args.out)
 
-    all_ok = ok_a and ok_b and ok_c and ok_e and ok_f
+    all_ok = ok_a and ok_b and ok_c and ok_e and ok_f and ok_g
     print(f"\n== geometry checks: {PASS if all_ok else FAIL} ==")
     sys.exit(0 if all_ok else 1)
 

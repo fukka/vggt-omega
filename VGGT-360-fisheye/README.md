@@ -18,8 +18,8 @@ model; the attention machinery is untouched.
 
 | | upstream (ERP panorama) | this port (Aria fisheye) |
 |---|---|---|
-| input domain | 360°×180° ERP, every pixel imaged | KB4 fisheye, imaged cone θ ≤ **62.33°** (the KB4 polynomial turnover) |
-| view layout | 6 yaw ring @ FOV 110° + 2 poles | **1 center + 8-direction ring** (azimuth step 45°, tilt 32°, FOV 60°; design rule `tilt + FOV/2 ≈ θ_max`) |
+| input domain | 360°×180° ERP, every pixel imaged | KB4 fisheye, imaged cone θ ≤ **54.83°** (the lens' usable FOV — *not* the 62.33° KB4 polynomial turnover, see below) |
+| view layout | 6 yaw ring @ FOV 110° + 2 poles | **1 center + 8-direction ring** (azimuth step 45°, tilt 26°, FOV 60°; design rule `tilt + FOV/2 ≳ θ_max`) |
 | pixel↔ray | lon/lat linear mapping | KB4 forward (render) / inverse LUT (fusion) — `utils/fisheye_cam.py` |
 | view split | `ERP2Persp` | `fisheye_to_persp` (`utils/fisheye_views.py`) |
 | invalid pixels | none (poles cropped in eval) | **analytic cone mask** threaded through SA masks → VGGT `rgb_mask` attention bias → fusion weights |
@@ -36,15 +36,54 @@ Bug fixes applied to the upstream copy (documented inline):
 on the attention-save path (now device-safe). Upstream `main.py` is kept as
 `main_erp_upstream.py` for reference.
 
+## Two different angular limits (θ_max ≠ the KB4 turnover)
+
+Conflating these is a bug, and `utils/fisheye_cam.py` keeps them apart:
+
+- **fold-back turnover**, `kb4_max_incidence(k)` = **62.33°**. The KB4 polynomial
+  is only monotonic up to here; past it the projection is non-injective and
+  sampling those rays aliases onto wrong in-cone pixels. A property of the *fit*,
+  and the right guard for warps and for truncating the inverse LUT.
+- **usable FOV**, `aria_valid_theta_max()` = **54.83°**. What the lens actually
+  images. Two independent measurements agree: (a) the image circle is inscribed
+  in the 1408² frame — the smallest principal-point-to-border margin is 690.3 px,
+  which unprojects to 54.83°, while the circle at the turnover would need
+  745.8 px; (b) photometrically, on a real ADT frame the p90 brightness per
+  incidence band falls 139 → 92 → 52 → 12 across 48° → 55° → 57° → 61°, and the
+  60–64° band is 98.6% black.
+
+`FisheyeCam.theta_max()` returns the min of the two, so the ray LUT, view
+rendering, layout cone clamp, fusion and the eval mask all inherit the usable
+limit. Earlier versions used the turnover as the usable FOV, which fed ~5–12% dead
+vignette pixels per ring view into VGGT flagged as valid and put **10.9%** dead
+pixels into the eval mask — scored against GT with a black input. Any number
+produced before this change should be regenerated. The same authority is used by
+the baselines (`aria_fisheye.usable_max_incidence`) so the rows stay comparable.
+
 ## Layout geometry (why 1 + 8 views)
 
-- ring tilt 32° + FOV 60° → each ring view covers incidence 2°…62° along its
-  azimuth; the outer edge lands exactly on the imaged cone.
-- adjacent ring-view centers are `2·asin(sin32°·sin22.5°) ≈ 23.4°` apart ≪ 60°
-  FOV → large azimuthal overlap; ring↔center separation 32° < 60° → radial
-  overlap. Verified: zero coverage holes, ≥2-view overlap on 88% of the cone.
-- ring-view corners poke past θ_max; they carry no image and are zeroed by the
-  analytic valid mask (which also gates attention and fusion).
+- ring tilt 26° + FOV 60° → each ring view covers incidence 4°…56° along its
+  azimuth; the outer edge just clears the imaged cone.
+- adjacent ring-view centers are `2·asin(sin26°·sin22.5°) ≈ 19.3°` apart ≪ 60°
+  FOV → large azimuthal overlap; ring↔center separation 26° < 60° → radial
+  overlap. Verified: zero coverage holes, ≥2-view overlap on 92.5% of the cone,
+  and 94.5% of each ring view's area carries image.
+- ring-view corners still reach 60°, i.e. ~5° past θ_max; they carry no image and
+  are zeroed by the analytic valid mask (which also gates attention and fusion).
+- 26° is the knee of the trade-off at FOV 60 / 8 views — tilt 28 wastes 9.4% of
+  each view, tilt 24 opens 0.46% holes, and the old tilt 32 (aimed at the
+  turnover) wasted **16.7%** per view on pixels the sensor never images:
+
+  | ring tilt | view valid % | holes | ≥2-view |
+  |---|---|---|---|
+  | 32 (old) | 83.3% | 0.0000% | 96.6% |
+  | 28 | 90.6% | 0.0000% | 94.1% |
+  | **26** | **94.5%** | **0.0000%** | **92.5%** |
+  | 24 | 98.0% | 0.4613% | 90.6% |
+- module 1's adaptive augmentation now adds **1–2** views, not 4: at this ring
+  density an azimuth-twist candidate lands 8.7° from an existing view and
+  `min_sep_deg` correctly rejects it. Measure `--no-adaptive` before assuming the
+  extra views earn their compute.
 
 ## Run
 
@@ -83,9 +122,16 @@ All geometry is proven before any GPU run; current status **PASS**:
   per-view grids and fused back matches the ground-truth field to **0.000%**;
   the layout has **0 coverage holes** inside the cone (asserted over the full
   cone up to ~1 view-pixel of rim quantisation).
-- **D. real ADT frame** — view montage, footprint overlay (θ_max circle lands
-  on the physical image circle), coverage map, and an RGB re-fusion of the 9
-  views reproducing the original photo at **46.6 dB PSNR**.
+- **G. usable-FOV photometry** — bins a real frame's p90 brightness by incidence
+  angle and asserts θ_max sits on the vignette shoulder, so the cone can never
+  drift back onto the KB4 turnover unnoticed. Runs on the checked-in
+  `outputs/sweep_omega/raw_fisheye.png` when `--adt-root` is absent (skipped, not
+  failed, if neither is available). Verified to accept 54.8–58° and reject 52°,
+  60° and the old 62.33°.
+- **D. real ADT frame** — view montage, footprint overlay (the θ_max circle now
+  lands *on* the visible image circle; with the old turnover-based θ_max it sat
+  outside it, in the vignette), coverage map, and an RGB re-fusion of the views
+  reproducing the original photo.
 
 ## Debugging bumpy / seamy fused depth
 

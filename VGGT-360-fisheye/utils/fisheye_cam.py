@@ -18,11 +18,29 @@ azimuth ``phi = atan2(Y, X)``:
     u = cx + fx * theta_d * cos(phi)
     v = cy + fy * theta_d * sin(phi)
 
-The polynomial is only monotonic up to a lens-dependent *turnover* angle
-(~62.3 deg for the Aria 214-1 coefficients).  Beyond it the projection folds
-back and is non-injective: those rays are physically never imaged, and naively
-sampling them aliases onto wrong in-cone pixels ("fold-back ghosting").  All
-code here therefore clamps validity to ``theta <= kb4_max_incidence(k)``.
+Two different angular limits
+----------------------------
+Conflating these two is a bug, and this module deliberately keeps them apart:
+
+    * **fold-back turnover** — ``kb4_max_incidence(k)`` ~ 62.33 deg.  The KB4
+      polynomial is only monotonic up to this angle; beyond it the projection
+      is non-injective and naively sampling those rays aliases onto wrong
+      in-cone pixels ("fold-back ghosting").  This is a property of the fitted
+      *model* and is a hard guard for every warp and for the inverse LUT.
+    * **usable FOV** — ``aria_valid_theta_max()`` ~ 54.83 deg.  The angle the
+      lens/sensor actually *images*.  Two independent measurements agree:
+      (a) the image circle is inscribed in the 1408^2 frame — the smallest
+      principal-point-to-border margin is 690.3 px, which unprojects to
+      54.83 deg (while the circle at the turnover would need 745.8 px); and
+      (b) photometrically, on a real ADT frame the p90 brightness per incidence
+      band falls 139 -> 92 -> 52 -> 12 across 48 -> 55 -> 57 -> 61 deg, and the
+      60-64 deg band is 98.6% black.
+
+``FisheyeCam.theta_max()`` returns the ``min`` of the two, so every consumer
+(ray LUT, view rendering, view-layout cone clamp, fusion, eval masks) inherits
+the usable limit.  Using the turnover as the usable FOV — as this port
+originally did — feeds ~5-12% dead vignette pixels per ring view into the
+network flagged as valid, and puts ~10.9% dead pixels into the eval mask.
 
 Provenance
 ----------
@@ -34,6 +52,7 @@ places.
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -46,6 +65,11 @@ _ARIA_CY_NATIVE = 716.71
 _ARIA_NATIVE = 1408.0
 _ARIA_KB4 = (0.3852, -0.4442, 0.5591, -0.3254)
 
+# Optional path to an Aria device-calibration JSON.  When it is set AND
+# projectaria_tools is importable, the lens' own "valid radius" is preferred
+# over the geometric derivation in ``inscribed_valid_theta``.
+_ARIA_CALIB_JSON_ENV = "ARIA_CALIB_JSON"
+
 
 @dataclass
 class FisheyeCam:
@@ -53,6 +77,8 @@ class FisheyeCam:
 
     All attributes are in pixels for an ``H x W`` frame.  ``k`` is the KB4
     radial vector ``(k1, k2, k3, k4)`` — rotation- and resolution-invariant.
+    ``valid_theta`` is the lens' usable half-FOV in radians (see module
+    docstring); ``None`` means "unknown, fall back to the fold-back turnover".
     """
 
     H: int
@@ -62,13 +88,98 @@ class FisheyeCam:
     cx: float
     cy: float
     k: Tuple[float, float, float, float]
+    valid_theta: Optional[float] = None
 
     def theta_max(self) -> float:
-        """Max valid incidence angle (radians) — the KB4 forward turnover."""
-        return kb4_max_incidence(self.k)
+        """Max **usable** incidence angle (radians).
+
+        ``min(usable FOV, fold-back turnover)`` — see the module docstring for
+        why those are two different things.  Every downstream consumer
+        (``fisheye_ray_lut``, ``fisheye_to_persp``, the view-layout cone clamp,
+        fusion, the eval cone mask) goes through here, so this is the single
+        place the usable cone is defined.
+        """
+        turnover = kb4_max_incidence(self.k)
+        if self.valid_theta is None:
+            return turnover
+        return min(float(self.valid_theta), turnover)
 
 
-def aria_intrinsics(H: int, W: int, rotated: bool = True) -> FisheyeCam:
+def inscribed_valid_theta(fx: float, fy: float, cx: float, cy: float,
+                          H: float, W: float,
+                          k: Tuple[float, float, float, float]) -> float:
+    """Usable half-FOV (radians) from the *inscribed* image circle.
+
+    A fisheye sensor is normally sized so the image circle just fits inside the
+    frame, so the smallest principal-point-to-border margin IS the circle
+    radius.  Unprojecting that radius therefore gives the lens' usable
+    half-FOV without needing the vendor calibration:
+
+        theta_d = min(cx, W-1-cx, cy, H-1-cy) / f   ->   theta = KB4^-1(theta_d)
+
+    For Aria 214-1 the limiting margin is 690.3 px and this returns
+    **54.83 deg** — matching the photometric falloff measured on real ADT
+    frames (see module docstring).  Being a ratio of pixels to focal length the
+    result is resolution-invariant, and rotating a square frame permutes the
+    margins without changing their minimum, so it is orientation-invariant too.
+    """
+    theta_d = min(cx / fx, (W - 1.0 - cx) / fx,
+                  cy / fy, (H - 1.0 - cy) / fy)
+    return float(kb4_unproject_theta(np.array([theta_d], dtype=np.float64), k)[0])
+
+
+def _calibrated_valid_theta(k: Tuple[float, float, float, float],
+                            calib_json: Optional[str] = None) -> Optional[float]:
+    """Usable half-FOV (radians) from Aria's own calibration "valid radius".
+
+    Aria camera calibrations carry an explicit valid-pixel radius, which is the
+    authoritative answer.  Reaching it needs both ``projectaria_tools`` and a
+    calibration source (``calib_json``, or the ``ARIA_CALIB_JSON`` env var), so
+    this returns ``None`` — never raises — whenever the package is missing, the
+    file is absent, or the API shape is not what we expect; the caller then
+    uses ``inscribed_valid_theta``, which lands on the same answer to within a
+    fraction of a degree.  The radius is stored at native resolution, so it is
+    divided by the native focal length.
+    """
+    path = calib_json or os.environ.get(_ARIA_CALIB_JSON_ENV)
+    if not path or not os.path.exists(path):
+        return None
+    try:
+        from projectaria_tools.core import calibration as _calib
+
+        with open(path, "r") as fh:
+            device = _calib.device_calibration_from_json_string(fh.read())
+        radius = device.get_camera_calib("camera-rgb").get_valid_radius()
+        if radius is None:
+            return None
+        theta_d = float(radius) / _ARIA_F_NATIVE
+        return float(kb4_unproject_theta(np.array([theta_d], dtype=np.float64), k)[0])
+    except Exception:      # missing package, broken extension, changed API
+        return None
+
+
+_VALID_THETA_CACHE: dict = {}
+
+
+def aria_valid_theta_max(calib_json: Optional[str] = None) -> float:
+    """Usable half-FOV of the Aria 214-1 RGB lens (radians), ~54.83 deg.
+
+    Calibration first, inscribed-circle geometry as the fallback.  Cached — the
+    inverse-LUT interpolation is not free and the answer never changes.
+    """
+    key = calib_json or os.environ.get(_ARIA_CALIB_JSON_ENV) or ""
+    if key not in _VALID_THETA_CACHE:
+        th = _calibrated_valid_theta(_ARIA_KB4, calib_json=calib_json)
+        if th is None:
+            th = inscribed_valid_theta(_ARIA_F_NATIVE, _ARIA_F_NATIVE,
+                                       _ARIA_CX_NATIVE, _ARIA_CY_NATIVE,
+                                       _ARIA_NATIVE, _ARIA_NATIVE, _ARIA_KB4)
+        _VALID_THETA_CACHE[key] = th
+    return _VALID_THETA_CACHE[key]
+
+
+def aria_intrinsics(H: int, W: int, rotated: bool = True,
+                    calib_json: Optional[str] = None) -> FisheyeCam:
     """Aria 214-1 intrinsics scaled to an ``H x W`` frame.
 
     Parameters
@@ -79,6 +190,9 @@ def aria_intrinsics(H: int, W: int, rotated: bool = True) -> FisheyeCam:
               Rotating a square frame swaps fx/fy and moves the principal
               point: for 270 CCW, pixel ``(x, y) -> (H-1-y, x)`` so
               ``cx' = (H-1) - cy`` and ``cy' = cx``.
+    calib_json : optional Aria device-calibration JSON, used to read the lens'
+              own valid radius instead of deriving it (see
+              ``aria_valid_theta_max``).
     """
     sx, sy = W / _ARIA_NATIVE, H / _ARIA_NATIVE
     fx = _ARIA_F_NATIVE * sx
@@ -88,7 +202,8 @@ def aria_intrinsics(H: int, W: int, rotated: bool = True) -> FisheyeCam:
     if rotated:
         fx, fy = fy, fx
         cx, cy = (H - 1) - cy, cx
-    return FisheyeCam(H=H, W=W, fx=fx, fy=fy, cx=cx, cy=cy, k=_ARIA_KB4)
+    return FisheyeCam(H=H, W=W, fx=fx, fy=fy, cx=cx, cy=cy, k=_ARIA_KB4,
+                      valid_theta=aria_valid_theta_max(calib_json))
 
 
 # --------------------------------------------------------------------------- #
@@ -109,11 +224,16 @@ def kb4_forward_theta(theta: np.ndarray,
 
 
 def kb4_max_incidence(k: Tuple[float, float, float, float], n: int = 8192) -> float:
-    """Max valid incidence angle (radians) = the forward-polynomial turnover.
+    """Fold-back guard (radians) = the forward-polynomial turnover, ~62.33 deg.
 
-    Beyond this angle ``theta_d(theta)`` decreases again (the projection folds
-    back), so such rays cannot be imaged by the lens and must be excluded from
-    every warp.  ~62.33 deg for the Aria 214-1 coefficients.
+    Beyond this angle ``theta_d(theta)`` decreases again, so the projection is
+    non-injective and sampling such rays aliases onto wrong in-cone pixels.
+    Every warp must exclude them.
+
+    This is **not** the lens' usable FOV — the polynomial is fitted only inside
+    the imaged circle, so its turnover sits ~7.5 deg beyond where Aria actually
+    images (see ``aria_valid_theta_max``, and the module docstring for the two
+    measurements).  Use ``FisheyeCam.theta_max()``, which takes the min of both.
     """
     tg = np.linspace(0.0, np.pi / 2 + 0.2, n)
     td = kb4_forward_theta(tg, k)

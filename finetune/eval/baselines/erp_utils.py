@@ -147,13 +147,19 @@ def _build_erp_geometry(cam_params, img_h, img_w, cano, fwd_sz, crop_wFoV,
         _erpmod.F.grid_sample = _orig_gs   # always restore the global
     new_grid = captured["grid"]
 
-    # Lens cone (KB4 fold-back guard) — same derivation as the old per-call path,
-    # now precomputed once. ``lat``/``lon`` are the ERP patch grids from the call.
+    # Lens cone — the angle the lens actually IMAGES (~54.8° for Aria), not the
+    # KB4 fold-back turnover (62.33°), which is a property of the polynomial fit
+    # and sits ~7.5° past the imaged circle; masking to the turnover admits dead
+    # vignette pixels into the eval. See ``aria_fisheye.usable_max_incidence``.
+    # Precomputed once here; ``lat``/``lon`` are the ERP patch grids from the call.
     if max_incidence_deg is None and str(cam_params.get("camera_model")) == "OPENCV_FISHEYE":
-        from .aria_fisheye import kb4_max_incidence
-        max_incidence_deg = float(np.degrees(kb4_max_incidence(
+        from .aria_fisheye import usable_max_incidence
+        max_incidence_deg = float(np.degrees(usable_max_incidence(
             (float(cam_params["k1"]), float(cam_params["k2"]),
-             float(cam_params["k3"]), float(cam_params["k4"])))))
+             float(cam_params["k3"]), float(cam_params["k4"])),
+            float(cam_params["fl_x"]), float(cam_params["fl_y"]),
+            float(cam_params["cx"]), float(cam_params["cy"]),
+            float(img_h), float(img_w))))
     cone = np.ones_like(mask_active, dtype=np.float32)
     if max_incidence_deg is not None:
         cos_c = (np.sin(phi) * np.sin(lat)

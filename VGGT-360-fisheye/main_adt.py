@@ -371,7 +371,8 @@ def run(args: argparse.Namespace) -> dict:
         view_params = view_generation_fisheye(
             rgb, cam, fov_deg=args.fov, ring_tilt_deg=args.ring_tilt,
             n_ring=args.n_ring, adaptive=not args.no_adaptive,
-            max_total=args.max_views)
+            max_total=args.max_views, view_hw=(args.persp_size, args.persp_size),
+            supersample=args.crop_supersample)
 
         persp_imgs, sa_masks, valid_masks = [], [], []
         for (psi, tilt, fov) in view_params:
@@ -513,9 +514,10 @@ def main() -> None:
                    help="anti-aliasing factor for the tangent-view render "
                         "(render at Nx then box-downsample); 1 = the old "
                         "aliased direct render")
-    p.add_argument("--ring-tilt", type=float, default=32.0,
+    p.add_argument("--ring-tilt", type=float, default=26.0,
                    help="ring-view tilt from the optical axis (deg); "
-                        "design rule tilt + fov/2 ~= 62.3 (the Aria cone)")
+                        "design rule tilt + fov/2 >~ 54.8 (the Aria USABLE "
+                        "cone, not the 62.3-deg KB4 fold-back turnover)")
     p.add_argument("--n-ring", type=int, default=8, help="ring view count")
     p.add_argument("--max-views", type=int, default=13,
                    help="cap after adaptive augmentation (9 base + 4)")

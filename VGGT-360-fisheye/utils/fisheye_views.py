@@ -3,21 +3,30 @@
 
 Upstream VGGT-360 covers the full sphere with 6 horizontal views + 2 poles
 (``utils/gen_views.py``).  The Aria RGB fisheye only images a cone of half-angle
-``theta_max ~ 62.3 deg``, so the layout is replaced by a **center + 8-direction
-ring** (the "top, bottom, left, right, diagonals + center" layout):
+``theta_max ~ 54.8 deg`` (``FisheyeCam.theta_max()`` — the *usable* FOV, NOT the
+62.33-deg KB4 fold-back turnover; see ``fisheye_cam`` for why those differ), so
+the layout is replaced by a **center + 8-direction ring** (the "top, bottom,
+left, right, diagonals + center" layout):
 
     * 1 center view   : optical axis, FOV 60 deg
                         (covers incidence 0..30 deg at the edge, 39 deg corner)
-    * 8 ring views    : azimuth psi in {0, 45, ..., 315} deg, tilt alpha=32 deg,
-                        FOV 60 deg -> each covers incidence 2..62 deg along its
-                        azimuth; the outer edge lands exactly on theta_max
-                        (design rule: ``alpha + FOV/2 ~= theta_max``).
+    * 8 ring views    : azimuth psi in {0, 45, ..., 315} deg, tilt alpha=26 deg,
+                        FOV 60 deg -> each covers incidence 4..56 deg along its
+                        azimuth; the outer edge just clears the imaged cone
+                        (design rule: ``alpha + FOV/2 >~ theta_max``).
 
 Overlap (the precondition for VGGT's cross-view attention to unify scale):
-adjacent ring-view centers are ``2*asin(sin 32 * sin 22.5) ~ 23.4 deg`` apart —
-far less than the 60-deg FOV — and ring<->center separation is 32 deg < 60.
-The cone is covered without gaps; ring-view *corners* poke slightly beyond
-theta_max and are zeroed by the analytic valid mask (they carry no image).
+adjacent ring-view centers are ``2*asin(sin 26 * sin 22.5) ~ 19.3 deg`` apart —
+far less than the 60-deg FOV — and ring<->center separation is 26 deg < 60.
+Measured over a dense sampling of the imaged cone: **0 coverage holes**, >=2
+views on **92.5%** of it, and **94.5%** of each ring view's area carries image.
+Ring-view *corners* still reach 60 deg, i.e. ~5 deg past the cone, and are
+zeroed by the analytic valid mask (they carry no image).
+
+The ring tilt is the knee of the coverage/waste trade-off at FOV 60 / 8 views:
+tilt 28 wastes 9.4% of each view, tilt 24 opens 0.46% holes, and the port's
+original tilt 32 — which aimed the rim at the *turnover* rather than the usable
+FOV — wasted 16.7% per view on pixels the sensor never images.
 
 View parameterisation
 ---------------------
@@ -56,7 +65,7 @@ ViewParam = Tuple[float, float, float]
 
 # Default layout (see module docstring for the geometry derivation).
 DEFAULT_FOV_DEG = 60.0
-DEFAULT_RING_TILT_DEG = 32.0
+DEFAULT_RING_TILT_DEG = 26.0
 DEFAULT_N_RING = 8
 
 
@@ -127,7 +136,8 @@ def fisheye_to_persp(img: np.ndarray,
     azimuth_deg, tilt_deg, fov_deg : view parameters (see module docstring).
     height, width : output view size (512x512 -> VGGT preprocessing keeps the
                   FOV and lands on the 518x518 / 37x37-token grid).
-    theta_max   : incidence cone cutoff; default = the lens turnover.
+    theta_max   : incidence cone cutoff; default = ``cam.theta_max()``, the
+                  lens' usable FOV (not the KB4 fold-back turnover).
     return_maps : also return the ``(u, v)`` sampling maps (for checkers).
     supersample : anti-aliasing factor.  ``cv2.remap`` with INTER_LINEAR only
                   reads a 2x2 neighbourhood, so rendering a view DIRECTLY at
@@ -215,8 +225,37 @@ def perspective_confidence_map(rgb: np.ndarray, tau: float = 0.5,
                                valid_mask: Optional[np.ndarray] = None):
     """Per-pixel confidence from Sobel gradients (upstream, + analytic mask).
 
-    Identical numerics to upstream ``perspective_confidence_map`` except the
-    valid mask can be supplied analytically instead of the black-pixel test.
+    Two fisheye-motivated departures from upstream: the valid mask can be
+    supplied analytically instead of the black-pixel test, and the
+    percentile/median statistics are computed **over valid pixels only**.
+
+    The masking matters.  Upstream takes ``p1``/``p99``/``t0`` over the whole
+    frame, which on a cone is a real bias: the zeroed corners of a cone-clipped
+    ring view contribute zero gradient, drag the median down, and so inflate
+    that view's score — i.e. views score high for *being clipped*.  Measured
+    over the 9 base views of a uniformly-textured frame, where the true answer
+    is "all equal", and of a real ADT frame:
+
+        =========================  ==================  ===============
+        normalisation statistics   uniform (artefact)  real (content)
+        =========================  ==================  ===============
+        whole frame (upstream)     0.0090              0.0126
+        valid pixels only          0.0011              0.0126
+        =========================  ==================  ===============
+
+    So masking cuts the geometry artefact ~8x and leaves the content signal
+    untouched: the ranking goes from 1.4x content-over-artefact to ~11x.
+
+    Note the *per-view* normalisation is deliberately kept.  It does compress
+    the absolute score into a narrow band (~0.51 +- 0.01), which looks like it
+    destroys the signal, but sharing one normalisation across the view set —
+    tried, measured, rejected — is worse: the tangent warp resamples each view
+    at a different rate, so the views of a *uniform-texture* sphere differ in
+    real gradient magnitude by 5.6% (center 0.295 vs ring 0.311), and a shared
+    normalisation reports that resampling difference as a content difference
+    (uniform-frame artefact grows 0.0011 -> 0.0145, swamping the content
+    signal).  Per-view normalisation divides the resampling rate out.  Only the
+    *ranking* is consumed downstream, so the narrow band costs nothing.
     """
     g = cv2.cvtColor(rgb.astype(np.uint8), cv2.COLOR_RGB2GRAY).astype(np.float32) / 255.0
     gx = cv2.Sobel(g, cv2.CV_32F, 1, 0, ksize=3)
@@ -224,15 +263,17 @@ def perspective_confidence_map(rgb: np.ndarray, tau: float = 0.5,
     mag = np.sqrt(gx * gx + gy * gy)
     mag = cv2.GaussianBlur(mag, (0, 0), 1.0)
 
-    p1, p99 = np.percentile(mag, 1), np.percentile(mag, 99)
-    T = np.clip((mag - p1) / (p99 - p1 + 1e-6), 0.01, 0.99)
-
-    t0 = float(np.median(T))
-    conf_map = 1.0 / (1.0 + np.exp(-(T - t0) / max(tau, 1e-6)))
-
     if valid_mask is None:
         valid_mask = rgb.sum(axis=2) > 0
     valid_mask = valid_mask.astype(bool)
+    sel = mag[valid_mask] if valid_mask.any() else mag.ravel()
+
+    p1, p99 = np.percentile(sel, 1), np.percentile(sel, 99)
+    T = np.clip((mag - p1) / (p99 - p1 + 1e-6), 0.01, 0.99)
+
+    t0 = float(np.median(T[valid_mask])) if valid_mask.any() else float(np.median(T))
+    conf_map = 1.0 / (1.0 + np.exp(-(T - t0) / max(tau, 1e-6)))
+
     conf_map[~valid_mask] = 0.0
     return conf_map, valid_mask
 
@@ -296,6 +337,16 @@ def augment_least_confident(base: List[ViewParam],
     for the center view (tilt 0, azimuth undefined) two fixed diagonal
     candidates are used.  ``min_sep_deg`` keeps neighbors from duplicating an
     existing view, exactly like upstream.
+
+    Expect **1-2 added views, not 4**, at the default layout.  A ring of 8 at
+    tilt 26 puts neighboring centers 19.3 deg apart, so a ``d_azimuth=25`` twist
+    lands only 8.7 deg from an existing ring view and ``min_sep_deg`` rejects it;
+    the tilt offsets are accepted instead, and a second uncertain view on an
+    adjacent azimuth often has its offset rejected too (8.4 deg apart).  That is
+    the guard working as intended — at this ring density an azimuth twist adds
+    almost no coverage that is not already there.  It also means module 1 buys
+    much less than the 4 extra views the ``max_total=13`` cap implies; measure
+    ``--no-adaptive`` before assuming it earns its compute.
     """
     views = list(base)
     extra = max_total - len(views)
@@ -332,7 +383,8 @@ def view_generation_fisheye(fisheye_img: np.ndarray,
                             n_ring: int = DEFAULT_N_RING,
                             view_hw: Tuple[int, int] = (512, 512),
                             adaptive: bool = True,
-                            max_total: int = 13) -> List[ViewParam]:
+                            max_total: int = 13,
+                            supersample: int = 3) -> List[ViewParam]:
     """Full module-1 pipeline: base layout + uncertainty-guided augmentation.
 
     Renders the base views once (cheap, cv2.remap), scores each with the
@@ -340,6 +392,11 @@ def view_generation_fisheye(fisheye_img: np.ndarray,
     picks the two least confident, and adds up to 2 neighbors around each.
     Returns the final list of ``(azimuth, tilt, fov)`` — the caller re-renders
     (matching upstream main.py, which also renders twice).
+
+    ``supersample`` must match what the caller will use for the real render:
+    the Sobel confidence is a texture measure, and an aliased render has
+    inflated gradients, so a mismatch ranks views by resampling artefacts
+    instead of content.
     """
     views = base_views(fov_deg, ring_tilt_deg, n_ring)
     if not adaptive:
@@ -349,7 +406,8 @@ def view_generation_fisheye(fisheye_img: np.ndarray,
     scores = []
     for (psi, a, f) in views:
         persp, valid = fisheye_to_persp(fisheye_img, cam, psi, a, f,
-                                        height=view_hw[0], width=view_hw[1])
+                                        height=view_hw[0], width=view_hw[1],
+                                        supersample=supersample)
         conf_map, vmask = perspective_confidence_map(persp, valid_mask=valid > 0.5)
         scores.append(confidence_score_from_map(conf_map, vmask))
     worst2 = list(np.argsort(np.asarray(scores))[:2])

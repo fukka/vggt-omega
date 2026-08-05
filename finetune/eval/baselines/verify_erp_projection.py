@@ -36,7 +36,7 @@ from typing import Tuple
 
 import numpy as np
 
-from .aria_fisheye import AriaFisheye, aria_intrinsics, kb4_max_incidence
+from .aria_fisheye import AriaFisheye, aria_intrinsics
 from .erp_utils import crop_size, fisheye_to_erp_fwd
 
 
@@ -73,7 +73,7 @@ def synthetic_graticule_test(cam: AriaFisheye, cano: int, fwd_sz: Tuple[int, int
 
     os.makedirs(out_dir, exist_ok=True)
     H, W = cam.H, cam.W
-    th_max = kb4_max_incidence(cam.k)
+    th_max = cam.usable_theta_max()
     deg = np.deg2rad
 
     # full graticule (visual)
@@ -108,7 +108,8 @@ def synthetic_graticule_test(cam: AriaFisheye, cano: int, fwd_sz: Tuple[int, int
     mer_dev = float(mc.std()) if mc.size else float("nan")  # perpendicular spread (cols)
     fh, fw = fwd_sz
     ok = eq_dev < 0.02 * fh and mer_dev < 0.02 * fw
-    print(f"[verify] turnover (lens FOV half-angle) = {np.rad2deg(th_max):.1f} deg")
+    print(f"[verify] usable FOV half-angle = {np.rad2deg(th_max):.2f} deg "
+          f"(imaged circle; the KB4 fold-back turnover is ~7.5 deg wider)")
     print(f"[verify] equator  (lat=0): row={er.mean():.1f}±{eq_dev:.2f}px, cols {ec.min()}–{ec.max()}  "
           f"(expect a HORIZONTAL line at row {fh//2})")
     print(f"[verify] meridian (lon=0): col={mc.mean():.1f}±{mer_dev:.2f}px, rows {mr.min()}–{mr.max()}  "

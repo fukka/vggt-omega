@@ -85,6 +85,15 @@ class AriaFisheye:
                 self.k[0], self.k[1], self.k[2], self.k[3],
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
+    def usable_theta_max(self) -> float:
+        """Max incidence angle (radians) this camera actually images (~54.83°).
+
+        See ``usable_max_incidence`` — this is the usable FOV, *not* the KB4
+        fold-back turnover, and it is what every cone mask should use.
+        """
+        return usable_max_incidence(self.k, self.fx, self.fy,
+                                    self.cx, self.cy, self.H, self.W)
+
     def opencv_fisheye_params(self) -> Dict[str, object]:
         """``cam_params`` dict for ``dac.utils.erp_geometry.cam_to_erp_patch_fast``."""
         return {
@@ -180,6 +189,52 @@ def kb4_max_incidence(k: Tuple[float, float, float, float], n: int = 8192) -> fl
     if dec.any():
         return float(tg[int(np.argmax(dec))])
     return float(tg[-1])
+
+
+def inscribed_valid_theta(fx: float, fy: float, cx: float, cy: float,
+                          H: float, W: float,
+                          k: Tuple[float, float, float, float]) -> float:
+    """Usable half-FOV (radians) from the *inscribed* image circle, ~54.83°.
+
+    A fisheye sensor is sized so the image circle just fits inside the frame, so
+    the smallest principal-point-to-border margin IS the circle radius:
+
+        θ_d = min(cx, W-1-cx, cy, H-1-cy) / f    →    θ = KB4⁻¹(θ_d)
+
+    For Aria 214-1 the limiting margin is 690.3 px → **54.83°**, whereas the
+    circle at the fold-back turnover would need 745.8 px. Being a pixel/focal
+    ratio the result is resolution-invariant, and rotating a square frame
+    permutes the margins without changing their minimum.
+    """
+    theta_d = min(cx / fx, (W - 1.0 - cx) / fx,
+                  cy / fy, (H - 1.0 - cy) / fy)
+    return float(_kb4_unproject_theta(np.array([theta_d], dtype=np.float64), k)[0])
+
+
+def usable_max_incidence(k: Tuple[float, float, float, float],
+                         fx: float, fy: float, cx: float, cy: float,
+                         H: float, W: float) -> float:
+    """Max incidence angle (radians) that the lens actually **images**.
+
+    Distinct from ``kb4_max_incidence``, and the two must not be confused:
+
+    * ``kb4_max_incidence`` is the polynomial **fold-back turnover** (62.33°) — a
+      property of the *fit*. It is the right guard against aliasing, and the
+      right truncation point for the inverse LUT.
+    * this is the **usable FOV** (~54.83°). The KB4 coefficients are fitted only
+      inside the imaged circle, so the turnover sits ~7.5° past where Aria
+      images anything. Two independent measurements agree: the inscribed-circle
+      geometry above, and photometry on a real ADT frame, where p90 brightness
+      per incidence band falls 139 → 92 → 52 → 12 across 48° → 55° → 57° → 61°
+      and the 60-64° band is 98.6% black.
+
+    Cone masks — for the ERP warps here and for the tangent-view port in
+    ``VGGT-360-fisheye/utils/fisheye_cam.py`` — must use this one, otherwise dead
+    vignette pixels are scored against GT (~10.9% of the Aria cone mask).
+    Returns ``min`` of the two so it is always a safe warp bound.
+    """
+    return min(inscribed_valid_theta(fx, fy, cx, cy, H, W, k),
+               kb4_max_incidence(k))
 
 
 def aria_ray_z(cam: AriaFisheye) -> np.ndarray:

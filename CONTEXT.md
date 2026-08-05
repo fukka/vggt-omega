@@ -43,12 +43,20 @@ against z-GT.
 
 ## Camera and image geometry
 
-**Imaged cone** — the set of rays a lens physically images. For KB4 the
-forward polynomial `theta_d(theta)` is monotonic only up to a *turnover*
-angle (~62.33° for Aria 214-1); beyond it the projection folds back and is
-non-injective. Rays past the turnover are never imaged and must be masked
-everywhere, or they alias onto wrong in-cone pixels ("fold-back ghosting").
-Authority: `VGGT-360-fisheye/utils/fisheye_cam.py:kb4_max_incidence`.
+**Imaged cone** — the set of rays a lens physically images: `theta <= 54.83°`
+for Aria 214-1. Authority: `FisheyeCam.theta_max()` in
+`VGGT-360-fisheye/utils/fisheye_cam.py`, mirrored for the baselines by
+`finetune/eval/baselines/aria_fisheye.py:usable_max_incidence`.
+
+Do **not** confuse it with the **fold-back turnover** (~62.33°,
+`kb4_max_incidence`): the KB4 forward polynomial `theta_d(theta)` is monotonic
+only up to that angle, and past it the projection is non-injective, so rays
+beyond it alias onto wrong in-cone pixels ("fold-back ghosting"). That makes the
+turnover a necessary *guard*, but it is a property of the polynomial fit, which
+is only constrained inside the imaged circle — it sits ~7.5° beyond where Aria
+images anything. Using it as the imaged cone (as this port originally did) admits
+dead vignette pixels: ~5–12% of every ring view, and 10.9% of the eval mask.
+`theta_max()` returns the min of the two.
 
 **Tangent view** — a gnomonic (perspective) crop rendered from a fisheye or
 ERP frame about some view direction. Straight 3D lines stay straight in a
