@@ -1,0 +1,297 @@
+# RayTun3R (reproduction)
+
+Re-implementation of **"RayTun3R: Online Camera Adaptation in 3D Foundation
+Models"** (Sinitsyn, Araslanov, Cremers; [arXiv:2607.02711](https://arxiv.org/abs/2607.02711),
+TU Munich / MCML / Oxford) on the backbones this repo carries.
+
+The paper says "our code will be made publicly available"; nothing is published
+as of 2026-08, so everything here is reconstructed from the paper text. Where the
+paper is ambiguous, the choice made is listed under
+[Interpretation decisions](#interpretation-decisions) — read that section before
+comparing any number against a table.
+
+**The idea.** Pretrained 3D foundation models carry a *pinhole bias* in their
+positional encodings: the local Jacobian of the pretrained PE is flat in image
+radius, which is only correct for a pinhole camera. RayTun3R freezes the whole
+backbone and learns tiny radial/angular residuals on the positional encodings —
+10,752 parameters — from a short unlabelled fisheye segment, plus three
+parameter-free corrections. It claims 2–12× lower rotation error than the
+unadapted model at no inference cost.
+
+---
+
+## Quick start
+
+Needs a modern PyTorch (≥2.0), plus `opencv-python` for MAGSAC++ and
+`numpy<2`. Run everything from the repo root, not from inside `raytun3r/`.
+
+Neither of these needs weights, data, or a GPU — they are the fastest way to
+confirm the install works:
+
+```bash
+python raytun3r/smoke_test.py
+```
+
+```bash
+python -m pytest raytun3r/tests -q
+```
+
+Fit an adapter on one sequence (this is the whole method — a few minutes on one
+GPU, ~10k trainable parameters):
+
+```bash
+python -m raytun3r.train --backbone vggt --weights pretrained --dataset scannetpp --path /data/scannetpp/data/<scene> --out runs/rt3r/<scene>
+```
+
+Then evaluate. `--adapter` is applied **only** to the method it was fitted for,
+so this command compares the fitted adapter against the training-free baselines:
+
+```bash
+python -m raytun3r.eval --backbone vggt --weights pretrained --dataset scannetpp --path /data/scannetpp/data/<scene> --adapter runs/rt3r/<scene>/adapter.pt --methods vanilla,param_free,center_ph,multi_ph,raytun3r --out runs/rt3r/<scene>/results.json
+```
+
+`lora` and `caltok` are *learned* baselines, so each needs its own fit before it
+means anything (they share the objective, so only `--method` changes). Evaluate
+each against its own checkpoint:
+
+```bash
+python -m raytun3r.train --backbone vggt --dataset scannetpp --path /data/scannetpp/data/<scene> --method lora --out runs/rt3r/<scene>-lora
+```
+
+```bash
+python -m raytun3r.eval --backbone vggt --dataset scannetpp --path /data/scannetpp/data/<scene> --adapter runs/rt3r/<scene>-lora/adapter.pt --methods lora
+```
+
+Evaluating a learned method with no matching checkpoint is allowed but warns
+loudly — it is an untrained model, not a baseline result.
+
+On ADT / Aria fisheye:
+
+```bash
+python -m raytun3r.train --backbone vggt --dataset adt --path /group-volume/Fengjia/data/projectaria_tools_adt_data_clean/<seq> --out runs/rt3r/adt
+```
+
+Useful flags: `--backbone {vggt,vggt_omega,da3}` (see
+[Backbone support](#backbone-support) before choosing), `--matcher ufm` to
+refuse the fallbacks, `--max-frames` to shorten a debug run, and `--iters` /
+`--windows` to trade fit quality for time. `--help` lists all of them.
+
+---
+
+## Paper → code map
+
+| Paper | Where |
+|---|---|
+| Central camera model, `κ` / `κ⁻¹`, KB4 [38] and EUCM [39] (Eq. 1, 3) | `cameras.py` |
+| Backprojection Jacobian, pinhole-bias diagnostic (Eq. 2, 4; Fig. 2) | `cameras.py::Camera.backproject_jacobian` |
+| Absolute-PE residual `P' = P_A + t_r(ρ) + ρ·δ_θ(θ)` (Eq. 5) | `adapter.py::RadialAngularPE` |
+| RoPE residual `ω' = ω + Δ_r(ρ)` (Eq. 6) | `adapter.py::RadialRoPE` |
+| Patch tokenization: local undistortion + border tokens (Sec. 4.2) | `corrections.py::patch_undistort_grid`, `fill_border_tokens` |
+| Prediction-grid coordinate correction (Sec. 4.2) | `corrections.py::camera_aware_uv_grid` |
+| Hook points on a frozen backbone | `backbones.py::Backbone.install` |
+| `X = D·κ⁻¹` (Eq. 7) | `losses.py::backproject` |
+| Reprojection loss (Eq. 8) | `losses.py::reprojection_loss` |
+| Fixed MAGSAC++ pose target (Eq. 9) | `losses.py::pose_loss`, `matching.py::relative_pose_magsac` |
+| Edge-aware smoothness (Eq. 10) | `losses.py::smoothness_loss` |
+| L2 and TV regularisers (Eq. 11, 12) | `losses.py::l2_penalty`, `tv_penalty` |
+| Total objective, `w_pose=1, w_smooth=10, w_L2=2, w_TV=20` (Eq. 13) | `losses.py::LossWeights`, `total_loss` |
+| Adam, lr 1e-3, grad clip 1.0, 504×504, zero-init (Impl. details) | `train.py::fit_adapter` |
+| UFM [44] correspondences | `matching.py::UFMMatcher` |
+| 30 three-frame windows, drop flow < 2 px (Sec. 5) | `data.py::build_windows` |
+| `R°`, `t°`, `d_reproj`, AbsRel, `δ₁.₂₅` (Eq. 14–18) | `metrics.py` |
+| Center-PH, Multi-PH (Fig. 3) | `baselines.py::CenterPH`, `MultiPH` |
+| LoRA `r=8, α=16`; CalTok `t=4` (Tab. 3, right) | `baselines.py::attach_lora`, `attach_caltok` |
+| Component ablations (Tab. 4a, 7b, 8) | `--no-patch-undistort`, `--no-border-token`, `--no-dpt-grid`, `--n-angular 0`, `--n-radial`, `--methods param_free` |
+
+---
+
+## Backbone support
+
+The method's dominant term is the **absolute-PE** residual. The paper's own
+Tab. 7(b), on ETH3D terrains, measures:
+
+| Configuration | R° | t° | d_reproj |
+|---|---|---|---|
+| Absolute PE only (no RoPE) | 0.68 | 0.9 | 1.6 |
+| **RoPE only (no absolute PE)** | **19.52** | **7.8** | **9.6** |
+| Both (full) | 0.48 | 0.9 | 1.6 |
+
+That single row decides what each backbone here can show:
+
+| `--backbone` | ViT | Absolute PE | RoPE | Adapter params (C) | Status |
+|---|---|---|---|---|---|
+| `vggt` | DINOv2 (vendored `vggt_visfeat`) | ✅ `pos_embed` | ✅ `RotaryPositionEmbedding2D` | 28,692 (C=1024) | **Faithful target.** One of the paper's three backbones; weights are public. |
+| `vggt_omega` | DINOv3 | ❌ none | ✅ `RopePositionEmbedding` | 20 | **Expected to barely help.** Reproduces the "RoPE only" row, not Tab. 1. |
+| `da3` | DINOv2-style | ✅ | ✅ | 10,772 (C=384) | Paper's primary. Needs external `depth_anything_3`; hooks written, untested. |
+
+`vggt_omega` is wired up so the claim can be *tested* on this repo's own model,
+not because it is expected to match the headline result. If it does improve
+substantially, that is a finding about DINOv3, and it contradicts Tab. 7(b).
+
+---
+
+## Interpretation decisions
+
+Each of these is a place the paper does not fully specify. All are options; the
+default is listed first.
+
+1. **Depth convention in Eq. 7.** `X = D·κ⁻¹` does not say how `κ⁻¹` is
+   normalised, and on a wide lens the two readings differ by `1/cos θ` — a
+   factor of 2.15 at the Aria rim (see the repo's `CONTEXT.md`). Default
+   `--convention range` treats `κ⁻¹` as the unit ray, which is defined at every
+   incidence angle. `--convention z` uses Eq. 1's `z=1` ray, matching what the
+   VGGT-family depth heads natively emit, but it diverges at 90° and is unusable
+   on the 185–200° datasets. Keep it consistent between train and eval.
+
+2. **Prediction-grid radial coordinate.** "Undistorting through the calibrated
+   fisheye-to-pinhole map" means `tan θ`, which saturates past the clamp: on a
+   180° lens the outer grid cells all collapse to the same coordinate — exactly
+   the resolution loss the paper's own Appendix C describes for naive PE
+   remapping. `--grid-mode auto` (default) uses `tan` below 80° half-angle and
+   the angular radius `θ` beyond; `tan` and `angular` force either.
+
+3. **Scale of the patch linearisation.** A raw linearisation magnifies rim
+   patches enormously on a 185–200° lens, so the resampler would read a handful
+   of source pixels and upsample. `preserve_scale=True` (default) divides the
+   Jacobian by `sqrt|det|`, correcting patch *shape* (anisotropy, shear) while
+   keeping its footprint.
+
+4. **Tangent frame for the patch linearisation.** Taken in a *local* gnomonic
+   frame about each patch's own ray, using the shortest-arc rotation from `+z`.
+   A single global pinhole is undefined at 90° incidence and cannot cover the
+   wide lenses in the benchmark. This frame is the identity on-axis by
+   construction (verified in the tests).
+
+5. **RoPE residual semantics.** Eq. 6 adds one scalar per radial bin to the
+   rotary angle, "shared across RoPE frequencies". Implemented literally: the
+   same `Δ_r(ρ)` is added to every frequency and both axial halves. For
+   DINOv3-style modules that return `(sin, cos)` this uses the angle-addition
+   identities; for VGGT's module, which returns already-rotated tokens, the
+   equivalent extra rotation is composed onto the output (exact, since rotations
+   compose).
+
+6. **Eq. 12 is written on `P'`, not on the residual.** The pretrained table
+   `P_A` therefore enters through a cross term, so it is captured from the PE
+   hook on the first forward. RoPE-only backbones have no `P_A` and fall back to
+   the TV of the residual.
+
+7. **Eq. 9 uses `arccos`, which cannot reach zero numerically.** `arccos` has an
+   infinite derivative at ±1, so it needs its argument clamped — and the clamp
+   puts a floor under the loss (~2.8e-3 rad at 1e-6 of slack) that the optimiser
+   can never get below. `losses.py` uses the algebraically identical `atan2`
+   forms, which hit exactly zero at the target with bounded gradients. The
+   *reported metric* in `metrics.py` keeps plain `arccos` — no gradients there.
+
+8. **Multi-PH pose fusion** is unspecified. All views of a frame share an optical
+   centre and differ by a known rotation, so each view's predicted pose is mapped
+   back through that rotation and averaged (chordal SO(3) mean). Depth is fused
+   by preferring the view whose axis is closest to each ray.
+
+9. **Matcher.** `--matcher auto` prefers UFM, then RAFT (with a
+   forward–backward consistency confidence), then SIFT. **Only UFM is
+   comparable to the paper**; the matcher actually used is recorded in the eval
+   JSON and warned about at startup. SIFT in particular is sparse on fisheye and
+   gives the reprojection loss a weak signal.
+
+10. **LoRA/CalTok scope.** Applied to the last 12 encoder blocks, prediction
+    heads excluded. That reproduces the paper's quoted 147.5K LoRA parameters on
+    DA3-Small exactly (`12 × (8·384 + 1152·8) = 147,456`).
+
+---
+
+## Discrepancies found in the paper
+
+* **The 10,752 parameter count excludes the RoPE table.** `20×384 + 8×384 =
+  10,752` is exactly the two PE tables at DA3-Small's width. The paper also
+  describes a 20-parameter radial RoPE table and ablates it on DA3-Small
+  (Tab. 7b), so the full adapter is 10,772. `param_breakdown()` reports both;
+  the smoke test asserts both. The 20-parameter difference is immaterial to any
+  result, but it means "10,752" and "the adapter" are not quite the same object.
+
+* **Eq. 17 is not AbsRel.** It is printed as
+  `mean(‖s·D − D*‖₂)` — an absolute error with no division by the ground truth,
+  which is neither *relative* nor consistent with Eigen et al. [53] that it
+  cites, nor with the reported magnitudes (0.107 on ETH3D). `metrics.py`
+  implements the standard `mean(|s·D − D*| / D*)`.
+
+* **Tab. 4(a) `RayTun3R (ours)` is not the best row in its own ablation.** The
+  full model reports R° 1.183 while four ablated variants score lower (0.942 for
+  "w/o RoPE adapter", 0.810 for "Naive remap of PE"). The paper acknowledges
+  "some ablations achieve slightly lower pose error" and selects on `d_reproj`,
+  where the full model does win. Worth knowing before treating Tab. 4(a) as
+  evidence that every component helps pose.
+
+---
+
+## What is verified, and what is not
+
+**Verified on CPU** (`smoke_test.py`, 33 checks; `tests/`, 39 tests):
+
+* KB4/EUCM/pinhole `project ∘ unproject` round-trips to ~1e-5 px.
+* **The paper's central premise (Sec. 3).** The pinhole backprojection Jacobian
+  is flat in radius to 1.0000; the KB4 one varies by 10–30× over the same radii.
+* Zero-initialised adapters are *exact* no-ops on both in-tree backbones, so
+  adaptation provably starts from the pretrained model.
+* Gradients reach every adapter table — including through the `torch.no_grad()`
+  block in `vggt_omega`'s aggregator — while every backbone parameter stays
+  frozen and `remove()` restores the model bit-exactly.
+* Eq. 8 and 9 are zero at ground-truth geometry and positive off it; `d_reproj`,
+  AbsRel and `δ₁.₂₅` are scale-invariant as Eq. 16–18 require.
+* MAGSAC++ recovers the true relative pose from exact matches to <1e-4°.
+* Train → checkpoint → eval runs end-to-end on the real ADT sequence.
+
+**Not verified — needs the GPU box:**
+
+* **Any number in the paper.** Every check above is behavioural. Reproducing
+  Tab. 1/2/3 needs real weights, real data, and UFM.
+* The `da3` backbone: hook points are written against the expected module layout
+  but have never been executed.
+* Whether the reproduction actually recovers the claimed 2–12× rotation
+  improvement — the open question this code exists to answer.
+
+---
+
+## Data
+
+**ScanNet++** (paper dataset, 115° DSLR fisheye) expects the official layout:
+
+```
+<scene>/dslr/nerfstudio/transforms.json    OPENCV_FISHEYE intrinsics + poses
+<scene>/dslr/resized_images/<file_path>    RGB
+<scene>/dslr/render_depth/<stem>.png       rendered depth, uint16 mm (optional)
+```
+
+Poses are converted from nerfstudio/OpenGL to the OpenCV camera-from-world
+convention used everywhere else here.
+
+**ADT / Aria** reuses this repo's existing helpers — `cam3r/adt.py` for the
+trajectory and `T_device_camera`, `finetune/eval/baselines/aria_fisheye.py` for
+the KB4 calibration and the usable-cone limit — rather than restating them.
+
+> **ADT pose caveat.** `groundtruth/aria_trajectory.csv` gives world-from-*device*
+> poses; camera poses need `T_device_camera` from the MPS calibration or the VRS.
+> When `cam3r.adt.resolve_extrinsics` cannot find it, it falls back to the device
+> frame and reports `exact=False`. This loader then leaves ground-truth poses
+> **unset** rather than emit poses wrong by the sensor lever arm and mounting
+> rotation, and the evaluator says so and skips `R°`/`t°`/`d_reproj`. Depth
+> metrics still work, and adaptation is unaffected — it never reads GT pose.
+> Pass `--extrinsics-json` to enable pose metrics. The local sample sequence has
+> no MPS calibration, so it hits this path.
+
+ADT `depth_npy` is **planar z** (`CONTEXT.md`); it is converted to euclidean
+range on load to match `--convention range`, and pixels outside the imaged cone
+are masked *before* the conversion, since `1/cos θ` explodes there.
+
+---
+
+## Limitations carried over from the paper
+
+1. The correction is camera-specific: a different lens needs a new fit.
+2. It assumes a principal point and mostly radial distortion — no strong
+   tangential or non-radial optics.
+3. It needs camera parameters (Appendix B shows AnyCalib estimates suffice).
+4. Fisheye only; panoramic/ERP input is future work.
+5. **It needs inter-frame motion.** With degenerate motion the self-supervised
+   constraints go weak, because large depth or translation-direction errors
+   induce only small reprojection errors. `build_windows` enforces the paper's
+   2 px flow threshold and raises if no window qualifies.
