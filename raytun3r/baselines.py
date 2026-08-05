@@ -165,8 +165,16 @@ class ProjectionBaseline:
             samp = F.grid_sample(pred.depth[:, None], g[None].expand(s, -1, -1, -1),
                                  mode="bilinear", padding_mode="border",
                                  align_corners=False)[:, 0]
+            # `pred.depth` is already in the backbone's installed convention, but
+            # that convention is defined against the *virtual* view's axis, not
+            # the fisheye's: a ray at 60 deg from the fisheye axis may sit near
+            # the centre of a tilted pinhole view. Undo it in the virtual frame,
+            # then reapply in the fisheye frame, using `local[..., 2]` = cos of
+            # the angle to the virtual axis.
+            if pred.depth_convention == "range":
+                samp = samp * local[..., 2]                  # -> planar z, virtual frame
             if self.depth_convention == "range":
-                samp = samp / local[..., 2].clamp_min(1e-3)
+                samp = samp / local[..., 2].clamp_min(1e-3)  # -> range along the fisheye ray
 
             cover = self._cover[k].to(dev)
             # Prefer the view whose axis is closest to each ray.
@@ -183,7 +191,7 @@ class ProjectionBaseline:
         t = torch.stack(ts).mean(dim=0)
         covered = best > -1.0
         return Prediction(depth=depth_acc, conf=covered.float(), R=R, t=t,
-                          covered=covered)
+                          covered=covered, depth_convention=self.depth_convention)
 
 
 def CenterPH(backbone: Backbone, fisheye: Camera, *, fov_deg: float = 110.0,

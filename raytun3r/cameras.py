@@ -42,7 +42,17 @@ __all__ = [
     "from_opencv_fisheye",
     "from_aria",
     "from_scannetpp",
+    "DEPTH_CONVENTIONS",
+    "convert_depth",
 ]
+
+#: The two readings of a depth map. ``"z"`` is planar z -- distance along the
+#: optical axis, what a z-buffer and every pinhole-trained depth head emit.
+#: ``"range"`` is euclidean distance along each pixel's own ray. They are related
+#: by ``range = z / cos(theta)`` and are *not* interchangeable on a wide lens:
+#: the factor runs to 1.74x at the Aria rim and ~11x at a 170 deg frame corner,
+#: and being radially varying it cannot be absorbed by any global scale.
+DEPTH_CONVENTIONS = ("z", "range")
 
 
 def pixel_grid(height: int, width: int, *, device=None, dtype=torch.float32) -> Tensor:
@@ -155,6 +165,24 @@ class Camera:
         """Intrinsics for a crop whose top-left pixel centre was ``(u0, v0)``."""
         return self.__class__(**{**self._params(), "cx": self.cx - u0, "cy": self.cy - v0,
                                  "width": width, "height": height})
+
+    def with_max_fov(self, fov_deg: float) -> "Camera":
+        """Same lens, cone restricted to ``fov_deg`` total field of view.
+
+        Only ever *narrows*: asking for more than the lens images is a no-op, so
+        a sweep can be written as one ascending list without special-casing the
+        native FOV.
+
+        This is the knob for the paper's stated 115 deg ScanNet++ FOV versus the
+        ~170 deg its released calibration actually implies. Because ``theta_max``
+        defines ``valid_mask``, and ``valid_mask`` is ``Omega``, narrowing it
+        propagates to every loss (Eq. 8, 10) and every metric (Eq. 16-18) without
+        touching the images -- the model still sees the full frame, so this
+        isolates *where the method is scored* from what it is shown.
+        """
+        return self.__class__(**{**self._params(),
+                                 "theta_max": min(self.theta_max,
+                                                  math.radians(fov_deg / 2.0))})
 
     def _params(self) -> dict:
         out = {"fx": self.fx, "fy": self.fy, "cx": self.cx, "cy": self.cy,
@@ -371,3 +399,37 @@ def _default_theta_max(cam: KannalaBrandt) -> float:
     inside = torch.nonzero(r_mono <= r_far)
     theta_frame = float(mono[int(inside[-1])]) if inside.numel() else theta_turn
     return min(theta_turn, theta_frame)
+
+
+def convert_depth(depth: Tensor, camera: "Camera", *, src: str, dst: str,
+                  min_cos: float = 1e-6) -> Tensor:
+    """Convert a depth map between planar z and euclidean range.
+
+    ``range = z / cos(theta)``, where ``cos(theta)`` is the z component of the
+    unit ray through each pixel -- so this is a *per-pixel, radially varying*
+    rescaling, not a global one. That is precisely why it cannot be left to the
+    scale alignment in Eq. 16-18 to absorb: those solve for a single scalar.
+
+    Everything downstream of a backbone (Eq. 7's ``X = D kappa^-1``, ``d_reproj``,
+    ``AbsRel``) is only correct when the normalisation of ``kappa^-1`` matches the
+    definition of ``D``. This function is what makes the two agree; see
+    :class:`~raytun3r.backbones.Prediction` for which convention each producer is
+    tagged with.
+
+    ``min_cos`` floors the divisor, and matches ``backproject``'s own clamp so
+    that the two stay exact inverses. Do not raise it as a "safety" measure: a
+    larger floor silently stops this being the inverse of Eq. 7's ``z`` reading
+    precisely at the grazing angles where they differ most. Mask to
+    ``camera.valid_mask`` instead -- past ~85 deg the planar-z reading is
+    physically degenerate anyway (``1/cos`` exceeds 10 and diverges at 90).
+    """
+    if src not in DEPTH_CONVENTIONS or dst not in DEPTH_CONVENTIONS:
+        raise ValueError(f"depth convention must be one of {DEPTH_CONVENTIONS}; "
+                         f"got src={src!r}, dst={dst!r}")
+    if src == dst:
+        return depth
+    h, w = depth.shape[-2:]
+    cos = camera.ray_grid(h, w, device=depth.device)[..., 2].to(depth.dtype)
+    if src == "z":
+        return depth / cos.clamp_min(min_cos)
+    return depth * cos

@@ -45,7 +45,7 @@ from torch import Tensor, nn
 
 from . import corrections as C
 from .adapter import RayTun3RAdapter
-from .cameras import Camera
+from .cameras import DEPTH_CONVENTIONS, Camera, convert_depth
 
 __all__ = ["Prediction", "Backbone", "build_backbone", "BACKBONES"]
 
@@ -54,10 +54,24 @@ __all__ = ["Prediction", "Backbone", "build_backbone", "BACKBONES"]
 class Prediction:
     """Per-frame geometry from a backbone, in a backbone-independent form.
 
-    ``depth`` is planar z in the camera frame (see the repo's CONTEXT.md -- the
-    VGGT-family depth heads emit planar z, not euclidean range). ``R``/``t`` are
-    camera-from-world, so the relative pose of frame j w.r.t. i is
-    ``R_j R_i^T`` and ``t_j - R_j R_i^T t_i``.
+    ``R``/``t`` are camera-from-world, so the relative pose of frame j w.r.t. i
+    is ``R_j R_i^T`` and ``t_j - R_j R_i^T t_i``.
+
+    ``depth_convention`` says what ``depth`` *means*, and it is not decoration.
+    Every depth head in this repo natively emits **planar z** (CONTEXT.md
+    measured it for the VGGT family by RANSAC plane fit), while Eq. 7's
+    ``X = D kappa^-1`` is only correct when the normalisation of ``kappa^-1``
+    matches. Producers therefore convert to the convention the run asked for and
+    tag it here, and consumers assert on the tag rather than assume.
+
+    This used to be implicit, and the two producers disagreed: the virtual-pinhole
+    baselines divided by ``cos`` to get range while the direct fisheye path handed
+    the head's raw planar z straight to ``backproject(convention="range")``. Both
+    were then compared against ADT ground truth that *had* been converted. The
+    resulting radial warp is worth ~0.66 px of ``d_reproj`` on Aria geometry and
+    ~0.99 px on a 170 deg frame -- against a measured method-to-method spread of
+    0.10 px, i.e. the artefact was an order of magnitude larger than the effect
+    being measured.
 
     ``covered`` marks where the method actually produced a depth. It is ``None``
     for a backbone that predicts everywhere; the virtual-pinhole baselines set it
@@ -74,6 +88,23 @@ class Prediction:
     t: Tensor              # (S, 3)
     extra: dict = None
     covered: Optional[Tensor] = None    # (S, H, W) bool, or None for "everywhere"
+    depth_convention: str = "z"         # what `depth` means; see the class docstring
+
+    def require_convention(self, convention: str) -> None:
+        """Fail loudly when a consumer's convention differs from this map's.
+
+        The mismatch it guards is silent by construction -- both readings are
+        plain positive depth maps of the same shape, so nothing downstream can
+        notice -- and it costs more than the effect under study.
+        """
+        if self.depth_convention != convention:
+            raise ValueError(
+                f"depth is {self.depth_convention!r} but the caller asked for "
+                f"{convention!r}. These differ by a per-pixel 1/cos(theta), up to "
+                f"~11x at a 170 deg frame corner, and no global scale alignment can "
+                f"absorb it. Install the backbone with depth_convention="
+                f"{convention!r} rather than converting here."
+            )
 
     def relative(self, i: int, j: int) -> Tuple[Tensor, Tensor]:
         R_rel = self.R[j] @ self.R[i].transpose(-1, -2)
@@ -89,6 +120,9 @@ class Backbone(nn.Module):
     embed_dim: int = 1024
     has_abs_pe: bool = False
     has_rope: bool = False
+    #: what this model's depth head natively emits, before any conversion.
+    #: Every head wrapped here is pinhole-trained and emits planar z.
+    native_depth: str = "z"
 
     def __init__(self, model: nn.Module):
         super().__init__()
@@ -111,6 +145,8 @@ class Backbone(nn.Module):
         self.use_patch_undistort = False
         self.use_border_token = False
         self.use_dpt_grid = False
+        #: convention every Prediction from this backbone is emitted in.
+        self.depth_convention = "range"
 
     # -- construction -----------------------------------------------------
 
@@ -125,11 +161,17 @@ class Backbone(nn.Module):
     def install(self, adapter: Optional[RayTun3RAdapter], camera: Camera,
                 image_hw: Tuple[int, int], *, patch_undistort: bool = True,
                 border_token: bool = True, dpt_grid: bool = True,
-                preserve_scale: bool = True, grid_mode: str = "auto") -> "Backbone":
+                preserve_scale: bool = True, grid_mode: str = "auto",
+                depth_convention: str = "range") -> "Backbone":
         """Attach the adapter and the parameter-free corrections.
 
         ``adapter=None`` installs only the parameter-free parts, which is how the
         "Param.-free only" row of Tab. 8 is produced.
+
+        ``depth_convention`` is what :attr:`Prediction.depth` will be emitted in,
+        converted from :attr:`native_depth`. It must match what the losses,
+        metrics and ground-truth loader use, or the geometry is warped radially;
+        :meth:`Prediction.require_convention` enforces that downstream.
         """
         self.remove()
         h, w = image_hw
@@ -138,6 +180,10 @@ class Backbone(nn.Module):
                 f"image size {image_hw} is not a multiple of patch size {self.patch_size}"
             )
         gh, gw = h // self.patch_size, w // self.patch_size
+
+        if depth_convention not in DEPTH_CONVENTIONS:
+            raise ValueError(f"depth_convention must be one of {DEPTH_CONVENTIONS}")
+        self.depth_convention = depth_convention
 
         cam = camera.resized(w, h) if (camera.height, camera.width) != (h, w) else camera
         self.camera = cam
@@ -177,6 +223,12 @@ class Backbone(nn.Module):
         self._undistort_grid = None
         self._valid_patches = None
         self._pe_table = None
+        # Drop the camera too, so a post-remove forward returns the head's native
+        # depth exactly as a pre-install one did. "Restores the model exactly as it
+        # was" has to cover the output convention, not just the module tree.
+        self.camera = None
+        self._grid = None
+        self.depth_convention = "range"
 
     def pe_table(self) -> Optional[Tensor]:
         """``(H*W, C)`` pretrained absolute PE on the bound grid, or ``None``.
@@ -324,6 +376,27 @@ class Backbone(nn.Module):
     def forward(self, images: Tensor) -> Prediction:
         raise NotImplementedError
 
+    def _finalize(self, pred: Prediction) -> Prediction:
+        """Put a raw head prediction into the installed depth convention.
+
+        Every concrete ``forward`` ends here, so there is exactly one place where
+        a head's native planar z becomes whatever the run asked for. Doing it per
+        backbone instead is how the direct path and the pinhole baselines drifted
+        apart in the first place.
+
+        Before :meth:`install` there is no camera, so no conversion is possible --
+        ``z -> range`` needs the ray grid. Such a prediction is tagged with the
+        head's native convention and left alone, which is also what keeps
+        ``forward`` outside an install bit-identical across ``install``/``remove``.
+        """
+        if self.camera is None:
+            pred.depth_convention = self.native_depth
+            return pred
+        pred.depth = convert_depth(pred.depth, self.camera,
+                                   src=self.native_depth, dst=self.depth_convention)
+        pred.depth_convention = self.depth_convention
+        return pred
+
     def valid_mask(self, h: int, w: int, device=None) -> Tensor:
         return self.camera.valid_mask(h, w, device=device)
 
@@ -407,8 +480,9 @@ class VGGTBackbone(Backbone):
         extri = extri[0]                                   # (S, 3, 4) cam-from-world
         depth = preds["depth"][0, ..., 0]                  # (S, H, W)
         conf = preds.get("depth_conf", torch.ones_like(depth[:, None]))[0]
-        return Prediction(depth=depth, conf=conf, R=extri[:, :3, :3], t=extri[:, :3, 3],
-                          extra={"pose_enc": preds["pose_enc"]})
+        return self._finalize(
+            Prediction(depth=depth, conf=conf, R=extri[:, :3, :3], t=extri[:, :3, 3],
+                       extra={"pose_enc": preds["pose_enc"]}))
 
 
 # ---------------------------------------------------------------------------
@@ -483,8 +557,9 @@ class VGGTOmegaBackbone(Backbone):
         extri = extri[0]
         depth = preds["depth"][0, ..., 0]
         conf = preds.get("depth_conf", torch.ones_like(depth[:, None]))[0]
-        return Prediction(depth=depth, conf=conf, R=extri[:, :3, :3], t=extri[:, :3, 3],
-                          extra={"pose_enc": preds["pose_enc"]})
+        return self._finalize(
+            Prediction(depth=depth, conf=conf, R=extri[:, :3, :3], t=extri[:, :3, 3],
+                       extra={"pose_enc": preds["pose_enc"]}))
 
 
 # ---------------------------------------------------------------------------
@@ -493,18 +568,50 @@ class VGGTOmegaBackbone(Backbone):
 
 
 class DA3Backbone(Backbone):
-    patch_size = 14
-    embed_dim = 384         # DA3-Small; overridden per variant in load()
-    has_abs_pe = True
-    has_rope = True
+    """Depth Anything 3 -- the paper's primary backbone (Tab. 1, 4, 7b are DA3-Small).
 
-    _VARIANTS = {"small": 384, "base": 768, "large": 1024}
+    Verified against ``depth_anything_3`` 0.1.1. Three things about that package
+    shape the code below, all confirmed by building ``da3-small`` and running it:
+
+    * ``DepthAnything3.forward`` wraps the whole call in ``torch.no_grad()`` and
+      queries ``torch.cuda.is_bf16_supported()``. Adaptation needs gradients
+      through the frozen model to reach the adapter, so this wraps the **inner**
+      ``DepthAnything3Net`` and applies its own autocast. Going through the public
+      wrapper would train nothing and crash on a CPU-only host.
+    * The DPT positional grid is added by ``DualDPT._add_pos_embed``, not the
+      ``_apply_pos_embed`` VGGT uses.
+    * ``create_uv_grid``'s docstring claims ``(width, height, 2)`` here too, while
+      ``_add_pos_embed`` consumes it as ``(height, width, 2)`` -- the same trap
+      documented in :func:`corrections.camera_aware_uv_grid`.
+    """
+
+    patch_size = 14
+    embed_dim = 384         # DA3-Small; re-read from the ViT in load()
+    has_abs_pe = True       # DinoVisionTransformer.pos_embed
+    has_rope = True         # RotaryPositionEmbedding2D, rope_start=4 on da3-small
+
+    #: variant -> (config name, HuggingFace id)
+    _VARIANTS = {
+        "small": ("da3-small", "depth-anything/DA3-SMALL"),
+        "base": ("da3-base", "depth-anything/DA3-BASE"),
+        "large": ("da3-large", "depth-anything/DA3-LARGE"),
+        "giant": ("da3-giant", "depth-anything/DA3-GIANT"),
+    }
 
     @classmethod
     def load(cls, weights: Optional[str] = None, device="cpu", variant: str = "small",
              **kw) -> "DA3Backbone":
+        """``weights=None`` builds the architecture with random init (for tests);
+        ``"pretrained"`` fetches the variant's released checkpoint; anything else
+        is passed to ``from_pretrained`` verbatim."""
+        if variant not in cls._VARIANTS:
+            raise ValueError(f"unknown DA3 variant {variant!r}; "
+                             f"choose from {sorted(cls._VARIANTS)}")
+        cfg_name, hub_id = cls._VARIANTS[variant]
+
         try:
-            from depth_anything_3.api import DepthAnything3  # type: ignore
+            from depth_anything_3.cfg import create_object, load_config  # type: ignore
+            from depth_anything_3.registry import MODEL_REGISTRY  # type: ignore
         except ImportError as exc:               # pragma: no cover - optional dep
             raise ImportError(
                 "The 'da3' backbone needs the depth_anything_3 package "
@@ -512,9 +619,18 @@ class DA3Backbone(Backbone):
                 "use --backbone vggt, which is vendored in this repo."
             ) from exc
 
-        model = DepthAnything3.from_pretrained(weights or f"depth-anything/DA3NESTED-GIANT")
-        obj = cls(model.to(device))
-        obj.embed_dim = cls._VARIANTS.get(variant, 384)
+        if weights in (None, "random"):
+            net = create_object(load_config(MODEL_REGISTRY[cfg_name]))
+        else:
+            from depth_anything_3.api import DepthAnything3  # type: ignore
+            wrapper = DepthAnything3.from_pretrained(
+                hub_id if weights == "pretrained" else weights)
+            # Unwrap: the public forward is no-grad, see the class docstring.
+            net = wrapper.model
+
+        obj = cls(net.to(device))
+        vit = obj._vit()
+        obj.embed_dim = int(vit.pos_embed.shape[-1])
         return obj
 
     def _vit(self) -> nn.Module:
@@ -554,30 +670,50 @@ class DA3Backbone(Backbone):
 
         self._patch_method(vit, "interpolate_pos_encoding", interpolate_pos_encoding)
 
-    def _hook_dpt_grid(self, grid_mode: str) -> None:  # pragma: no cover - optional dep
-        for mod in self.model.modules():
-            if hasattr(mod, "_apply_pos_embed"):
-                try:
-                    from depth_anything_3.model.heads.utils import (  # type: ignore
-                        create_uv_grid, position_grid_to_embed,
-                    )
-                except ImportError:
-                    return
-                self._patch_method(mod, "_apply_pos_embed",
-                                   self._make_apply_pos_embed(grid_mode, create_uv_grid,
-                                                              position_grid_to_embed))
+    def _hook_dpt_grid(self, grid_mode: str) -> None:
+        """Patch ``DualDPT._add_pos_embed``.
 
-    def forward(self, images: Tensor) -> Prediction:  # pragma: no cover - optional dep
+        The method is ``_add_pos_embed`` in ``depth_anything_3.model.dualdpt`` /
+        ``dpt``, and the helpers live in ``model.utils.head_utils``. Both differ
+        from VGGT's naming, and both were wrong here -- guarded by ``hasattr`` and
+        a bare ``except ImportError``, so the correction silently did nothing
+        rather than failing. Anything unexpected now raises.
+        """
+        from depth_anything_3.model.utils.head_utils import (  # type: ignore
+            create_uv_grid, position_grid_to_embed,
+        )
+
+        targets = [m for m in self.model.modules() if hasattr(m, "_add_pos_embed")]
+        if not targets:
+            raise RuntimeError(
+                "no DA3 head exposing _add_pos_embed; the package layout has changed. "
+                "Re-check against depth_anything_3.model.dualdpt before trusting "
+                "--no-dpt-grid ablations."
+            )
+        for mod in targets:
+            self._patch_method(mod, "_add_pos_embed",
+                               self._make_apply_pos_embed(grid_mode, create_uv_grid,
+                                                          position_grid_to_embed))
+
+    def forward(self, images: Tensor) -> Prediction:
         if images.dim() == 4:
             images = images.unsqueeze(0)
-        out = self.model(images)
-        depth = out["depth"] if isinstance(out, dict) else out.depth
-        pose = out["extrinsics"] if isinstance(out, dict) else out.extrinsics
-        depth = depth.squeeze(0) if depth.dim() == 4 else depth
-        pose = pose.squeeze(0) if pose.dim() == 4 else pose
-        conf = (out.get("conf") if isinstance(out, dict) else None)
-        conf = torch.ones_like(depth) if conf is None else conf.squeeze(0)
-        return Prediction(depth=depth, conf=conf, R=pose[:, :3, :3], t=pose[:, :3, 3])
+        # Autocast on CUDA only, and *not* under no_grad -- see the class docstring.
+        if images.is_cuda:
+            dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+            with torch.autocast(device_type="cuda", dtype=dtype):
+                out = self.model(images)
+        else:
+            out = self.model(images)
+
+        depth = out["depth"].squeeze(0)                    # (B, S, H, W) -> (S, H, W)
+        pose = out["extrinsics"].squeeze(0)                # (B, S, 3, 4) -> (S, 3, 4)
+        # The key is 'depth_conf', matching the VGGT family; 'conf' does not exist
+        # and silently fell back to ones.
+        conf = out["depth_conf"].squeeze(0) if "depth_conf" in out else torch.ones_like(depth)
+        return self._finalize(
+            Prediction(depth=depth.float(), conf=conf.float(),
+                       R=pose[:, :3, :3].float(), t=pose[:, :3, 3].float()))
 
 
 BACKBONES = {

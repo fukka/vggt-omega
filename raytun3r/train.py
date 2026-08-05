@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import time
 from dataclasses import asdict
@@ -96,7 +97,9 @@ def build_argparser() -> argparse.ArgumentParser:
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--backbone", default="vggt", choices=["vggt", "vggt_omega", "da3"])
     p.add_argument("--weights", default="pretrained")
-    p.add_argument("--variant", default="small", help="DA3 variant: small|base|large")
+    p.add_argument("--variant", default="small",
+                   choices=["small", "base", "large", "giant"],
+                   help="DA3 size; 'small' is the paper's primary backbone")
     p.add_argument("--dataset", default="scannetpp", choices=["scannetpp", "adt"])
     p.add_argument("--path", required=True, help="scene / sequence directory")
     p.add_argument("--out", required=True)
@@ -125,6 +128,9 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--max-size", type=int, default=504)
     p.add_argument("--max-frames", type=int, default=None)
     p.add_argument("--extrinsics-json", default=None, help="ADT T_device_camera")
+    p.add_argument("--max-fov", type=float, default=None,
+                   help="restrict Omega to this total FOV in degrees (never widens); "
+                        "the knob for the paper's stated 115 deg vs ScanNet++'s real ~170")
 
     p.add_argument("--iters", type=int, default=300)
     p.add_argument("--lr", type=float, default=1e-3)
@@ -147,8 +153,16 @@ def main(argv=None) -> None:
                               **({"variant": args.variant} if args.backbone == "da3" else {}))
     source = load_sequence(args.dataset, args.path, max_size=args.max_size,
                            patch=backbone.patch_size, max_frames=args.max_frames,
-                           **({"extrinsics_json": args.extrinsics_json}
+                           **({"extrinsics_json": args.extrinsics_json,
+                               "depth_convention": args.convention}
                               if args.dataset == "adt" else {}))
+    if args.max_fov is not None:
+        before = 2 * math.degrees(source.camera.theta_max)
+        source.camera = source.camera.with_max_fov(args.max_fov)
+        after = 2 * math.degrees(source.camera.theta_max)
+        print(f"[data] Omega restricted: {before:.0f} deg -> {after:.0f} deg FOV "
+              f"(images unchanged; this narrows where the method is scored)")
+
     print(f"[data] {source.name}: {len(source)} frames at {source.h}x{source.w}, "
           f"FOV {2 * torch.rad2deg(torch.tensor(source.camera.theta_max)):.0f} deg")
 
@@ -173,6 +187,7 @@ def main(argv=None) -> None:
         border_token=(args.method == "raytun3r" and not args.no_border_token),
         dpt_grid=(args.method == "raytun3r" and not args.no_dpt_grid),
         grid_mode=args.grid_mode,
+        depth_convention=args.convention,
     )
 
     if args.method == "lora":

@@ -16,6 +16,17 @@ Deps for the test suite only (no GPU, no weights, no datasets):
 pip install "torch>=2.0" torchvision numpy Pillow einops safetensors opencv-python pytest
 ```
 
+Optional, and worth it — it unlocks the DA3-Small test, i.e. the paper's primary
+backbone. The package declares `torch>=2.10`, but only its `xformers`/serving
+extras need that; `--no-deps` plus the three real imports works on torch 2.2:
+
+```bash
+pip install --no-deps depth-anything-3 && pip install omegaconf addict einops
+```
+
+`depth_anything_3.api` additionally pulls in `moviepy`; `DA3Backbone.load(weights=None)`
+avoids it by building from the config registry directly.
+
 ## Your verification loop
 
 This is the point of the split — you can verify almost everything locally:
@@ -28,10 +39,12 @@ python -m pytest raytun3r/tests -q
 python raytun3r/smoke_test.py
 ```
 
-40 tests + 33 checks, ~10 s total, CPU-only. They cover camera round-trips, the
+46 tests + 35 checks, ~25 s total, CPU-only. They cover camera round-trips, the
 paper's pinhole-bias premise, zero-init adapters being exact no-ops, gradients
-reaching every table while the backbone stays frozen, loss/metric invariants, and
-MAGSAC++ pose recovery. **A change that passes both is ready for a GPU run.**
+reaching every table while the backbone stays frozen, loss/metric invariants,
+MAGSAC++ pose recovery, the depth-convention pairing, and — when
+`depth_anything_3` is installed — DA3-Small hooks against the real package.
+**A change that passes both is ready for a GPU run.**
 
 They do *not* cover: real weights, real data, or any number in the paper. Never
 claim a paper result is reproduced — that is GPU-Claude's evidence to produce.
@@ -75,6 +88,17 @@ Module map:
 | `metrics.py` | Eq. 14–18 |
 | `data.py` | ScanNet++ and ADT loaders, window construction |
 | `matching.py` | UFM, MAGSAC++ pose target |
+| `experiments/` | full-dataset and ablation drivers (`scannetpp_all`, `fov_sweep`) |
+
+## Two invariants that are easy to break
+
+* **Depth convention.** Backbones declare `native_depth`, `install()` converts
+  once at the boundary, `Prediction` carries the tag, consumers call
+  `require_convention`. Never convert depth ad hoc in a new call site — that is
+  precisely how the direct path and the pinhole baselines silently diverged.
+* **Ω is `camera.valid_mask`,** which is `theta_max`. Anything that changes
+  `theta_max` changes every loss and every metric at once. That is deliberate
+  (`--max-fov` uses it), but it means a "harmless" camera tweak is never local.
 
 ## House style
 

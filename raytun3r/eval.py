@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from typing import Dict, List, Optional
 
@@ -51,6 +52,9 @@ def evaluate(runner, windows, camera, *, convention: str = "range",
     coverage_sum, n_cov = 0.0, 0
     for win in windows:
         pred = runner(win.images)
+        # d_reproj (Eq. 16) backprojects, and AbsRel compares against ground truth
+        # that data.py converted to this same convention.
+        pred.require_convention(convention)
         row: Dict[str, float] = {}
 
         # A method that only predicts part of the frame (Center-PH, Multi-PH) is
@@ -117,11 +121,13 @@ def _make_runner(method: str, backbone, camera, args, adapter_state=None):
     handles = []
     if method in ("vanilla",):
         backbone.install(None, camera, (args._h, args._w),
-                         patch_undistort=False, border_token=False, dpt_grid=False)
+                         patch_undistort=False, border_token=False, dpt_grid=False,
+                         depth_convention=args.convention)
         return (lambda imgs: backbone.forward(imgs[None])), handles
 
     if method == "param_free":
-        backbone.install(None, camera, (args._h, args._w), grid_mode=args.grid_mode)
+        backbone.install(None, camera, (args._h, args._w), grid_mode=args.grid_mode,
+                         depth_convention=args.convention)
         return (lambda imgs: backbone.forward(imgs[None])), handles
 
     if method == "raytun3r":
@@ -130,7 +136,8 @@ def _make_runner(method: str, backbone, camera, args, adapter_state=None):
         backbone.install(adapter, camera, (args._h, args._w),
                          patch_undistort=not args.no_patch_undistort,
                          border_token=not args.no_border_token,
-                         dpt_grid=not args.no_dpt_grid, grid_mode=args.grid_mode)
+                         dpt_grid=not args.no_dpt_grid, grid_mode=args.grid_mode,
+                         depth_convention=args.convention)
         if adapter_state:
             adapter.load_state_dict(adapter_state)
         else:
@@ -140,14 +147,16 @@ def _make_runner(method: str, backbone, camera, args, adapter_state=None):
 
     if method in ("center_ph", "multi_ph"):
         backbone.install(None, camera, (args._h, args._w),
-                         patch_undistort=False, border_token=False, dpt_grid=False)
+                         patch_undistort=False, border_token=False, dpt_grid=False,
+                         depth_convention=args.convention)
         ctor = CenterPH if method == "center_ph" else MultiPH
         base = ctor(backbone, camera, fov_deg=args.ph_fov, depth_convention=args.convention)
         return base, handles
 
     if method in ("lora", "caltok"):
         backbone.install(None, camera, (args._h, args._w),
-                         patch_undistort=False, border_token=False, dpt_grid=False)
+                         patch_undistort=False, border_token=False, dpt_grid=False,
+                         depth_convention=args.convention)
         if method == "lora":
             mods, handles = attach_lora(backbone, r=args.lora_r, alpha=args.lora_alpha)
         else:
@@ -169,7 +178,8 @@ def build_argparser() -> argparse.ArgumentParser:
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--backbone", default="vggt", choices=["vggt", "vggt_omega", "da3"])
     p.add_argument("--weights", default="pretrained")
-    p.add_argument("--variant", default="small")
+    p.add_argument("--variant", default="small",
+                   choices=["small", "base", "large", "giant"])
     p.add_argument("--dataset", default="scannetpp", choices=["scannetpp", "adt"])
     p.add_argument("--path", required=True)
     p.add_argument("--adapter", default=None, help="adapter.pt from raytun3r.train")
@@ -198,6 +208,9 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--max-size", type=int, default=504)
     p.add_argument("--max-frames", type=int, default=None)
     p.add_argument("--extrinsics-json", default=None)
+    p.add_argument("--max-fov", type=float, default=None,
+                   help="restrict Omega to this total FOV in degrees (never widens); "
+                        "the knob for the paper's stated 115 deg vs ScanNet++'s real ~170")
     p.add_argument("--convention", default="range", choices=["range", "z"])
     p.add_argument("--seed", type=int, default=0)
     return p
@@ -210,8 +223,16 @@ def main(argv=None) -> None:
                               **({"variant": args.variant} if args.backbone == "da3" else {}))
     source = load_sequence(args.dataset, args.path, max_size=args.max_size,
                            patch=backbone.patch_size, max_frames=args.max_frames,
-                           **({"extrinsics_json": args.extrinsics_json}
+                           **({"extrinsics_json": args.extrinsics_json,
+                               "depth_convention": args.convention}
                               if args.dataset == "adt" else {}))
+    if args.max_fov is not None:
+        before = 2 * math.degrees(source.camera.theta_max)
+        source.camera = source.camera.with_max_fov(args.max_fov)
+        after = 2 * math.degrees(source.camera.theta_max)
+        print(f"[data] Omega restricted: {before:.0f} deg -> {after:.0f} deg FOV "
+              f"(images unchanged; this narrows where the method is scored)")
+
     args._h, args._w = source.h, source.w
 
     matcher = build_matcher(args.matcher, device=args.device)

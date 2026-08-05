@@ -175,11 +175,25 @@ def main() -> int:
               (ad.pe is not None) == bb.has_abs_pe and (ad.rope is not None) == bb.has_rope,
               f"{ad.param_breakdown()}")
 
-        bb.install(ad, c, hw, patch_undistort=False, border_token=False, dpt_grid=False)
+        # Install in the head's native convention so this isolates the adapter;
+        # "range" would also apply a deliberate 1/cos to the depth.
+        bb.install(ad, c, hw, patch_undistort=False, border_token=False, dpt_grid=False,
+                   depth_convention=bb.native_depth)
         with torch.no_grad():
             z = bb.forward(imgs)
         check(f"{name}: zero-init adapter is an exact no-op",
               bool(torch.allclose(z.depth, base.depth, atol=1e-6)))
+
+        bb.install(ad, c, hw, patch_undistort=False, border_token=False, dpt_grid=False,
+                   depth_convention="range")
+        with torch.no_grad():
+            rng = bb.forward(imgs)
+        cos = c.ray_grid(*hw).to(rng.depth.device)[..., 2]
+        check(f"{name}: direct path honours the installed depth convention",
+              rng.depth_convention == "range"
+              and bool(torch.allclose(rng.depth, z.depth / cos.clamp_min(1e-6),
+                                      rtol=1e-5, atol=1e-6)),
+              "planar z -> euclidean range, same as the pinhole baselines")
 
         with torch.no_grad():
             for p in ad.parameters():

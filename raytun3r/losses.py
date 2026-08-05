@@ -229,6 +229,8 @@ def total_loss(pred, batch, camera: Camera, adapter, *,
     pose target (MAGSAC++ failed or too few matches) simply skip the pose term.
     """
     weights = weights or LossWeights()
+    # Eq. 7 is only correct when kappa^-1's normalisation matches what D means.
+    pred.require_convention(convention)
     s = pred.depth.shape[0]
     dev = pred.depth.device
 

@@ -36,11 +36,12 @@ python raytun3r/smoke_test.py
 python -m pytest raytun3r/tests -q
 ```
 
-Fit an adapter on one sequence (this is the whole method — a few minutes on one
-GPU, ~10k trainable parameters):
+Fit an adapter on one sequence. This is the whole method: ~10k trainable
+parameters, ~3 minutes on one GPU. `da3 --variant small` is the paper's primary
+backbone and needs `pip install depth-anything-3`:
 
 ```bash
-python -m raytun3r.train --backbone vggt --weights pretrained --dataset scannetpp --path /data/scannetpp/data/<scene> --out runs/rt3r/<scene>
+python -m raytun3r.train --backbone da3 --variant small --weights pretrained --dataset scannetpp --path /data/scannetpp/data/<scene> --stride 10 --out runs/rt3r/<scene>
 ```
 
 Then evaluate. `--adapter` is applied **only** to the method it was fitted for,
@@ -71,10 +72,28 @@ On ADT / Aria fisheye:
 python -m raytun3r.train --backbone vggt --dataset adt --path /group-volume/Fengjia/data/projectaria_tools_adt_data_clean/<seq> --out runs/rt3r/adt
 ```
 
-Useful flags: `--backbone {vggt,vggt_omega,da3}` (see
+Useful flags: `--backbone {da3,vggt,vggt_omega}` (see
 [Backbone support](#backbone-support) before choosing), `--matcher ufm` to
-refuse the fallbacks, `--max-frames` to shorten a debug run, and `--iters` /
+refuse the fallbacks, `--stride` (see decision 11 — it dominates the result),
+`--max-fov` to restrict Ω, `--max-frames` to shorten a debug run, and `--iters` /
 `--windows` to trade fit quality for time. `--help` lists all of them.
+
+### Full-dataset and ablation drivers
+
+Whole of ScanNet++, one scene per GPU, per-scene fit, aggregated with a standard
+error over scenes:
+
+```bash
+python -m raytun3r.experiments.scannetpp_all --backbone da3 --variant small --weights pretrained --root /netapp/datasets/scannetpp/data --out runs/rt3r/snpp-all-da3s --workers 4
+```
+
+The FOV sweep that tests why the virtual-pinhole baselines currently win:
+
+```bash
+python -m raytun3r.experiments.fov_sweep --backbone da3 --variant small --weights pretrained --dataset scannetpp --path /data/scannetpp/data/<scene> --out runs/fov-sweep/<scene>
+```
+
+Both accept `--dry-run` / `--limit` to print or shorten the plan first.
 
 ---
 
@@ -120,9 +139,24 @@ That single row decides what each backbone here can show:
 
 | `--backbone` | ViT | Absolute PE | RoPE | Adapter params (C) | Status |
 |---|---|---|---|---|---|
-| `vggt` | DINOv2 (vendored `vggt_visfeat`) | ✅ `pos_embed` | ✅ `RotaryPositionEmbedding2D` | 28,692 (C=1024) | **Faithful target.** One of the paper's three backbones; weights are public. |
+| `da3 --variant small` | DINOv2 ViT-S | ✅ `pos_embed` | ✅ `RotaryPositionEmbedding2D` | **10,772** (C=384) | **The paper's primary**, and the target for reproduction. Hooks verified against `depth_anything_3` 0.1.1. |
+| `vggt` | DINOv2 (vendored `vggt_visfeat`) | ✅ `pos_embed` | ✅ `RotaryPositionEmbedding2D` | 28,692 (C=1024) | Also one of the paper's three. The only backbone run on real data so far. |
 | `vggt_omega` | DINOv3 | ❌ none | ✅ `RopePositionEmbedding` | 20 | **Expected to barely help.** Reproduces the "RoPE only" row, not Tab. 1. |
-| `da3` | DINOv2-style | ✅ | ✅ | 10,772 (C=384) | Paper's primary. Needs external `depth_anything_3`; hooks written, untested. |
+
+DA3-Small is where the paper's headline parameter count comes from, and the
+adapter reproduces it exactly on the real model: `20·384 + 8·384 = 10,752` for
+the two PE tables, `+20` for the radial RoPE table.
+
+Three things about `depth_anything_3` 0.1.1 that the code has to work around,
+each confirmed by building `da3-small` and running it:
+
+* `DepthAnything3.forward` wraps the call in `torch.no_grad()` and queries
+  `torch.cuda.is_bf16_supported()`. Adaptation needs gradients through the frozen
+  model, so `DA3Backbone` wraps the **inner** `DepthAnything3Net`.
+* The DPT grid is added by `DualDPT._add_pos_embed`, not VGGT's `_apply_pos_embed`,
+  and the helpers live in `model.utils.head_utils`, not `model.heads.utils`.
+* `create_uv_grid`'s docstring claims `(width, height, 2)` while its caller
+  consumes `(height, width, 2)` — the same trap as in VGGT.
 
 `vggt_omega` is wired up so the claim can be *tested* on this repo's own model,
 not because it is expected to match the headline result. If it does improve
@@ -136,12 +170,24 @@ Each of these is a place the paper does not fully specify. All are options; the
 default is listed first.
 
 1. **Depth convention in Eq. 7.** `X = D·κ⁻¹` does not say how `κ⁻¹` is
-   normalised, and on a wide lens the two readings differ by `1/cos θ` — a
-   factor of 2.15 at the Aria rim (see the repo's `CONTEXT.md`). Default
-   `--convention range` treats `κ⁻¹` as the unit ray, which is defined at every
-   incidence angle. `--convention z` uses Eq. 1's `z=1` ray, matching what the
-   VGGT-family depth heads natively emit, but it diverges at 90° and is unusable
-   on the 185–200° datasets. Keep it consistent between train and eval.
+   normalised, and the two readings differ by a *per-pixel* `1/cos θ` — 1.74× at
+   the Aria rim, ~11× at a 170° frame corner. Being radially varying, no global
+   scale alignment can absorb it, so Eq. 16–18's `min_s` does not rescue a
+   mismatch.
+
+   Default `--convention range` treats `κ⁻¹` as the unit ray, which is defined at
+   every incidence angle; `--convention z` uses Eq. 1's `z=1` ray, which is what
+   every depth head here natively emits but diverges at 90°.
+
+   **The pairing is now enforced, not assumed.** Backbones declare
+   `native_depth`, `install(depth_convention=...)` converts once at the boundary,
+   `Prediction` carries the tag, and consumers call `require_convention`. This
+   was a live bug: `baselines.py` divided by `cos` to get range while the direct
+   fisheye path handed raw planar z to `backproject(convention="range")`, and
+   both were scored against ADT ground truth that *had* been converted. The
+   pinhole baselines were therefore the only methods in the right convention —
+   worth ~0.99 px of `d_reproj` on ScanNet++ geometry and ~0.66 px on Aria,
+   against a measured method-to-method spread of 0.10 px.
 
 2. **Prediction-grid radial coordinate.** "Undistorting through the calibrated
    fisheye-to-pinhole map" means `tan θ`, which saturates past the clamp: on a
@@ -197,6 +243,17 @@ default is listed first.
     heads excluded. That reproduces the paper's quoted 147.5K LoRA parameters on
     DA3-Small exactly (`12 × (8·384 + 1152·8) = 147,456`).
 
+11. **Evaluation stride.** The paper says "evaluate on the full sequence" and
+    filters below 2 px of flow, but never states a stride, and on this data the
+    choice dominates the method — see [Finding 1](#finding-1--the-evaluation-stride-matters-more-than-the-method).
+    `--stride 10` is used throughout; `--stride 1` is retained only to reproduce
+    the degenerate runs on the `results` branch.
+
+12. **Restricting Ω for an FOV ablation.** `--max-fov` narrows `theta_max`, which
+    defines `valid_mask`, which is Ω. Images are untouched, so the model still
+    sees the whole frame — this isolates *where a method is scored* from what it
+    is shown. It only ever narrows.
+
 ---
 
 ## Discrepancies found in the paper
@@ -223,9 +280,65 @@ default is listed first.
 
 ---
 
+## Measured results
+
+First real runs: `lambda_63`, **VGGT-1B frozen**, UFM, 30 three-frame windows,
+300 iters, Adam 1e-3, clip 1.0, 504 max side. Artifacts on the `results` branch
+under `results/rt3r/`.
+
+**ScanNet++ `3f15a9266d`, stride 10** (`results/rt3r/s10-snpp-3f15a9266d/`):
+
+| method | R° | t° | d_reproj | coverage |
+|---|---|---|---|---|
+| vanilla | 2.379 | 22.79 | 1.293 | — |
+| param_free | 2.377 | 22.64 | 1.304 | — |
+| **raytun3r** | **1.858** | 23.85 | 1.196 | — |
+| center_ph | 0.378 | 5.46 | 0.445 | 0.66 |
+| multi_ph | 0.406 | 5.24 | 0.836 | 1.00 |
+
+Read plainly: RayTun3R cuts rotation error 2.379° → 1.858°, a **1.28×**
+improvement against the paper's claimed 2–12×; it does **not** improve `t°`; and
+both virtual-pinhole baselines beat it by ~5× on `R°`, the *opposite* of Tab. 1's
+ordering. Candidate explanations, none yet tested: VGGT is not the paper's
+primary backbone (DA3-Small is), this frame is ~170° rather than the 115° the
+paper ascribes to ScanNet++, and one scene is one sample.
+
+> **These numbers predate two fixes and should not be quoted.** They were
+> produced before the depth-convention unification and before the DA3 hooks
+> worked. `d_reproj` in particular is not trustworthy: on this geometry the
+> convention mismatch alone accounts for ~0.99 px, against a method-to-method
+> spread of 0.10 px. `R°` and `t°` are unaffected — pose comes from the camera
+> head, not from depth — so the rotation story above still stands.
+> `experiments/scannetpp_all.py` and `experiments/fov_sweep.py` are the reruns.
+
+**ADT `seq131`, stride 1** — degenerate, kept only for the record. All five
+methods land within 0.06 px of each other on `d_reproj` (6.51–6.57), and the fit
+*diverged*: total loss rose 3.44 → 4.11 over 300 iters and `raytun3r` scored
+worse than `vanilla` on both `R°` (1.349 vs 1.305) and `t°` (68.4 vs 64.0).
+
+### Finding 1 — the evaluation stride matters more than the method
+
+The paper says "evaluate on the full sequence" and filters windows below 2 px of
+optical flow, but never specifies a stride. Taken as consecutive frames on this
+data, that admits pairs whose baseline is ~1.1 cm against ~3 m of scene depth. At
+that ratio translation direction is unobservable: MAGSAC++ on UFM matches — as
+good a geometric reference as exists here — is itself **11.1°** off the
+ground-truth translation, and `d_reproj` stops depending on depth at all. At
+stride 10 the baseline is ~9 cm, inter-frame rotation ~6.6°, and MAGSAC++ agrees
+with ground truth to **3.2°**. Stride-1 numbers measure the protocol, not the
+method; `--stride 10` is the default in both experiment drivers.
+
+### Finding 2 — the ScanNet++ pose convention is correct
+
+The nerfstudio→OpenCV conversion in `data.py` was checked against MAGSAC++, which
+is independent of it: median rotation disagreement 0.17°. Recorded so it is not
+re-litigated.
+
+---
+
 ## What is verified, and what is not
 
-**Verified on CPU** (`smoke_test.py`, 33 checks; `tests/`, 39 tests):
+**Verified on CPU** (`smoke_test.py`, 35 checks; `tests/`, 46 tests):
 
 * KB4/EUCM/pinhole `project ∘ unproject` round-trips to ~1e-5 px.
 * **The paper's central premise (Sec. 3).** The pinhole backprojection Jacobian
@@ -239,21 +352,31 @@ default is listed first.
   AbsRel and `δ₁.₂₅` are scale-invariant as Eq. 16–18 require.
 * MAGSAC++ recovers the true relative pose from exact matches to <1e-4°.
 * Train → checkpoint → eval runs end-to-end on the real ADT sequence.
+* **DA3-Small against the real package** (`depth_anything_3` 0.1.1): the adapter
+  is a no-op at zero init, the parameter-free corrections demonstrably change the
+  output, gradients reach every table while the model stays frozen, and `remove()`
+  restores bit-exactly. Its `embed_dim` is read from the ViT (384), which is where
+  the paper's 10,752 comes from: `20·384 + 8·384`, confirmed rather than assumed.
+* **Every method now reports depth in the same convention**, enforced by
+  `Prediction.require_convention` rather than by comment.
 
 **Not verified — needs the GPU box:**
 
 * **Any number in the paper.** Every check above is behavioural. Reproducing
   Tab. 1/2/3 needs real weights, real data, and UFM.
-* The `da3` backbone: hook points are written against the expected module layout
-  but have never been executed.
-* Whether the reproduction actually recovers the claimed 2–12× rotation
-  improvement — the open question this code exists to answer.
+* Whether the reproduction recovers the claimed 2–12× rotation improvement on the
+  paper's own backbone and dataset — the open question this code exists to answer.
+  The one run so far (VGGT, one scene) says 1.28×.
+* Whether the FOV gap explains the inverted baseline ordering
+  (`experiments/fov_sweep.py`).
+* DA3-Small has run only on random weights, at 70×70, on CPU. Nothing about
+  *pretrained* DA3 behaviour is established.
 
 ---
 
 ## Data
 
-**ScanNet++** (paper dataset, 115° DSLR fisheye) expects the official layout:
+**ScanNet++** (paper dataset) expects the official layout:
 
 ```
 <scene>/dslr/nerfstudio/transforms.json    OPENCV_FISHEYE intrinsics + poses
@@ -262,21 +385,34 @@ default is listed first.
 ```
 
 Poses are converted from nerfstudio/OpenGL to the OpenCV camera-from-world
-convention used everywhere else here.
+convention used everywhere else here (validated against MAGSAC++ to 0.17°).
+
+> **The DSLR is a full-frame ~170° fisheye, not the 115° the paper states.** Its
+> released calibration puts the frame corner at ~85° incidence, the corners carry
+> real image content, and `project ∘ unproject` round-trips there to 1.5e-5 px —
+> so the corners are inside the lens model, not extrapolation. This matters twice:
+> Ω is the whole rectangle rather than the inscribed circle (which would discard
+> 47% of a 504×336 frame), and 170° is far outside what any of these backbones
+> saw in training. `--max-fov 115` scores on the paper's stated cone; the sweep in
+> `experiments/fov_sweep.py` exists to find out whether that is the explanation
+> for the inverted baseline ordering.
+
+`render_depth/` is optional and was **absent** in the run on the `results`
+branch, so `AbsRel`/`δ₁.₂₅` (Tab. 3) have never been measured on ScanNet++.
 
 **ADT / Aria** reuses this repo's existing helpers — `cam3r/adt.py` for the
 trajectory and `T_device_camera`, `finetune/eval/baselines/aria_fisheye.py` for
 the KB4 calibration and the usable-cone limit — rather than restating them.
 
 > **ADT pose caveat.** `groundtruth/aria_trajectory.csv` gives world-from-*device*
-> poses; camera poses need `T_device_camera` from the MPS calibration or the VRS.
-> When `cam3r.adt.resolve_extrinsics` cannot find it, it falls back to the device
-> frame and reports `exact=False`. This loader then leaves ground-truth poses
-> **unset** rather than emit poses wrong by the sensor lever arm and mounting
-> rotation, and the evaluator says so and skips `R°`/`t°`/`d_reproj`. Depth
-> metrics still work, and adaptation is unaffected — it never reads GT pose.
-> Pass `--extrinsics-json` to enable pose metrics. The local sample sequence has
-> no MPS calibration, so it hits this path.
+> poses; camera poses need `T_device_camera`. With `projectaria_tools` installed
+> this resolves exactly from `video.vrs` and ADT pose metrics work — that is the
+> case on the GPU box. Where it cannot be resolved,
+> `cam3r.adt.resolve_extrinsics` reports `exact=False`, and this loader then
+> leaves ground-truth poses **unset** rather than emit poses wrong by the sensor
+> lever arm and mounting rotation; the evaluator says so and skips
+> `R°`/`t°`/`d_reproj`. Depth metrics still work, and adaptation is unaffected —
+> it never reads GT pose. `--extrinsics-json` supplies it manually.
 
 ADT `depth_npy` is **planar z** (`CONTEXT.md`); it is converted to euclidean
 range on load to match `--convention range`, and pixels outside the imaged cone

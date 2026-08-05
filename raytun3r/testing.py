@@ -79,3 +79,21 @@ def tiny_vggt_omega(embed_dim: int = 64, seed: int = 0) -> VGGTOmegaBackbone:
     bb = VGGTOmegaBackbone(model)
     bb.embed_dim = embed_dim
     return bb
+
+
+def tiny_da3(variant: str = "small", seed: int = 0):
+    """DA3 at real architecture, random weights -- the paper's primary backbone.
+
+    There is no smaller build than the released configs: the ViT depth, the DPT
+    ``out_layers`` and the head widths are wired together in the YAML. ``da3-small``
+    is 34M parameters, which is a couple of seconds on CPU for a two-frame 70x70
+    input, so tests use it as-is rather than trying to shrink it.
+
+    Raises ``ImportError`` when ``depth_anything_3`` (or its ``omegaconf``/
+    ``addict``/``einops`` deps) is missing; callers should skip on that.
+    """
+    from .backbones import DA3Backbone
+
+    bb = DA3Backbone.load(weights=None, variant=variant)
+    torch.manual_seed(seed)
+    return bb

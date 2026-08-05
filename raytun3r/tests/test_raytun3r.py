@@ -21,7 +21,8 @@ import torch
 
 from raytun3r import corrections as C
 from raytun3r.adapter import RadialAngularPE, RadialRoPE, RayTun3RAdapter, patch_polar_coords
-from raytun3r.cameras import EUCM, KannalaBrandt, Pinhole, pixel_grid
+from raytun3r.backbones import Prediction
+from raytun3r.cameras import EUCM, KannalaBrandt, Pinhole, convert_depth, pixel_grid
 from raytun3r.losses import (backproject, l2_penalty, pose_loss, reprojection_loss,
                              smoothness_loss, tv_penalty)
 from raytun3r.matching import Matches, mean_flow_magnitude, relative_pose_magsac
@@ -267,6 +268,56 @@ def scene():
     return cam, rng, R, t, Matches(target=uv, weight=(valid & inb).float()), valid
 
 
+def test_depth_conventions_are_related_by_one_over_cos():
+    """The pairing Eq. 7 requires: D and kappa^-1 must describe the same thing.
+
+    ``backproject(z_map, "z")`` and ``backproject(z_map/cos, "range")`` are the
+    same point cloud. Pinning the *relationship* rather than the choice means a
+    future silent switch of either side shows up here.
+    """
+    cam = toy_camera(112, 112, fov_deg=170.0)
+    z = 1.0 + torch.rand(112, 112)
+    # Restrict to where planar z is physically meaningful. This lens grazes 90 deg
+    # at the frame corner, and there 1/cos exceeds 1700 -- the equivalence still
+    # holds but float32 has no significant digits left to show it in. That
+    # degeneracy is exactly why "range" is the default convention.
+    cone = cam.valid_mask(112, 112) & (cam.ray_grid(112, 112)[..., 2] > math.cos(math.radians(80)))
+
+    rng = convert_depth(z, cam, src="z", dst="range")
+    X_z = backproject(z, cam, convention="z")
+    X_r = backproject(rng, cam, convention="range")
+    assert bool(cone.any())
+    assert torch.allclose(X_z[cone], X_r[cone], rtol=1e-5, atol=1e-6)
+
+    # and the conversion is a genuine round trip
+    assert torch.allclose(convert_depth(rng, cam, src="range", dst="z")[cone],
+                          z[cone], rtol=1e-5, atol=1e-6)
+
+
+def test_depth_conversion_is_radial_not_global():
+    """1/cos varies across the frame, so no single scale can absorb it.
+
+    This is why the mismatch had to be fixed rather than left to the scale
+    alignment in Eq. 16-18, which solves for one scalar per pair.
+    """
+    cam = toy_camera(112, 112, fov_deg=170.0)
+    cone = cam.valid_mask(112, 112)
+    ones = torch.ones(112, 112)
+    ratio = convert_depth(ones, cam, src="z", dst="range")[cone]
+    assert float(ratio.min()) == pytest.approx(1.0, abs=1e-3)
+    assert float(ratio.max()) > 3.0            # a 170 deg lens reaches ~11x at the corner
+
+
+def test_prediction_convention_guard_rejects_a_mismatch():
+    """A wrong convention is invisible without this guard: both are (H, W) depths."""
+    pred = Prediction(depth=torch.ones(1, 8, 8), conf=torch.ones(1, 8, 8),
+                      R=torch.eye(3)[None], t=torch.zeros(1, 3),
+                      depth_convention="z")
+    pred.require_convention("z")               # no raise
+    with pytest.raises(ValueError, match="range"):
+        pred.require_convention("range")
+
+
 def test_reprojection_loss_zero_at_truth(scene):
     cam, rng, R, t, m, valid = scene
     loss, wsum = reprojection_loss(rng, R, t, m, cam, valid=valid)
@@ -391,15 +442,108 @@ def test_backbone_hooks_are_transparent_and_reversible(name):
     assert (ad.pe is not None) == bb.has_abs_pe
     assert (ad.rope is not None) == bb.has_rope
 
-    bb.install(ad, cam, hw, patch_undistort=False, border_token=False, dpt_grid=False)
+    # Install in the head's own convention so this isolates the adapter: with
+    # depth_convention="range" the depth would also pick up a deliberate 1/cos,
+    # and a no-op check could not tell that apart from a broken hook.
+    bb.install(ad, cam, hw, patch_undistort=False, border_token=False, dpt_grid=False,
+               depth_convention=bb.native_depth)
     with torch.no_grad():
         z = bb.forward(imgs)
+    assert z.depth_convention == bb.native_depth
     assert torch.allclose(z.depth, base.depth, atol=1e-6)     # zero-init no-op
 
     bb.remove()
     with torch.no_grad():
         r = bb.forward(imgs)
     assert torch.equal(r.depth, base.depth)                   # exact restore
+
+
+def test_da3_hooks_fire_on_the_real_package():
+    """DA3-Small is the paper's primary backbone, so its hooks need real coverage.
+
+    Every assertion here corresponds to something that was wrong when written
+    blind against an assumed layout: the DPT method was ``_apply_pos_embed`` (it
+    is ``_add_pos_embed``), the helper import path was ``model.heads.utils`` (it
+    is ``model.utils.head_utils``), and the wrapper's ``forward`` is ``no_grad``
+    so the adapter could never have been trained through it.
+    """
+    pytest.importorskip("depth_anything_3", reason="da3 backbone is an optional dep")
+    pytest.importorskip("omegaconf")
+    from raytun3r.testing import tiny_da3
+
+    try:
+        bb = tiny_da3()
+    except ImportError as exc:
+        pytest.skip(f"depth_anything_3 present but not importable: {exc}")
+
+    assert bb.embed_dim == 384                    # read from the ViT, not hardcoded
+    assert bb.has_abs_pe and bb.has_rope
+
+    hw = (70, 70)
+    cam = toy_camera(*hw, fov_deg=140.0)
+    imgs = torch.rand(1, 2, 3, *hw)
+
+    with torch.no_grad():
+        base = bb.forward(imgs)
+    assert base.depth.shape == (2, *hw)
+    assert bool(torch.isfinite(base.depth).all())
+
+    ad = bb.make_adapter()
+    # Corrections off: this isolates the adapter, which must be an exact no-op
+    # at zero init.
+    bb.install(ad, cam, hw, patch_undistort=False, border_token=False, dpt_grid=False,
+               depth_convention=bb.native_depth)
+    with torch.no_grad():
+        z = bb.forward(imgs)
+    assert torch.allclose(z.depth, base.depth, atol=1e-5)
+
+    # Corrections on: these are *meant* to change the prediction. If the DPT-grid
+    # hook silently missed its target -- which is exactly what the wrong method
+    # name did -- the output would be unchanged, so this is the regression test.
+    bb.install(ad, cam, hw, depth_convention=bb.native_depth)
+    with torch.no_grad():
+        corrected = bb.forward(imgs)
+    assert not torch.allclose(corrected.depth, base.depth, atol=1e-5)
+
+    # gradients must reach every table through the frozen model
+    out = bb.forward(imgs)
+    out.depth.mean().backward()
+    assert all(p.grad is not None and torch.isfinite(p.grad).all()
+               for p in ad.parameters())
+    assert all(p.grad is None for p in bb.model.parameters())
+
+    bb.remove()
+    with torch.no_grad():
+        assert torch.equal(bb.forward(imgs).depth, base.depth)
+
+
+@pytest.mark.parametrize("name", ["vggt_omega", "vggt"])
+def test_installed_convention_is_applied_to_the_direct_path(name):
+    """The direct fisheye path must convert, exactly as the pinhole baselines do.
+
+    Before this, only ``baselines.py`` divided by cos, so vanilla/param_free/
+    raytun3r were scored in planar z against range ground truth.
+    """
+    from raytun3r.testing import tiny_vggt, tiny_vggt_omega
+
+    bb, hw = (tiny_vggt_omega(), (64, 64)) if name == "vggt_omega" else (tiny_vggt(), (70, 70))
+    cam = toy_camera(*hw, fov_deg=140.0)
+    imgs = torch.rand(1, 2, 3, *hw)
+
+    bb.install(None, cam, hw, patch_undistort=False, border_token=False,
+               dpt_grid=False, depth_convention="z")
+    with torch.no_grad():
+        as_z = bb.forward(imgs)
+    bb.install(None, cam, hw, patch_undistort=False, border_token=False,
+               dpt_grid=False, depth_convention="range")
+    with torch.no_grad():
+        as_range = bb.forward(imgs)
+
+    assert as_z.depth_convention == "z" and as_range.depth_convention == "range"
+    cos = cam.ray_grid(*hw)[..., 2]
+    assert torch.allclose(as_range.depth, as_z.depth / cos.clamp_min(1e-6), rtol=1e-5, atol=1e-6)
+    # and it is a real change, not a no-op that happens to pass
+    assert not torch.allclose(as_range.depth, as_z.depth, rtol=1e-2)
 
 
 @pytest.mark.parametrize("name", ["vggt_omega", "vggt"])
