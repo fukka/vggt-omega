@@ -10,11 +10,15 @@ paper is ambiguous, the choice made is listed under
 [Interpretation decisions](#interpretation-decisions) — read that section before
 comparing any number against a table.
 
-> **[PAPER.md](PAPER.md) is the condensed paper.** Every hyperparameter, the full
-> evaluation protocol, all five result tables, all four ablation tables, the
-> sequences the paper actually names, the seven things it leaves unspecified, and
-> its three errata. **Read it instead of the PDF** — it is written so no run needs
-> the paper open.
+> **[PAPER.md](PAPER.md) is the condensed paper, and only the paper.** Every
+> hyperparameter, the full evaluation protocol, all six result tables, all four
+> ablation tables, the sequences it actually names, the twelve things it leaves
+> unspecified, and its six errata. **Read it instead of the PDF** — it is written
+> so no run needs the paper open.
+>
+> **[reproduction.md](reproduction.md) is what is ours**: how we resolved each of
+> the paper's gaps, which numbers we are chasing, and how to read a run without
+> mistaking a paper-consistent result for a failure.
 
 **The idea.** Pretrained 3D foundation models carry a *pinhole bias* in their
 positional encodings: the local Jacobian of the pretrained PE is flat in image
@@ -100,7 +104,7 @@ python -m raytun3r.experiments.fov_sweep --backbone da3 --variant small --weight
 ```
 
 The adaptation-length sweep, which tests the one hyperparameter the paper never
-states (see [PAPER.md §8](PAPER.md#8--what-the-paper-does-not-specify)):
+states (see [PAPER.md §10](PAPER.md#10--what-the-paper-does-not-specify)):
 
 ```bash
 python -m raytun3r.experiments.iters_sweep --backbone da3 --variant small --weights pretrained --dataset scannetpp --path /data/scannetpp/data/<scene> --out runs/iters-sweep/<scene>
@@ -285,8 +289,9 @@ default is listed first.
   implements the standard `mean(|s·D − D*| / D*)`.
 
 * **Tab. 4(a) `RayTun3R (ours)` is not the best row in its own ablation.** The
-  full model reports R° 1.183 while four ablated variants score lower (0.942 for
-  "w/o RoPE adapter", 0.810 for "Naive remap of PE"). The paper acknowledges
+  full model reports R° 1.183 while six of the seven ablated variants score lower
+  (0.942 for "w/o RoPE adapter", 0.810 for "Naive remap of PE"); only "Patch
+  undistortion" at 1.397 is worse. The paper acknowledges
   "some ablations achieve slightly lower pose error" and selects on `d_reproj`,
   where the full model does win. Worth knowing before treating Tab. 4(a) as
   evidence that every component helps pose.
