@@ -13,6 +13,7 @@ answers "is the whole thing wired together".
 """
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -24,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from cam3r.adt import ADTPairDataset, find_adt_sequences
 from cam3r.alignment import PairwiseEdge, prune_scene_graph, ray_aware_global_alignment
 from cam3r.cameras import aria_214_1_kb4
+from cam3r.cli import default_adt_root
 from cam3r.data import CurriculumSampler, TwoViewSource, synthesize_view, random_camera_for
 from cam3r.geometry import make_se3, random_rotations, relative_pose, se3_inverse, transform_points
 from cam3r.losses import cam3r_loss
@@ -162,7 +164,7 @@ with tempfile.TemporaryDirectory() as td:
     check("checkpoint round-trip", same)
 
 # ------------------------------------------------------- 8. real ADT sample
-adt_root = "/Users/fengjiazhang/Documents/projectaria_tools_adt_data"
+adt_root = default_adt_root() or os.path.expanduser("~/Documents/projectaria_tools_adt_data")
 seqs = find_adt_sequences(adt_root)
 if seqs:
     ds = ADTPairDataset(seqs, resolution=64, max_frames=28,

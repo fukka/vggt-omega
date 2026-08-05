@@ -5,6 +5,7 @@ still runs on a machine without the ADT sample.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -22,9 +23,12 @@ from cam3r.adt import (
     select_pairs,
 )
 from cam3r.cameras import aria_214_1_kb4
+from cam3r.cli import ADT_ROOT_ENV
 from cam3r.geometry import geodesic_angle, make_se3, random_rotations, relative_pose
 
-ADT_ROOT = Path("/Users/fengjiazhang/Documents/projectaria_tools_adt_data")
+# Same knob the CLI uses, so one export makes the suite and the entry points
+# agree on which copy of ADT they are reading.
+ADT_ROOT = Path(os.environ.get(ADT_ROOT_ENV, "~/Documents/projectaria_tools_adt_data")).expanduser()
 
 
 def _require_adt() -> Path:
@@ -75,6 +79,27 @@ def test_pair_selection_honours_the_papers_window():
 def test_pair_selection_returns_nothing_for_a_static_camera():
     T = make_se3(torch.eye(3, dtype=torch.float64).repeat(10, 1, 1), torch.zeros(10, 3, dtype=torch.float64))
     assert select_pairs(T, baseline_m=(0.35, 1.75), angle_deg=(25.0, 65.0)) == []
+
+
+def test_pair_selection_never_crosses_recordings():
+    """Two ADT sessions of one apartment share a world frame.
+
+    Without a group label, frames from different recordings sit inside the
+    baseline/angle window and get paired -- a well-defined relative pose over
+    two scenes with different people and object placement.
+    """
+    torch.manual_seed(4)
+    n = 40
+    T = make_se3(random_rotations(n, seed=5, dtype=torch.float64),
+                 torch.randn(n, 3, dtype=torch.float64) * 1.5)
+    groups = [0] * (n // 2) + [1] * (n - n // 2)
+
+    ungrouped = select_pairs(T, baseline_m=(0.0, 99.0), angle_deg=(0.0, 180.0))
+    grouped = select_pairs(T, baseline_m=(0.0, 99.0), angle_deg=(0.0, 180.0), groups=groups)
+
+    assert any(groups[i] != groups[j] for i, j in ungrouped), "test layout has no cross pairs"
+    assert all(groups[i] == groups[j] for i, j in grouped)
+    assert set(grouped) < set(ungrouped), "grouping must only remove pairs"
 
 
 def test_pair_selection_respects_max_pairs():

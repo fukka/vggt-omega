@@ -1,7 +1,7 @@
 # Copyright (c) 2026.
 """Load the initializations CAM3R prescribes (paper Sec. 4.2 / Table S3).
 
-    Ray Module ViT      <- UniK3D angular module
+    Ray Module ViT      <- UniK3D (DINOv2 trunk, 1024->512 adapters, angular module)
     Cross-view Module   <- DUSt3R
     everything else     <- scratch
 
@@ -52,7 +52,14 @@ class LoadReport:
 
 
 def _read_state_dict(path: str) -> Dict[str, torch.Tensor]:
-    blob = torch.load(path, map_location="cpu")
+    try:
+        blob = torch.load(path, map_location="cpu", weights_only=True)
+    except Exception:
+        # DUSt3R's release pickles its training ``argparse.Namespace`` alongside
+        # the weights, which torch >= 2.6 refuses under weights_only.  Retry
+        # unrestricted -- the caller named this file explicitly, so it is as
+        # trusted as any other path they pass in.
+        blob = torch.load(path, map_location="cpu", weights_only=False)
     for key in ("model", "state_dict", "weights"):
         if isinstance(blob, dict) and key in blob and isinstance(blob[key], dict):
             blob = blob[key]
@@ -124,25 +131,62 @@ def load_unik3d_into_ray_module(
 ) -> LoadReport:
     """Initialize a :class:`cam3r.model.RayModule` from a UniK3D checkpoint.
 
-    Only the angular module transfers cleanly: UniK3D's encoder is a DINOv2
-    backbone with a different block layout, so its trunk is left at init and the
-    SH read-out head (``aggregate1/2``, ``latents_pos``, ``project_*``,
-    ``out_*``) is what carries over -- which is precisely the "angular module"
-    the paper names.
+    The paper initializes this whole backbone -- "the ViT backbones of the Ray
+    Module and Cross-view Module are initialized with pre-trained weights of
+    UniK3D and DUSt3R, respectively" -- so three groups transfer:
+
+    ``pixel_encoder.*``
+        The DINOv2 ViT-L/14 trunk.  Same pre-norm layout as
+        :class:`cam3r.model.Block` once the fused ``qkv`` is split, which is why
+        :func:`_split_fused_qkv` is shared with the DUSt3R loader.
+    ``pixel_decoder.camera_token_adapter.input_adapters.{i}``
+        Table S3's ``1024 -> 512`` projection, one per read-out depth.
+    ``pixel_decoder.angular_module.*``
+        The SH read-out head.
+
+    UniK3D's ``mask_token`` has no counterpart here and is dropped.
     """
     src = _read_state_dict(checkpoint)
-    report = LoadReport(source="UniK3D-angular")
+    report = LoadReport(source="UniK3D")
 
     remapped: Dict[str, torch.Tensor] = {}
+
+    def put(name: str, value: torch.Tensor) -> None:
+        remapped[name] = value
+
+    # Markers are matched anywhere in the key, not just at position 0, so a
+    # checkpoint saved under an extra wrapper prefix still resolves.
     for key, value in src.items():
-        if "angular_module." not in key:
+        # ---- trunk -------------------------------------------------------- #
+        if "pixel_encoder." in key:
+            tail = key.split("pixel_encoder.", 1)[1]
+            if tail.startswith("mask_token"):
+                continue                                # no counterpart here
+            if tail.endswith("attn.qkv.weight"):
+                prefix = tail[: -len(".qkv.weight")]
+                bias = src.get(key[: -len("weight")] + "bias")
+                for k, v in _split_fused_qkv(prefix, value, bias).items():
+                    put(k, v)
+                continue
+            if tail.endswith("attn.qkv.bias"):
+                continue                                # consumed above
+            put(tail, value)
             continue
-        tail = key.split("angular_module.", 1)[1]
-        # UniK3D names the per-degree projections/read-outs individually.
-        for i, deg in enumerate((1, 2, 3)):
-            tail = tail.replace(f"project_deg{deg}.", f"projects.{i}.")
-            tail = tail.replace(f"out_deg{deg}.", f"outs.{i}.")
-        remapped[f"head.{tail}"] = value
+
+        # ---- Table S3 projection ------------------------------------------ #
+        marker = "camera_token_adapter.input_adapters."
+        if marker in key:
+            put(f"camera_token_adapter.{key.split(marker, 1)[1]}", value)
+            continue
+
+        # ---- angular module ----------------------------------------------- #
+        if "angular_module." in key:
+            tail = key.split("angular_module.", 1)[1]
+            # UniK3D names the per-degree projections/read-outs individually.
+            for i, deg in enumerate((1, 2, 3)):
+                tail = tail.replace(f"project_deg{deg}.", f"projects.{i}.")
+                tail = tail.replace(f"out_deg{deg}.", f"outs.{i}.")
+            put(f"head.{tail}", value)
 
     for name, tensor in remapped.items():
         _assign(ray_module, name, tensor, report)

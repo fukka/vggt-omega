@@ -10,8 +10,8 @@ Three terms, combined in :func:`cam3r_loss`:
   pinhole mode its pretraining is biased toward.
 * **Local regression loss** (Eq. 7-8) on pointmaps, each side divided by its own
   mean point norm so the term is invariant to scene scale.
-* **Relative pose loss** (Eq. 9-10): geodesic rotation error plus a
-  scale-anchored translation term.
+* **Relative pose loss** (Eq. 9-10): geodesic rotation error plus a translation
+  term weighted by the detached pointmap-magnitude ratio.
 
 Unspecified in the paper, chosen here (see cam3r/README.md "Unspecified"):
 ``beta = 0.5``, ``lambda_A = lambda_regr = lambda_pose = 1.0``, azimuth
@@ -25,6 +25,7 @@ from typing import Dict, List, Optional, Tuple
 import torch
 
 from cam3r.geometry import geodesic_angle, rays_to_spherical, wrap_angle
+from cam3r.model import pointmap_scale
 
 
 # --------------------------------------------------------------------------- #
@@ -87,13 +88,7 @@ def _normalize_by_mean_norm(
     pts: torch.Tensor, valid: Optional[torch.Tensor], eps: float = 1e-6
 ) -> torch.Tensor:
     """Eq. 7: divide each view's pointmap by its own mean point norm ``eta``."""
-    norms = pts.norm(dim=1)                                  # (B, H, W)
-    if valid is None:
-        eta = norms.flatten(1).mean(dim=1)
-    else:
-        m = valid.flatten(1).float()
-        eta = (norms.flatten(1) * m).sum(1) / m.sum(1).clamp(min=1.0)
-    return pts / eta.clamp(min=eps).view(-1, 1, 1, 1)
+    return pts / pointmap_scale(pts, valid, eps).view(-1, 1, 1, 1)
 
 
 def local_regression_loss(
@@ -138,45 +133,44 @@ def local_regression_loss(
 def relative_pose_loss(
     R_pred: torch.Tensor,
     t_dir_pred: torch.Tensor,
-    scale_pred: torch.Tensor,
     R_gt: torch.Tensor,
     t_gt: torch.Tensor,
+    scale: Optional[torch.Tensor] = None,
     w_rot: float = 1.0,
     w_trans: float = 1.0,
-    w_scale: float = 1.0,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
-    """Eq. 9-10: geodesic rotation error, translation direction, and scale.
+    """Eq. 9-10: ``L_pose = lambda (L_rot + L_trans)``.
 
-    Eq. 10 is ambiguous about how ``s`` enters, and the obvious reading is a
-    trap.  Writing the prediction as ``s*u_p`` and the target as ``sg(s)*u_g``
-    gives ``L = s^2 ||u_p - u_g||^2``, whose derivative with respect to ``s`` is
-    ``2s(1 - cos)`` -- positive for *every* non-zero direction error.  Nothing
-    else in Eq. 11 constrains ``s`` (Eq. 8 divides pointmaps by their own mean
-    norm, so it is scale-free), so that formulation is minimized by driving
-    ``s`` to zero rather than by fixing the direction.
+    Eq. 9 is the geodesic error on SO(3).  Eq. 10 is
+    ``||t_{2->1} - t*_{2->1}||^2`` with ``t = s t_hat`` on both sides, where the
+    paper takes ``s`` from "the ratio of the predicted pointmap magnitudes to
+    the ground-truth magnitudes" and **detaches** it "to serve as a static
+    target".  So the same constant multiplies prediction and target, and the
+    term is a direction loss weighted by ``s^2``:
 
-    Splitting the two removes the degeneracy:
+        L_trans = s^2 ||u_pred - u_gt||^2 ,   s = sg(eta_pred / eta_gt)
 
-    * ``L_trans`` is a pure **direction** term, ``||u_p - u_g||^2``, with no
-      dependence on ``s`` at all;
-    * ``L_scale`` supervises magnitude in log space against ``||t_gt||``, which
-      is well-posed whenever the GT translation is metric (it is on ADT).
-      Pass ``w_scale=0`` for a corpus that is only defined up to scale.
+    Two consequences worth being explicit about.  ``s`` carries no gradient, so
+    nothing in Eq. 11 supervises a scale *head* -- which is why
+    :class:`cam3r.model.PoseHead` does not have one and the magnitude of ``t``
+    is read off the pointmap instead.  And because ``s`` is a ratio, a corpus
+    that is only defined up to scale still trains: it drops out of both sides.
+
+    ``scale`` may be omitted, which reduces the term to a plain unit-direction
+    loss (``s = 1``) -- the right thing when no pointmap GT accompanies the pose.
     """
     l_rot = geodesic_angle(R_pred, R_gt).mean()
 
     u_pred = torch.nn.functional.normalize(t_dir_pred, dim=-1, eps=1e-8)
     u_gt = torch.nn.functional.normalize(t_gt, dim=-1, eps=1e-8)
-    l_trans = ((u_pred - u_gt) ** 2).sum(-1).mean()
+    s = torch.ones_like(u_pred[..., 0]) if scale is None else scale.detach()
+    l_trans = (s**2 * ((u_pred - u_gt) ** 2).sum(-1)).mean()
 
-    gt_norm = t_gt.norm(dim=-1).clamp(min=1e-8)
-    l_scale = ((torch.log(scale_pred.clamp(min=1e-8)) - torch.log(gt_norm)) ** 2).mean()
-
-    loss = w_rot * l_rot + w_trans * l_trans + w_scale * l_scale
+    loss = w_rot * l_rot + w_trans * l_trans
     return loss, {
         "pose/rot_rad": float(l_rot.detach()),
         "pose/trans_sq": float(l_trans.detach()),
-        "pose/scale_log_sq": float(l_scale.detach()),
+        "pose/scale": float(s.mean().detach()),
     }
 
 
@@ -193,7 +187,6 @@ def cam3r_loss(
     beta: float = 0.5,
     conf_mode: str = "none",
     conf_alpha: float = 0.2,
-    w_scale: float = 1.0,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """Eq. 11: ``lambda_A L_A + lambda_regr L_regr + lambda_pose L_pose``.
 
@@ -233,9 +226,14 @@ def cam3r_loss(
 
     l_pose = zero
     if targets.get("R") is not None:
+        # Eq. 10's s = eta_pred / eta_gt, both measured on the reference view.
+        s = None
+        if preds.get("points") is not None and targets.get("points") is not None:
+            s = pointmap_scale(preds["points"][0], valid[0]) / pointmap_scale(
+                targets["points"][0], valid[0]
+            )
         l_pose, pose_logs = relative_pose_loss(
-            preds["R"], preds["t_dir"], preds["scale"], targets["R"], targets["t"],
-            w_scale=w_scale,
+            preds["R"], preds["t_dir"], targets["R"], targets["t"], scale=s,
         )
         logs.update(pose_logs)
     logs["loss/pose"] = float(l_pose.detach())

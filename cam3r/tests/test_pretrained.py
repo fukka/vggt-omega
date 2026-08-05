@@ -59,15 +59,42 @@ def _fake_dust3r(model: CAM3R) -> dict:
 
 
 def _fake_unik3d(model: CAM3R) -> dict:
-    head = model.ray_module.head
+    """A state dict in UniK3D's layout.
+
+    Three groups, matching the real checkpoint: the DINOv2 ``pixel_encoder``
+    trunk (fused ``attn.qkv``), the per-depth ``camera_token_adapter``
+    projections, and the ``angular_module`` with its per-degree names.
+    """
+    rm = model.ray_module
     sd = {}
-    for name, p in head.named_parameters():
-        src = name
-        for i, deg in enumerate((1, 2, 3)):
-            src = src.replace(f"projects.{i}.", f"project_deg{deg}.")
-            src = src.replace(f"outs.{i}.", f"out_deg{deg}.")
-        sd[f"model.decoder.angular_module.{src}"] = torch.randn_like(p)
-    sd["model.pixel_decoder.some.other.weight"] = torch.randn(4, 4)   # must be ignored
+    for name, p in rm.named_parameters():
+        if name.startswith("head."):
+            src = name[len("head.") :]
+            for i, deg in enumerate((1, 2, 3)):
+                src = src.replace(f"projects.{i}.", f"project_deg{deg}.")
+                src = src.replace(f"outs.{i}.", f"out_deg{deg}.")
+            sd[f"model.pixel_decoder.angular_module.{src}"] = torch.randn_like(p)
+        elif name.startswith("camera_token_adapter."):
+            tail = name[len("camera_token_adapter.") :]
+            sd[f"model.pixel_decoder.camera_token_adapter.input_adapters.{tail}"] = torch.randn_like(p)
+        elif ".attn.q." in name or ".attn.k." in name or ".attn.v." in name:
+            continue                                    # emitted fused below
+        else:
+            sd[f"model.pixel_encoder.{name}"] = torch.randn_like(p)
+
+    seen = set()
+    for name, p in rm.named_parameters():
+        if ".attn.q.weight" in name:
+            prefix = name[: -len(".q.weight")]
+            if prefix in seen:
+                continue
+            seen.add(prefix)
+            dim = p.shape[0]
+            sd[f"model.pixel_encoder.{prefix}.qkv.weight"] = torch.randn(3 * dim, dim)
+            sd[f"model.pixel_encoder.{prefix}.qkv.bias"] = torch.randn(3 * dim)
+
+    sd["model.pixel_encoder.mask_token"] = torch.randn(1, 4)   # no counterpart; ignored
+    sd["model.pixel_decoder.radial_module.x.weight"] = torch.randn(4, 4)   # ignored
     return sd
 
 
@@ -108,7 +135,12 @@ def test_dust3r_loader_maps_cross_attention_names(tmp_path):
     )
 
 
-def test_unik3d_loader_targets_the_angular_head(tmp_path):
+def test_unik3d_loader_initializes_the_whole_ray_backbone(tmp_path):
+    """The paper initializes the Ray Module's *ViT backbone*, not just the head.
+
+    Every parameter of the Ray Module has a UniK3D counterpart, so a correct
+    loader leaves nothing at init.
+    """
     model = _tiny()
     ckpt = tmp_path / "unik3d.pt"
     torch.save(_fake_unik3d(model), ckpt)
@@ -116,10 +148,26 @@ def test_unik3d_loader_targets_the_angular_head(tmp_path):
     trunk_before = model.ray_module.blocks[0].mlp.fc1.weight.clone()
     report = load_unik3d_into_ray_module(model.ray_module, str(ckpt))
 
-    assert report.n_loaded > 0
-    assert all(n.startswith("head.") for n in report.loaded)
-    # The ViT trunk is a different architecture and must be left alone.
-    assert torch.equal(trunk_before, model.ray_module.blocks[0].mlp.fc1.weight)
+    assert not torch.equal(trunk_before, model.ray_module.blocks[0].mlp.fc1.weight)
+    assert report.missing == [], f"left at init: {report.missing}"
+    assert report.skipped_shape == []
+    for group in ("blocks.", "patch_embed.", "camera_token_adapter.", "head."):
+        assert any(n.startswith(group) for n in report.loaded), group
+
+
+def test_unik3d_loader_splits_the_trunks_fused_qkv(tmp_path):
+    model = _tiny()
+    sd = _fake_unik3d(model)
+    ckpt = tmp_path / "u.pt"
+    torch.save(sd, ckpt)
+    load_unik3d_into_ray_module(model.ray_module, str(ckpt))
+
+    fused = sd["model.pixel_encoder.blocks.0.attn.qkv.weight"]
+    dim = fused.shape[0] // 3
+    attn = model.ray_module.blocks[0].attn
+    assert torch.allclose(attn.q.weight, fused[:dim])
+    assert torch.allclose(attn.k.weight, fused[dim : 2 * dim])
+    assert torch.allclose(attn.v.weight, fused[2 * dim :])
 
 
 def test_unik3d_loader_maps_per_degree_names(tmp_path):
@@ -130,7 +178,20 @@ def test_unik3d_loader_maps_per_degree_names(tmp_path):
     load_unik3d_into_ray_module(model.ray_module, str(ckpt))
     assert torch.allclose(
         model.ray_module.head.projects[0].weight,
-        sd["model.decoder.angular_module.project_deg1.weight"],
+        sd["model.pixel_decoder.angular_module.project_deg1.weight"],
+    )
+
+
+def test_unik3d_loader_maps_the_table_s3_projection(tmp_path):
+    """Table S3's 1024 -> 512 is UniK3D's ``camera_token_adapter``, one per depth."""
+    model = _tiny()
+    sd = _fake_unik3d(model)
+    ckpt = tmp_path / "u.pt"
+    torch.save(sd, ckpt)
+    load_unik3d_into_ray_module(model.ray_module, str(ckpt))
+    assert torch.allclose(
+        model.ray_module.camera_token_adapter[0].weight,
+        sd["model.pixel_decoder.camera_token_adapter.input_adapters.0.weight"],
     )
 
 

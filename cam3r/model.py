@@ -45,20 +45,37 @@ class CAM3RConfig:
     patch_size: int = 16          # Cross-view encoder (Table S3)
     ray_patch_size: int = 14      # Ray Module (Table S3)
 
+    # Ray Module trunk = DINOv2 ViT-L/14, the backbone UniK3D initializes.
     ray_embed_dim: int = 1024     # ViT-L
     ray_depth: int = 24
     ray_heads: int = 16
+    ray_register_tokens: int = 1  # DINOv2-with-registers
+    ray_pos_grid: int = 37        # DINOv2 pos-embed grid (518 / 14), interpolated
+    # Table S3: "Linear projection (1024 -> 512)" sits between the trunk and the
+    # angular module, which therefore runs at 512 -- the width of UniK3D's
+    # ``angular_module``, whose weights initialize it.  One projection per
+    # read-out depth, as in UniK3D's ``camera_token_adapter``.
+    ray_angular_dim: int = 512
+    ray_angular_heads: int = 8
+    ray_layer_scale: float = 1e-4   # UniK3D config: layer_scale = 0.0001
+    # 1-based trunk layers whose class token feeds the angular module.  ``None``
+    # spreads them evenly, which reproduces the paper's {6, 12, 18, 24} at
+    # ray_depth 24 and still works for the small configs the tests build.
+    ray_readout_layers: Optional[Tuple[int, ...]] = None
 
     cv_embed_dim: int = 1024      # ViT-L encoder
     cv_enc_depth: int = 24
     cv_dec_embed_dim: int = 768   # decoder runs narrower than the encoder, as in DUSt3R
     cv_dec_depth: int = 12
     cv_heads: int = 16
-    cv_dec_heads: int = 12
+    cv_dec_heads: int = 12        # DUSt3R's BaseDecoder: 768 wide, 12 heads
 
     sh_degree: int = 3
     mlp_ratio: float = 4.0
-    dpt_features: int = 128
+    dpt_features: int = 256       # Table S3: D_feat = 256
+    # Table S3: "Multi-scale fusion {0, 6, 9, 12}" -- DUSt3R's hook set, where 0
+    # is the encoder output and 6/9/12 are 1-based decoder layers.
+    dpt_hooks: Tuple[int, ...] = (0, 6, 9, 12)
 
 
 # --------------------------------------------------------------------------- #
@@ -103,19 +120,42 @@ class Attention(nn.Module):
         return self.proj(att.transpose(1, 2).reshape(B, N, H * D))
 
 
-class Block(nn.Module):
-    """Pre-norm self-attention block."""
+class LayerScale(nn.Module):
+    """DINOv2's per-channel residual gate.
 
-    def __init__(self, dim: int, heads: int, mlp_ratio: float = 4.0) -> None:
+    Present in UniK3D's encoder blocks as ``ls1``/``ls2``.  Loading those blocks
+    into a trunk that lacks it would silently drop the learned residual scaling,
+    so the module is part of the block rather than an option.
+    """
+
+    def __init__(self, dim: int, init: float = 1.0) -> None:
+        super().__init__()
+        self.gamma = nn.Parameter(torch.full((dim,), init))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x * self.gamma
+
+
+class Block(nn.Module):
+    """Pre-norm self-attention block.
+
+    ``layer_scale`` selects the DINOv2 layout used by the Ray Module trunk, whose
+    weights come from UniK3D.  The Cross-view Module is CroCo/DUSt3R, which has
+    no LayerScale, so it leaves the flag off and keeps the plain residual.
+    """
+
+    def __init__(self, dim: int, heads: int, mlp_ratio: float = 4.0, layer_scale: bool = False) -> None:
         super().__init__()
         self.norm1 = nn.LayerNorm(dim)
         self.attn = Attention(dim, heads)
         self.norm2 = nn.LayerNorm(dim)
         self.mlp = Mlp(dim, mlp_ratio)
+        self.ls1 = LayerScale(dim) if layer_scale else nn.Identity()
+        self.ls2 = LayerScale(dim) if layer_scale else nn.Identity()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = x + self.attn(self.norm1(x))
-        return x + self.mlp(self.norm2(x))
+        x = x + self.ls1(self.attn(self.norm1(x)))
+        return x + self.ls2(self.mlp(self.norm2(x)))
 
 
 class DecoderBlock(nn.Module):
@@ -176,32 +216,100 @@ def sincos_pos_embed(dim: int, h: int, w: int, device, dtype) -> torch.Tensor:
 # Ray Module
 # --------------------------------------------------------------------------- #
 
-class AngularHead(nn.Module):
-    """Class tokens -> base-grid intrinsics + SH coefficients.
+class UniK3DMlp(nn.Module):
+    """UniK3D's ``MLP``: LayerNorm, expand, GELU, contract.
 
-    Mirrors UniK3D's ``AngularModule``: four groups of class tokens are expanded
-    into 3/3/5/7 latent slots (pinhole parameters plus SH degrees 1-3), refined
-    by two attention blocks, then read out.  Submodule names match UniK3D's so a
-    checkpoint maps across.
+    Differs from :class:`Mlp` in carrying its own input norm, which is why the
+    block around it has no separate ``norm2``.  Name-compatible with UniK3D so
+    the angular module's weights load.
     """
 
-    def __init__(self, dim: int, heads: int, degree: int = 3) -> None:
+    def __init__(self, dim: int, expansion: float = 4.0, output_dim: Optional[int] = None) -> None:
+        super().__init__()
+        hidden = int(dim * expansion)
+        self.norm = nn.LayerNorm(dim)
+        self.proj1 = nn.Linear(dim, hidden)
+        self.proj2 = nn.Linear(hidden, output_dim or dim)
+        self.act = nn.GELU()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.proj2(self.act(self.proj1(self.norm(x))))
+
+
+class AngularAttentionBlock(nn.Module):
+    """UniK3D's ``AttentionBlock``, self-attention mode.
+
+    Two details separate it from :class:`Block`, and both matter for loading
+    ``angular_module`` weights: the query and key/value paths take *different*
+    LayerNorms of the same input, and the latent positions are added to the
+    per-head **queries** after projection rather than to the token embeddings.
+    Projections are bias-free.
+    """
+
+    def __init__(self, dim: int, heads: int, expansion: float = 4.0, layer_scale: float = 1e-4) -> None:
+        super().__init__()
+        if dim % heads:
+            raise ValueError(f"angular dim {dim} not divisible by {heads} heads")
+        self.heads = heads
+        self.mlp = UniK3DMlp(dim, expansion)
+        self.kv = nn.Linear(dim, dim * 2, bias=False)
+        self.q = nn.Linear(dim, dim, bias=False)
+        self.norm_attnx = nn.LayerNorm(dim)
+        self.norm_attnctx = nn.LayerNorm(dim)
+        self.out = nn.Linear(dim, dim, bias=False)
+        self.ls1_1 = LayerScale(dim, layer_scale)
+        self.ls2 = LayerScale(dim, layer_scale)
+
+    def forward(self, x: torch.Tensor, pos_embed: torch.Tensor) -> torch.Tensor:
+        B, N, C = x.shape
+        h, d = self.heads, C // self.heads
+        # UniK3D packs kv as (kv h d), so k is the first half of the output.
+        kv = self.kv(self.norm_attnctx(x)).view(B, N, 2, h, d)
+        k, v = kv[:, :, 0].transpose(1, 2), kv[:, :, 1].transpose(1, 2)
+        q = self.q(self.norm_attnx(x)).view(B, N, h, d).transpose(1, 2)
+        q = q + pos_embed.reshape(B, N, h, d).transpose(1, 2)
+
+        a = F.scaled_dot_product_attention(q, k, v).transpose(1, 2).reshape(B, N, C)
+        x = self.ls1_1(self.out(a)) + x
+        return self.ls2(self.mlp(x)) + x
+
+
+class AngularHead(nn.Module):
+    """UniK3D's ``AngularModule``: class tokens -> base-grid intrinsics + SH coefficients.
+
+    One group of class tokens per read-out depth is expanded into 3/3/5/7 latent
+    slots (pinhole parameters plus SH degrees 1-3), refined by two attention
+    blocks, then read out.  Submodule names, widths and biases match UniK3D's so
+    the checkpoint the paper initializes from maps across.
+    """
+
+    def __init__(
+        self,
+        dim: int,
+        heads: int,
+        degree: int = 3,
+        expansion: float = 4.0,
+        layer_scale: float = 1e-4,
+    ) -> None:
         super().__init__()
         self.pin_params = 3
         self.deg_params = (3, 5, 7)[:degree]
         self.degree = degree
         self.num_params = self.pin_params + sum(self.deg_params)
 
-        self.aggregate1 = Block(dim, heads)
-        self.aggregate2 = Block(dim, heads)
-        self.latents_pos = nn.Parameter(torch.randn(1, self.num_params, dim) * 0.02)
+        self.aggregate1 = AngularAttentionBlock(dim, heads, expansion, layer_scale)
+        self.aggregate2 = AngularAttentionBlock(dim, heads, expansion, layer_scale)
+        self.latents_pos = nn.Parameter(torch.randn(1, self.num_params, dim))
 
         self.project_pin = nn.Linear(dim, self.pin_params * dim, bias=False)
         self.projects = nn.ModuleList(
             [nn.Linear(dim, n * dim, bias=False) for n in self.deg_params]
         )
-        self.out_pinhole = nn.Linear(dim, 1)
-        self.outs = nn.ModuleList([nn.Linear(dim, 3) for _ in self.deg_params])
+        # UniK3D reads out through a two-layer MLP, not a bare Linear.
+        self.out_pinhole = UniK3DMlp(dim, expansion=1.0, output_dim=1)
+        self.outs = nn.ModuleList(
+            [UniK3DMlp(dim, expansion=1.0, output_dim=3) for _ in self.deg_params]
+        )
 
     def forward(self, cls_tokens: torch.Tensor, H: int, W: int) -> Tuple[torch.Tensor, torch.Tensor]:
         B, n_groups, dim = cls_tokens.shape
@@ -210,9 +318,10 @@ class AngularHead(nn.Module):
         toks = [self.project_pin(groups[0]).reshape(B, -1, dim)]
         for g, proj in zip(groups[1:], self.projects):
             toks.append(proj(g).reshape(B, -1, dim))
-        x = torch.cat(toks, dim=1) + self.latents_pos
+        x = torch.cat(toks, dim=1)
 
-        x = self.aggregate2(self.aggregate1(x))
+        pos = self.latents_pos.expand(B, -1, -1)
+        x = self.aggregate2(self.aggregate1(x, pos), pos)
         splits = torch.split(x, [self.pin_params] + list(self.deg_params), dim=1)
 
         intr = self._fill_intrinsics(self.out_pinhole(splits[0]).squeeze(-1), H, W)
@@ -235,19 +344,79 @@ class AngularHead(nn.Module):
         return torch.stack([hfov, vfov, cx, cy], dim=-1)
 
 
+def default_readout_layers(depth: int, n_groups: int) -> Tuple[int, ...]:
+    """Evenly spaced 1-based trunk layers, one per angular-module token group.
+
+    ``(24, 4)`` gives ``(6, 12, 18, 24)`` -- the paper's set, which is in turn
+    UniK3D's ``pixel_encoder.depths``.  A trunk shallower than ``n_groups``
+    (the tests build 2-block ones) repeats layers rather than failing; the
+    groups stay distinct because each has its own projection.
+    """
+    return tuple(
+        min(depth, max(1, int(round((i + 1) * depth / n_groups)))) for i in range(n_groups)
+    )
+
+
 class RayModule(nn.Module):
-    """Per-image branch predicting the SH ray field (Eq. 2)."""
+    """Per-image branch predicting the SH ray field (Eq. 2).
+
+    DINOv2 ViT-L/14 trunk with the class token read at
+    :func:`default_readout_layers` -- the paper's {6, 12, 18, 24} -- each depth
+    projected 1024 -> 512 by its own linear (Table S3, UniK3D's
+    ``camera_token_adapter``) before the angular module consumes the stack.  The
+    layout is UniK3D's throughout, because that is the checkpoint the paper
+    initializes this backbone from.
+    """
 
     def __init__(self, cfg: CAM3RConfig) -> None:
         super().__init__()
         self.cfg = cfg
         dim = cfg.ray_embed_dim
-        self.n_groups = 1 + len(( 3, 5, 7)[: cfg.sh_degree])
+        self.n_groups = 1 + len((3, 5, 7)[: cfg.sh_degree])
+        self.readout_layers = tuple(
+            cfg.ray_readout_layers or default_readout_layers(cfg.ray_depth, self.n_groups)
+        )
+        if len(self.readout_layers) != self.n_groups:
+            raise ValueError(
+                f"the angular module wants {self.n_groups} token groups but "
+                f"ray_readout_layers names {len(self.readout_layers)} layers"
+            )
+        if max(self.readout_layers) > cfg.ray_depth or min(self.readout_layers) < 1:
+            raise ValueError(f"ray_readout_layers {self.readout_layers} outside 1..{cfg.ray_depth}")
+
         self.patch_embed = PatchEmbed(cfg.ray_patch_size, dim)
-        self.cls_tokens = nn.Parameter(torch.randn(1, self.n_groups, dim) * 0.02)
-        self.blocks = nn.ModuleList([Block(dim, cfg.ray_heads, cfg.mlp_ratio) for _ in range(cfg.ray_depth)])
+        self.cls_token = nn.Parameter(torch.randn(1, 1, dim) * 0.02)
+        self.register_tokens = (
+            nn.Parameter(torch.randn(1, cfg.ray_register_tokens, dim) * 0.02)
+            if cfg.ray_register_tokens
+            else None
+        )
+        g = cfg.ray_pos_grid
+        self.pos_embed = nn.Parameter(torch.randn(1, 1 + g * g, dim) * 0.02)
+        self.blocks = nn.ModuleList(
+            [Block(dim, cfg.ray_heads, cfg.mlp_ratio, layer_scale=True) for _ in range(cfg.ray_depth)]
+        )
         self.norm = nn.LayerNorm(dim)
-        self.head = AngularHead(dim, cfg.ray_heads, cfg.sh_degree)
+        self.camera_token_adapter = nn.ModuleList(
+            [nn.Linear(dim, cfg.ray_angular_dim) for _ in range(self.n_groups)]
+        )
+        self.head = AngularHead(
+            cfg.ray_angular_dim,
+            cfg.ray_angular_heads,
+            cfg.sh_degree,
+            cfg.mlp_ratio,
+            cfg.ray_layer_scale,
+        )
+
+    def _positions(self, gh: int, gw: int, dtype: torch.dtype) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Class and patch position embeddings, bicubically resized to the grid."""
+        cls_pos, patch_pos = self.pos_embed[:, :1], self.pos_embed[:, 1:]
+        g = int(round(math.sqrt(patch_pos.shape[1])))
+        if (gh, gw) != (g, g):
+            p = patch_pos.reshape(1, g, g, -1).permute(0, 3, 1, 2)
+            p = F.interpolate(p, size=(gh, gw), mode="bicubic", align_corners=False)
+            patch_pos = p.permute(0, 2, 3, 1).reshape(1, gh * gw, -1)
+        return cls_pos.to(dtype), patch_pos.to(dtype)
 
     def forward(self, img: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """-> ``(rays (B,3,H,W), intrinsics (B,4), sh_coeffs (B,C,3))``."""
@@ -258,14 +427,33 @@ class RayModule(nn.Module):
         rh, rw = max(ps, round(H / ps) * ps), max(ps, round(W / ps) * ps)
         x = img if (rh, rw) == (H, W) else F.interpolate(img, size=(rh, rw), mode="bilinear", align_corners=False)
 
-        tokens, gh, gw = self.patch_embed(x)
-        tokens = tokens + sincos_pos_embed(tokens.shape[-1], gh, gw, tokens.device, tokens.dtype)
-        tokens = torch.cat([self.cls_tokens.expand(B, -1, -1), tokens], dim=1)
-        for blk in self.blocks:
-            tokens = blk(tokens)
-        tokens = self.norm(tokens)
+        patches, gh, gw = self.patch_embed(x)
+        cls_pos, patch_pos = self._positions(gh, gw, patches.dtype)
+        parts = [self.cls_token.expand(B, -1, -1) + cls_pos]
+        if self.register_tokens is not None:
+            parts.append(self.register_tokens.expand(B, -1, -1))
+        parts.append(patches + patch_pos)
+        tokens = torch.cat(parts, dim=1)
 
-        intr, coeffs = self.head(tokens[:, : self.n_groups], H, W)
+        # DINOv2 applies the trunk norm to every intermediate it hands out, and
+        # the class token is index 0 (registers sit between it and the patches).
+        # Capture by depth, then index in request order -- a shallow trunk may
+        # name the same layer for more than one group.
+        wanted = set(self.readout_layers)
+        captured: Dict[int, torch.Tensor] = {}
+        for depth, blk in enumerate(self.blocks, start=1):
+            tokens = blk(tokens)
+            if depth in wanted:
+                captured[depth] = self.norm(tokens)[:, 0]
+
+        cam_tokens = torch.cat(
+            [
+                adapt(captured[depth]).unsqueeze(1)
+                for adapt, depth in zip(self.camera_token_adapter, self.readout_layers)
+            ],
+            dim=1,
+        )
+        intr, coeffs = self.head(cam_tokens, H, W)
         return decode_rays(coeffs, intr, H, W, degree=self.cfg.sh_degree), intr, coeffs
 
 
@@ -310,11 +498,15 @@ class DPTHead(nn.Module):
 
 
 class PoseHead(nn.Module):
-    """Pooled cross-view tokens -> ``R_2->1`` (6D), ``t_hat_2->1``, scale ``s``.
+    """Pooled cross-view tokens -> ``R_2->1`` (6D) and ``t_hat_2->1`` on S^2.
 
-    The paper does not state a parameterization; 6D rotation is used here for
-    its singularity-free gradients, translation is emitted as a direction and
-    L2-normalized onto S^2, and scale is exponentiated so it stays positive.
+    The paper's head regresses only these two; the magnitude of ``t = s t_hat``
+    comes from the predicted pointmap, not from a learned scalar (Sec. 3.2.3 --
+    "the scale factor is derived from the ratio of the predicted pointmap
+    magnitudes").  A scale head here would take no gradient under Eq. 10.
+
+    The paper does not state a parameterization; 6D rotation is used for its
+    singularity-free gradients and translation is L2-normalized onto S^2.
     """
 
     def __init__(self, dim: int, hidden: int = 256) -> None:
@@ -324,16 +516,14 @@ class PoseHead(nn.Module):
         )
         self.to_rot = nn.Linear(hidden, 6)
         self.to_trans = nn.Linear(hidden, 3)
-        self.to_scale = nn.Linear(hidden, 1)
 
-    def forward(self, f1: torch.Tensor, f2: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, f1: torch.Tensor, f2: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         from cam3r.geometry import rot6d_to_matrix
 
         h = self.mlp(torch.cat([f1.mean(dim=1), f2.mean(dim=1)], dim=-1))
         R = rot6d_to_matrix(self.to_rot(h))
         t_dir = F.normalize(self.to_trans(h), dim=-1, eps=1e-8)
-        scale = torch.exp(self.to_scale(h).squeeze(-1).clamp(-15.0, 15.0))
-        return R, t_dir, scale
+        return R, t_dir
 
 
 class CrossViewModule(nn.Module):
@@ -359,10 +549,12 @@ class CrossViewModule(nn.Module):
         )
         self.dec_norm = nn.LayerNorm(ddim)
 
-        n_stages = min(4, cfg.cv_dec_depth)
-        self.stage_idx = [
-            int(round(i * (cfg.cv_dec_depth - 1) / max(n_stages - 1, 1))) for i in range(n_stages)
-        ]
+        # Table S3: "Multi-scale fusion {0, 6, 9, 12}" -- DUSt3R's hook set,
+        # where 0 is the encoder output (before any decoder block) and 6/9/12
+        # are 1-based decoder layers.  Clamped so the small configs the tests
+        # build still name distinct, in-range stages.
+        self.dpt_hooks = sorted({min(h, cfg.cv_dec_depth) for h in cfg.dpt_hooks})
+        n_stages = len(self.dpt_hooks)
         self.head1 = DPTHead(ddim, cfg.dpt_features, 2, n_stages)
         self.head2 = DPTHead(ddim, cfg.dpt_features, 2, n_stages)
         self.pose_head = PoseHead(ddim)
@@ -380,21 +572,22 @@ class CrossViewModule(nn.Module):
 
         f1, f2 = self.encode(img1), self.encode(img2)
         g1, g2 = self.decoder_embed(f1), self.decoder_embed(f2)
-        stages1: List[torch.Tensor] = []
-        stages2: List[torch.Tensor] = []
-        for idx, (b1, b2) in enumerate(zip(self.dec_blocks, self.dec_blocks2)):
+        # Hook 0 is the encoder output, before any decoder block has run.
+        stages1: List[torch.Tensor] = [g1] if 0 in self.dpt_hooks else []
+        stages2: List[torch.Tensor] = [g2] if 0 in self.dpt_hooks else []
+        for depth, (b1, b2) in enumerate(zip(self.dec_blocks, self.dec_blocks2), start=1):
             # Both branches read the *previous* layer's other-view state (Eq. 3),
             # so the update is symmetric rather than order-dependent.
             n1, n2 = b1(g1, g2), b2(g2, g1)
             g1, g2 = n1, n2
-            if idx in self.stage_idx:
+            if depth in self.dpt_hooks:
                 stages1.append(g1)
                 stages2.append(g2)
 
         g1, g2 = self.dec_norm(g1), self.dec_norm(g2)
         o1 = self.head1(stages1, gh, gw, H, W)
         o2 = self.head2(stages2, gh, gw, H, W)
-        R, t_dir, scale = self.pose_head(g1, g2)
+        R, t_dir = self.pose_head(g1, g2)
 
         return {
             # softplus keeps distance and confidence strictly positive without a
@@ -403,13 +596,30 @@ class CrossViewModule(nn.Module):
             "conf": [F.softplus(o1[:, 1]) + 1e-4, F.softplus(o2[:, 1]) + 1e-4],
             "R": R,
             "t_dir": t_dir,
-            "scale": scale,
         }
 
 
 # --------------------------------------------------------------------------- #
 # Full model
 # --------------------------------------------------------------------------- #
+
+def pointmap_scale(
+    points: torch.Tensor, valid: Optional[torch.Tensor] = None, eps: float = 1e-6
+) -> torch.Tensor:
+    """Mean point norm ``eta`` of a (B, 3, H, W) pointmap -- Eq. 7's scale.
+
+    One definition serves both the normalization in
+    :func:`cam3r.losses.local_regression_loss` and the ``s`` of Eq. 10, so the
+    two cannot drift apart.
+    """
+    norms = points.norm(dim=1).flatten(1)
+    if valid is None:
+        eta = norms.mean(dim=1)
+    else:
+        m = valid.flatten(1).to(norms.dtype)
+        eta = (norms * m).sum(1) / m.sum(1).clamp(min=1.0)
+    return eta.clamp(min=eps)
+
 
 class CAM3R(nn.Module):
     """Ray Module + Cross-view Module, combined per Eq. 1."""
@@ -442,5 +652,7 @@ class CAM3R(nn.Module):
             "points": points,
             "R": cv["R"],
             "t_dir": cv["t_dir"],
-            "scale": cv["scale"],
+            # Sec. 3.2.3: t = s * t_hat, with s the scale the pointmap itself
+            # implies.  Reference view is view 1, the frame the pose maps into.
+            "scale": pointmap_scale(points[0]),
         }

@@ -12,7 +12,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from cam3r.model import CAM3R, CAM3RConfig
+from cam3r.model import CAM3R, CAM3RConfig, LayerScale
 
 
 def _tiny(**kw) -> CAM3R:
@@ -130,3 +130,39 @@ def test_parameter_count_is_reported():
     model = _tiny()
     n = model.num_parameters()
     assert n > 0 and n == sum(p.numel() for p in model.parameters())
+
+
+# ------------------------------------------------------- paper Table S3 shapes
+
+def test_paper_config_reproduces_the_papers_readout_and_fusion_layers():
+    """ViT-L/24 reads class tokens at {6,12,18,24}; DPT fuses {0,6,9,12}."""
+    cfg = CAM3RConfig()
+    model = CAM3R(cfg)
+    assert model.ray_module.readout_layers == (6, 12, 18, 24)
+    assert model.cross_view.dpt_hooks == [0, 6, 9, 12]
+    assert cfg.dpt_features == 256
+    assert cfg.cv_dec_heads == 12          # DUSt3R's BaseDecoder, not the encoder's 16
+
+
+def test_angular_module_runs_at_512_behind_a_projection():
+    """Table S3: "Linear projection (1024 -> 512)", one per read-out depth."""
+    rm = CAM3R(CAM3RConfig()).ray_module
+    assert len(rm.camera_token_adapter) == 4
+    for adapt in rm.camera_token_adapter:
+        assert (adapt.in_features, adapt.out_features) == (1024, 512)
+    assert rm.head.latents_pos.shape == (1, 18, 512)
+
+
+def test_ray_trunk_carries_layerscale_but_the_cross_view_encoder_does_not():
+    """UniK3D's trunk is DINOv2 (LayerScale); DUSt3R's encoder is CroCo (none)."""
+    model = _tiny()
+    assert isinstance(model.ray_module.blocks[0].ls1, LayerScale)
+    assert not isinstance(model.cross_view.enc_blocks[0].ls1, LayerScale)
+
+
+def test_readout_layers_stay_distinct_groups_on_a_shallow_trunk():
+    """A 2-block trunk repeats depths; the four groups must still be four tokens."""
+    rm = _tiny().ray_module
+    assert len(rm.readout_layers) == rm.n_groups == 4
+    rays, intr, coeffs = rm(torch.rand(2, 3, 64, 64))
+    assert coeffs.shape == (2, 15, 3) and intr.shape == (2, 4)

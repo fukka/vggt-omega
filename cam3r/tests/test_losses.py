@@ -115,9 +115,8 @@ def test_confidence_weighting_rewards_being_confident_when_right():
 def test_pose_loss_is_zero_at_ground_truth():
     R = random_rotations(4, seed=6)
     t = torch.randn(4, 3)
-    s = t.norm(dim=-1)
     t_hat = torch.nn.functional.normalize(t, dim=-1)
-    loss, logs = relative_pose_loss(R, t_hat, s, R.clone(), t.clone())
+    loss, logs = relative_pose_loss(R, t_hat, R.clone(), t.clone(), scale=t.norm(dim=-1))
     assert float(loss) < 1e-6, logs
 
 
@@ -127,61 +126,56 @@ def test_pose_loss_rotation_term_is_the_geodesic_angle():
                         [math.sin(a), math.cos(a), 0.0],
                         [0.0, 0.0, 1.0]]])
     t = torch.tensor([[0.0, 0.0, 1.0]])
-    _, logs = relative_pose_loss(Rz, t, torch.ones(1), torch.eye(3).unsqueeze(0), t.clone())
+    _, logs = relative_pose_loss(Rz, t, torch.eye(3).unsqueeze(0), t.clone())
     assert abs(logs["pose/rot_rad"] - a) < 1e-5
 
 
-def test_pose_loss_translation_term_ignores_predicted_magnitude():
-    """The translation term grades direction only; magnitude is L_scale's job."""
-    R = torch.eye(3).unsqueeze(0)
-    t_gt = torch.tensor([[0.0, 0.0, 2.0]])
-    d = torch.tensor([[0.0, 0.0, 1.0]])
-    _, a = relative_pose_loss(R, d, torch.tensor([1.0]), R, t_gt)
-    _, b = relative_pose_loss(R, d, torch.tensor([9.0]), R, t_gt)
-    assert a["pose/trans_sq"] == b["pose/trans_sq"] == 0.0
+def test_pose_loss_translation_term_compares_directions_only():
+    """Eq. 10 applies the *same* ``s`` to prediction and target.
 
-
-def test_pose_loss_supervises_scale_against_the_metric_gt():
-    R = torch.eye(3).unsqueeze(0)
-    t_gt = torch.tensor([[0.0, 0.0, 2.0]])
-    d = torch.tensor([[0.0, 0.0, 1.0]])
-    _, exact = relative_pose_loss(R, d, torch.tensor([2.0]), R, t_gt)
-    _, wrong = relative_pose_loss(R, d, torch.tensor([0.2]), R, t_gt)
-    assert exact["pose/scale_log_sq"] < 1e-10
-    assert wrong["pose/scale_log_sq"] > 1.0
-
-
-def test_pose_loss_does_not_reward_shrinking_the_scale():
-    """Regression: the naive Eq. 10 reading is minimized by driving s -> 0.
-
-    With the prediction ``s*u_p`` and the target ``sg(s)*u_g``, the loss is
-    ``s^2||u_p-u_g||^2`` and dL/ds = 2s(1-cos) > 0 for any direction error, so
-    gradient descent collapses the scale instead of fixing the direction.
-    Nothing else in the objective pins ``s`` down, so this has to be checked here.
+    ``t = s u_pred`` against ``t* = s u_gt`` cancels the magnitude, so a
+    prediction pointing the right way scores zero however long the GT
+    translation is.
     """
     R = torch.eye(3).unsqueeze(0)
+    d = torch.tensor([[0.0, 0.0, 1.0]])
+    for gt_len in (0.5, 2.0, 9.0):
+        _, logs = relative_pose_loss(R, d, R, d * gt_len, scale=torch.tensor([3.0]))
+        assert logs["pose/trans_sq"] < 1e-12, gt_len
+
+
+def test_pose_loss_translation_term_is_s_squared_times_direction_error():
+    R = torch.eye(3).unsqueeze(0)
     t_gt = torch.tensor([[0.0, 0.0, 1.0]])
-    bad_dir = torch.tensor([[1.0, 0.0, 0.0]])          # 90 deg wrong
+    bad = torch.tensor([[1.0, 0.0, 0.0]])              # 90 deg wrong: ||u_p-u_g||^2 = 2
+    for s in (1.0, 2.0, 3.0):
+        _, logs = relative_pose_loss(R, bad, R, t_gt, scale=torch.tensor([s]))
+        assert abs(logs["pose/trans_sq"] - 2.0 * s * s) < 1e-5, s
+
+
+def test_pose_loss_scale_is_detached():
+    """Eq. 10's ``s`` is "detached from the gradient flow to serve as a static
+    target", so no gradient reaches whatever produced it."""
+    R = torch.eye(3).unsqueeze(0)
+    t_gt = torch.tensor([[0.0, 0.0, 1.0]])
+    bad = torch.tensor([[1.0, 0.0, 0.0]], requires_grad=True)   # keeps a graph alive
     scale = torch.tensor([1.0], requires_grad=True)
 
-    loss, _ = relative_pose_loss(R, bad_dir, scale, R, t_gt, w_scale=0.0)
+    loss, _ = relative_pose_loss(R, bad, R, t_gt, scale=scale)
     loss.backward()
-    grad = 0.0 if scale.grad is None else float(scale.grad)
-    assert grad == 0.0, f"direction error still pushes on scale (grad {grad})"
-
-    # And with scale supervision on, the pull is toward the GT magnitude.
-    scale2 = torch.tensor([0.1], requires_grad=True)
-    loss2, _ = relative_pose_loss(R, bad_dir, scale2, R, t_gt)
-    loss2.backward()
-    assert float(scale2.grad) < 0, "under-scaled prediction should be pushed up"
+    assert bad.grad is not None and bad.grad.abs().sum() > 0, "direction must be supervised"
+    assert scale.grad is None or float(scale.grad) == 0.0
 
 
-def test_scale_supervision_can_be_disabled_for_up_to_scale_corpora():
+def test_pose_loss_still_grades_direction_without_a_scale():
+    """A corpus with pose GT but no pointmaps falls back to ``s = 1``."""
     R = torch.eye(3).unsqueeze(0)
     t_gt = torch.tensor([[0.0, 0.0, 5.0]])
-    d = torch.tensor([[0.0, 0.0, 1.0]])
-    loss, _ = relative_pose_loss(R, d, torch.tensor([0.01]), R, t_gt, w_scale=0.0)
-    assert float(loss) < 1e-6
+    good = torch.tensor([[0.0, 0.0, 1.0]])
+    bad = torch.tensor([[1.0, 0.0, 0.0]])
+    ok, _ = relative_pose_loss(R, good, R, t_gt)
+    off, _ = relative_pose_loss(R, bad, R, t_gt)
+    assert float(ok) < 1e-6 < float(off)
 
 
 # ------------------------------------------------------------------- Eq. 11

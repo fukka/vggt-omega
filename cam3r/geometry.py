@@ -133,10 +133,33 @@ def rays_to_spherical(d: torch.Tensor, eps: float = 1e-8) -> Tuple[torch.Tensor,
     ``theta = arccos(z)`` in ``[0, pi]``; ``phi = atan2(y, x)`` in ``(-pi, pi]``.
     ``phi`` is degenerate on the optical axis (``theta = 0``); callers that
     difference it should weight by ``sin(theta)`` or accept the noise there.
+
+    Both poles are guarded, because on a real camera they are *hit exactly*:
+    the on-axis pixel has ``z == 1`` and ``x == y == 0``.  ``arccos`` has an
+    infinite derivative at ``|z| = 1``, so an accurate ray field -- which is
+    what a UniK3D-initialized Ray Module produces on its very first step --
+    NaNs the whole backward pass through it.  Clamping the *value* would not
+    help; the derivative is what diverges, and a clamp wide enough to tame it
+    costs ~0.08 deg on axis.
+
+    ``theta = atan2(hypot(x, y), z)`` is exact for a unit vector and, because
+    ``rho^2 + z^2 = 1`` there, has ``dtheta/drho = z`` and ``dtheta/dz = -rho``
+    -- both bounded by 1 everywhere on the sphere.  The ``1e-20`` under the
+    square root keeps ``drho/dx = x/rho`` finite at the axis without moving
+    ``rho`` by more than 1e-10.  ``phi`` takes zero gradient where it carries no
+    information.
     """
     d = torch.nn.functional.normalize(d, dim=-1, eps=eps)
-    theta = torch.arccos(torch.clamp(d[..., 2], -1.0, 1.0))
-    phi = torch.atan2(d[..., 1], d[..., 0])
+    x, y, z = d[..., 0], d[..., 1], d[..., 2]
+
+    rho = torch.sqrt(x * x + y * y + 1e-20)
+    theta = torch.atan2(rho, z)
+
+    on_axis = (x * x + y * y) < eps
+    phi = torch.atan2(
+        torch.where(on_axis, torch.zeros_like(y), y),
+        torch.where(on_axis, torch.ones_like(x), x),
+    )
     return theta, phi
 
 

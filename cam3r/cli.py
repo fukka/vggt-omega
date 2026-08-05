@@ -33,6 +33,11 @@ def add_model_args(p: argparse.ArgumentParser) -> None:
     g.add_argument("--dec-width", type=int, default=768, help="decoder width (DUSt3R: 768)")
     g.add_argument("--depth", type=int, default=24, help="encoder blocks")
     g.add_argument("--heads", type=int, default=16)
+    g.add_argument("--dec-heads", type=int, default=12, help="decoder heads (DUSt3R: 12)")
+    g.add_argument("--angular-width", type=int, default=512,
+                   help="angular module width (Table S3 projects 1024 -> 512)")
+    g.add_argument("--angular-heads", type=int, default=8, help="angular module heads (UniK3D: 8)")
+    g.add_argument("--dpt-features", type=int, default=256, help="DPT D_feat (Table S3: 256)")
     g.add_argument("--dust3r", default=None, help="DUSt3R checkpoint for Cross-view Module init")
     g.add_argument("--unik3d", default=None, help="UniK3D checkpoint for Ray Module init")
 
@@ -64,12 +69,18 @@ def config_from_args(args: argparse.Namespace) -> CAM3RConfig:
         ray_embed_dim=args.width,
         ray_depth=args.depth,
         ray_heads=args.heads,
+        ray_angular_dim=args.angular_width,
+        ray_angular_heads=args.angular_heads,
         cv_embed_dim=args.width,
         cv_enc_depth=args.depth,
         cv_dec_embed_dim=args.dec_width,
         cv_dec_depth=max(2, args.depth // 2),
         cv_heads=args.heads,
-        cv_dec_heads=args.heads,
+        # DUSt3R's BaseDecoder is 768 wide with 12 heads, and its weights are
+        # what initializes this decoder -- reusing the *encoder's* head count
+        # would reinterpret that pretrained attention layout.
+        cv_dec_heads=args.dec_heads,
+        dpt_features=args.dpt_features,
     )
 
 

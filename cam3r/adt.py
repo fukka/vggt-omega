@@ -116,6 +116,19 @@ def _se3_from_translation_quat(t: Sequence[float], q_xyzw: Sequence[float]) -> t
     return torch.tensor(T, dtype=torch.float64)
 
 
+def _candidate_vrs(seq_dir: str) -> List[str]:
+    """VRS files in ``seq_dir``, real recording first.
+
+    ADT names the recording differently across releases -- the public download
+    ships ``video.vrs``, other copies ``main_recording.vrs``.  ``synthetic_video``
+    is a re-render of the same rig, so it is a legitimate last resort but not a
+    first choice.
+    """
+    named = [os.path.join(seq_dir, n) for n in ("main_recording.vrs", "video.vrs")]
+    rest = sorted(p for p in glob.glob(os.path.join(seq_dir, "*.vrs")) if p not in named)
+    return [p for p in named + rest if os.path.exists(p)]
+
+
 def resolve_extrinsics(
     seq_dir: str, extrinsics_json: Optional[str] = None, label: str = "camera-rgb"
 ) -> Tuple[torch.Tensor, str, bool]:
@@ -163,8 +176,7 @@ def resolve_extrinsics(
                         True,
                     )
 
-    vrs = os.path.join(seq_dir, "main_recording.vrs")
-    if os.path.exists(vrs):
+    for vrs in _candidate_vrs(seq_dir):
         try:
             from projectaria_tools.core import data_provider  # type: ignore
 
@@ -173,7 +185,7 @@ def resolve_extrinsics(
             T = calib.get_transform_device_camera().to_matrix()
             return torch.tensor(np.asarray(T), dtype=torch.float64), "projectaria_tools", True
         except Exception:
-            pass
+            continue
 
     return torch.eye(4, dtype=torch.float64), "device-frame-fallback", False
 
@@ -188,12 +200,20 @@ def select_pairs(
     angle_deg: Tuple[float, float] = (25.0, 65.0),
     max_pairs: Optional[int] = None,
     seed: int = 0,
+    groups: Optional[Sequence[int]] = None,
 ) -> List[Tuple[int, int]]:
     """Pairs whose baseline and viewing-angle change fall in the paper's window.
 
     Paper Sec. D.3: ``0.35 m <= b <= 1.75 m`` and ``25 deg <= theta <= 65 deg``.
     Too close and the pair is degenerate; too far and there is no overlap.
     ``poses_cw`` is (N, 4, 4) camera-from-world.
+
+    ``groups`` labels each frame with the recording it came from; only same-group
+    pairs are emitted.  ADT sequences of one apartment share a world frame, so
+    without this two frames from *different* sessions can sit 0.5 m and 40 deg
+    apart and pass the window while showing different people and a different
+    object layout -- a pair with a well-defined relative pose and no valid
+    correspondence.
     """
     n = poses_cw.shape[0]
     lo_b, hi_b = baseline_m
@@ -203,6 +223,8 @@ def select_pairs(
     out: List[Tuple[int, int]] = []
     for i in range(n):
         for j in range(i + 1, n):
+            if groups is not None and groups[i] != groups[j]:
+                continue
             R_ij, t_ij = relative_pose(poses_cw[i].unsqueeze(0), poses_cw[j].unsqueeze(0))
             b = float(t_ij.norm())
             if not (lo_b <= b <= hi_b):
@@ -271,11 +293,12 @@ class ADTPairDataset(Dataset):
 
         self.rgb_paths: List[str] = []
         self.depth_paths: List[str] = []
+        self.frame_seq: List[int] = []          # which recording each frame came from
         poses_cw: List[torch.Tensor] = []
-        self.extrinsics_source = "unset"
-        self.extrinsics_exact = False
+        sources: set = set()
+        self.extrinsics_exact = True        # every sequence must be exact for this to hold
 
-        for seq_dir in seq_dirs:
+        for seq_id, seq_dir in enumerate(seq_dirs):
             frames = self._gather_frames(seq_dir, rgb_subdir, depth_subdir, max_frames)
             if not frames:
                 continue
@@ -285,7 +308,10 @@ class ADTPairDataset(Dataset):
             R_fix = torch.eye(4, dtype=torch.float64)
             R_fix[:3, :3] = IMAGE_ROT_TO_CAMERA
             T_dc_rot = T_dc @ se3_inverse(R_fix)
-            self.extrinsics_source, self.extrinsics_exact = source, exact
+            # One inexact sequence makes the whole dataset inexact, so record
+            # every source rather than letting the last sequence overwrite.
+            sources.add(source)
+            self.extrinsics_exact = self.extrinsics_exact and exact
 
             for rgb, depth in frames:
                 stamp = _frame_timestamp_us(rgb)
@@ -297,13 +323,17 @@ class ADTPairDataset(Dataset):
                 T_wc = T_wd[k] @ T_dc_rot
                 self.rgb_paths.append(rgb)
                 self.depth_paths.append(depth)
+                self.frame_seq.append(seq_id)
                 poses_cw.append(se3_inverse(T_wc.unsqueeze(0))[0])
 
         if not poses_cw:
             raise RuntimeError(f"no usable ADT frames found under {list(seq_dirs)}")
+        self.extrinsics_source = "+".join(sorted(sources)) if sources else "unset"
 
         self.poses_cw = torch.stack(poses_cw)
-        self.pairs = select_pairs(self.poses_cw, baseline_m, angle_deg, max_pairs)
+        self.pairs = select_pairs(
+            self.poses_cw, baseline_m, angle_deg, max_pairs, groups=self.frame_seq
+        )
         if not self.pairs:
             raise RuntimeError(
                 f"{len(self.poses_cw)} frames but no pair met baseline {baseline_m} m / "

@@ -84,6 +84,25 @@ def test_relative_pose_recovers_a_known_motion():
     assert torch.allclose(x2 @ R21.transpose(-1, -2) + t21.unsqueeze(1), x1, atol=1e-4)
 
 
+def test_spherical_gradients_are_finite_at_the_poles():
+    """The on-axis pixel hits z=1 and x=y=0 *exactly* on every real camera.
+
+    Regression: with arccos(z) the backward pass through an accurate ray field
+    is all-NaN from the first step, which is exactly what a UniK3D-initialized
+    Ray Module produces.
+    """
+    d = torch.tensor(
+        [[0.0, 0.0, 1.0], [0.0, 0.0, -1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+        requires_grad=True,
+    )
+    theta, phi = rays_to_spherical(d)
+    (theta.sum() + phi.sum()).backward()
+    assert torch.isfinite(d.grad).all(), d.grad
+    # And the value is still exact on axis, not clamped away from it
+    # (1e-6 is float32's resolution near pi, not slack in the guard).
+    assert float(theta[0]) < 1e-9 and abs(float(theta[1]) - math.pi) < 1e-6
+
+
 def test_spherical_round_trip():
     torch.manual_seed(8)
     d = torch.randn(1000, 3, dtype=torch.float64)
