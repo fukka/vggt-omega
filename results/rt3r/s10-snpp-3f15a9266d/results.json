@@ -1,0 +1,49 @@
+{
+  "_meta": {
+    "matcher": "ufm",
+    "backbone": "vggt",
+    "dataset": "scannetpp",
+    "scene": "3f15a9266d",
+    "n_windows": 100,
+    "convention": "range",
+    "gt_pose": true,
+    "gt_depth": false
+  },
+  "vanilla": {
+    "R_deg": 2.378589277267456,
+    "d_reproj": 1.2925656417012215,
+    "t_deg": 22.78576578617096,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  },
+  "param_free": {
+    "R_deg": 2.376881895363331,
+    "d_reproj": 1.3042921355366708,
+    "t_deg": 22.63841289758682,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  },
+  "center_ph": {
+    "R_deg": 0.37810649424791337,
+    "d_reproj": 0.4449674427509308,
+    "t_deg": 5.463867690861225,
+    "n_rows": 100,
+    "_depth_skipped": 100,
+    "coverage": 0.6602123488284218
+  },
+  "multi_ph": {
+    "R_deg": 0.405605100132525,
+    "d_reproj": 0.8362923377752304,
+    "t_deg": 5.237920866012574,
+    "n_rows": 100,
+    "_depth_skipped": 100,
+    "coverage": 1.0
+  },
+  "raytun3r": {
+    "R_deg": 1.8575412995368241,
+    "d_reproj": 1.196189189851284,
+    "t_deg": 23.85121778011322,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  }
+}

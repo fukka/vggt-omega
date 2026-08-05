@@ -1,0 +1,15 @@
+{
+  "code_commit": "bfdb47e",
+  "code_branch": "organized",
+  "backbone": "vggt (facebook/VGGT-1B, frozen)",
+  "matcher": "ufm (infinity1096/UFM-Base)",
+  "host": "lambda_63, RTX 6000 Ada 48GB, CUDA 12.8",
+  "conda_env": "raytun3r (python 3.11.15, torch 2.11.0+cu128)",
+  "protocol": "30 three-frame windows, 300 iters, Adam lr 1e-3, clip 1.0, 504 max side, min-flow 2px",
+  "runs": {
+    "snpp-3f15a9266d": "ScanNet++ 3f15a9266d, stride 1 - DEGENERATE, ~1.1cm baseline, see README",
+    "adt-seq131": "ADT Apartment_release_clean_seq131_M1292, stride 1 - DEGENERATE, ~1.6cm baseline",
+    "s10-snpp-3f15a9266d": "ScanNet++ 3f15a9266d, stride 10 - the conditioned run"
+  },
+  "pending": "s10-adt-seq131 (queued on lambda_63 tmux session rt3r_adt10, waiting for a free GPU)"
+}

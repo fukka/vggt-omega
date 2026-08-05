@@ -1,0 +1,47 @@
+{
+  "_meta": {
+    "matcher": "ufm",
+    "backbone": "vggt",
+    "dataset": "scannetpp",
+    "scene": "3f15a9266d",
+    "n_windows": 100,
+    "convention": "range",
+    "gt_pose": true,
+    "gt_depth": false
+  },
+  "vanilla": {
+    "R_deg": 0.5539374655485153,
+    "d_reproj": 0.263708296045661,
+    "t_deg": 30.428465601205826,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  },
+  "param_free": {
+    "R_deg": 0.5552551390230656,
+    "d_reproj": 0.26504728227853774,
+    "t_deg": 30.447399303913116,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  },
+  "center_ph": {
+    "R_deg": 0.1472074330598116,
+    "d_reproj": 117.21580215454101,
+    "t_deg": 23.802731957435608,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  },
+  "multi_ph": {
+    "R_deg": 0.13468047562986613,
+    "d_reproj": 0.21699969224631788,
+    "t_deg": 21.10533802986145,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  },
+  "raytun3r": {
+    "R_deg": 0.42020422175526617,
+    "d_reproj": 0.2715750555694103,
+    "t_deg": 30.904672902226448,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  }
+}
