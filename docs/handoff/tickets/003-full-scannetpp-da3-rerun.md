@@ -5,6 +5,12 @@
 to the `results` branch.
 **Blocked by:** none. Pull `organized` first; everything below is already in it.
 
+> **Read [`raytun3r/PAPER.md`](../../../raytun3r/PAPER.md), not the PDF.** The whole
+> paper — every hyperparameter, all five result tables, all four ablation tables,
+> the named sequences, and the seven things it never specifies — is condensed
+> there. It was written from the actual PDF (2026-08-05) precisely so these runs
+> never need it open.
+
 ## Why this supersedes the earlier runs
 
 Three things changed since `bfdb47e`, two of which invalidate the numbers on the
@@ -63,13 +69,13 @@ deviation: **`--stride 10`, not 1**. At stride 1 on this data the baseline is
 itself 11.1° off ground truth) and `d_reproj` stops depending on depth. The paper
 does not specify a stride. Do not change it back without saying so in `meta.json`.
 
-**On "the same number of GPUs as the paper":** the paper does not state one, and
-the quantity is not meaningful for this method — RayTun3R fits ~10k parameters on
-one short segment from one camera in about three minutes, and its selling point
-is exactly that cheapness. There is nothing to shard *within* a scene, and a
-single adapter shared *across* scenes would be a different method. The parallel
-axis is therefore scenes, which is what `--workers` does. If you find a GPU count
-stated in the paper, put it in `meta.json` and tell CPU-Claude.
+**On "the same number of GPUs as the paper" — now settled from the PDF.** The
+paper never states a GPU count, and Appendix D says why it would not matter:
+experiments ran on single **RTX A6000 / A4000** cards "with independent scenes,
+sequences, and baselines executed in parallel when possible", ~180–250 GPU-hours
+total. So the paper's setting *is* one GPU per scene with scenes in parallel —
+exactly what `--workers` does. Nothing to shard within a scene; a single adapter
+shared across scenes would be a different method. This question is closed.
 
 ### Run 2 — VGGT-1B over all of ScanNet++
 
@@ -98,12 +104,78 @@ parameters there. It is the direct test of the paper's own Tab. 7(b) "RoPE only"
 row. A *large* improvement would contradict the paper and would be the most
 interesting result available.
 
+### Run 5 (new, rank alongside Run 3) — is 300 iterations simply too few?
+
+```bash
+python -m raytun3r.experiments.iters_sweep --backbone da3 --variant small --weights pretrained --dataset scannetpp --path /netapp/datasets/scannetpp/data/3f15a9266d --out runs/iters-sweep/3f15a9266d-da3s
+```
+
+Reading the PDF turned up the one hyperparameter Sec. 4.3 never states: **the
+number of optimisation steps**. We guessed `--iters 300` (~3 min). Appendix D
+quotes **2–3 h per ScanNet++ scene** for a full train-and-evaluate run. Even
+allowing that their figure covers full-sequence evaluation and every baseline,
+three minutes of fitting does not sit comfortably inside two hours — so we may be
+reporting an undertrained adapter and calling it a failed reproduction.
+
+Sweeps 300 → 10000 (~2.3 GPU-h for the scene, points independent so they can be
+spread over GPUs). If `raytun3r`'s `R_deg` is still falling at 300, that is the
+answer and every other run here needs redoing at the elbow — **so run this before
+Runs 1 and 2 if GPU time is tight.** It is orthogonal to Run 3: FOV asks what the
+methods are *scored on*, this asks how long ours was *fitted*.
+
 ### Also worth doing
 
 * **The queued `s10-adt-seq131` run**, now that conventions are fixed.
 * **Find ScanNet++ `render_depth/`.** It was absent, so `AbsRel`/`δ₁.₂₅` (Tab. 3)
   have never been measured on ScanNet++ at all. If it is not in the download,
   say so and Tab. 3 stays out of scope for this dataset.
+
+## Do this first — it is two minutes and may reframe everything
+
+Comparing our one real run against Tab. 2 (same scene `3f15…`, same VGGT
+backbone) shows our *unadapted* numbers are far **better** than the paper's, and
+only our *adapted* one is worse: vanilla `R°` 2.379 vs their 7.21, Center-PH 0.378
+vs 2.45, RayTun3R 1.858 vs 0.93. Every `d_reproj` of ours is 14–30× smaller than
+theirs. That is the signature of an evaluation that is *easier* than the paper's,
+not of a broken adapter — there is only 2.4° of error available to remove where
+they had 7.2°.
+
+So before any long run, print the geometry of the pairs actually being scored:
+
+```bash
+python -c "
+from raytun3r.data import ScanNetPPFisheye
+import torch
+s = ScanNetPPFisheye('/netapp/datasets/scannetpp/data/3f15a9266d')
+P = [s.pose(i) for i in range(len(s))]
+C = [(-R.T@t) for R,t in P]
+d = torch.tensor([ (C[i+1]-C[i]).norm() for i in range(len(C)-1) ])
+print('frames', len(s), 'consecutive baseline: median', d.median().item(), 'mean', d.mean().item())
+"
+```
+
+We measured ~1.1 cm at stride 1 against ~3 m of scene depth, which is why
+`--stride 10` exists. But ScanNet++ DSLR is a *sparse* handheld capture of a few
+hundred images per scene — 1.1 cm between consecutive DSLR shots is not what that
+should look like. If the number comes back that small, check whether
+`transforms.json` is being read in capture order and whether we are picking up a
+denser image set than the DSLR one. **If our pairs are much closer together than
+the paper's consecutive-pair protocol, that alone could explain both the too-good
+vanilla and the inverted ordering**, and it is cheaper to fix than either sweep.
+
+## How to read the numbers (from the PDF — avoids two false alarms)
+
+* **RayTun3R is not supposed to win `d_reproj`.** In the paper's own Tab. 1 it
+  loses that column to Center-PH or Multi-PH on **4 of 5 datasets** (ScanNet++:
+  RayTun3R 4.16 vs Multi-PH 1.63). Center-PH also wins depth on ScanNet++ outright
+  (AbsRel 0.066 vs 0.108, Tab. 3). The claim is about **pose** — `R°` and `t°`. A
+  `d_reproj` or AbsRel loss is a reproduction, not a failure.
+* **The target for `R°` on ScanNet++ `3f15…`** is Tab. 2: VGGT vanilla 7.21 →
+  RayTun3R **0.93**, with Center-PH at 2.45. So RayTun3R should beat Center-PH by
+  ~2.6×. Our run had Center-PH winning by ~5× — inverted, which is the real anomaly
+  and what Runs 3 and 5 are for.
+* Tab. 1 and Tab. 3 are aggregates over unnamed scenes; only Tab. 2 is
+  single-sequence. Match the sequence before comparing.
 
 ## Recording
 

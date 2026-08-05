@@ -88,7 +88,8 @@ Module map:
 | `metrics.py` | Eq. 14–18 |
 | `data.py` | ScanNet++ and ADT loaders, window construction |
 | `matching.py` | UFM, MAGSAC++ pose target |
-| `experiments/` | full-dataset and ablation drivers (`scannetpp_all`, `fov_sweep`) |
+| `PAPER.md` | the condensed paper — hyperparameters, protocol, every result table, the gaps. Read this, not the PDF |
+| `experiments/` | full-dataset and ablation drivers (`scannetpp_all`, `fov_sweep`, `iters_sweep`) |
 
 ## Two invariants that are easy to break
 

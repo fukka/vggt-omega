@@ -10,6 +10,12 @@ paper is ambiguous, the choice made is listed under
 [Interpretation decisions](#interpretation-decisions) — read that section before
 comparing any number against a table.
 
+> **[PAPER.md](PAPER.md) is the condensed paper.** Every hyperparameter, the full
+> evaluation protocol, all five result tables, all four ablation tables, the
+> sequences the paper actually names, the seven things it leaves unspecified, and
+> its three errata. **Read it instead of the PDF** — it is written so no run needs
+> the paper open.
+
 **The idea.** Pretrained 3D foundation models carry a *pinhole bias* in their
 positional encodings: the local Jacobian of the pretrained PE is flat in image
 radius, which is only correct for a pinhole camera. RayTun3R freezes the whole
@@ -93,7 +99,14 @@ The FOV sweep that tests why the virtual-pinhole baselines currently win:
 python -m raytun3r.experiments.fov_sweep --backbone da3 --variant small --weights pretrained --dataset scannetpp --path /data/scannetpp/data/<scene> --out runs/fov-sweep/<scene>
 ```
 
-Both accept `--dry-run` / `--limit` to print or shorten the plan first.
+The adaptation-length sweep, which tests the one hyperparameter the paper never
+states (see [PAPER.md §8](PAPER.md#8--what-the-paper-does-not-specify)):
+
+```bash
+python -m raytun3r.experiments.iters_sweep --backbone da3 --variant small --weights pretrained --dataset scannetpp --path /data/scannetpp/data/<scene> --out runs/iters-sweep/<scene>
+```
+
+All accept `--dry-run` / `--limit` to print or shorten the plan first.
 
 ---
 
@@ -302,6 +315,36 @@ both virtual-pinhole baselines beat it by ~5× on `R°`, the *opposite* of Tab. 
 ordering. Candidate explanations, none yet tested: VGGT is not the paper's
 primary backbone (DA3-Small is), this frame is ~170° rather than the 115° the
 paper ascribes to ScanNet++, and one scene is one sample.
+
+### Direct comparison against Tab. 2
+
+This run happens to be on the exact scene the paper names for ScanNet++ in Tab. 2
+(`3f15…`) with the same frozen backbone (VGGT), so the rows line up one-to-one —
+the only such comparison available to us:
+
+| | paper `R°` | ours `R°` | paper `t°` | ours `t°` | paper `d_reproj` | ours `d_reproj` |
+|---|---|---|---|---|---|---|
+| vanilla | 7.21 | **2.379** | 16.6 | 22.79 | 39.4 | **1.293** |
+| center_ph | 2.45 | **0.378** | 27.3 | **5.46** | 6.1 | **0.445** |
+| raytun3r | **0.93** | 1.858 | **6.0** | 23.85 | **3.2** | 1.196 |
+
+The pattern is consistent and it inverts the obvious reading: **our *unadapted*
+numbers are much better than the paper's, and only our *adapted* number is
+worse.** Our vanilla rotation is 3.0× better than theirs (2.379 vs 7.21) and our
+Center-PH 6.5× better (0.378 vs 2.45), while our RayTun3R is 2.0× *worse* (1.858
+vs 0.93).
+
+So the gap may not be a weak adapter but **a baseline that is already too good** —
+there is only 2.379° of error available to remove here, where the paper had 7.21°.
+Something in our evaluation is easier than theirs. The prime suspect is pair
+sampling: the paper evaluates *consecutive* pairs of the full sequence, we use
+`--stride 10` on a windowed subset. Every `d_reproj` of ours is also 14–30×
+smaller than the paper's, which points the same way and is not explained by the
+convention bug (that is worth ~1 px, not a factor of 30).
+
+That is a different and more tractable hypothesis than the FOV one, and it is
+testable off a single run — see `experiments/iters_sweep.py` for the other
+unstated-hyperparameter check, and ticket 003 Runs 3 and 5.
 
 > **These numbers predate two fixes and should not be quoted.** They were
 > produced before the depth-convention unification and before the DA3 hooks
