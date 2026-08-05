@@ -50,6 +50,23 @@ in the loss and the metric and it is easy to unify them by accident:
 * Eq. 17 as printed is not AbsRel (PAPER.md erratum 2); we implement the standard
   Eigen definition at [metrics.py:141](metrics.py#L141).
 
+**`d_reproj` weighting — fixed 2026-08-05, and it invalidates the old column.**
+Eq. 8 carries `w_ij` inside the sum; **Eq. 16 carries no weights at all**. We had
+been computing `sum(w·e)/sum(w)` — a confidence-weighted mean, i.e. the mean over
+the *confidently matched* subset — where Eq. 16 is an unweighted mean over all of
+Ω. That is not a normalising constant: UFM's covisibility goes to zero exactly
+where reprojection error is worst (the fisheye periphery, content that left the
+frame), so the old number dropped the hardest pixels *and* renormalised by their
+absence.
+
+`reprojection_depth_error(..., weighting=...)` now takes `"omega"` (Eq. 16,
+default) or `"confidence"` (the old behaviour), and `eval.py` reports **both** —
+`d_reproj` and `d_reproj_conf` — so pre-fix runs stay interpretable and the ratio
+gets measured rather than assumed. On synthetic 170° geometry the two differ by
+between **1× and 170×**, depending entirely on how much of Ω the matcher gives up
+on and how bad its flow is there; with perfect flow everywhere they coincide.
+**Only `d_reproj` is comparable to Tab. 1/2/5.**
+
 The equation-by-equation map from the paper to source files is in
 [README § Paper → code map](README.md#paper--code-map).
 
@@ -165,10 +182,19 @@ Full tables, the run configuration, and the two findings are in
 
 **Live hypotheses, in the order worth testing:**
 
-1. **Our evaluation is easier than the paper's.** Prime suspect is pair sampling —
-   the paper evaluates consecutive pairs of the full sequence, we use
-   `--stride 10` on a windowed subset. This also explains the uniformly small
-   `d_reproj`, which the convention bug (~1 px) does not.
+1. **Our evaluation is easier than the paper's.** Two independent mechanisms, both
+   now actionable:
+   * **The `d_reproj` weighting bug above.** We scored only the confidently
+     matched subset where Eq. 16 scores all of Ω. This alone can account for
+     anywhere from 1× to >100×, and our observed gap is 14–30× — squarely inside
+     that range, and far beyond what the depth-convention bug (~1 px) explains.
+     The first rerun measures it directly: compare `d_reproj` against
+     `d_reproj_conf` in the same `results.json`. **Note this affects only
+     `d_reproj`, not `R°`/`t°`**, so it does not explain the inverted rotation
+     ordering.
+   * **Pair sampling** — the paper evaluates consecutive pairs of the full
+     sequence, we use `--stride 10` on a windowed subset. This one *does* reach
+     `R°`, so it remains the candidate for the rotation story.
 2. **300 iterations may be far too few** (gap 1 above). `experiments/iters_sweep.py`.
 3. **FOV** — §4 above. `experiments/fov_sweep.py`.
 

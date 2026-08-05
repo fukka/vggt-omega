@@ -76,10 +76,16 @@ def align_scale(pred: Tensor, gt: Tensor, weight: Optional[Tensor] = None,
     return float((p * g).sum() / (p * p).sum().clamp_min(1e-12))
 
 
+#: How the per-pixel reprojection residual is averaged. See
+#: :func:`reprojection_depth_error`.
+REPROJ_WEIGHTINGS = ("omega", "confidence")
+
+
 def reprojection_depth_error(depth_i: Tensor, camera: Camera, matches,
                              R_gt: Tensor, t_gt: Tensor, *,
                              convention: str = "range",
-                             valid: Optional[Tensor] = None) -> Optional[float]:
+                             valid: Optional[Tensor] = None,
+                             weighting: str = "omega") -> Optional[float]:
     """Eq. 16 -- ``d_reproj`` in pixels, under ground-truth relative pose.
 
     The scale ``s`` is solved for once per pair by a 1-D search over the
@@ -87,13 +93,45 @@ def reprojection_depth_error(depth_i: Tensor, camera: Camera, matches,
     is over a single positive scalar, and reprojection is not convex in it, so a
     coarse-to-fine scan is both cheaper and more reliable than an optimiser.
 
-    Returns ``None`` when the pair has no confident matches.
+    ``weighting`` selects how the per-pixel residual is averaged, and the two
+    options are **not** small variations on each other:
+
+    * ``"omega"`` (default) is Eq. 16 as written: an *unweighted* mean over every
+      pixel of ``Omega``. Note that Eq. 16 carries no ``w_ij`` at all -- unlike
+      Eq. 8, which does. Pixels the matcher considers non-covisible are still
+      scored, against whatever dense flow it emitted there.
+    * ``"confidence"`` is a confidence-weighted mean, ``sum(w e) / sum(w)``, i.e.
+      the mean over the *confidently matched* subset.
+
+    The gap between them is large, not cosmetic. UFM's covisibility mask goes to
+    zero exactly where reprojection error is worst -- the fisheye periphery and
+    content that left the frame -- so ``"confidence"`` drops the hardest pixels
+    *and* renormalises by their absence. Comparing a ``"confidence"`` number
+    against the paper's tables understates our error by whatever fraction of
+    ``Omega`` the matcher gave up on. ``"omega"`` is the only one comparable to
+    Tab. 1/2/5.
+
+    Returns ``None`` when there is nothing to score.
     """
+    if weighting not in REPROJ_WEIGHTINGS:
+        raise ValueError(f"weighting must be one of {REPROJ_WEIGHTINGS}, got {weighting!r}")
+
     w = matches.weight
     if valid is not None:
         w = w * valid.to(w.dtype)
     if float(w.sum()) <= 0:
         return None
+
+    if weighting == "omega":
+        # Omega is geometric -- the valid fisheye disc -- not "where the matcher
+        # succeeded". Fall back to the lens' own mask when the caller gave none.
+        omega = (valid.to(w.dtype) if valid is not None
+                 else camera.valid_mask(*w.shape[-2:]).to(w.dtype))
+        norm = float(omega.sum())
+        if norm <= 0:
+            return None
+    else:
+        omega, norm = w, float(w.sum())
 
     X = backproject(depth_i, camera, convention=convention)
     R_gt = R_gt.to(X.dtype)
@@ -104,7 +142,7 @@ def reprojection_depth_error(depth_i: Tensor, camera: Camera, matches,
         uv = camera.project(Xj)
         e = (uv - matches.target).norm(dim=-1)
         e = torch.nan_to_num(e, nan=0.0, posinf=0.0, neginf=0.0)
-        return float((w * e).sum() / w.sum())
+        return float((omega * e).sum() / norm)
 
     # Coarse geometric sweep, then a local refinement around the best decade.
     best_s, best = 1.0, err_at(1.0)

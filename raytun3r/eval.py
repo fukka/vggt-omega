@@ -79,10 +79,21 @@ def evaluate(runner, windows, camera, *, convention: str = "range",
             R_hat, t_hat = pred.relative(i, j)
             row.update(pose_errors(R_hat, t_hat, R_gt, t_gt))
 
+            # Both averagings, every run: `d_reproj` is Eq. 16 as written and is
+            # the only one comparable to the paper's tables, while
+            # `d_reproj_conf` is the confidence-weighted number we reported
+            # before 2026-08-05. Carrying both keeps older runs interpretable and
+            # measures the ratio between them on real data instead of guessing it.
             d = reprojection_depth_error(pred.depth[i], camera, win.matches[(i, j)],
-                                         R_gt, t_gt, convention=convention, valid=omega(i))
+                                         R_gt, t_gt, convention=convention,
+                                         valid=omega(i), weighting="omega")
             if d is not None:
                 row["d_reproj"] = d
+            dc = reprojection_depth_error(pred.depth[i], camera, win.matches[(i, j)],
+                                          R_gt, t_gt, convention=convention,
+                                          valid=omega(i), weighting="confidence")
+            if dc is not None:
+                row["d_reproj_conf"] = dc
 
         if win.gt_depth is not None:
             dm = depth_metrics(pred.depth[0], win.gt_depth[0],
@@ -102,8 +113,8 @@ def evaluate(runner, windows, camera, *, convention: str = "range",
     if n_cov:
         out["coverage"] = coverage_sum / n_cov
     if label:
-        keys = [k for k in ("R_deg", "t_deg", "d_reproj", "AbsRel", "delta_1.25", "coverage")
-                if k in out]
+        keys = [k for k in ("R_deg", "t_deg", "d_reproj", "d_reproj_conf",
+                            "AbsRel", "delta_1.25", "coverage") if k in out]
         print(f"[eval] {label:12s} " + "  ".join(f"{k}={out[k]:.4f}" for k in keys)
               + (f"   (no GT pose in {n_no_pose} pairs)" if n_no_pose else ""))
     return out

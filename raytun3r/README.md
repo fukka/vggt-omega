@@ -351,13 +351,25 @@ That is a different and more tractable hypothesis than the FOV one, and it is
 testable off a single run — see `experiments/iters_sweep.py` for the other
 unstated-hyperparameter check, and ticket 003 Runs 3 and 5.
 
-> **These numbers predate two fixes and should not be quoted.** They were
-> produced before the depth-convention unification and before the DA3 hooks
-> worked. `d_reproj` in particular is not trustworthy: on this geometry the
-> convention mismatch alone accounts for ~0.99 px, against a method-to-method
-> spread of 0.10 px. `R°` and `t°` are unaffected — pose comes from the camera
-> head, not from depth — so the rotation story above still stands.
-> `experiments/scannetpp_all.py` and `experiments/fov_sweep.py` are the reruns.
+> **These numbers predate three fixes and should not be quoted.** They were
+> produced before the depth-convention unification, before the DA3 hooks worked,
+> and before `d_reproj` was averaged the way Eq. 16 defines it.
+>
+> **The `d_reproj` column is the worst affected and is not comparable to the
+> paper at all.** Two separate causes: the convention mismatch is worth ~0.99 px
+> on this geometry against a method-to-method spread of 0.10 px, and the metric
+> was a confidence-weighted mean over the *matched subset* where Eq. 16 is an
+> unweighted mean over all of Ω — a difference worth anywhere from 1× to 170×
+> depending on how much of Ω the matcher abandons (see
+> [reproduction.md §1](reproduction.md#1-hyperparameters--our-flags)). Runs from
+> `43ebada` on report both `d_reproj` and `d_reproj_conf`, so the ratio is
+> measured rather than assumed.
+>
+> `R°` and `t°` are unaffected by all three — pose comes from the camera head,
+> not from depth — so the rotation story above still stands, and the inverted
+> baseline ordering remains the real open question.
+> `experiments/scannetpp_all.py`, `fov_sweep.py` and `iters_sweep.py` are the
+> reruns; ticket 003 Phase 1 is the reproduction target.
 
 **ADT `seq131`, stride 1** — degenerate, kept only for the record. All five
 methods land within 0.06 px of each other on `d_reproj` (6.51–6.57), and the fit

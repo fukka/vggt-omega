@@ -388,6 +388,45 @@ def test_d_reproj_detects_wrong_shape(scene):
     assert reprojection_depth_error(warped, cam, m, R, t, valid=valid) > 1e-2
 
 
+def test_d_reproj_omega_is_unweighted_and_confidence_hides_the_hard_pixels(scene):
+    """Eq. 16 carries no ``w_ij``; averaging over the matched subset is not it.
+
+    The two options differ by *which pixels are scored*, not by a normalising
+    constant, so the gap tracks how much of Omega the matcher gave up on. This
+    pins the definition and the direction: dropping low-confidence pixels can
+    only ever make the number look better.
+    """
+    from dataclasses import replace
+
+    cam, rng, R, t, m, valid = scene
+    warped = rng * (1.0 + 0.4 * torch.rand_like(rng))
+
+    # Confidence that collapses exactly where the error is worst: keep the inner
+    # half of Omega, give up on the periphery. This is UFM's covisibility mask on
+    # a wide fisheye, in miniature.
+    h, w = m.weight.shape
+    yy, xx = torch.meshgrid(torch.arange(h), torch.arange(w), indexing="ij")
+    rad = ((yy - (h - 1) / 2) ** 2 + (xx - (w - 1) / 2) ** 2).sqrt()
+    inner = (rad < 0.5 * rad.max()).to(m.weight.dtype)
+    m_inner = replace(m, weight=m.weight * inner)
+
+    omega = reprojection_depth_error(warped, cam, m_inner, R, t, valid=valid,
+                                     weighting="omega")
+    conf = reprojection_depth_error(warped, cam, m_inner, R, t, valid=valid,
+                                    weighting="confidence")
+
+    # "omega" ignores the weights entirely, so zeroing them outside the centre
+    # must not move it at all.
+    full = reprojection_depth_error(warped, cam, m, R, t, valid=valid, weighting="omega")
+    assert omega == pytest.approx(full, rel=1e-9)
+
+    # ...whereas "confidence" scores only the easy centre, and reports less error.
+    assert conf < omega
+
+    with pytest.raises(ValueError, match="weighting"):
+        reprojection_depth_error(warped, cam, m, R, t, valid=valid, weighting="mean")
+
+
 def test_depth_metrics_scale_invariant(scene):
     _, rng, _, _, _, valid = scene
     d = depth_metrics(rng * 2.5, rng, valid=valid)
