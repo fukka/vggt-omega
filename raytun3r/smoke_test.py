@@ -137,8 +137,9 @@ def main() -> int:
           bool(torch.allclose(filled[0][inv], filled[0][inv][:1].expand_as(filled[0][inv]),
                               atol=1e-5))
           and bool(torch.equal(filled[0][vm.reshape(-1)], tok[0][vm.reshape(-1)])))
+    # (grid_h, grid_w, 2), so the x coordinate sweeps along a *row*.
     dpt = C.camera_aware_uv_grid(cam, 8, 8)
-    row = dpt[:, 4, 0]
+    row = dpt[4, :, 0]
     d = row.diff()
     check("DPT grid is monotone and non-uniform",
           bool((d > 0).all()) and float(d.std() / d.mean()) > 1e-3,

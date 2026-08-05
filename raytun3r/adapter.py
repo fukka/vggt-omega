@@ -15,7 +15,9 @@ pretrained encoding.
 
 Parameter count with the paper's defaults (N_r = 20, N_theta = 8) on a width-C
 backbone: ``20 C`` radial + ``8 C`` angular + ``20`` RoPE. For DA3-Small
-(C = 384) that is 7680 + 3072 + 20 = 10,752, the figure quoted in the abstract.
+(C = 384) the two PE tables are 7680 + 3072 = 10,752 -- the figure quoted in the
+abstract -- and the radial RoPE table brings the full adapter to 10,772. See the
+README: "10,752" and "the adapter" are not quite the same object.
 """
 
 from __future__ import annotations

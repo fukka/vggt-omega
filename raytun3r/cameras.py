@@ -344,18 +344,30 @@ def _default_theta_max(cam: KannalaBrandt) -> float:
 
     Mirrors ``aria_fisheye.usable_max_incidence``: the forward polynomial is only
     monotonic up to its turnover, and past it rays alias onto in-cone pixels.
+
+    The frame bound is the *corner* radius, not the nearest-edge radius. This
+    matters for full-frame fisheyes -- ScanNet++'s DSLR being the case in hand,
+    where the whole rectangle carries real image content and the KB4 polynomial
+    is monotone all the way out to it. Taking ``min(rx, ry)`` would give the
+    largest circle *inscribed* in the sensor and silently drop every pixel
+    outside it: on a 504x336 ScanNet++ frame that is 47% of the image, excluded
+    from ``Omega`` in every loss (Eq. 8, 10) and every metric (Eq. 16-18). The
+    paper's ``Omega`` is "the set of pixels inside the valid fisheye disc",
+    which for a lens whose image circle covers the sensor is the whole frame.
+    Circular fisheyes are unaffected: their real cone limit is smaller than the
+    corner and comes from the lens spec (see :func:`from_aria`) or the turnover.
     """
     th = torch.linspace(0.0, math.pi / 2, 4096, dtype=torch.float64)
     r = cam.r_of_theta(th)
     turn = torch.nonzero(r[1:] <= r[:-1])
     theta_turn = float(th[int(turn[0]) ]) if turn.numel() else math.pi / 2
-    # Largest theta whose image radius still lands inside the sensor rectangle.
-    r_corner = min(
+    # Largest image radius any pixel in the rectangle actually attains.
+    r_far = math.hypot(
         max(cam.cx, cam.width - 1 - cam.cx) / cam.fx,
         max(cam.cy, cam.height - 1 - cam.cy) / cam.fy,
     )
     mono = th[: (int(turn[0]) + 1 if turn.numel() else len(th))]
     r_mono = cam.r_of_theta(mono)
-    inside = torch.nonzero(r_mono <= r_corner)
+    inside = torch.nonzero(r_mono <= r_far)
     theta_frame = float(mono[int(inside[-1])]) if inside.numel() else theta_turn
     return min(theta_turn, theta_frame)

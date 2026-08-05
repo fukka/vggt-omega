@@ -181,8 +181,9 @@ class ProjectionBaseline:
         R = torch.stack([_chordal_rotation_mean(torch.stack([Rs[k][i] for k in range(len(self.views))]))
                          for i in range(s)])
         t = torch.stack(ts).mean(dim=0)
-        conf = (best > -1.0).float()
-        return Prediction(depth=depth_acc, conf=conf, R=R, t=t)
+        covered = best > -1.0
+        return Prediction(depth=depth_acc, conf=covered.float(), R=R, t=t,
+                          covered=covered)
 
 
 def CenterPH(backbone: Backbone, fisheye: Camera, *, fov_deg: float = 110.0,

@@ -191,13 +191,44 @@ def test_dpt_grid_matches_reference_span_and_is_non_uniform():
     # a 180 deg lens and are allowed to overshoot.
     theta = cam.incidence_grid(cam.height, cam.width)
     idx = ((torch.arange(8) + 0.5) * (cam.height / 8) - 0.5).round().long().clamp(0, cam.height - 1)
-    inside = (theta[idx][:, idx] <= cam.theta_max).permute(1, 0)
+    inside = theta[idx][:, idx] <= cam.theta_max
     assert float(ours[..., 0][inside].abs().max()) == pytest.approx(
         float(ref[..., 0].abs().max()), abs=1e-4)
 
-    d = ours[:, 4, 0].diff()
+    d = ours[4, :, 0].diff()                        # x coordinate along a row
     assert bool((d > 0).all())                      # monotone
     assert float(d.std() / d.mean()) > 1e-3         # but not uniform
+
+
+def test_dpt_grid_layout_matches_reference_on_a_non_square_grid():
+    """(H, W, 2), not (W, H, 2) -- the shape ``_apply_pos_embed`` adds to x.
+
+    ``create_uv_grid``'s docstring says ``(width, height, 2)`` but it builds the
+    grid with ``indexing="xy"`` and so returns ``(height, width, 2)``. Trusting
+    the docstring is a shape error on a non-square token grid and a silent x/y
+    transpose on a square one, which is why this has to be checked off-square.
+    """
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[2] / "VGGT-360-fisheye"
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    from vggt_visfeat.heads.utils import create_uv_grid
+
+    gh, gw = 24, 36
+    cam = toy_camera(gh * 14, gw * 14, fov_deg=100.0)
+    ours = C.camera_aware_uv_grid(cam, gw, gh, aspect_ratio=gw / gh)
+    ref = create_uv_grid(gw, gh, aspect_ratio=gw / gh)
+    assert ours.shape == ref.shape == (gh, gw, 2)
+
+    # x sweeps along a row, y sweeps down a column. Both also drift slightly on
+    # the other axis -- that radial coupling is exactly what the correction adds
+    # over the separable pinhole grid -- so assert that the sweep dominates the
+    # drift by a wide margin, which a transposed grid cannot do.
+    assert bool((ours[3, :, 0].diff() > 0).all())
+    assert bool((ours[:, 3, 1].diff() > 0).all())
+    assert float(ours[3, :, 0].std()) > 20 * float(ours[:, 3, 0].std())
+    assert float(ours[:, 3, 1].std()) > 20 * float(ours[3, :, 1].std())
 
 
 def test_wide_lens_falls_back_to_angular_grid():
@@ -207,7 +238,7 @@ def test_wide_lens_falls_back_to_angular_grid():
     auto = C.camera_aware_uv_grid(cam, 8, 8, mode="auto")
     ang = C.camera_aware_uv_grid(cam, 8, 8, mode="angular")
     assert torch.allclose(auto, ang)
-    assert float(tan[:, 4, 0].diff().min()) < float(ang[:, 4, 0].diff().min())
+    assert float(tan[4, :, 0].diff().min()) < float(ang[4, :, 0].diff().min())
 
 
 # ---------------------------------------------------------------------- losses

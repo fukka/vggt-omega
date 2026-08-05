@@ -73,8 +73,21 @@ def reprojection_loss(depth_i: Tensor, R_rel: Tensor, t_rel: Tensor,
                       valid: Optional[Tensor] = None) -> Tuple[Tensor, Tensor]:
     """Eq. 8 -- confidence-weighted L1 reprojection error, in pixels.
 
-    Returns ``(loss, weight_sum)``; the caller can aggregate over pairs by
-    weight so that pairs with few confident matches do not dominate.
+    Eq. 8 normalises by ``|Omega|`` -- the number of pixels inside the valid
+    fisheye disc -- with ``w_ij`` *inside* the sum::
+
+        L_reproj(i,j) = 1/|Omega| sum_{(u,v) in Omega} w_ij(u,v) ||...||_1
+
+    so the confidence weights are a genuine down-weighting, not a re-normalising
+    average: a pair where UFM is confident about only a third of the disc
+    contributes about a third as much. Dividing by ``sum(w)`` instead would undo
+    exactly that and inflate the term by ``|Omega|/sum(w)``, which on a fisheye
+    with heavy occlusion is a factor of 2-3. Since ``L_reproj`` carries weight 1
+    against ``w_smooth=10``, ``w_L2=2`` and ``w_TV=20`` (Eq. 13), that factor
+    silently re-tunes the whole objective.
+
+    Returns ``(loss, weight_sum)``; ``weight_sum`` lets the caller tell a pair
+    with no confident matches from one that merely scored zero.
     """
     X = backproject(depth_i, camera, convention=convention)
     Xj = _transform(X, R_rel, t_rel)
@@ -92,7 +105,9 @@ def reprojection_loss(depth_i: Tensor, R_rel: Tensor, t_rel: Tensor,
     wsum = w.sum()
     if float(wsum) <= 0:
         return depth_i.sum() * 0.0, wsum
-    return (w * torch.nan_to_num(err, nan=0.0, posinf=0.0, neginf=0.0)).sum() / wsum, wsum
+    omega = float(valid.sum()) if valid is not None else float(err.numel())
+    omega = max(omega, 1.0)
+    return (w * torch.nan_to_num(err, nan=0.0, posinf=0.0, neginf=0.0)).sum() / omega, wsum
 
 
 def _safe_norm(x: Tensor, dim: int = -1, eps: float = 1e-12) -> Tensor:
@@ -139,7 +154,15 @@ def pose_loss(R_hat: Tensor, t_hat: Tensor, R_tilde: Tensor, t_tilde: Tensor) ->
 
 def smoothness_loss(depth: Tensor, image: Tensor, *,
                     valid: Optional[Tensor] = None) -> Tensor:
-    """Eq. 10 -- edge-aware smoothness on mean-normalised depth ``D* = D/mean(D)``."""
+    """Eq. 10 -- edge-aware smoothness on mean-normalised depth ``D* = D/mean(D)``.
+
+    Eq. 10 sums the x and y terms per pixel and divides by ``|Omega|``. The
+    image-gradient factors ``e^{-|dI|}`` are weights *inside* that sum, so a
+    strongly textured frame -- where every ``e^{-|dI|}`` is small -- is meant to
+    contribute little smoothness pressure. Normalising by ``sum(e^{-|dI|})``
+    instead would rescale that away and make the term as strong on a textured
+    frame as on a blank wall.
+    """
     if valid is not None and bool(valid.any()):
         mean = depth[valid].mean().clamp_min(1e-6)
     else:
@@ -159,10 +182,10 @@ def smoothness_loss(depth: Tensor, image: Tensor, *,
         wx = wx * (valid[:, 1:] & valid[:, :-1]).to(wx.dtype)
         wy = wy * (valid[1:, :] & valid[:-1, :]).to(wy.dtype)
 
-    denom = wx.sum() + wy.sum()
-    if float(denom) <= 0:
+    omega = float(valid.sum()) if valid is not None else float(depth.numel())
+    if omega <= 0:
         return depth.sum() * 0.0
-    return ((wx * dx).sum() + (wy * dy).sum()) / denom
+    return ((wx * dx).sum() + (wy * dy).sum()) / omega
 
 
 def l2_penalty(residual: Tensor) -> Tensor:

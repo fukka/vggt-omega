@@ -23,9 +23,11 @@ as options and both default to the numerically stable choice:
   cares about. Set ``preserve_scale=False`` for the literal linearisation.
 * **Radial coordinate of the prediction grid.** The literal fisheye->pinhole map
   is ``tan(theta)``, which diverges at 90 deg and so is unusable at 185-200 deg
-  FOV. ``grid_mode="tan"`` (default) clamps at ``tan_clamp_deg`` and rescales the
-  grid to the span the head was trained on; ``grid_mode="angular"`` uses theta
-  itself, which is monotone over the full cone.
+  FOV. ``grid_mode="auto"`` (default) picks ``tan`` for lenses inside
+  ``tan_clamp_deg`` of half-angle and the angular radius ``theta`` beyond it.
+  ``grid_mode="tan"`` forces the clamped ``tan``, rescaled to the span the head
+  was trained on; ``grid_mode="angular"`` forces ``theta``, which is monotone
+  over the full cone.
 """
 
 from __future__ import annotations
@@ -203,10 +205,18 @@ def camera_aware_uv_grid(camera: Camera, grid_w: int, grid_h: int, *,
                          device=None, dtype=torch.float32) -> Tensor:
     """Camera-aware replacement for VGGT/DA3's ``create_uv_grid``.
 
-    Returns ``(grid_w, grid_h, 2)`` -- the same layout and normalisation as the
-    original (unit half-diagonal, ``indexing="xy"``), so it is a drop-in for the
-    DPT head's positional grid. The difference is that coordinates now follow the
-    *rays* of the calibrated fisheye rather than a uniform pinhole grid.
+    Returns ``(grid_h, grid_w, 2)`` -- the same layout and normalisation as the
+    original (unit half-diagonal), so it is a drop-in for the DPT head's
+    positional grid. The difference is that coordinates now follow the *rays* of
+    the calibrated fisheye rather than a uniform pinhole grid.
+
+    Note the shape: ``create_uv_grid``'s own docstring claims ``(width, height,
+    2)``, but it builds the grid with ``meshgrid(x, y, indexing="xy")``, which
+    returns ``(len(y), len(x)) = (height, width)``. The caller then does
+    ``permute(2, 0, 1)`` and adds the result to an ``(B, C, patch_h, patch_w)``
+    feature map, which only lines up under the ``(H, W, 2)`` reading. Following
+    the docstring instead transposes the grid: a shape error on non-square input
+    and, worse, a *silent* x/y swap when the token grid happens to be square.
     """
     img_h, img_w = camera.height, camera.width
     patch_h, patch_w = img_h / grid_h, img_w / grid_w
@@ -254,5 +264,5 @@ def camera_aware_uv_grid(camera: Camera, grid_w: int, grid_h: int, *,
     my = xy[..., 1][sel].abs().max().clamp_min(1e-6)
     xy = torch.stack((xy[..., 0] / mx * span_x, xy[..., 1] / my * span_y), dim=-1)
 
-    # create_uv_grid returns (width, height, 2) with indexing="xy".
-    return xy.permute(1, 0, 2).contiguous()
+    # (grid_h, grid_w, 2), matching what create_uv_grid actually returns.
+    return xy.contiguous()

@@ -93,8 +93,9 @@ class UFMMatcher(Matcher):
             from uniflowmatch.models.ufm import UniFlowMatchConfidence  # type: ignore
         except ImportError as exc:               # pragma: no cover - optional dep
             raise ImportError(
-                "UFM is not installed. Install it from "
-                "https://github.com/castacks/uniflowmatch, or pass "
+                "UFM is not installed. Install it with "
+                "`git clone --recursive https://github.com/UniFlowMatch/UFM` then "
+                "`pip install -e UFM -e UFM/UniCeption`, or pass "
                 "--matcher raft|sift to use a fallback."
             ) from exc
         self.model = UniFlowMatchConfidence.from_pretrained(
@@ -104,9 +105,15 @@ class UFMMatcher(Matcher):
     @torch.no_grad()
     def __call__(self, image_i: Tensor, image_j: Tensor, *,
                  valid: Optional[Tensor] = None) -> Matches:
+        # UFM normalises internally and needs to be told what it is being handed.
+        # Images here are float32 in [0, 1], which is UniCeption's "identity"
+        # normalisation; UFM then rescales to its encoder's own statistics.
+        # Omitting this trips an assert, and passing uint8 instead would cost a
+        # lossy round-trip through 8-bit.
         out = self.model.predict_correspondences_batched(
             source_image=image_i[None].to(self.device),
             target_image=image_j[None].to(self.device),
+            data_norm_type="identity",
         )
         flow = out.flow.flow_output[0].permute(1, 2, 0)          # (H, W, 2)
         conf = out.covisibility.mask[0].to(flow.dtype)           # (H, W)

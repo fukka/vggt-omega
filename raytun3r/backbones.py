@@ -58,6 +58,14 @@ class Prediction:
     VGGT-family depth heads emit planar z, not euclidean range). ``R``/``t`` are
     camera-from-world, so the relative pose of frame j w.r.t. i is
     ``R_j R_i^T`` and ``t_j - R_j R_i^T t_i``.
+
+    ``covered`` marks where the method actually produced a depth. It is ``None``
+    for a backbone that predicts everywhere; the virtual-pinhole baselines set it
+    because they only cover part of the fisheye frame (Center-PH sees ~31% of a
+    170 deg frame) and leave the rest at zero. Scoring those zeros as if they
+    were predictions turns d_reproj into a coverage statistic -- a zero depth
+    backprojects to the optical centre and reprojects onto the principal point,
+    which on this data costs ~117 px against a real error of ~0.2 px.
     """
 
     depth: Tensor          # (S, H, W)
@@ -65,6 +73,7 @@ class Prediction:
     R: Tensor              # (S, 3, 3)
     t: Tensor              # (S, 3)
     extra: dict = None
+    covered: Optional[Tensor] = None    # (S, H, W) bool, or None for "everywhere"
 
     def relative(self, i: int, j: int) -> Tuple[Tensor, Tensor]:
         R_rel = self.R[j] @ self.R[i].transpose(-1, -2)

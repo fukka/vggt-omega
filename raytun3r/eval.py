@@ -48,9 +48,21 @@ def evaluate(runner, windows, camera, *, convention: str = "range",
     rows: List[Dict[str, float]] = []
     n_no_pose = n_no_depth = 0
 
+    coverage_sum, n_cov = 0.0, 0
     for win in windows:
         pred = runner(win.images)
         row: Dict[str, float] = {}
+
+        # A method that only predicts part of the frame (Center-PH, Multi-PH) is
+        # scored on what it predicted; the rest is reported as coverage instead of
+        # being silently charged as depth error. See Prediction.covered.
+        def omega(i: int) -> torch.Tensor:
+            return valid if pred.covered is None else (valid & pred.covered[i])
+
+        if pred.covered is not None:
+            coverage_sum += float((pred.covered & valid).sum()) / max(float(valid.sum()), 1.0) \
+                / pred.covered.shape[0]
+            n_cov += 1
 
         # Consecutive pairs only, matching the paper's protocol.
         for i in range(len(win.indices) - 1):
@@ -64,13 +76,13 @@ def evaluate(runner, windows, camera, *, convention: str = "range",
             row.update(pose_errors(R_hat, t_hat, R_gt, t_gt))
 
             d = reprojection_depth_error(pred.depth[i], camera, win.matches[(i, j)],
-                                         R_gt, t_gt, convention=convention, valid=valid)
+                                         R_gt, t_gt, convention=convention, valid=omega(i))
             if d is not None:
                 row["d_reproj"] = d
 
         if win.gt_depth is not None:
             dm = depth_metrics(pred.depth[0], win.gt_depth[0],
-                               valid=valid & win.gt_valid[0])
+                               valid=omega(0) & win.gt_valid[0])
             row["AbsRel"], row["delta_1.25"] = dm["AbsRel"], dm["delta_1.25"]
         else:
             n_no_depth += 1
@@ -83,8 +95,11 @@ def evaluate(runner, windows, camera, *, convention: str = "range",
         out["_pose_skipped"] = n_no_pose
     if n_no_depth:
         out["_depth_skipped"] = n_no_depth
+    if n_cov:
+        out["coverage"] = coverage_sum / n_cov
     if label:
-        keys = [k for k in ("R_deg", "t_deg", "d_reproj", "AbsRel", "delta_1.25") if k in out]
+        keys = [k for k in ("R_deg", "t_deg", "d_reproj", "AbsRel", "delta_1.25", "coverage")
+                if k in out]
         print(f"[eval] {label:12s} " + "  ".join(f"{k}={out[k]:.4f}" for k in keys)
               + (f"   (no GT pose in {n_no_pose} pairs)" if n_no_pose else ""))
     return out
