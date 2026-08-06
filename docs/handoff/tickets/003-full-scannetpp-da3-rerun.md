@@ -11,6 +11,12 @@ to the `results` branch.
 > [`raytun3r/reproduction.md`](../../../raytun3r/reproduction.md) — what is *ours*:
 > how each gap was resolved and how to read a run. Neither needs the PDF open.
 
+## Goal
+
+We can say, with a committed number, whether RayTun3R reproduces on ScanNet++:
+`raytun3r` on scene `3f15…` with DA3-Small lands near the paper's **0.40° `R°`**
+(Tab. 5), or it does not and we know which of three explanations is responsible.
+
 **Work the phases in order.** Phase 1 is the actual reproduction and costs ~15
 GPU-minutes; Phases 2 and 3 only make sense once it has an answer. The previous
 version of this ticket led with a full-dataset sweep, which cannot reproduce any
