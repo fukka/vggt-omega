@@ -1,0 +1,54 @@
+{
+  "_meta": {
+    "matcher": "ufm",
+    "backbone": "da3",
+    "dataset": "scannetpp",
+    "scene": "3f15a9266d",
+    "n_windows": 100,
+    "convention": "range",
+    "gt_pose": true,
+    "gt_depth": false
+  },
+  "vanilla": {
+    "R_deg": 2.496287226676941,
+    "d_reproj": 3.713771712779999,
+    "d_reproj_conf": 1.9776822537183762,
+    "t_deg": 40.27993347167969,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  },
+  "param_free": {
+    "R_deg": 2.361481889486313,
+    "d_reproj": 3.6969344848394394,
+    "d_reproj_conf": 1.9633376187086105,
+    "t_deg": 39.67715756416321,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  },
+  "raytun3r": {
+    "R_deg": 1.5810120037198068,
+    "d_reproj": 3.464789634346962,
+    "d_reproj_conf": 1.714670302271843,
+    "t_deg": 21.556527545452116,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  },
+  "center_ph": {
+    "R_deg": 1.697339663207531,
+    "d_reproj": 1.847990139722824,
+    "d_reproj_conf": 1.5819114765524864,
+    "t_deg": 43.4035365319252,
+    "n_rows": 100,
+    "_depth_skipped": 100,
+    "coverage": 0.6602123488284218
+  },
+  "multi_ph": {
+    "R_deg": 2.004844403266907,
+    "d_reproj": 3.1793231347203257,
+    "d_reproj_conf": 1.466631623506546,
+    "t_deg": 21.23975376367569,
+    "n_rows": 100,
+    "_depth_skipped": 100,
+    "coverage": 1.0
+  }
+}

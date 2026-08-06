@@ -1,0 +1,20 @@
+{
+  "_meta": {
+    "matcher": "ufm",
+    "backbone": "da3",
+    "dataset": "scannetpp",
+    "scene": "3f15a9266d",
+    "n_windows": 100,
+    "convention": "range",
+    "gt_pose": true,
+    "gt_depth": false
+  },
+  "caltok": {
+    "R_deg": 0.7755031695216894,
+    "d_reproj": 3.407674831748009,
+    "d_reproj_conf": 1.6604849702119828,
+    "t_deg": 12.263654652833939,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  }
+}

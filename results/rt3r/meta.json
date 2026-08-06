@@ -9,7 +9,8 @@
   "runs": {
     "snpp-3f15a9266d": "ScanNet++ 3f15a9266d, stride 1 - DEGENERATE, ~1.1cm baseline, see README",
     "adt-seq131": "ADT Apartment_release_clean_seq131_M1292, stride 1 - DEGENERATE, ~1.6cm baseline",
-    "s10-snpp-3f15a9266d": "ScanNet++ 3f15a9266d, stride 10 - the conditioned run"
+    "s10-snpp-3f15a9266d": "ScanNet++ 3f15a9266d, stride 10 - the conditioned run",
+    "s10-snpp-3f15a9266d-da3s": "ScanNet++ 3f15a9266d, stride 10, DA3-Small (paper primary backbone) -- ticket 003 Phase 1, MISS: raytun3r 1.581 vs paper 0.40 R_deg, and lora/caltok beat raytun3r here (paper has raytun3r winning)"
   },
-  "pending": "s10-adt-seq131 (queued on lambda_63 tmux session rt3r_adt10, waiting for a free GPU)"
+  "pending": "s10-adt-seq131 finished (tmux rt3r_adt10, ADT10_DONE) but ran on code predating bfdb47e -- d_reproj and coverage fields are stale under the pre-fix depth convention/weighting; R_deg/t_deg may still be citable but not yet reconciled or pushed. Ticket 003 Phase 2 (iters_sweep/fov_sweep) and Phase 3 (scale-out, ADT rerun) not yet started pending a GPU-time go-ahead."
 }

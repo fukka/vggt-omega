@@ -1,0 +1,20 @@
+{
+  "_meta": {
+    "matcher": "ufm",
+    "backbone": "da3",
+    "dataset": "scannetpp",
+    "scene": "3f15a9266d",
+    "n_windows": 100,
+    "convention": "range",
+    "gt_pose": true,
+    "gt_depth": false
+  },
+  "lora": {
+    "R_deg": 0.542201599702239,
+    "d_reproj": 2.7075631275773047,
+    "d_reproj_conf": 0.9341719171404839,
+    "t_deg": 9.867648471593856,
+    "n_rows": 100,
+    "_depth_skipped": 100
+  }
+}

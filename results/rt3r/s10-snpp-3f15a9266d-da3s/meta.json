@@ -1,0 +1,18 @@
+{
+  "code_commit": "c71c204e08d9fd03dc035e1aececd44301215547",
+  "code_branch": "organized",
+  "backbone": "da3 (depth-anything-3 0.1.1, variant=small, pretrained, frozen)",
+  "matcher": "ufm (infinity1096/UFM-Base)",
+  "host": "lambda_63, RTX 6000 Ada 48GB, CUDA 12.8, GPU index 0",
+  "conda_env": "raytun3r (python 3.11, torch 2.11.0+cu128, numpy 1.26.4 -- downgraded from 2.4.4, DA3 requires numpy<2)",
+  "protocol": "30 three-frame windows, 300 iters, Adam lr 1e-3, clip 1.0, 504 max side, min-flow 2px, stride 10",
+  "dataset_path": "/netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d (ticket 003 stated path was missing the f.zhang2/ prefix)",
+  "wall_clock": "~5 min for 3 fits (raytun3r, lora, caltok) + 3 evals",
+  "purpose": "ticket #4 / docs/handoff/tickets/003-full-scannetpp-da3-rerun.md, Phase 0 + Phase 1: reproduce Tab. 5 (0.40 R_deg) with the paper's primary backbone",
+  "target_vs_measured_R_deg": {
+    "raytun3r":  {"paper": 0.40, "measured": 1.581},
+    "lora":      {"paper": 4.22, "measured": 0.542},
+    "caltok":    {"paper": 3.09, "measured": 0.776}
+  },
+  "verdict": "Phase 1 MISS. raytun3r does not reproduce 0.40 deg (got 1.581, ~4x worse). More notably, raytun3r is beaten by both lora (0.542) and caltok (0.776) on R_deg here -- the paper's own Tab. 5 has raytun3r beating both by ~8-10x. This inverts the paper's central rotation-quality ordering, not just its absolute number."
+}
