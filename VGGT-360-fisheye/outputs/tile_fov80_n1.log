@@ -1,0 +1,34 @@
+  [ADT] 1 usable sequence(s) (need: depth_npy, videos_synthetic)
+  [ADT]   SKIP Apartment_release_clean_seq133_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq134_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq135_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq136_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq137_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq138_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq140_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq141_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq142_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq143_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq144_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq145_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq146_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq147_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq148_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq149_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq150_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT] 2 frames <- Apartment_release_clean_seq131_M1292 (61 depth maps had no RGB partner)
+
+GT reference written (its own align% = 22.3% — the ceiling this metric can reach on this frame)
+loading VGGT-Omega from /group-volume/Fengjia/projects/vggt-omega/checkpoints/VGGT-Omega-1B-512/model.pt on cuda (torch.bfloat16) ...
+====================================================================
+weight check OK: all model keys matched (no random-init layers).
+====================================================================
+
+coverage held at 100 deg; patches rendered at 512px (vggt_omega native)
+inference: ONE joint multi-view pass per tiling
+
+ tiling  patches  patch FoV  scale spread  disp(deg)  align%   AbsRel   delta1
+      1        1     100.0d          0.0%      2.291    24.7   0.0489   0.9714
+
+wrote VGGT-360-fisheye/outputs/tile_fov80_n1/summary.csv
+Read: if disp falls with more/smaller patches, angular size drives it. Re-run with --match-detail; if the effect survives, it is context/scale, not input sharpness. Watch AbsRel too — PatchFusion reports tilings that help boundaries while hurting global depth.
