@@ -84,6 +84,31 @@ output on the issue. It answers four things:
    directly. If our stride-1 median GT rotation is ~0.5°, then `vanilla`'s 0.554°
    is the identity score and that evaluation carries no information at all.
 
+Then the pixel-level questions, still without moving any pixels:
+
+```bash
+python -m raytun3r.experiments.data_probes --path /netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d --json runs/audit/3f15a9266d-probes.json
+```
+
+* **Probe 1 — is the frame corner real content or dead vignette?** Intensity mean
+  and std per incidence-angle bin. Near-zero std in the outer bins means the image
+  circle is smaller than the sensor, Ω is a circle, and the paper's 115° is right;
+  std like the inner bins means content out to the corner and our ~170° is right.
+* **Probe 2 — what is `mask_path`?** A lens mask is radially symmetric, identical
+  across frames, and cuts at a fixed incidence angle; an anonymisation mask is
+  small, irregular and frame-varying. If it is a lens mask, **Ω should come from
+  it** and we have Ω wrong.
+* **Probe 3 — planar z or euclidean range?** Regresses `log(D)` on
+  `log(cos θ)`: planar z gives slope ≈ 1, range gives ≈ 0. Verified on a synthetic
+  scene with a known answer (0.95 → `z`, −0.05 → `range`). Only matters for
+  `d_reproj`/AbsRel, never for `R°`/`t°`.
+
+**Both scripts are read-only, need no GPU or weights, and emit JSON.** Commit the
+two JSON files to `results` — they are *derived statistics*, which is what makes
+them safe: **ScanNet++ is under Terms of Use that forbid redistribution and this
+repo is public, so no frame, mask or depth map from it may ever be committed.**
+That is also why these probes return numbers instead of crops.
+
 **Decision rule.** If some stride puts the median GT rotation near 7°, that is the
 operating point the paper is at and Phase 1 should be re-run there. If *no* stride
 reaches it, then our frame set differs from the paper's — that is the finding, and
