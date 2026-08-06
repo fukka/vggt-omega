@@ -1,0 +1,81 @@
+{
+  "scene": "3f15a9266d",
+  "transforms": {
+    "camera_model": "OPENCV_FISHEYE",
+    "w": 1752,
+    "h": 1168,
+    "n_frames": 896,
+    "ignored_top_level_keys": {
+      "test_frames": 10
+    },
+    "per_frame_keys": [
+      "file_path",
+      "is_bad",
+      "mask_path",
+      "transform_matrix"
+    ]
+  },
+  "fov_deg": {
+    "horizontal_total": 146.2928689295093,
+    "vertical_total": 103.69704724116804,
+    "diagonal_total": 169.46568460782024,
+    "theta_max_deg": 84.83516483516483,
+    "working_resolution": [
+      504,
+      336
+    ]
+  },
+  "poses": {
+    "n_posed": 896,
+    "bbox_extent": [
+      1.116127813807589,
+      1.939357258809637,
+      0.28725544093480404
+    ],
+    "path_length": 11.230357354841598
+  },
+  "per_stride": {
+    "1": {
+      "n_pairs": 895,
+      "gt_rotation_deg_median": 0.8906877926964978,
+      "gt_rotation_deg_mean": 1.0492209016460765,
+      "baseline_median": 0.010851982701089013
+    },
+    "5": {
+      "n_pairs": 891,
+      "gt_rotation_deg_median": 4.064288850652796,
+      "gt_rotation_deg_mean": 4.73873534284235,
+      "baseline_median": 0.05129507953384158
+    },
+    "10": {
+      "n_pairs": 886,
+      "gt_rotation_deg_median": 7.789717926709082,
+      "gt_rotation_deg_mean": 8.914464855530682,
+      "baseline_median": 0.08973332229744503
+    },
+    "20": {
+      "n_pairs": 876,
+      "gt_rotation_deg_median": 14.762015109206436,
+      "gt_rotation_deg_mean": 16.599363026237913,
+      "baseline_median": 0.15329893472090322
+    },
+    "40": {
+      "n_pairs": 856,
+      "gt_rotation_deg_median": 28.22781219587428,
+      "gt_rotation_deg_mean": 30.358181749265576,
+      "baseline_median": 0.2248603262534947
+    },
+    "60": {
+      "n_pairs": 836,
+      "gt_rotation_deg_median": 41.89948866286772,
+      "gt_rotation_deg_mean": 42.611716876651144,
+      "baseline_median": 0.30913547213675696
+    },
+    "80": {
+      "n_pairs": 816,
+      "gt_rotation_deg_median": 50.048435633468245,
+      "gt_rotation_deg_mean": 54.724117482549026,
+      "baseline_median": 0.37679495699637183
+    }
+  }
+}
