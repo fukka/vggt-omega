@@ -32,12 +32,35 @@ from cam3r.model import pointmap_scale
 # Eq. 5-6 -- asymmetric angular loss
 # --------------------------------------------------------------------------- #
 
+def _reduce(per_elem: torch.Tensor, valid: Optional[torch.Tensor], reduction: str) -> torch.Tensor:
+    """Collapse a per-element loss over the valid set.
+
+    ``"sum"`` is what Eq. 5 and Eq. 8 literally write -- neither carries a
+    ``1/|D^v|`` -- and ``"mean"`` is the default here.  The difference is not
+    cosmetic: a sum scales with resolution and with how much of the frame is
+    inside the lens cone, so at fixed ``lambda_A = lambda_regr = lambda_pose = 1``
+    (values the paper never gives) the *balance* between the three terms of
+    Eq. 11 would depend on image size, and a 512 px fisheye with a 55 deg cone
+    would weight ``L_regr`` differently from a 512 px panorama. See
+    ``reproduction.md``.
+    """
+    if reduction not in ("mean", "sum"):
+        raise ValueError(f"reduction must be 'mean' or 'sum' (got {reduction!r})")
+    if valid is None:
+        return per_elem.sum() if reduction == "sum" else per_elem.mean()
+    if not bool(valid.any()):
+        return per_elem.sum() * 0.0
+    picked = per_elem[valid]
+    return picked.sum() if reduction == "sum" else picked.mean()
+
+
 def asymmetric_angular_loss(
     pred: torch.Tensor,
     target: torch.Tensor,
     alpha: float = 0.7,
     valid: Optional[torch.Tensor] = None,
     wrapped: bool = False,
+    reduction: str = "mean",
 ) -> torch.Tensor:
     """Eq. 5: pinball / quantile loss with asymmetry ``alpha``.
 
@@ -49,12 +72,7 @@ def asymmetric_angular_loss(
     if wrapped:
         diff = wrap_angle(diff)
     weight = torch.where(diff < 0, torch.full_like(diff, alpha), torch.full_like(diff, 1.0 - alpha))
-    per_elem = weight * diff.abs()
-    if valid is None:
-        return per_elem.mean()
-    if not bool(valid.any()):
-        return per_elem.sum() * 0.0
-    return per_elem[valid].mean()
+    return _reduce(weight * diff.abs(), valid, reduction)
 
 
 def angular_loss(
@@ -64,6 +82,7 @@ def angular_loss(
     beta: float = 0.5,
     alpha_theta: float = 0.7,
     alpha_phi: float = 0.5,
+    reduction: str = "mean",
 ) -> torch.Tensor:
     """Eq. 6: ``beta * L^0.7(theta) + (1 - beta) * L^0.5(phi)``.
 
@@ -75,8 +94,8 @@ def angular_loss(
     target = target_rays.permute(0, 2, 3, 1)
     theta_p, phi_p = rays_to_spherical(pred)
     theta_t, phi_t = rays_to_spherical(target)
-    l_theta = asymmetric_angular_loss(theta_p, theta_t, alpha_theta, valid)
-    l_phi = asymmetric_angular_loss(phi_p, phi_t, alpha_phi, valid, wrapped=True)
+    l_theta = asymmetric_angular_loss(theta_p, theta_t, alpha_theta, valid, reduction=reduction)
+    l_phi = asymmetric_angular_loss(phi_p, phi_t, alpha_phi, valid, wrapped=True, reduction=reduction)
     return beta * l_theta + (1.0 - beta) * l_phi
 
 
@@ -98,6 +117,7 @@ def local_regression_loss(
     conf: Optional[torch.Tensor] = None,
     conf_mode: str = "none",
     conf_alpha: float = 0.2,
+    reduction: str = "mean",
 ) -> torch.Tensor:
     """Eq. 8: squared error between scale-normalized pointmaps.
 
@@ -119,11 +139,7 @@ def local_regression_loss(
     elif conf_mode != "none":
         raise ValueError(f"unknown conf_mode {conf_mode!r}")
 
-    if valid is None:
-        return per_pix.mean()
-    if not bool(valid.any()):
-        return per_pix.sum() * 0.0
-    return per_pix[valid].mean()
+    return _reduce(per_pix, valid, reduction)
 
 
 # --------------------------------------------------------------------------- #
@@ -187,6 +203,7 @@ def cam3r_loss(
     beta: float = 0.5,
     conf_mode: str = "none",
     conf_alpha: float = 0.2,
+    reduction: str = "mean",
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """Eq. 11: ``lambda_A L_A + lambda_regr L_regr + lambda_pose L_pose``.
 
@@ -202,26 +219,33 @@ def cam3r_loss(
 
     valid: List[Optional[torch.Tensor]] = targets.get("valid") or [None, None]
 
+    # Eq. 8 sums over v in {1, 2}; averaging keeps the term independent of how
+    # many views a sample carries.  Tied to `reduction` so the two cannot
+    # disagree about whether this objective sums or means.
+    def over_views(terms: List[torch.Tensor]) -> torch.Tensor:
+        stacked = torch.stack(terms)
+        return stacked.sum() if reduction == "sum" else stacked.mean()
+
     l_ang = zero
     if targets.get("rays") is not None:
-        terms = [
-            angular_loss(preds["rays"][v], targets["rays"][v], valid[v], beta=beta)
+        l_ang = over_views([
+            angular_loss(preds["rays"][v], targets["rays"][v], valid[v],
+                         beta=beta, reduction=reduction)
             for v in range(2)
-        ]
-        l_ang = torch.stack(terms).mean()
+        ])
     logs["loss/angular"] = float(l_ang.detach())
 
     l_regr = zero
     if targets.get("points") is not None:
         conf = preds.get("conf") or [None, None]
-        terms = [
+        l_regr = over_views([
             local_regression_loss(
                 preds["points"][v], targets["points"][v], valid[v],
                 conf=conf[v], conf_mode=conf_mode, conf_alpha=conf_alpha,
+                reduction=reduction,
             )
             for v in range(2)
-        ]
-        l_regr = torch.stack(terms).mean()
+        ])
     logs["loss/regr"] = float(l_regr.detach())
 
     l_pose = zero

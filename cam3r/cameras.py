@@ -216,19 +216,26 @@ class Equirect(Camera):
     Column ``u`` maps to longitude in ``[-pi, pi)``, row ``v`` to latitude in
     ``[pi/2, -pi/2]``.  Longitude 0 is the image centre and looks along +z.
 
-    Pixel coordinates are integer-indexed (no half-pixel offset), matching the
-    other cameras here, ``fisheye_ray_lut``, and ``rays.sphere_grid``.  A
-    half-pixel disagreement with ``sphere_grid`` shows up as a constant angular
-    bias of ``180/W`` degrees in the SH fit -- 2.8 deg at W=64 -- so the
-    convention has to be the same on both sides.
+    Paper Sec. D.3 fixes the convention: *"Using the normalized pixel center
+    convention ``(u, v) = ((u_idx + 0.5)/W, (v_idx + 0.5)/H)``, we map to
+    longitude ``lambda = (u - 0.5) 2pi`` and latitude ``phi = (0.5 - v) pi``."*
+    The half pixel matters because ERP has no intrinsic matrix to absorb it: it
+    is a fixed ``180/W`` degrees of longitude between the image content, which
+    *is* sampled at pixel centres, and the ray assigned to it -- 0.35 deg at the
+    paper's 512 px.  Nothing downstream removes it, so it would sit in the GT
+    ray field for every panoramic corpus as a constant bias.
+
+    ``project`` is the exact inverse and returns *index-space* coordinates, the
+    same convention as :class:`Pinhole` and :class:`KB4`, so a caller resampling
+    with ``grid_sample`` has to add the usual half pixel itself.
     """
 
     kind = "erp"
 
     def ray_field(self, H: int, W: int) -> Tuple[torch.Tensor, torch.Tensor]:
         xs, ys = _pixel_grid(H, W, dtype=torch.float64)
-        lon = xs / W * 2.0 * math.pi - math.pi
-        lat = math.pi / 2 - ys / H * math.pi
+        lon = ((xs + 0.5) / W - 0.5) * 2.0 * math.pi
+        lat = (0.5 - (ys + 0.5) / H) * math.pi
         cos_lat = torch.cos(lat)
         rays = torch.stack([cos_lat * torch.sin(lon), -torch.sin(lat), cos_lat * torch.cos(lon)], -1)
         return rays.to(torch.float32), torch.ones(H, W, dtype=torch.bool)
@@ -239,8 +246,8 @@ class Equirect(Camera):
         rays = torch.nn.functional.normalize(rays, dim=-1)
         lon = torch.atan2(rays[..., 0], rays[..., 2])
         lat = torch.arcsin((-rays[..., 1]).clamp(-1.0, 1.0))
-        u = (lon + math.pi) / (2.0 * math.pi) * W
-        v = (math.pi / 2 - lat) / math.pi * H
+        u = (lon / (2.0 * math.pi) + 0.5) * W - 0.5
+        v = (0.5 - lat / math.pi) * H - 0.5
         return torch.stack([u, v], -1)
 
     def spec(self) -> Dict:

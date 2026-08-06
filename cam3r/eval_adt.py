@@ -34,7 +34,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from finetune.eval.metrics import align_depth, depth_metrics
 
 from cam3r.adt import ADTPairDataset, find_adt_sequences
-from cam3r.alignment import PairwiseEdge, prune_scene_graph, ray_aware_global_alignment
+from cam3r.alignment import (
+    PairwiseEdge,
+    consensus_fields,
+    prune_scene_graph,
+    ray_aware_global_alignment,
+)
 from cam3r.cli import add_adt_args, add_model_args, build_model as _build, require_adt_root
 from cam3r.geometry import se3_inverse
 from cam3r.metrics import ate_rmse, mean_average_accuracy, pose_accuracy, relative_pose_error
@@ -154,8 +159,39 @@ def evaluate(args: argparse.Namespace) -> Dict:
 
 
 @torch.no_grad()
+def _directed_edge(model, item, u: int, v: int, flip: bool, device, args) -> PairwiseEdge:
+    """One directed edge ``e_uv`` from its own forward pass.
+
+    Supp. C.1: *"For each image pair (i, j) the graph contains two directed
+    edges e_ij and e_ji corresponding to the relative poses predicted by
+    CAM3R."*  They are genuinely different predictions -- the Cross-view Module
+    is asymmetric, so swapping which image is view 1 is a different inference --
+    and building only one of them leaves the symmetric-consistency stage of the
+    cascade with nothing to compare against.
+    """
+    a, b = (1, 0) if flip else (0, 1)
+    out_p = model(item["images"][a].unsqueeze(0).to(device),
+                  item["images"][b].unsqueeze(0).to(device))
+    R = out_p["R"][0].cpu().double()
+    t = out_p["t_dir"][0].cpu().double()
+    s = out_p["scale"][0].cpu().double()
+
+    stride = max(1, args.resolution // 32)
+    pts1 = out_p["points"][0][0, :, ::stride, ::stride].reshape(3, -1).T.cpu().double()
+    pts2 = out_p["points"][1][0, :, ::stride, ::stride].reshape(3, -1).T.cpu().double()
+    conf_u = out_p["conf"][0][0, ::stride, ::stride].reshape(-1).cpu().double()
+    conf_v = out_p["conf"][1][0, ::stride, ::stride].reshape(-1).cpu().double()
+    # Eq. 4: view 2's points expressed in frame 1.
+    pts2_in_1 = pts2 @ R.T + (s * t)
+    return PairwiseEdge.from_pointmaps(
+        u, v, pts1, pts2_in_1, pts2, conf_i=conf_u, conf_j=conf_v, R=R, t=s * t,
+        radius=args.overlap_radius,
+    )
+
+
+@torch.no_grad()
 def _multi_view(dataset, model, device, args) -> Dict:
-    """Run RAGA over the pair graph and score the recovered trajectory."""
+    """Run the pruning cascade and RAGA over the pair graph, then score the trajectory."""
     frames = sorted({i for pair in dataset.pairs for i in pair})
     remap = {f: k for k, f in enumerate(frames)}
     edges: List[PairwiseEdge] = []
@@ -165,45 +201,69 @@ def _multi_view(dataset, model, device, args) -> Dict:
     limit = args.max_pairs or len(dataset.pairs)
     for pair_idx, (i, j) in enumerate(dataset.pairs[:limit]):
         item = dataset[pair_idx]
-        out_p = model(item["images"][0].unsqueeze(0).to(device), item["images"][1].unsqueeze(0).to(device))
-        R = out_p["R"][0].cpu().double()
-        t = out_p["t_dir"][0].cpu().double()
-        s = out_p["scale"][0].cpu().double()
+        for u, v, flip in ((i, j, False), (j, i, True)):
+            edge = _directed_edge(model, item, remap[u], remap[v], flip, device, args)
+            n_attempted += 1
+            overlaps.append(edge.overlap or 0.0)
+            if len(edge.points_i) >= args.min_correspondences:
+                edges.append(edge)
 
-        stride = max(1, args.resolution // 32)
-        pts1 = out_p["points"][0][0, :, ::stride, ::stride].reshape(3, -1).T.cpu().double()
-        pts2 = out_p["points"][1][0, :, ::stride, ::stride].reshape(3, -1).T.cpu().double()
-        conf_i = out_p["conf"][0][0, ::stride, ::stride].reshape(-1).cpu().double()
-        conf_j = out_p["conf"][1][0, ::stride, ::stride].reshape(-1).cpu().double()
-        # Eq. 4: view 2's points expressed in frame 1.
-        pts2_in_1 = pts2 @ R.T + (s * t)
-        edge = PairwiseEdge.from_pointmaps(
-            remap[i], remap[j], pts1, pts2_in_1, pts2, conf_i=conf_i, conf_j=conf_j, R=R, t=s * t,
-            radius=args.overlap_radius,
-        )
-        n_attempted += 1
-        overlaps.append(edge.overlap or 0.0)
-        if len(edge.points_i) >= args.min_correspondences:
-            edges.append(edge)
+    # Attribute the drops to the stage that made them: supp. C.1 is a cascade,
+    # and "0 edges left" means something different at each stage.
+    taus = {"tau_rot_deg": args.tau_rot, "tau_tra_deg": args.tau_tra}
 
-    kept = prune_scene_graph(edges, min_overlap=args.min_overlap, overlap_radius=args.overlap_radius)
+    def survivors(**kw) -> int:
+        return len(prune_scene_graph(edges, overlap_radius=args.overlap_radius,
+                                     largest_component=False, **taus, **kw))
+
+    after_pose = survivors(min_overlap=0.0, strict_symmetry=False)
+    after_overlap = survivors(min_overlap=args.min_overlap, strict_symmetry=False)
+    kept = prune_scene_graph(edges, min_overlap=args.min_overlap,
+                             overlap_radius=args.overlap_radius, **taus)
     out: Dict = {
         "edges_attempted": n_attempted,
         "edges_with_correspondences": len(edges),
+        "edges_after_pose_consistency": after_pose,
+        "edges_after_overlap_gate": after_overlap,
         "edges_kept": len(kept),
         "median_overlap": round(float(torch.tensor(overlaps).median()), 4) if overlaps else 0.0,
     }
     if len(kept) < 1:
-        out["note"] = (
-            f"no edge survived: median MNN overlap {out['median_overlap']:.3f} at radius "
-            f"{args.overlap_radius}. Expected for an untrained network, whose two views' "
-            f"pointmaps are unrelated; raise --overlap-radius to exercise the path anyway."
-        )
+        if after_pose < len(edges) // 2:
+            out["note"] = (
+                f"stage 1 (symmetric pose consistency) removed "
+                f"{len(edges) - after_pose}/{len(edges)} edges at tau_rot=15 deg. "
+                "Expected for an untrained network: R_j->i and R_i->j are independent "
+                "hallucinations, so they do not transpose into each other. This stage "
+                "only became reachable once both directed edges were built."
+            )
+        else:
+            out["note"] = (
+                f"stage 2 (overlap) removed the rest: median MNN overlap "
+                f"{out['median_overlap']:.3f} at radius {args.overlap_radius}. "
+                "Expected for an untrained network, whose two views' pointmaps are "
+                "unrelated; raise --overlap-radius to exercise the path anyway."
+            )
         return out
 
-    res = ray_aware_global_alignment(len(frames), kept, iters=args.raga_iters)
-    gt_positions = torch.stack([se3_inverse(dataset.poses_cw[f].unsqueeze(0))[0][:3, 3] for f in frames])
-    out["ate_rmse_m"] = round(ate_rmse(res.poses[:, :3, 3], gt_positions), 4)
+    # Supp. C.1 stage 3 keeps one component, so some frames may now be unposed.
+    # Scoring them would silently credit a camera the graph never placed.
+    component = sorted({v for e in kept for v in (e.i, e.j)})
+    out["views_in_component"] = len(component)
+    out["views_dropped"] = len(frames) - len(component)
+
+    n_pixels = int(max(max(e.idx_i.max(), e.idx_j.max()) for e in kept)) + 1
+    views = consensus_fields(len(frames), kept, n_pixels)
+    res = ray_aware_global_alignment(
+        len(frames), kept, iters=args.raga_iters,
+        views=views, refine_log_depth=args.refine_log_depth,
+    )
+    out["anchor_view"] = int(res.anchor)
+
+    gt_positions = torch.stack(
+        [se3_inverse(dataset.poses_cw[frames[k]].unsqueeze(0))[0][:3, 3] for k in component]
+    )
+    out["ate_rmse_m"] = round(ate_rmse(res.poses[component, :3, 3], gt_positions), 4)
     out["raga_final_loss"] = float(res.best_loss)
     return out
 
@@ -223,6 +283,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--overlap-radius", type=float, default=0.1)
     p.add_argument("--min-correspondences", type=int, default=8,
                    help="drop an edge with fewer surviving MNN matches")
+    p.add_argument("--tau-rot", type=float, default=15.0,
+                   help="supp. Eq. S1 pruning threshold, deg (the paper names it, "
+                        "gives no value)")
+    p.add_argument("--tau-tra", type=float, default=30.0,
+                   help="supp. Eq. S2 pruning threshold, deg (likewise unspecified)")
+    p.add_argument("--refine-log-depth", action="store_true",
+                   help="also optimize per-pixel log-depth (supp. Eq. S4 / Sec. C.3); "
+                        "off follows Eq. 12, which freezes it -- see PAPER.md erratum 5")
 
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--out", default=None, help="write results JSON here")

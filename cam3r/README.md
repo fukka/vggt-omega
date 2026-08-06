@@ -13,6 +13,16 @@ CAM3R matters to this repo because it reports on **ADT Aria fisheye** — 99.0 /
 95.0 RRA@15 / RTA@15 (Table 1) — the exact data
 [`VGGT-360-fisheye/`](../VGGT-360-fisheye/README.md) works on.
 
+Three files, three jobs:
+
+* **[PAPER.md](PAPER.md)** — the paper and only the paper. Equations, tables,
+  hyperparameters, and 15 verified errata. If a claim is not there, the paper
+  does not make it.
+* **[reproduction.md](reproduction.md)** — ours: the knobs the paper leaves open
+  and what to sweep first, where we knowingly depart, every bug this
+  reproduction hit and what it cost.
+* **README.md** (this file) — how to run it.
+
 ## Paper → code map
 
 | Paper | Where |
@@ -31,7 +41,11 @@ CAM3R matters to this repo because it reports on **ADT Aria fisheye** — 99.0 /
 | Eq. 11, total objective | `losses.py::cam3r_loss` |
 | Eq. 12, Ray-Aware Global Alignment | `alignment.py::ray_aware_global_alignment` |
 | Eq. S4, ray conditioning (points slide along frozen rays) | `alignment.py::ray_conditioned_points` |
-| Scene-graph pruning (symmetry + adaptive 20th-percentile MNN gate) | `alignment.py::prune_scene_graph` |
+| Supp. C.1 pruning cascade: symmetry → adaptive quantile gate + strict symmetry → largest component | `alignment.py::prune_scene_graph` |
+| Sec. 3.3 consensus ray field + 3-step global radial field | `alignment.py::consensus_fields` |
+| Supp. C.2 anchor = highest-degree node, pinned to `I` | `alignment.py::anchor_node` |
+| Sec. D.3 ERP pixel-centre convention `((u+0.5)/W, (v+0.5)/H)` | `cameras.py::Equirect` |
+| Table S2 zero weight decay on bias and LayerNorm | `train.py::param_groups` |
 | Two-phase homogeneous → heterogeneous curriculum | `data.py::CurriculumSampler` |
 | Sec. D.1, synthetic fisheye (equidistant) from panoramas | `data.py::synthesize_view`, `_random_kb4` |
 | Init: UniK3D ViT backbone + DUSt3R | `pretrained.py` |
@@ -43,7 +57,7 @@ CAM3R matters to this repo because it reports on **ADT Aria fisheye** — 99.0 /
 ## Usage
 
 ```bash
-# unit tests (138 of them)
+# unit tests (157 of them)
 python -m pytest cam3r/tests/ -q
 
 # CPU end-to-end wiring check, incl. the real ADT sample if present
@@ -128,27 +142,38 @@ that matches nothing rather than silently staying random.
 
 ## Unspecified in the paper — chosen here
 
-Each is a keyword argument, not a baked-in constant.
+Every one is a flag or keyword argument, not a baked-in constant. The full list,
+with what each is expected to cost if wrong and which to sweep first, is
+[reproduction.md §1](reproduction.md). The headline ones:
 
 1. **λ_A = λ_regr = λ_pose = 1.0** and **β = 0.5** (Eq. 6, 11) — no values given.
-2. **Azimuth residuals are wrapped** into (−π, π]. Eq. 5 writes a plain absolute
+   The three terms are in different units, so 1:1:1 is a placeholder, not a
+   choice. **Sweep this first.**
+2. **Loss reduction.** Eq. 5 and Eq. 8 are written as sums with no `1/|D^v|`,
+   while the prose calls Eq. 8 an "MSE formulation". `--loss-reduction sum` is
+   the literal form; the default `mean` keeps Eq. 11's balance independent of
+   resolution and cone coverage, which is what makes λ sweepable at all.
+3. **Which learning rate.** Sec. 4.2 says 5×10⁻⁵; Table S2 says `blr` 1.5×10⁻⁴
+   with `lr = blr × batch/256`, which gives 1.9×10⁻⁵. Three mutually
+   inconsistent numbers. `--lr` follows the main text at 5e-5.
+4. **Confidence supervision.** σ appears in no training loss, so as written the
+   confidence head gets no gradient and the σ-weighting in Eq. 12 is
+   meaningless. Default is the DUSt3R term (`σ·L − α log σ`); `--conf-mode none`
+   gives the literal Eq. 8.
+5. **τ_rot = 15°, τ_tra = 30°** — named in supp. C.1, never valued.
+   `--tau-rot` / `--tau-tra`.
+6. **Azimuth residuals are wrapped** into (−π, π]. Eq. 5 writes a plain absolute
    difference, which would score two rays 0.02 rad apart as ~2π apart across the
    ±π seam.
-3. **Confidence supervision.** The paper uses σ only in Eq. 12 and never says
-   what trains it — as written, the confidence head gets no gradient and the
-   confidence weighting in global alignment would be meaningless. Default is
-   the DUSt3R term (`σ·L − α log σ`); `--conf-mode none` gives the literal Eq. 8.
-4. **Pose parameterization** — 6D rotation (Zhou et al.) and translation
+7. **`r > 0` activation** — softplus. "Via an activation layer" is all the paper
+   says.
+8. **Pose parameterization** — 6D rotation (Zhou et al.) and translation
    L2-normalized onto S². Paper says only `R ∈ SO(3)`, `t̂ ∈ S²`.
-5. **Which learning rate.** Sec. 4.2 says "an initial learning rate of 5×10⁻⁵";
-   Table S2 says "Base Learning Rate (blr) 1.5×10⁻⁴". These disagree, and the
-   MAE/DUSt3R `blr × batch/256` convention reconciles them to neither
-   (1.5e-4 × 32/256 = 1.9e-5). `--lr` follows the main text at 5e-5.
-6. **τ_rot = 15°, τ_tra = 30°** for pruning — the paper names the thresholds but
-   gives no numbers.
-7. **`geodesic_angle` uses `atan2`**, not the literal `arccos((tr−1)/2)` of
+9. **`geodesic_angle` uses `atan2`**, not the literal `arccos((tr−1)/2)` of
    Eq. 9. Analytically identical; arccos loses precision and has a divergent
    gradient at 0 and π, and the same function serves as both loss and metric.
+10. **mAA@30** follows the RelPose/PoseDiffusion definition — mean over integer
+    thresholds 1…30 of joint rotation+translation accuracy.
 
 ## Known deviations
 
@@ -165,12 +190,12 @@ Each is a keyword argument, not a baked-in constant.
    `supports_heterogeneous`. None here does, so phase 2 degenerates to phase 1
    and says so at runtime. The paper's ablation says this costs a lot (65.4 vs
    97.7 RRA@15 on 2D3DS).
-3. **RAGA is optimized with Adam**, seeded by a spanning tree of closed-form
-   weighted-Umeyama fits, and returns its **best** iterate. The paper says only
-   "alternating optimization: poses→scales→joint". The seed matters: from an
-   identity start Adam converges slowly and imprecisely, and on clean input the
-   seed is already optimal, so a last-iterate return would be worse than not
-   refining at all.
+3. **RAGA follows the paper's poses→scales→joint schedule**, but seeds it with a
+   spanning tree of closed-form weighted-Umeyama fits rooted at the anchor, and
+   returns its **best** iterate. The paper gives no learning rate, iteration
+   count or stage length. The seed matters: from an identity start Adam
+   converges slowly and imprecisely, and on clean input the seed is already
+   optimal, so a last-iterate return would be worse than not refining at all.
 4. **Overlap pruning follows the supplementary, not the main text.** Sec. 3.3
    reads like a fixed "<20% of the pixel count" cut, but supp. C.1 says
    *"Rather than using a fixed threshold, we apply an adaptive quantile gate"*
@@ -178,6 +203,9 @@ Each is a keyword argument, not a baked-in constant.
    the quantile gate; `gate="fixed"` gives the main-text reading. The
    difference is real — absolute match counts depend on texture and resolution,
    so a fixed cut tends to keep everything or nothing.
+4a. **Eq. 12 freezes the radial prior; supp. Eq. S4 does not.** The two
+   contradict each other (PAPER.md erratum 5). Default is Eq. 12;
+   `--refine-log-depth` is the Sec. C.3 reading.
 5. **DPT head is a compact reassemble/fuse**, not DUSt3R's exact head.
 6. **Ray Module patch size (14) need not divide the image size**; inputs are
    resized to the nearest multiple rather than rejected.
@@ -207,11 +235,21 @@ Each is a keyword argument, not a baked-in constant.
 
 The pipeline runs end to end on the real local sequence
 (`Apartment_release_clean_seq131_M1292`): 28 frames → 44 pairs in the paper's
-window, two-view forward, pose/ray/depth metrics, scene-graph pruning, global
-alignment, ATE. Training reduces the objective on real data (5.94 → 2.98 over
-6 short epochs; angular 0.431 → 0.144, regression 1.63 → 0.40, pose 3.88 → 2.44).
+window, two-view forward, pose/ray/depth metrics, the full pruning cascade,
+consensus fields, global alignment, ATE. Training reduces the objective on real
+data (5.94 → 2.98 over 6 short epochs; angular 0.431 → 0.144, regression
+1.63 → 0.40, pose 3.88 → 2.44).
 
 Pose accuracy is **chance level**, as it must be for an untrained network — the
 median rotation error sits near the ~120° expected of a random rotation.
+
+One consequence is worth expecting: with the symmetric-consistency stage now
+reachable, `--multi-view` on an untrained network reports **`edges_kept: 0`**,
+because `R_{j→i}` and `R_{i→j}` are independent hallucinations and do not
+transpose into each other. That is the stage doing its job, not a failure —
+`edges_after_pose_consistency` says which stage dropped what, and
+`--tau-rot`/`--tau-tra` will force the path open for a wiring check. See
+[reproduction.md §6](reproduction.md).
+
 Reproducing 99.0 / 95.0 needs the paper's four corpora, its initializations, and
 its 300–500 epochs on real hardware.

@@ -74,6 +74,27 @@ def to_batch(sample: Dict, device: torch.device) -> Dict:
     }
 
 
+def param_groups(model: torch.nn.Module, weight_decay: float) -> List[Dict]:
+    """Table S2: weight decay 0.05, but **zero on bias and LayerNorm**.
+
+    One flat ``model.parameters()`` group decays everything, including the Ray
+    Module's LayerScale gammas -- which UniK3D initializes at 1e-4, so decaying
+    them pulls the pretrained residual gates toward zero, i.e. toward discarding
+    exactly the initialization the paper depends on.  Every parameter of rank
+    <= 1 (biases, LayerNorm weight/bias, LayerScale gamma, class/register/pos
+    tokens) goes in the no-decay group.
+    """
+    decay, no_decay = [], []
+    for name, p in model.named_parameters():
+        if not p.requires_grad:
+            continue
+        (no_decay if p.ndim <= 1 else decay).append(p)
+    return [
+        {"params": decay, "weight_decay": weight_decay},
+        {"params": no_decay, "weight_decay": 0.0},
+    ]
+
+
 def lr_at(step: int, total: int, base_lr: float, warmup: int, min_lr: float = 1e-6) -> float:
     """Table S2: linear warmup then cosine decay onto a ``min_lr`` floor.
 
@@ -127,7 +148,7 @@ def run_phase(
             loss, logs = cam3r_loss(
                 out, batch,
                 lambda_a=args.lambda_a, lambda_regr=args.lambda_regr, lambda_pose=args.lambda_pose,
-                beta=args.beta, conf_mode=args.conf_mode,
+                beta=args.beta, conf_mode=args.conf_mode, reduction=args.loss_reduction,
             )
             (loss / args.accum).backward()
 
@@ -185,8 +206,8 @@ def main() -> None:
     initialize_cam3r(model, dust3r=args.dust3r, unik3d=args.unik3d)
     print(f"  CAM3R: {model.num_parameters() / 1e6:.1f}M parameters", flush=True)
 
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.95),
-                            weight_decay=args.weight_decay)
+    opt = torch.optim.AdamW(param_groups(model, args.weight_decay), lr=args.lr,
+                            betas=(0.9, 0.95))
 
     phases = [1, 2] if args.phase == "both" else [int(args.phase)]
     history: List[Dict] = []
@@ -221,6 +242,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--lambda-pose", type=float, default=1.0)
     p.add_argument("--beta", type=float, default=0.5)
     p.add_argument("--conf-mode", default="dust3r", choices=["none", "dust3r"])
+    p.add_argument("--loss-reduction", default="mean", choices=["mean", "sum"],
+                   help="'sum' is Eq. 5/8 as literally written; 'mean' keeps the three "
+                        "terms of Eq. 11 balanced independently of resolution")
 
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")

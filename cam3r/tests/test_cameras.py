@@ -121,3 +121,30 @@ def test_kb4_projection_inverts_unprojection():
     grid = torch.stack([xs, ys], dim=-1)
     err = (uv - grid).norm(dim=-1)[valid]
     assert float(err.max()) < 1e-2, f"max reprojection error {float(err.max()):.4f} px"
+
+
+def test_equirect_uses_the_papers_pixel_centre_convention():
+    """Sec. D.3: (u, v) = ((u_idx + 0.5)/W, (v_idx + 0.5)/H).
+
+    ERP has no intrinsic matrix to absorb a half pixel, so the convention is
+    observable: with pixel centres and an even width, no column sits exactly on
+    the +z axis -- the two middle columns straddle it symmetrically.
+    """
+    H, W = 32, 64
+    rays, _ = Equirect().ray_field(H, W)
+    lon = torch.atan2(rays[..., 0].double(), rays[..., 2].double())[0]
+    left, right = float(lon[W // 2 - 1]), float(lon[W // 2])
+    assert left < 0.0 < right, "the axis should fall between the two middle columns"
+    assert abs(left + right) < 1e-9, "and they should straddle it symmetrically"
+    assert abs(abs(left) - math.pi / W) < 1e-9, f"expected half a pixel, got {left:.6f}"
+
+
+def test_equirect_project_inverts_its_own_ray_field():
+    H, W = 16, 32
+    cam = Equirect()
+    rays, _ = cam.ray_field(H, W)
+    uv = cam.project(rays.double(), H=H, W=W)
+    ys, xs = torch.meshgrid(torch.arange(H, dtype=torch.float64),
+                            torch.arange(W, dtype=torch.float64), indexing="ij")
+    assert torch.allclose(uv[..., 0], xs, atol=1e-6)
+    assert torch.allclose(uv[..., 1], ys, atol=1e-6)

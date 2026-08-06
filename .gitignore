@@ -31,3 +31,7 @@ third_party/
 *~
 .idea/
 .vscode/
+
+# Paper PDFs kept next to their reproduction, not committed (20MB+ binaries)
+cam3r/*.pdf
+raytun3r/*.pdf

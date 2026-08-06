@@ -20,8 +20,10 @@ device-from-camera transform is composed with :data:`IMAGE_ROT_TO_CAMERA`
 
 **Camera extrinsics.**  Relative *camera* pose is
 ``T_cam_device . T_d1_world . T_world_d2 . T_device_cam``; the device-from-camera
-term does not cancel, and ignoring it costs up to ~8 deg of translation
-direction at a 0.35 m baseline -- material at RTA@15.  :func:`resolve_extrinsics`
+term does not cancel.  On the GPU box it resolves to a 13.6 mm lever arm **and a
+~38 deg rotation**, and the conjugation preserves rotation *angle* -- so RRA is
+unaffected but the translation direction is rotated by the full 38 deg, which is
+fatal at RTA@15.  :func:`resolve_extrinsics`
 tries an explicit JSON, then MPS ``online_calibration.jsonl``, then
 ``projectaria_tools``, and only then falls back to the device frame.  The
 fallback is recorded in ``extrinsics_source`` and ``extrinsics_exact`` so a run

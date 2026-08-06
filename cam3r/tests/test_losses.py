@@ -5,6 +5,7 @@ import math
 import sys
 from pathlib import Path
 
+import pytest
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -208,3 +209,67 @@ def test_total_loss_runs_and_backpropagates():
     assert preds["rays"][0].grad.abs().sum() > 0
     for key in ("loss/angular", "loss/regr", "loss/pose", "loss/total"):
         assert key in logs
+
+
+# ---------------------------------------------------------- Eq. 5 / Eq. 8 reduction
+
+def test_sum_reduction_is_the_paper_and_mean_is_the_default():
+    """Eq. 5 and Eq. 8 carry no 1/|D^v|; both readings must be reachable."""
+    torch.manual_seed(3)
+    pred = torch.randn(1, 3, 8, 8)
+    target = torch.randn(1, 3, 8, 8)
+    valid = torch.ones(1, 8, 8, dtype=torch.bool)
+
+    mean = local_regression_loss(pred, target, valid, reduction="mean")
+    total = local_regression_loss(pred, target, valid, reduction="sum")
+    assert torch.allclose(total, mean * valid.sum(), rtol=1e-5)
+
+    with pytest.raises(ValueError):
+        local_regression_loss(pred, target, valid, reduction="median")
+
+
+def test_sum_reduction_scales_with_resolution_and_mean_does_not():
+    """Why 'mean' is the default: at lambda=1 a sum makes Eq. 11's balance
+    depend on image size, so the same recipe weights a 64px and a 128px crop
+    differently."""
+    torch.manual_seed(4)
+    small = torch.randn(1, 3, 16, 16)
+    big = small.repeat_interleave(2, dim=2).repeat_interleave(2, dim=3)
+    zeros_s, zeros_b = torch.zeros_like(small), torch.zeros_like(big)
+
+    m_s = local_regression_loss(small, zeros_s, reduction="mean")
+    m_b = local_regression_loss(big, zeros_b, reduction="mean")
+    s_s = local_regression_loss(small, zeros_s, reduction="sum")
+    s_b = local_regression_loss(big, zeros_b, reduction="sum")
+
+    assert torch.allclose(m_s, m_b, rtol=1e-5), "mean should be resolution-free"
+    assert float(s_b) > 3.5 * float(s_s), "sum should scale with the pixel count"
+
+
+def test_reduction_threads_through_the_total_objective():
+    torch.manual_seed(5)
+    B, H, W = 1, 8, 8
+    preds = {
+        "rays": [torch.nn.functional.normalize(torch.randn(B, 3, H, W), dim=1) for _ in range(2)],
+        "points": [torch.randn(B, 3, H, W).abs().add(1.0) for _ in range(2)],
+        "conf": [torch.rand(B, H, W).add(0.5) for _ in range(2)],
+        "R": random_rotations(B, seed=8),
+        "t_dir": torch.nn.functional.normalize(torch.randn(B, 3), dim=-1),
+    }
+    T1 = make_se3(random_rotations(B, seed=9), torch.randn(B, 3))
+    T2 = make_se3(random_rotations(B, seed=10), torch.randn(B, 3))
+    R_gt, t_gt = relative_pose(T1, T2)
+    targets = {
+        "rays": [torch.nn.functional.normalize(torch.randn(B, 3, H, W), dim=1) for _ in range(2)],
+        "points": [torch.randn(B, 3, H, W).abs().add(1.0) for _ in range(2)],
+        "valid": [torch.ones(B, H, W, dtype=torch.bool) for _ in range(2)],
+        "R": R_gt,
+        "t": t_gt,
+    }
+    mean_logs = cam3r_loss(preds, targets, reduction="mean")[1]
+    sum_logs = cam3r_loss(preds, targets, reduction="sum")[1]
+    # 64 valid pixels per view, and Eq. 8 sums the two views instead of averaging.
+    assert sum_logs["loss/regr"] > 100.0 * mean_logs["loss/regr"]
+    assert sum_logs["loss/angular"] > 100.0 * mean_logs["loss/angular"]
+    # L_pose is a per-pair quantity either way, so it must not move.
+    assert abs(sum_logs["loss/pose"] - mean_logs["loss/pose"]) < 1e-9

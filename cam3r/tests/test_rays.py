@@ -83,14 +83,37 @@ def test_fit_is_insensitive_to_the_base_grid_fov():
 
 
 def test_equirect_is_exactly_representable_at_degree_1():
-    """The l=1 block is linear in (x, y, z), so an ERP ray field is an exact fit."""
+    """The l=1 block is linear in (x, y, z), so an ERP ray field is an exact fit.
+
+    Exact only when the base grid shares the pixel-centre convention of paper
+    Sec. D.3, which it does through the principal point: ``cx = (W - 1) / 2``
+    makes ``sphere_grid`` and ``Equirect.ray_field`` differ by a sign flip on
+    ``y``, and a sign flip is linear.  This is the regression test for that.
+    """
     H, W = 32, 64
     rays, valid = Equirect().ray_field(H, W)
-    intr = torch.tensor([[2 * math.pi, math.pi, W / 2.0, H / 2.0]])
+    intr = default_intrinsics(H, W, hfov=2 * math.pi).unsqueeze(0)
     coeffs = fit_sh_coeffs(rays.unsqueeze(0).permute(0, 3, 1, 2), intr, degree=1)
     recon = decode_rays(coeffs, intr, H, W, degree=1)
     mean, mx = _mean_max_deg(recon.permute(0, 2, 3, 1), rays.unsqueeze(0), valid.unsqueeze(0))
     assert mx < 0.05, f"ERP fit max {mx:.4f} deg (mean {mean:.4f})"
+
+
+def test_a_half_pixel_base_grid_offset_costs_a_constant_180_over_w():
+    """Why the principal point is ``(W - 1) / 2``: the old ``W / 2`` is half a pixel out.
+
+    The residual is not noise -- it is a constant angular bias of ``180 / W``
+    degrees, which no amount of SH degree removes because it is a latitude
+    shift, and a latitude shift is not a rotation.
+    """
+    H, W = 32, 64
+    rays, valid = Equirect().ray_field(H, W)
+    off = torch.tensor([[2 * math.pi, math.pi, W / 2.0, H / 2.0]])
+    coeffs = fit_sh_coeffs(rays.unsqueeze(0).permute(0, 3, 1, 2), off, degree=1)
+    recon = decode_rays(coeffs, off, H, W, degree=1)
+    mean, mx = _mean_max_deg(recon.permute(0, 2, 3, 1), rays.unsqueeze(0), valid.unsqueeze(0))
+    assert abs(mean - 180.0 / W) < 0.05, f"expected ~{180.0 / W:.3f} deg, got {mean:.3f}"
+    assert mx - mean < 0.05, "the offset shows up as a constant bias, not a tail"
 
 
 def test_pinhole_ray_field_is_well_approximated():

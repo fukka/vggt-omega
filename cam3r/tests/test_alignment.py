@@ -16,6 +16,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from cam3r.alignment import (
     PairwiseEdge,
+    anchor_node,
+    consensus_fields,
     mutual_nearest_neighbors,
     overlap_ratio,
     prune_scene_graph,
@@ -210,6 +212,173 @@ def test_pruning_rejects_asymmetric_reciprocal_poses():
     assert len(prune_scene_graph(edges, min_overlap=0.0, tau_rot_deg=15.0)) == 2
 
 
+def test_strict_symmetry_drops_the_direction_that_passed():
+    """Supp C.1: 'if e_ij passes but e_ji fails, both edges are discarded'."""
+    T_wc, world = _scene(n_views=2)
+    scales = torch.ones(2, dtype=torch.float64)
+    edges = _edges_from_scene(T_wc, world, scales, [(0, 1), (1, 0)])
+    edges[0].overlap = 0.90        # e_01 sails through the gate
+    edges[1].overlap = 0.01        # e_10 fails it
+
+    both = prune_scene_graph(edges, min_overlap=0.5, gate="fixed", strict_symmetry=True)
+    assert both == [], "the surviving direction must go down with its reciprocal"
+
+    lone = prune_scene_graph(edges, min_overlap=0.5, gate="fixed", strict_symmetry=False)
+    assert {(e.i, e.j) for e in lone} == {(0, 1)}
+
+
+def test_largest_connected_component_is_extracted():
+    """Supp C.1 stage 3: a fragment that shares no edge with the bulk is dropped."""
+    T_wc, world = _scene(n_views=5)
+    scales = torch.ones(5, dtype=torch.float64)
+    # 0-1-2 is the bulk; 3-4 is an unrelated fragment.
+    edges = _edges_from_scene(T_wc, world, scales, [(0, 1), (1, 2), (0, 2), (3, 4)])
+    for e in edges:
+        e.overlap = 0.9
+
+    kept = prune_scene_graph(edges, min_overlap=0.0)
+    assert {(e.i, e.j) for e in kept} == {(0, 1), (1, 2), (0, 2)}
+    assert {(e.i, e.j) for e in prune_scene_graph(edges, min_overlap=0.0,
+                                                  largest_component=False)} == {
+        (0, 1), (1, 2), (0, 2), (3, 4)}
+
+
+def test_a_disconnected_view_would_otherwise_be_reported_at_the_origin():
+    """Why stage 3 matters: the seed leaves an unreachable view at identity.
+
+    Without the component extraction the optimizer has no term touching view 3,
+    so it silently returns a camera at the world origin rather than an error.
+    """
+    T_wc, world = _scene(n_views=4)
+    scales = torch.ones(4, dtype=torch.float64)
+    edges = _edges_from_scene(T_wc, world, scales, [(0, 1), (1, 2), (3, 3)][:2])
+    res = ray_aware_global_alignment(4, edges, iters=30)
+    assert torch.allclose(res.poses[3], torch.eye(4, dtype=torch.float64)), \
+        "view 3 is unreachable and should still be sitting at identity"
+
+
+# --------------------------------------------------------------- Sec. 3.3 anchor
+
+def test_anchor_is_the_highest_degree_node():
+    """Supp C.2 fixes the pose of the highest-degree node, not view 0."""
+    T_wc, world = _scene(n_views=4)
+    scales = torch.ones(4, dtype=torch.float64)
+    # View 2 touches three edges; views 0, 1, 3 touch one or two.
+    edges = _edges_from_scene(T_wc, world, scales, [(0, 2), (1, 2), (2, 3)])
+    assert anchor_node(4, edges) == 2
+
+    res = ray_aware_global_alignment(4, edges, iters=60)
+    assert res.anchor == 2
+    assert torch.allclose(res.poses[2], torch.eye(4, dtype=torch.float64), atol=1e-9)
+    assert abs(float(res.scales[2]) - 1.0) < 1e-9
+
+
+def test_anchor_choice_does_not_change_relative_geometry():
+    """The gauge is arbitrary: pinning a different camera must give the same scene."""
+    T_wc, world = _scene(n_views=3, n_pts=200, seed=11)
+    scales = torch.tensor([1.0, 2.0, 0.5], dtype=torch.float64)
+    edges = _edges_from_scene(T_wc, world, scales, [(0, 1), (1, 2), (0, 2)])
+    a = ray_aware_global_alignment(3, edges, iters=300, anchor=0)
+    b = ray_aware_global_alignment(3, edges, iters=300, anchor=2)
+    for (i, j) in [(0, 1), (1, 2), (0, 2)]:
+        Ra, ta = relative_pose(se3_inverse(a.poses[i]).unsqueeze(0), se3_inverse(a.poses[j]).unsqueeze(0))
+        Rb, tb = relative_pose(se3_inverse(b.poses[i]).unsqueeze(0), se3_inverse(b.poses[j]).unsqueeze(0))
+        rot, tra = relative_pose_error(Ra, ta, Rb, tb)
+        assert float(rot) < 1.0 and float(tra) < 2.0
+    ratio_a = a.scales / a.scales[0]
+    ratio_b = b.scales / b.scales[0]
+    assert torch.allclose(ratio_a, ratio_b, rtol=0.05)
+
+
+# ------------------------------------------------------- Sec. 3.3 consensus fields
+
+def _pointmap_edge(i, j, T_wc, world, scale_i=1.0, scale_j=1.0, radius=0.5):
+    """A real from_pointmaps edge, so it carries pixel indices."""
+    X_ii = transform_points(se3_inverse(T_wc[i]), world) / scale_i
+    X_jj = transform_points(se3_inverse(T_wc[j]), world) / scale_j
+    R, t = relative_pose(se3_inverse(T_wc[i]).unsqueeze(0), se3_inverse(T_wc[j]).unsqueeze(0))
+    X_ji = X_jj * scale_j @ R[0].T + t[0]
+    return PairwiseEdge.from_pointmaps(i, j, X_ii, X_ji, X_jj, R=R[0], t=t[0], radius=radius)
+
+
+def test_consensus_fields_need_pixel_indices():
+    T_wc, world = _scene(n_views=2, n_pts=40)
+    edges = _edges_from_scene(T_wc, world, torch.ones(2, dtype=torch.float64), [(0, 1)])
+    try:
+        consensus_fields(2, edges, n_pixels=40)
+    except ValueError as exc:
+        assert "pixel indices" in str(exc)
+    else:
+        raise AssertionError("fusing edges without indices should be refused")
+
+
+def test_consensus_rays_are_unit_and_agree_with_the_observations():
+    T_wc, world = _scene(n_views=3, n_pts=60, seed=8)
+    edges = [_pointmap_edge(0, 1, T_wc, world), _pointmap_edge(0, 2, T_wc, world)]
+    fields = consensus_fields(3, edges, n_pixels=60)
+
+    seen = fields[0].seen
+    assert bool(seen.any())
+    norms = fields[0].rays[seen].norm(dim=-1)
+    assert torch.allclose(norms, torch.ones_like(norms), atol=1e-9)
+
+    # View 0's own pointmap is the same in both edges, so the fused field must
+    # reproduce it exactly.
+    truth = transform_points(se3_inverse(T_wc[0]), world)
+    got = fields[0].points()[seen]
+    assert torch.allclose(got, truth[seen], atol=1e-8)
+
+
+def test_consensus_radial_median_alignment_survives_a_mis_scaled_edge():
+    """Step 2 of the three: relative scale resolved by a robust median."""
+    T_wc, world = _scene(n_views=3, n_pts=80, seed=9)
+    good = _pointmap_edge(0, 1, T_wc, world)
+    # An edge whose view-0 radial distances are uniformly 4x too large.
+    skewed = _pointmap_edge(0, 2, T_wc, world)
+    skewed.points_i = skewed.points_i * 4.0
+    skewed.conf = skewed.conf * 0.5
+
+    fields = consensus_fields(3, [good, skewed], n_pixels=80)
+    seen = fields[0].seen
+    truth = transform_points(se3_inverse(T_wc[0]), world).norm(dim=-1)
+    got = fields[0].radial[seen]
+    err = (got / truth[seen] - 1.0).abs().max()
+    assert float(err) < 1e-6, f"median alignment left {float(err):.3e} relative error"
+
+
+def test_alignment_over_consensus_fields_recovers_known_poses():
+    T_wc, world = _scene(n_views=3, n_pts=200, seed=10)
+    edges = [_pointmap_edge(i, j, T_wc, world) for (i, j) in [(0, 1), (1, 2), (0, 2)]]
+    views = consensus_fields(3, edges, n_pixels=200)
+    res = ray_aware_global_alignment(3, edges, iters=300, views=views)
+    for (i, j) in [(0, 1), (1, 2), (0, 2)]:
+        R_gt, t_gt = relative_pose(se3_inverse(T_wc[i]).unsqueeze(0), se3_inverse(T_wc[j]).unsqueeze(0))
+        R_p, t_p = relative_pose(se3_inverse(res.poses[i]).unsqueeze(0), se3_inverse(res.poses[j]).unsqueeze(0))
+        rot, tra = relative_pose_error(R_p, t_p, R_gt, t_gt)
+        assert float(rot) < 2.0 and float(tra) < 5.0
+
+
+def test_refine_log_depth_needs_consensus_fields():
+    T_wc, world = _scene(n_views=2, n_pts=60, seed=12)
+    edges = [_pointmap_edge(0, 1, T_wc, world)]
+    try:
+        ray_aware_global_alignment(2, edges, iters=10, refine_log_depth=True)
+    except ValueError as exc:
+        assert "consensus_fields" in str(exc)
+    else:
+        raise AssertionError("per-pixel log-depth has no meaning without shared fields")
+
+
+def test_refine_log_depth_does_not_make_a_clean_scene_worse():
+    """Supp Eq. S4 frees log d; on exact input it should find nothing to fix."""
+    T_wc, world = _scene(n_views=3, n_pts=150, seed=16)
+    edges = [_pointmap_edge(i, j, T_wc, world) for (i, j) in [(0, 1), (1, 2), (0, 2)]]
+    views = consensus_fields(3, edges, n_pixels=150)
+    frozen = ray_aware_global_alignment(3, edges, iters=150, views=views)
+    freed = ray_aware_global_alignment(3, edges, iters=150, views=views, refine_log_depth=True)
+    assert freed.best_loss <= frozen.best_loss * 1.05
+
+
 # ------------------------------------------------------------------- Eq. 12
 
 def test_alignment_recovers_known_poses():
@@ -295,3 +464,24 @@ def test_identity_init_still_converges_but_starts_far_worse():
     tree = ray_aware_global_alignment(3, edges, iters=300, init="spanning_tree")
     ident = ray_aware_global_alignment(3, edges, iters=300, init="identity")
     assert tree.best_loss < ident.best_loss
+
+
+def test_duplicate_keys_are_judged_per_edge():
+    """Regression: two edges sharing (i, j) must be filtered independently.
+
+    Keying the verdict by ordered pair lets a bad duplicate ride in on its
+    twin's pass -- which is exactly how an all-pairs graph plus one junk edge
+    on an existing pair slipped through.
+    """
+    T_wc, world = _scene(n_views=3)
+    scales = torch.ones(3, dtype=torch.float64)
+    good = _edges_from_scene(T_wc, world, scales, [(0, 1), (1, 2), (0, 2)])
+    for e in good:
+        e.overlap = 0.9
+    junk = PairwiseEdge(i=0, j=2,
+                        points_i=torch.randn(40, 3, dtype=torch.float64),
+                        points_j=torch.randn(40, 3, dtype=torch.float64),
+                        conf=torch.ones(40, dtype=torch.float64), overlap=0.01)
+    kept = prune_scene_graph(good + [junk], min_overlap=0.2)
+    assert len(kept) == 3
+    assert all(e.overlap == 0.9 for e in kept)

@@ -166,3 +166,33 @@ def test_readout_layers_stay_distinct_groups_on_a_shallow_trunk():
     assert len(rm.readout_layers) == rm.n_groups == 4
     rays, intr, coeffs = rm(torch.rand(2, 3, 64, 64))
     assert coeffs.shape == (2, 15, 3) and intr.shape == (2, 4)
+
+
+def test_weight_decay_skips_bias_and_layernorm():
+    """Table S2: 'Zero Weight Decay: Bias and LayerNorm parameters'.
+
+    A single flat parameter group decays everything, including the Ray Module's
+    LayerScale gammas -- which UniK3D initializes at 1e-4, so decaying them
+    pushes the pretrained residual gates toward zero, i.e. toward discarding
+    the very initialization the paper depends on.
+    """
+    from cam3r.train import param_groups
+
+    model = _tiny()
+    groups = param_groups(model, weight_decay=0.05)
+    assert len(groups) == 2
+    decayed = {id(p) for p in groups[0]["params"]}
+    spared = {id(p) for p in groups[1]["params"]}
+    assert groups[0]["weight_decay"] == 0.05 and groups[1]["weight_decay"] == 0.0
+
+    # Every parameter appears exactly once, and every rank<=1 tensor is spared.
+    every = [p for p in model.parameters() if p.requires_grad]
+    assert len(decayed) + len(spared) == len(every)
+    for name, p in model.named_parameters():
+        if p.ndim <= 1:
+            assert id(p) in spared, f"{name} should not be weight-decayed"
+        else:
+            assert id(p) in decayed, f"{name} should be weight-decayed"
+
+    gammas = [n for n, p in model.named_parameters() if n.endswith("gamma")]
+    assert gammas, "expected LayerScale gammas in the Ray Module trunk"

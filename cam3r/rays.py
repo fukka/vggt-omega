@@ -42,8 +42,19 @@ def n_sh_coeffs(degree: int = 3) -> int:
 
 
 def default_intrinsics(H: int, W: int, hfov: float = math.pi / 2) -> torch.Tensor:
-    """A sane ``(hfov, vfov, cx, cy)`` starting point: centred, vfov scaled by aspect."""
-    return torch.tensor([hfov, hfov * H / W, W / 2.0, H / 2.0], dtype=torch.float32)
+    """A sane ``(hfov, vfov, cx, cy)`` starting point: centred, vfov scaled by aspect.
+
+    The centre of a ``W``-wide integer pixel grid is ``(W - 1) / 2``, not
+    ``W / 2``: the latter sits half a pixel to the right of the middle pixel.
+    That half pixel is exactly the pixel-centre convention of paper Sec. D.3 --
+    with ``cx = (W - 1) / 2`` this grid and :meth:`cameras.Equirect.ray_field`
+    agree up to a sign flip on ``y``, so a degree-1 expansion reproduces an ERP
+    field exactly.  With ``W / 2`` it cannot, and the residual is a constant
+    ``180 / W`` degrees.
+    """
+    return torch.tensor(
+        [hfov, hfov * H / W, (W - 1) / 2.0, (H - 1) / 2.0], dtype=torch.float32
+    )
 
 
 def sphere_grid(intrinsics: torch.Tensor, H: int, W: int) -> torch.Tensor:
@@ -163,7 +174,7 @@ def fit_ray_field(
 
     best: Optional[RayFitResult] = None
     for hfov in hfov_candidates:
-        intr = torch.tensor([[hfov, hfov * H / W, W / 2.0, H / 2.0]], dtype=torch.float32)
+        intr = default_intrinsics(H, W, hfov).unsqueeze(0)
         coeffs = fit_sh_coeffs(rays, intr, valid, degree=degree)
         recon = decode_rays(coeffs, intr, H, W, degree=degree)
         dot = (recon * rays).sum(1).clamp(-1.0, 1.0)

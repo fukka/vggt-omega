@@ -185,7 +185,13 @@ def synthesize_view(
     Hp, Wp = panorama.shape[-2:]
     uv = Equirect().project(world_dirs, H=Hp, W=Wp).reshape(H, W, 2)
 
-    grid = torch.stack([uv[..., 0] / Wp * 2 - 1, uv[..., 1] / Hp * 2 - 1], dim=-1)
+    # `project` returns index-space coordinates; grid_sample with
+    # align_corners=False puts pixel *centres* at (idx + 0.5) / N, so the half
+    # pixel has to be added here or every synthesized view is resampled half a
+    # pixel off its own ray field.
+    grid = torch.stack(
+        [(uv[..., 0] + 0.5) / Wp * 2 - 1, (uv[..., 1] + 0.5) / Hp * 2 - 1], dim=-1
+    )
     grid = grid.unsqueeze(0).to(panorama.dtype)
     image = F.grid_sample(
         panorama.unsqueeze(0), grid, mode="bilinear", padding_mode="border", align_corners=False
