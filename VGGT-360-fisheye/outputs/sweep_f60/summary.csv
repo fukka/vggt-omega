@@ -1,0 +1,14 @@
+tag,mode,fov,enhance,true_fov,infer_fov_h,infer_fov_w,align_pct
+tangent_fov40_none,tangent,40.0,none,40.0,38.71,38.63,14.21
+tangent_fov60_none,tangent,60.0,none,60.0,60.37,60.44,19.56
+tangent_fov80_none,tangent,80.0,none,80.0,75.33,75.58,25.20
+tangent_fov100_none,tangent,100.0,none,100.0,99.35,99.52,28.79
+tangent_fov110_none,tangent,110.0,none,110.0,104.52,104.45,24.49
+tangent_fov120_none,tangent,120.0,none,120.0,106.71,106.72,20.27
+raw_roi_fov40_none,raw_roi,40.0,none,40.0,37.26,37.16,14.37
+raw_roi_fov60_none,raw_roi,60.0,none,60.0,54.80,54.94,16.48
+raw_roi_fov80_none,raw_roi,80.0,none,80.0,67.06,67.25,19.29
+raw_roi_fov100_none,raw_roi,100.0,none,100.0,75.28,75.69,20.15
+raw_roi_fov110_none,raw_roi,110.0,none,110.0,84.78,85.10,18.69
+raw_roi_fov120_none,raw_roi,120.0,none,120.0,89.26,89.38,20.20
+rectifier_fovrect_none,rectifier,None,none,84.54737801218748,84.10,84.30,28.14

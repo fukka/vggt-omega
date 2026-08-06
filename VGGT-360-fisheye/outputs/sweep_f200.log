@@ -1,0 +1,41 @@
+render size 512 (native token grid for vggt_omega; override with --persp-size)
+  [ADT] 1 usable sequence(s) (need: depth_npy, videos_synthetic)
+  [ADT]   SKIP Apartment_release_clean_seq133_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq134_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq135_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq136_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq137_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq138_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq140_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq141_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq142_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq143_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq144_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq145_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq146_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq147_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq148_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq149_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq150_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT] 201 frames <- Apartment_release_clean_seq131_M1292 (61 depth maps had no RGB partner)
+loading VGGT-Omega from /group-volume/Fengjia/projects/vggt-omega/checkpoints/VGGT-Omega-1B-512/model.pt on cuda (torch.bfloat16) ...
+====================================================================
+weight check OK: all model keys matched (no random-init layers).
+====================================================================
+
+config                          true_fov  infer(h,w)      align
+tangent_fov40_none                    40    39.1, 39.0    23.2%
+tangent_fov60_none                    60    60.5, 60.6    23.2%
+tangent_fov80_none                    80    77.1, 77.1    25.5%
+tangent_fov100_none                  100   100.5,100.7    30.1%
+tangent_fov110_none                  110   105.3,105.3    25.5%
+tangent_fov120_none                  120   107.4,107.3    23.5%
+raw_roi_fov40_none                    40    37.8, 37.8    22.1%
+raw_roi_fov60_none                    60    56.5, 56.7    21.0%
+raw_roi_fov80_none                    80    67.6, 67.8    24.1%
+raw_roi_fov100_none                  100    78.2, 78.5    23.6%
+raw_roi_fov110_none                  110    86.7, 87.0    23.0%
+raw_roi_fov120_none                  120    90.1, 90.2    24.8%
+rectifier_fovrect_none                85    86.6, 86.3    32.4%
+
+done — 13 configs. See VGGT-360-fisheye/outputs/sweep_f200/ (summary.csv, align_vs_fov.png, grid.png, per-config *.png)
