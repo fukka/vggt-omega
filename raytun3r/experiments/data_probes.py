@@ -95,10 +95,15 @@ def probe_mask(src, frames: List[int], edges: List[float]) -> Optional[Dict]:
     cam = src.camera
     th = cam.incidence_grid(cam.height, cam.width).rad2deg()
     for i in frames:
+        # ScanNet++ names the mask after the image stem; a per-frame `mask_path`,
+        # when present, may be relative to either dslr/ or dslr/masks/.
+        stem = os.path.splitext(os.path.basename(src.frames[i]["file_path"]))[0]
         rel = src.frames[i].get("mask_path")
-        if not rel:
-            continue
-        for cand in (os.path.join(root, rel), os.path.join(root, "masks", os.path.basename(rel))):
+        cands = [os.path.join(root, "masks", stem + ".png")]
+        if rel:
+            cands = [os.path.join(root, rel),
+                     os.path.join(root, "masks", os.path.basename(rel))] + cands
+        for cand in cands:
             if os.path.exists(cand):
                 break
         else:

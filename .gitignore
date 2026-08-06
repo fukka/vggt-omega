@@ -35,3 +35,10 @@ third_party/
 # Paper PDFs kept next to their reproduction, not committed (20MB+ binaries)
 cam3r/*.pdf
 raytun3r/*.pdf
+
+# Licensed dataset samples staged by raytun3r/experiments/make_local_sample.py.
+# ScanNet++ is licensed per-recipient and this repo is public: a sample must
+# never be committed, and `git rm` would not take it back once it had been.
+scannetpp_example/
+**/SAMPLE_MANIFEST.json
+*_sample_scene/

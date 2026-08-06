@@ -104,10 +104,30 @@ python -m raytun3r.experiments.data_probes --path /netapp/datasets/f.zhang2/scan
   `d_reproj`/AbsRel, never for `R°`/`t°`.
 
 **Both scripts are read-only, need no GPU or weights, and emit JSON.** Commit the
-two JSON files to `results` — they are *derived statistics*, which is what makes
-them safe: **ScanNet++ is under Terms of Use that forbid redistribution and this
-repo is public, so no frame, mask or depth map from it may ever be committed.**
-That is also why these probes return numbers instead of crops.
+two JSON files to `results`.
+
+### Also stage a local sample (~5 MB) so this stops needing a round-trip
+
+```bash
+python -m raytun3r.experiments.make_local_sample --src /netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d --out /sdcard/data/scannetpp_example
+```
+
+Then tell Fengji it is ready; **he moves it out of band** and CPU-Claude works
+against it directly. The output has the same layout as a real scene, so
+`ScanNetPPFisheye(<copied>)` opens it unchanged and `data_audit`, `data_probes`,
+even `train`/`eval` on a couple of frames all run off-box.
+
+It keeps **the full `transforms.json`** — so the trajectory-wide stride and
+identity-predictor analysis stays exact — plus 24 frames sampled as offsets
+`{0,1,2,5,10,20,40,60}` from 3 anchors, which is what makes pairs at stride 1, 2,
+5, 10, 20, 40 and 60 all available locally. Masks and `render_depth` come too when
+present. Verified end to end on a synthetic scene: 24/24/24 at 4.6 MB, and the
+probes give the same verdicts against the staged copy as against the original.
+
+**Do not commit the sample.** ScanNet++ is licensed per-recipient and this repo is
+public; `git rm` would not take it back, since history here is permanent and
+mirrored. `.gitignore` now blocks the usual paths, but the transfer is out of band
+regardless.
 
 **Decision rule.** If some stride puts the median GT rotation near 7°, that is the
 operating point the paper is at and Phase 1 should be re-run there. If *no* stride
