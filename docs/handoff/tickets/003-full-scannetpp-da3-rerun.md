@@ -52,6 +52,44 @@ camera head — so the rotation findings still stand.
 
 ---
 
+## Phase −1 — audit the evaluation data first (seconds, no GPU)
+
+**Phase 1 ran and missed (see below), so this now precedes everything.** `vanilla`
+is the easiest thing in the paper to reproduce — frozen backbone, no adapter, no
+training, no randomness — and ours does not match: paper 7.21° `R°` on this scene
+with VGGT, we measure 0.554 at stride 1 and 2.379 at stride 10. Until that is
+explained, no adapter result means anything.
+
+```bash
+python -m raytun3r.experiments.data_audit --path /netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d --json runs/audit/3f15a9266d.json
+```
+
+Reads `transforms.json` only — no images, no weights, no GPU. Report the whole
+output on the issue. It answers four things:
+
+1. **Keys the loader ignores.** `test_frames`, `applied_transform`,
+   `applied_scale`, and per-frame **`mask_path`**. ScanNet++ ships per-frame DSLR
+   masks and we ignore them — if those masks define the valid fisheye region, then
+   the paper's Ω is the mask and ours is the whole rectangle, which would explain
+   the 115°/170° disagreement outright.
+2. **The FOV the intrinsics actually imply**, at frame edges and corner
+   (horizontal / vertical / diagonal). One of those may be the paper's 115°.
+3. **Whether the poses are metric.** If the camera bbox is ~1 rather than metres,
+   every distance we have quoted — including the 1.09 cm baseline — is in the
+   wrong unit.
+4. **The identity-predictor score per stride.** This is the important one.
+   `R°` is an *absolute* angular error, so a model predicting identity scores
+   exactly the median GT rotation. **Two runs' `R°` are only comparable when their
+   GT rotation distributions match**, and `--stride` changes that distribution
+   directly. If our stride-1 median GT rotation is ~0.5°, then `vanilla`'s 0.554°
+   is the identity score and that evaluation carries no information at all.
+
+**Decision rule.** If some stride puts the median GT rotation near 7°, that is the
+operating point the paper is at and Phase 1 should be re-run there. If *no* stride
+reaches it, then our frame set differs from the paper's — that is the finding, and
+it is worth more than any further sweep. Either way, stop and report before
+spending GPU time.
+
 ## Phase 0 — setup and two cheap checks (~10 min)
 
 ```bash
