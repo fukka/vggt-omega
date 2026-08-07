@@ -135,6 +135,55 @@ reaches it, then our frame set differs from the paper's — that is the finding,
 it is worth more than any further sweep. Either way, stop and report before
 spending GPU time.
 
+## Phase 1b — re-run Phase 1 on the corrected frame set (~20 GPU-min)
+
+**Phase −1 came back and changed two things about how Phase 1 must be run.** Do
+this before Phase 2; it is cheap and Phase 2's diagnostics are unreadable until
+the frame set and the metric are right.
+
+1. **16% of the frames should never have been evaluated.** `is_bad` is true for
+   143 of 896 on `3f15a9266d`, in 8 contiguous runs, the longest 132 frames.
+   `data.py` now drops them by default (`--keep-bad` restores the old behaviour),
+   so **every Phase 1 number needs re-measuring** — the frame set changed.
+2. **`t°` below stride 20 is measuring nothing.** A random direction in 3D scores
+   90°; we measure 121 / 98 / 65 / 139° at strides 1–10 locally, and your
+   stride-10 DA3 run gave 40.3°. Translation direction only becomes observable at
+   stride 20–60 (26.6 / 24.0 / 31.8). So run stride 10 **and** stride 40.
+
+```bash
+S=/netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d
+for ST in 10 40; do
+  for M in raytun3r lora caltok; do
+    python -m raytun3r.train --backbone da3 --variant small --weights pretrained \
+      --dataset scannetpp --path $S --method $M --stride $ST \
+      --out runs/rt3r/tab5-3f15-da3s-s$ST-$M
+  done
+  python -m raytun3r.eval --backbone da3 --variant small --weights pretrained \
+    --dataset scannetpp --path $S --stride $ST \
+    --adapter runs/rt3r/tab5-3f15-da3s-s$ST-raytun3r/adapter.pt \
+    --methods vanilla,param_free,raytun3r,center_ph,multi_ph \
+    --out runs/rt3r/tab5-3f15-da3s-s$ST/results.json
+done
+```
+
+(plus the separate `lora` / `caltok` evals against their own checkpoints, as in
+Phase 1.)
+
+`eval.py` now emits **`R_deg_identity`** and **`R_skill`** on every run. Report
+`R_skill`, not raw `R°`: a bare `R°` is not comparable across strides, and it is
+what made two rounds of our numbers look like they disagreed with the paper when
+they were measured at different rotation scales.
+
+**The target to beat is skill, not degrees.** At stride 10 the paper's VGGT
+vanilla (7.21°) is **1.08× skill — at chance** — while its RayTun3R (0.93°) is
+**8.38×**. Ours are vanilla 3.1×, raytun3r 4.9×. So we have *two* gaps: our
+unadapted model is much healthier than theirs, and our adapted one is much worse.
+
+**Also worth one cheap question:** can `dslr/masks/` and `dslr/render_depth/` be
+fetched for this scene? Both are absent from the current download, which is why Ω
+-from-mask and all of Tab. 3 (AbsRel, δ₁.₂₅) remain untestable. `transforms.json`
+references masks per frame, so they exist upstream.
+
 ## Phase 0 — setup and two cheap checks (~10 min)
 
 ```bash
