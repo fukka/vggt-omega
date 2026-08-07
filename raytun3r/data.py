@@ -135,14 +135,26 @@ class ScanNetPPFisheye(SequenceSource):
     ``transforms.json`` stores camera-to-world in the nerfstudio/OpenGL frame
     (x right, y up, z backwards); it is converted to the OpenCV camera-from-world
     convention used everywhere else here.
+
+    ``render_depth`` is **planar z** -- the ScanNet++ toolkit renders it from the
+    mesh with a z-buffer, and ``depth_any_camera/docs/DATA.md`` flags the same
+    thing ("the ground-truth depth uses z-buffer rendering ... using Euclidean
+    distance for training and testing is essential for large FoV cameras"). It is
+    converted to euclidean range on load, matching the ``"range"`` convention the
+    losses and metrics default to; pass ``depth_convention="z"`` to keep it as
+    stored. Skipping that conversion costs a per-pixel ``1/cos(theta)`` -- 10.9x
+    at this lens's 84.8 deg rim -- which no single global scale can absorb, so it
+    lands directly on ``AbsRel``/``delta_1.25`` (Tab. 3).
     """
 
     def __init__(self, scene_dir: str, *, max_size: int = 504, patch: int = 14,
                  max_frames: Optional[int] = None, transforms: Optional[str] = None,
-                 depth_scale: float = 1e-3, keep_bad: bool = False):
+                 depth_scale: float = 1e-3, keep_bad: bool = False,
+                 depth_convention: str = "range"):
         self.scene_dir = scene_dir
         self.name = os.path.basename(scene_dir.rstrip("/"))
         self.depth_scale = depth_scale
+        self.depth_convention = depth_convention
 
         tpath = transforms or os.path.join(scene_dir, "dslr", "nerfstudio", "transforms.json")
         if not os.path.exists(tpath):
@@ -248,8 +260,25 @@ class ScanNetPPFisheye(SequenceSource):
         from PIL import Image
 
         d = torch.from_numpy(np.asarray(Image.open(path)).astype(np.float32)) * self.depth_scale
+
+        # Convert at the *rendered* resolution, then resample. Resampling first
+        # pairs each z with a neighbour's theta, and 1/cos amplifies that
+        # mismatch exactly where cos is smallest -- worth 0.003 AbsRel on
+        # 3f15a9266d, which is 5% of Tab. 3's Center-PH target.
+        if self.depth_convention == "range":
+            # ScanNet++ renders planar z; the losses/metrics default to range.
+            oh, ow = d.shape[-2:]
+            full = self.camera.resized(ow, oh)
+            cos = full.ray_grid(oh, ow, device=d.device)[..., 2]
+            # Restrict to the imaged cone *before* converting: outside it the ray
+            # is near-grazing, so 1/cos(theta) explodes and would manufacture
+            # depths of thousands of metres from ordinary indoor GT.
+            keep = (d > 1e-6) & full.valid_mask(oh, ow, device=d.device)
+            d = torch.where(keep, d / cos.clamp_min(1e-3), torch.zeros_like(d))
+
         d = _resize_to(d[None], (self.h, self.w), mode="nearest")[0]
-        return d, d > 1e-6
+        valid = (d > 1e-6) & self.camera.valid_mask(self.h, self.w, device=d.device)
+        return torch.where(valid, d, torch.zeros_like(d)), valid
 
 
 # ---------------------------------------------------------------------------

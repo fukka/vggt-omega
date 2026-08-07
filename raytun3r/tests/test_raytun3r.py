@@ -738,3 +738,97 @@ def test_scannetpp_anon_mask_path_resolution(tmp_path):
     assert mask is not None, "mask_path is a bare filename; resolve it beside the images"
     assert mask.shape == (src.h, src.w) and mask.dtype == torch.bool
     assert mask.any() and not mask.all()
+
+
+def _synthetic_scannetpp(tmp_path, planar_z, *, w=70, h=42, fl=30.0):
+    """A one-frame ScanNet++ scene whose ``render_depth`` holds ``planar_z``."""
+    import json as _json
+
+    import numpy as np
+    from PIL import Image
+
+    d = tmp_path / "scene" / "dslr"
+    (d / "resized_images").mkdir(parents=True)
+    (d / "render_depth").mkdir(parents=True)
+    (d / "nerfstudio").mkdir(parents=True)
+
+    Image.new("RGB", (w, h)).save(d / "resized_images" / "DSC00000.JPG")
+    mm = np.round(planar_z.numpy() * 1000.0).astype(np.uint16)   # uint16 mm, as shipped
+    Image.fromarray(mm, mode="I;16").save(d / "render_depth" / "DSC00000.png")
+
+    (d / "nerfstudio" / "transforms.json").write_text(_json.dumps({
+        "camera_model": "OPENCV_FISHEYE", "w": w, "h": h,
+        "fl_x": fl, "fl_y": fl, "cx": w / 2.0, "cy": h / 2.0,
+        "k1": 0.0, "k2": 0.0, "k3": 0.0, "k4": 0.0,
+        "frames": [{"file_path": "DSC00000.JPG",
+                    "transform_matrix": [[1, 0, 0, 0], [0, 1, 0, 0],
+                                         [0, 0, 1, 0], [0, 0, 0, 1]]}]}))
+    return str(tmp_path / "scene")
+
+
+def test_scannetpp_render_depth_is_planar_z_and_gets_converted(tmp_path):
+    """ScanNet++ ``render_depth`` is a z-buffer; returning it raw wrecks Tab. 3.
+
+    The loader used to hand the stored planar z straight to ``depth_metrics``,
+    which compares it against predictions in euclidean range (decision 4,
+    ``--convention range``). The two differ by a per-pixel ``1/cos(theta)`` --
+    10.9x at 3f15a9266d's 84.8 deg rim -- and ``align_scale`` fits one global
+    scalar, which cannot absorb it. Measured on that scene, a *perfect* range
+    predictor scored AbsRel 0.426 / delta_1.25 0.412, i.e. worse than the paper's
+    worst reported method (vanilla, 0.282 / 0.601), so Tab. 3 was unmeasurable
+    before any backbone ran.
+    """
+    from raytun3r.data import ScanNetPPFisheye
+    from raytun3r.metrics import depth_metrics
+
+    # Probe the geometry, then build a scene at constant euclidean range.
+    probe = ScanNetPPFisheye(_synthetic_scannetpp(tmp_path / "probe",
+                                                  torch.ones(42, 70)), max_size=70)
+    cos = probe.camera.ray_grid(probe.h, probe.w)[..., 2]
+    assert float(cos.min()) < 0.5, "camera too narrow to exercise the conversion"
+
+    rng_true = torch.full((probe.h, probe.w), 3.0)
+    scene = _synthetic_scannetpp(tmp_path / "scene", rng_true * cos, w=70, h=42)
+
+    src = ScanNetPPFisheye(scene, max_size=70)
+    assert (src.h, src.w) == (42, 70), "test assumes no resample of the depth map"
+
+    d, valid = src.depth(0)
+    assert valid.any()
+    # uint16 mm quantisation of z, divided back by cos, is worst at the rim.
+    assert torch.allclose(d[valid], rng_true[valid], atol=5e-3), \
+        "planar z was not converted to euclidean range"
+
+    z_src = ScanNetPPFisheye(scene, max_size=70, depth_convention="z")
+    dz, _ = z_src.depth(0)
+    assert torch.allclose(dz[valid], (rng_true * cos)[valid], atol=5e-3), \
+        'depth_convention="z" must return the stored planar z unchanged'
+
+    # The symptom, at the seam eval.py:110 uses: a perfect range predictor.
+    m = depth_metrics(rng_true, d, valid=valid)
+    assert m["AbsRel"] < 0.01 and m["delta_1.25"] > 0.99, \
+        f"perfect predictor scores AbsRel {m['AbsRel']:.3f} / delta {m['delta_1.25']:.3f}"
+
+    bug = depth_metrics(rng_true, dz, valid=valid)
+    assert bug["AbsRel"] > 0.05, \
+        "the unconverted path should still be visibly wrong -- else the test is vacuous"
+
+
+def test_scannetpp_convention_reaches_the_loader():
+    """``--convention`` used to be forwarded for ADT only, leaving ScanNet++ raw.
+
+    The loader fix is inert unless both CLIs pass the flag through, so pin the
+    call site rather than trusting the default.
+    """
+    import inspect
+
+    from raytun3r import eval as _eval
+    from raytun3r import train as _train
+
+    for mod in (_eval, _train):
+        src = inspect.getsource(mod.main)
+        i = src.index("load_sequence(")
+        call = src[i:i + 400]
+        assert "depth_convention=args.convention" in call, (
+            f"{mod.__name__}.main passes depth_convention conditionally; "
+            f"ScanNet++ then silently keeps planar z")

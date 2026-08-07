@@ -38,12 +38,22 @@ METHODS = ["vanilla", "param_free", "raytun3r", "center_ph", "multi_ph", "lora",
 
 @torch.no_grad()
 def evaluate(runner, windows, camera, *, convention: str = "range",
-             device="cpu", label: str = "") -> Dict[str, float]:
+             device="cpu", label: str = "", max_depth: Optional[float] = None
+             ) -> Dict[str, float]:
     """Score one method over the evaluation windows.
 
     ``runner`` maps ``(S, 3, H, W)`` images to a :class:`~raytun3r.backbones.Prediction`.
     Pose and ``d_reproj`` need ground-truth pose and are skipped without it;
     ``AbsRel``/``delta_1.25`` need ground-truth depth.
+
+    ``max_depth`` caps the ground truth before scoring. The paper states no cap,
+    so the default is none; it exists because mesh-rendered depth carries rays
+    that leave the room through windows and doorways, and whether those are in
+    Tab. 3 is an unstated choice worth measuring rather than assuming.
+
+    Only frame 0 of each window contributes to ``AbsRel``/``delta_1.25``. Window
+    starts step by one, so that is a distinct frame per window; scoring all
+    ``seq_len`` frames would count the overlap repeatedly.
     """
     valid = camera.valid_mask(*windows[0].images.shape[-2:], device=device)
     rows: List[Dict[str, float]] = []
@@ -106,7 +116,8 @@ def evaluate(runner, windows, camera, *, convention: str = "range",
 
         if win.gt_depth is not None:
             dm = depth_metrics(pred.depth[0], win.gt_depth[0],
-                               valid=omega(0) & win.gt_valid[0])
+                               valid=omega(0) & win.gt_valid[0],
+                               max_depth=max_depth)
             row["AbsRel"], row["delta_1.25"] = dm["AbsRel"], dm["delta_1.25"]
         else:
             n_no_depth += 1
@@ -246,6 +257,10 @@ def build_argparser() -> argparse.ArgumentParser:
                    help="keep ScanNet++ frames the dataset flags is_bad; they are "
                         "dropped by default (143 of 896 on 3f15a9266d)")
     p.add_argument("--convention", default="range", choices=["range", "z"])
+    p.add_argument("--max-depth", type=float, default=None,
+                   help="cap ground-truth depth before AbsRel/delta_1.25 "
+                        "(Tab. 3). The paper states no cap, so the default is "
+                        "none; set it to measure the sensitivity.")
     p.add_argument("--seed", type=int, default=0)
     return p
 
@@ -257,8 +272,8 @@ def main(argv=None) -> None:
                               **({"variant": args.variant} if args.backbone == "da3" else {}))
     source = load_sequence(args.dataset, args.path, max_size=args.max_size,
                            patch=backbone.patch_size, max_frames=args.max_frames,
-                           **({"extrinsics_json": args.extrinsics_json,
-                               "depth_convention": args.convention}
+                           depth_convention=args.convention,
+                           **({"extrinsics_json": args.extrinsics_json}
                               if args.dataset == "adt" else
                               {"keep_bad": args.keep_bad}))
     if args.max_fov is not None:
@@ -309,7 +324,7 @@ def main(argv=None) -> None:
         try:
             results[method] = evaluate(runner, windows, source.camera,
                                        convention=args.convention, device=args.device,
-                                       label=method)
+                                       label=method, max_depth=args.max_depth)
         finally:
             for h in handles:
                 h.remove()

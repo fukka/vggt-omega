@@ -769,3 +769,94 @@ it**, which raises that ticket's priority.
 
 That is now the fourth and fifth instance of which-pixels-is-it-averaged-over in
 this project. It is the dominant bug class here.
+
+## 6j. Tab. 3 was unmeasurable, and the reason was in the loader (2026-08-07)
+
+Re-prioritised onto Tab. 3 and the depth columns of Tab. 1/2, on the argument
+that **`AbsRel`/`δ₁.₂₅` are the only targets the span degeneracy cannot reach**.
+Counting the free parameters we control:
+
+| target | metric | knobs we control | can a mismatch falsify? |
+|---|---|---|---|
+| Tab. 1/2 `R°`, `t°` | absolute angle over a pair | **span** — continuous, sweeps the whole target range | no; §6c fitted R²=0.9984 |
+| Tab. 1/2 `d_reproj` | px, GT pose | **span** + convention | no, same degeneracy |
+| **Tab. 3 `AbsRel`/`δ₁.₂₅`** | per-pixel, single frame | **none** — no pairs enter | **yes** |
+
+§6h was right that `R°` cannot be reproduced without the paper's pair selection,
+and wrong to generalise that to "the absolute values are not reproducible". It is
+true of `R°` and false of Tab. 3. Tab. 3's residual unknowns — the unnamed scene
+set, Ω — are *bounded*, not tunable, which is exactly the property `R°` lacks.
+
+### A perfect predictor scored worse than the paper's worst method
+
+`ScanNetPPFisheye.depth` returned `render_depth` **raw**. ScanNet++ renders it
+with a z-buffer — planar z — while predictions are euclidean range (decision 4,
+`--convention range`). `depth_any_camera/docs/DATA.md` flags the same thing
+independently: *"the ground-truth depth uses z-buffer rendering … using Euclidean
+distance for training and testing is essential for large FoV cameras."*
+`ADTSequence.depth` had converted correctly since it was written; ScanNet++ never
+did, and had no `depth_convention` attribute at all.
+
+The two conventions differ by a per-pixel `1/cos θ` — **10.9× at this lens's
+84.8° rim** — and `align_scale` fits one global scalar, which cannot absorb it.
+Measured on `3f15a9266d` through the real camera:
+
+| | AbsRel | δ₁.₂₅ |
+|---|---|---|
+| perfect range predictor, before the fix | **0.426** | **0.412** |
+| perfect range predictor, after | 0.0002 | 1.0000 |
+| paper Tab. 3 vanilla (DA3-Small) | 0.282 | 0.601 |
+| paper Tab. 3 Center-PH | 0.066 | 0.961 |
+
+A perfect predictor scored **worse than the paper's worst reported method on both
+metrics**, and the injected 0.426 is 2× the entire vanilla→Center-PH effect
+(0.282 → 0.066) that Tab. 3 exists to show. Tab. 3 was not noisy, it was
+unmeasurable — before any backbone ran.
+
+This is why it stayed invisible: `render_depth` does not exist on this download,
+so `depth()` returned `None` and `eval.py` counted `n_no_depth`. The defect was
+waiting on the far side of ticket #11, on the critical path of the only
+protocol-free target.
+
+### The FOV disagreement compounds it
+
+The artifact a perfect predictor absorbs, against lens FOV:
+
+| diag FOV | 1/cos max | artifact AbsRel | artifact δ₁.₂₅ |
+|---|---|---|---|
+| 115° (the paper's stated ScanNet++ FOV) | 1.86× | 0.158 | 0.748 |
+| **169.5° (§4, what our frames actually are)** | **10.9×** | **0.426** | **0.412** |
+
+At 115° the artifact sits below the paper's reported vanilla, so its numbers are
+consistent with either convention and this does *not* diagnose the paper. At our
+measured 169.5° the artifact exceeds the paper's entire vanilla number. §4's FOV
+disagreement and this bug multiply.
+
+### Three fixes, because the first one alone was inert
+
+1. `ScanNetPPFisheye` takes `depth_convention` (default `"range"`) and converts,
+   cone-masking first so `1/cos` cannot explode on grazing rays.
+2. **Convert at the rendered resolution, then resample.** Resampling first pairs
+   each z with a *neighbour's* θ, and `1/cos` amplifies that mismatch exactly
+   where cos is smallest. Worth 0.0031 → 0.0002 AbsRel — 5% → 0.2% of the
+   Center-PH target.
+3. `eval.py` and `train.py` passed `depth_convention` **only when
+   `dataset == "adt"`**. Without this the loader fix never fires from the CLI.
+
+`--max-depth` is now exposed (default: no cap). The paper states no cap and
+mesh-rendered depth carries rays that leave the room through windows, so this is
+an unstated choice; it is better measured than assumed.
+
+Regression cover: `test_scannetpp_render_depth_is_planar_z_and_gets_converted`
+pins the round trip and the symptom, `test_scannetpp_convention_reaches_the_loader`
+pins the two call sites. Both go red on the pre-fix tree. On a real scene's
+camera, `experiments/depth_gt_verify.py` — **run it against ticket #11's output
+before trusting any Tab. 3 number**, since it fails loudly if the delivered maps
+are in a convention the loader does not expect.
+
+### What this does not touch
+
+`d_reproj` never reads `gt_depth` — it backprojects `pred.depth` with GT pose and
+the matcher. So §6i's finding stands unchanged: our vanilla/Center-PH `d_reproj`
+ratio is **0.6×** where Tab. 1 reports **10.8×**. That disagreement is still live
+and is now the largest one on the depth side.

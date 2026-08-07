@@ -159,8 +159,8 @@ def main(argv=None) -> None:
                               **({"variant": args.variant} if args.backbone == "da3" else {}))
     source = load_sequence(args.dataset, args.path, max_size=args.max_size,
                            patch=backbone.patch_size, max_frames=args.max_frames,
-                           **({"extrinsics_json": args.extrinsics_json,
-                               "depth_convention": args.convention}
+                           depth_convention=args.convention,
+                           **({"extrinsics_json": args.extrinsics_json}
                               if args.dataset == "adt" else
                               {"keep_bad": args.keep_bad}))
     if args.max_fov is not None:
