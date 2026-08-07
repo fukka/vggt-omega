@@ -600,3 +600,92 @@ rotation gain is not credible.
 set, not to adjacent DSLR frames** — 896/60 ≈ 15 frames, which is a plausible
 keyframe count. Whether ScanNet++ ships such a list is a cheap thing to check and
 is the first item of the next ticket.
+
+## 6h. The harness is verified — without the paper, and without a backbone (2026-08-07)
+
+**The method used in §6c–6g was wrong.** Three tickets were spent varying `stride`,
+`is_bad`, resolution and window length until the paper's vanilla `R°` matched.
+That is fitting, not verifying. `R°` is an *absolute* angle, so its value is set by
+which pairs you evaluate and the paper does not say; agreement therefore proves
+nothing and disagreement diagnoses nothing. Stride 60 was **found by requiring the
+paper's number**, and the symptom was visible immediately — it means pairs 44°
+apart on a sequence whose consecutive frames are 0.94° apart, flatly contradicting
+"consecutive image pairs" — and it was explained away rather than treated as a
+warning.
+
+### The check that actually settles it
+
+Classical geometry, in `experiments/harness_verify.py`. SIFT on two real frames →
+unproject the matches to bearings **through our own camera model** →
+MAGSAC++ → compare to **our own** ground truth. Everything under suspicion is
+inside that loop: the Kannala-Brandt model and its `k1..k4`, the nerfstudio →
+OpenCV conversion, the cam-from-world convention, `R_rel = R_j R_iᵀ`, and
+`rotation_error_deg` itself.
+
+Measured on `3f15a9266d`, at genuine strides from the staged anchor groups:
+
+| stride | GT rotation | SIFT+MAGSAC error |
+|---|---|---|
+| 1 | 0.99° | 0.166° |
+| 2 | 1.67° | 0.481° |
+| 5 | 3.32° | 0.137° |
+| 10 | 9.04° | 0.312° |
+| 20 | 20.79° | 0.244° |
+| 20 | 22.76° | 0.449° |
+
+**A 1990s algorithm recovers our ground truth to 0.14–0.73° across a 20× range of
+rotation.** The camera model, the poses, the relative-pose algebra and the metric
+are all correct. No published number was used to establish that, and none is
+needed.
+
+### And it supplies the reference the paper cannot
+
+Same pairs, same GT, three methods:
+
+| | median error | rotation gain |
+|---|---|---|
+| SIFT + MAGSAC | **0.31°** | **0.97** |
+| DA3-Small vanilla | 2.63° | 0.72 |
+| DA3-Small Center-PH | 1.16° | 0.82 |
+
+So the fisheye damage is **real and large** — a frozen DA3 is 8× worse than
+classical geometry on identical pairs — and Center-PH removes about half of it.
+That is the paper's qualitative claim, confirmed, and it is what the adapter has
+to close. Classical geometry is the "a correct method reaches about here" line
+that the paper's absolute numbers cannot provide.
+
+### What this means for the paper's numbers
+
+They are a **sanity check on mechanism, not a target to hit**. The reproducible,
+protocol-free content of Tab. 2 is:
+
+* vanilla under-reads rotation on fisheye (ours: gain 0.82–0.88 across three
+  backbones) — ✅ confirmed;
+* rectifying to a pinhole recovers most of it (ours: 0.99 on VGGT/π³, 0.87 on
+  DA3) — ✅ confirmed;
+* the adapter should close the remaining gap to classical-geometry quality —
+  **still to test, and this is the actual reproduction target.**
+
+The absolute values (7.21, 2.45, 0.93) are not reproducible without the paper's
+pair selection, and chasing them produced three tickets of motion and one
+withdrawn conclusion. **Report `gain` against the classical reference; report
+`R°` only with the pair separation stated beside it.**
+
+### Two defects this found in my own analysis code, both caught by running it
+
+1. **Different denominators.** Classical returns nothing when SIFT cannot match —
+   exactly the hard pairs — while the backbone still scores them. Summarising over
+   each method's own successes compared two different pair sets and made the
+   backbone look *better* than classical. The summary is now restricted to pairs
+   every method answered. This is the third time this project has hit a
+   which-samples-is-it-averaged-over bug.
+2. **Gain from `|error|` is not gain.** The error is unsigned, so overshoot and
+   undershoot look identical and one large miss dominates. `_gain` now regresses
+   *predicted* rotation magnitude on true magnitude through the origin.
+
+### Status of the stride-60 claim
+
+**Downgraded to a hypothesis about the paper's setup.** It is no longer load-bearing:
+the harness is verified by other means. It remains the only reading under which the
+paper's Tab. 2 has sane rotation gains — at consecutive pairs its vanilla would need
+gain −6.1 — but it was reached by fitting and should not be quoted as established.
