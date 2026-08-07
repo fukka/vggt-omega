@@ -689,3 +689,83 @@ withdrawn conclusion. **Report `gain` against the classical reference; report
 the harness is verified by other means. It remains the only reading under which the
 paper's Tab. 2 has sane rotation gains — at consecutive pairs its vanilla would need
 gain −6.1 — but it was reached by fitting and should not be quoted as established.
+
+## 6i. The depth column — a floor we can compute, and a large structural disagreement (2026-08-07)
+
+Prompted by the observation that `d_reproj` was a better place to look than `R°`.
+It is, for a reason worth stating: **everything verified so far is pose**, and
+`d_reproj` exercises a disjoint half of the pipeline — the depth head, the
+planar-z/range convention, Ω, and the matcher.
+
+### The same trap applies, and does not disqualify it
+
+Eq. 16 uses ground-truth pose, so it isolates depth *from pose* — but at zero
+parallax any depth reprojects onto itself, so `d_reproj` still shrinks with pair
+separation exactly as `R°` does. Chasing Tab. 1's 23.82 by tuning stride would be
+tickets 9/10/12 again with a different metric.
+
+**What makes it different is that a floor is computable.** Because the pose is
+fixed, the best depth consistent with the correspondences can be triangulated from
+those same correspondences and scored by the same metric. `experiments/depth_verify.py`
+reports three numbers on identical pixels — **triangulated** (the achievable
+floor), **model**, and **constant** (a null) — and the ratio model/floor is
+protocol-free, since both scale with parallax the same way.
+
+On `3f15a9266d` with DA3-Small at sparse SIFT matches:
+
+| | median `d_reproj` | ratio to floor |
+|---|---|---|
+| triangulated | 0.098 px | 1.0× |
+| DA3-Small vanilla | 0.826 px | **8.5×** |
+| constant depth | 0.492 px | 5.0× |
+
+So the depth path carries a large deficit, and vanilla does not clearly beat "every
+pixel at the same distance".
+
+### Depth gain: the analogue of rotation gain
+
+Regressing `log d_model` on `log d_triangulated` gives a slope that is 1.0 when the
+depth *range* is recovered. DA3-Small scores **0.406** with correlation **0.56** —
+right ordering, range compressed ~2.5× per decade. Compare its **rotation** gain of
+0.816. The same under-reading, in both channels.
+
+The depth map is qualitatively correct (rendered and inspected: near door, far
+wall, chairs all in the right order), so this is attenuation, not failure.
+
+### The structural check, which is the reproducible content of Tab. 1
+
+Tab. 1, DA3-Small, ScanNet++, `d_reproj`: vanilla 23.82, Center-PH 2.21,
+Multi-PH 1.63, LoRA 4.98, CalTok 7.02, RayTun3R 4.16. Two features are testable
+without the absolute values:
+
+* vanilla is **10.8×** worse than Center-PH;
+* **RayTun3R loses to both pinhole baselines** — the paper concedes this.
+
+Our vanilla/Center-PH depth ratio is **0.6×** on the staged sample. If that
+survives at scale it is a large, protocol-robust disagreement: rectifying to a
+pinhole does not improve our *depth* the way the paper says it improves theirs,
+even though it clearly improves our *rotation* (gain 0.82 → 0.99 on VGGT/π³).
+
+### The convention question is open, and this script cannot close it
+
+A third regressor `log cos θ` would read 0 for euclidean range and 1 for planar z.
+It comes out ≈ 0.3, which settles nothing: with the depth signal itself attenuated
+to 0.4, and θ correlated with depth in a room (the periphery is the near door), the
+term is confounded. **Rendered ground-truth depth (ticket 006 / #11) is what settles
+it**, which raises that ticket's priority.
+
+### Two more denominator bugs, both caught by running it
+
+1. **A weak triangulation filter destroys the reference.** With only `d > 0` and a
+   loose parallax test, near-parallel rays triangulate to garbage that still passes,
+   and the "floor" comes out *worse than the model* — I briefly concluded DA3's
+   depth was uncorrelated with truth (corr −0.10). With cheirality, a 1 px
+   reprojection check and a 1° parallax minimum, corr is **0.56**. The first reading
+   was wrong.
+2. **Center-PH covers 66% of the fisheye.** Scoring it on pixels it never predicted
+   charges it for zeros; scoring each method on its own coverage compares different
+   regions. `depth_verify` scores everything on the **intersection**. Before the fix
+   Center-PH's depth gain read −0.09; after, 0.49.
+
+That is now the fourth and fifth instance of which-pixels-is-it-averaged-over in
+this project. It is the dominant bug class here.
