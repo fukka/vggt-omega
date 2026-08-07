@@ -622,16 +622,53 @@ class DA3Backbone(Backbone):
         if weights in (None, "random"):
             net = create_object(load_config(MODEL_REGISTRY[cfg_name]))
         else:
-            from depth_anything_3.api import DepthAnything3  # type: ignore
-            wrapper = DepthAnything3.from_pretrained(
-                hub_id if weights == "pretrained" else weights)
-            # Unwrap: the public forward is no-grad, see the class docstring.
-            net = wrapper.model
+            repo = hub_id if weights == "pretrained" else weights
+            try:
+                from depth_anything_3.api import DepthAnything3  # type: ignore
+                wrapper = DepthAnything3.from_pretrained(repo)
+                # Unwrap: the public forward is no-grad, see the class docstring.
+                net = wrapper.model
+            except ImportError:
+                # `api` drags in the video-export stack (moviepy et al.), which is
+                # irrelevant here and absent on a plain install. The released repos
+                # are just config.json + model.safetensors, so build the same
+                # architecture from the registry and load the weights directly.
+                net = cls._load_released_weights(cfg_name, repo, create_object,
+                                                 load_config, MODEL_REGISTRY)
 
         obj = cls(net.to(device))
         vit = obj._vit()
         obj.embed_dim = int(vit.pos_embed.shape[-1])
         return obj
+
+    @staticmethod
+    def _load_released_weights(cfg_name, repo, create_object, load_config, registry):
+        """Build from the registry config and load ``model.safetensors`` directly.
+
+        Used only when ``depth_anything_3.api`` cannot be imported. Keeps the same
+        architecture the wrapper would have built, so the hooks still find
+        ``pos_embed`` and ``_add_pos_embed`` in the usual places.
+        """
+        from huggingface_hub import hf_hub_download
+        from safetensors.torch import load_file
+
+        net = create_object(load_config(registry[cfg_name]))
+        sd = load_file(hf_hub_download(repo, "model.safetensors"))
+        # The wrapper stores the net under `model.`; strip it if present.
+        if any(k.startswith("model.") for k in sd):
+            sd = {k[len("model."):]: v for k, v in sd.items() if k.startswith("model.")}
+        missing, _ = net.load_state_dict(sd, strict=False)
+        # The released checkpoints omit the auxiliary DPT output head ("_aux"),
+        # which the depth/pose path never reads. Anything else missing would mean
+        # a partly-initialised backbone, which must not run silently.
+        core = [k for k in missing if "_aux" not in k]
+        if core:
+            raise RuntimeError(
+                f"DA3 {cfg_name}: {len(core)} non-auxiliary tensors missing from "
+                f"{repo}/model.safetensors, e.g. {sorted(core)[:3]}. Refusing to run a "
+                f"partly-initialised backbone -- install depth_anything_3's full "
+                f"dependencies so the official loader can be used.")
+        return net
 
     def _vit(self) -> nn.Module:
         for attr in ("backbone", "encoder", "vit", "patch_embed"):

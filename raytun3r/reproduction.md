@@ -230,6 +230,31 @@ them.** Poses are metric (camera bbox 1.12 × 1.94 × 0.29 m, 11.2 m path).
 absent, so Ω-from-mask and AbsRel (Tab. 3) remain untested. `transforms.json`
 does reference masks per frame (`mask_path`), so they exist upstream.
 
+### Local CPU check: vanilla skill across stride
+
+DA3-Small pretrained, run on **this Mac** against the 1.7 MB sample (no GPU). Small
+`n` — 2 to 8 pairs per stride — so this is indicative, not a measurement; it exists
+to test the shape of the curve, and GPU-Claude's 100-window numbers supersede it.
+
+| stride | pairs | `R°` | identity | **skill** | `t°` |
+|---|---|---|---|---|---|
+| 1 | 6 | 0.544 | 0.990 | 1.82× | 121.0 |
+| 2 | 3 | 0.657 | 1.665 | 2.53× | 97.9 |
+| 5 | 4 | 1.803 | 4.498 | 2.49× | 64.6 |
+| 10 | 2 | 3.462 | 9.037 | 2.61× | 139.1 |
+| 20 | 8 | 4.588 | 16.003 | 3.49× | 26.6 |
+| 40 | 5 | 5.941 | 35.224 | 5.93× | 24.0 |
+| 60 | 3 | 9.223 | 45.657 | 4.95× | 31.8 |
+
+Two things follow. **Our vanilla never approaches chance** — skill is 1.8–5.9× at
+every stride, against the paper's 1.08×. Whatever makes their frozen backbone
+useless on this data is not present in ours, at any pair separation. And **`t°` is
+at or worse than chance below stride 20**: a random direction in 3D scores 90°, and
+we measure 121 / 98 / 65 / 139 at strides 1–10. Our stride-10 `t°` numbers — ours
+and GPU-Claude's 40.3 alike — are not measuring anything. Only at stride 20–60
+(26.6 / 24.0 / 31.8) does translation direction become observable, which is the
+paper's own limitation (v) in Sec. 6.
+
 **Live hypotheses, in the order worth testing:**
 
 0. **Our vanilla is healthier than the paper's** — the newest and most likely to
