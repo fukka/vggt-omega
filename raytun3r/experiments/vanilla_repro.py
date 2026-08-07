@@ -113,6 +113,8 @@ def _run_config(bb, src, stride: int, seq_len: int, n_pairs: int,
         with torch.no_grad():
             pred = bb.forward(imgs[None])
         R_hat, t_hat = pred.relative(0, len(idx) - 1)
+        # src.pose() is CPU, pred.relative() is on --device: metrics need one home.
+        R_hat, t_hat = R_hat.to(R_gt), t_hat.to(t_gt)
         R_err.append(rotation_error_deg(R_hat, R_gt))
         t_err.append(translation_error_deg(t_hat, t_gt))
         R_id.append(rotation_error_deg(torch.eye(3, dtype=R_gt.dtype), R_gt))

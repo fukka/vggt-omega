@@ -283,3 +283,90 @@ The paper's own limitation (v) is the mechanism behind our degenerate stride-1
 runs: with small inter-frame displacement the self-supervised constraints go weak,
 because large depth or translation-direction errors induce only small reprojection
 errors.
+
+## 6c. Ticket 9 — the VGGT vanilla protocol sweep, and why its hit does not count (2026-08-07)
+
+GPU-Claude ran `experiments/vanilla_repro.py` with VGGT-1B on `3f15a9266d`,
+100 pairs per configuration, 20 configurations. Full table in
+`results/vanilla-repro-3f15a9266d/` on the `results` branch.
+
+The headline looked like a hit: **stride 40, `is_bad` honoured, square 504×504,
+`seq_len` 2 → `R°` = 7.189 against the paper's 7.21**, off by 0.021°. GPU-Claude
+flagged the objection in the same message, and the objection is right.
+
+### The stage-1 sweep is an affine function of the identity score
+
+Fitting the six stage-1 rows (square off, `seq_len` 2, `is_bad` dropped):
+
+| span | identity `I` | `R°` measured | `R°` fitted | resid |
+|---|---|---|---|---|
+| 1 | 0.939 | 0.460 | 0.581 | −0.121 |
+| 2 | 1.805 | 0.811 | 0.729 | +0.082 |
+| 5 | 4.104 | 1.200 | 1.120 | +0.080 |
+| 10 | 8.312 | 1.828 | 1.836 | −0.008 |
+| 20 | 16.096 | 3.110 | 3.160 | −0.050 |
+| 40 | 30.777 | 5.673 | 5.657 | +0.016 |
+
+**`R° = 0.42 + 0.170·I`, R² = 0.9984.**
+
+`I` — the identity predictor's score, i.e. the median GT rotation — is fixed by
+the frame span alone. So `R°(span)` is a smooth monotone curve, and *every*
+target between 0.46° and 5.67° is attained at exactly one span. **Fitting one
+free parameter to one target number cannot fail, so it is not evidence.** The
+stride-40 agreement is a curve crossing. Three of the twenty configurations
+land within 1° of 7.21 for the same reason.
+
+The two constants are the useful output, because both are span-invariant:
+
+* **floor 0.42°** — the part of the error that survives as rotations shrink to
+  zero. This is the fisheye damage, and it is what the adapter has to remove.
+* **slope 0.170** — the fraction of the rotation magnitude left unrecovered.
+
+For the paper's 7.21° to be a consecutive-pair number (`I` = 0.939° here), its
+floor would have to be ≥ 7.05° — **17× ours**. That is the quantity actually in
+dispute, and no choice of stride changes it.
+
+### Squaring is a degradation, not a protocol
+
+`square=True` costs a flat ~27% of `R°` at fixed span (5.673 → 7.189 at span 40;
+6.114 → 7.772 at span 40 reached as `seq_len` 3 × stride 20). It stretches the
+fisheye anamorphically to 504×504 and pushes VGGT off-distribution. Reaching the
+paper's number by degrading the input is not a protocol match.
+
+### `seq_len` and stride are one axis, not two
+
+Identity depends only on the span `(seq_len − 1) × stride`, confirmed exactly in
+the data: `seq_len` 3 at stride 20 and `seq_len` 2 at stride 40 both give
+`I` = 30.777. At fixed span, the extra middle frame slightly *hurts*
+(5.673 → 6.114, and 7.189 → 7.772 squared) — worth noting for a multi-view model,
+where more context should help.
+
+### What replaces it
+
+`experiments/protocol_identify.py`. One target cannot falsify a one-parameter
+fit; two can. `vanilla` and `Center-PH` are both training-free and matcher-free,
+Tab. 2 gives both on this scene (7.21 and 2.45), and they share one unknown — the
+span. Each method's curve crosses its own target at some `I*`; the test is
+whether the two `I*` agree. Agreement identifies the protocol and validates the
+harness at two independent operating points; disagreement rules the protocol out
+as the explanation and points at the backbone or its preprocessing.
+
+Guarded by `MIN_R2 = 0.90`, since every `I*` is read off a fitted line.
+
+### Also settled by this round
+
+* **Frames are sorted before use.** `transforms.json` does *not* store `frames`
+  in filename order (`names == sorted(names)` is False), but `data.py:167` sorts
+  by `file_path`, so "stride 1" really is temporally consecutive. Confirmed
+  numerically: consecutive-pair median rotation over the 752 good frames is
+  0.943°, matching the 0.939° the sweep measured.
+* **Dropping `is_bad` creates jumps.** Consecutive-pair rotation over good frames
+  only has median 0.943° but max 64.4° (vs 4.46° with bad frames kept), because
+  removing a contiguous run of up to 132 frames splices its two ends together.
+  The median is robust to this; a mean would not be.
+* **`test_frames` is not the eval sequence** — 10 frames, consecutive-pair
+  rotations of 165.9°/45.1°/119.0°/…, median 45.1°. Too few and too wild.
+* **The input really is raw fisheye**, visually confirmed on the staged sample:
+  strong barrel distortion, `OPENCV_FISHEYE` with `k1..k4`, 146.3° horizontal.
+  `has_mask: true` in `transforms.json`, so masks exist in the dataset even
+  though the staged sample carries none.
