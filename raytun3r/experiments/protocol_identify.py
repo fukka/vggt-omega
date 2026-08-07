@@ -171,7 +171,7 @@ def _run(pred_fn, src, stride: int, seq_len: int, n_pairs: int,
     step = max(1, len(starts) // n_pairs)
     starts = starts[::step][:n_pairs]
 
-    R_err, t_err, R_id = [], [], []
+    R_err, t_err, R_id, gt_ang, pred_ang = [], [], [], [], []
     for s in starts:
         idx = [s + k * stride for k in range(seq_len)]
         gi, gj = src.pose(idx[0]), src.pose(idx[-1])
@@ -189,12 +189,25 @@ def _run(pred_fn, src, stride: int, seq_len: int, n_pairs: int,
         R_hat, t_hat = R_hat.to(R_gt), t_hat.to(t_gt)
         R_err.append(rotation_error_deg(R_hat, R_gt))
         t_err.append(translation_error_deg(t_hat, t_gt))
-        R_id.append(rotation_error_deg(torch.eye(3, dtype=R_gt.dtype), R_gt))
+        eye = torch.eye(3, dtype=R_gt.dtype)
+        R_id.append(rotation_error_deg(eye, R_gt))
+        # Rotation *magnitudes*, for the gain below. `rotation_error_deg(I, R)`
+        # is exactly the angle of R, so this needs no second formula.
+        gt_ang.append(R_id[-1])
+        pred_ang.append(rotation_error_deg(eye, R_hat))
     if not R_err:
         return None
     r, ident = _median(R_err), _median(R_id)
+    # Rotation gain: the slope through the origin of predicted angle on GT angle.
+    # A model that reads a fraction `alpha` of every rotation scores an error of
+    # exactly (1-alpha)*I, so `alpha` is the span-invariant content of the affine
+    # fit's slope -- and unlike the slope it is measured directly, per span,
+    # rather than inferred from how the error grows across spans.
+    denom = sum(x * x for x in gt_ang)
+    gain = (sum(x * y for x, y in zip(gt_ang, pred_ang)) / denom) if denom > 0 else float("nan")
     return {"n": len(R_err), "R_deg": r, "t_deg": _median(t_err),
-            "identity": ident, "R_skill": ident / r if r > 0 else float("nan")}
+            "identity": ident, "R_skill": ident / r if r > 0 else float("nan"),
+            "gain": gain}
 
 
 def main(argv=None) -> None:
@@ -267,7 +280,7 @@ def main(argv=None) -> None:
             rows[m][st] = r
             print(f"    stride {st:3d}  n={r['n']:3d}  I={r['identity']:7.3f}  "
                   f"R={r['R_deg']:7.3f}  t={r['t_deg']:7.2f}  "
-                  f"skill={r['R_skill']:5.2f}x", flush=True)
+                  f"skill={r['R_skill']:5.2f}x  gain={r['gain']:.3f}", flush=True)
         print(flush=True)
 
     # --- the test -------------------------------------------------------------
@@ -331,6 +344,33 @@ def main(argv=None) -> None:
                   f"the evaluation protocol -- it is the backbone or its "
                   f"preprocessing. Ticket 9's stride-40 R match was a curve "
                   f"crossing, as suspected.")
+
+    # --- gain, the span-invariant comparison ---------------------------------
+    # `R_deg` ratios between methods are a bad summary once both errors are small:
+    # they divide two near-zero numbers and explode. Rotation gain does not. A
+    # model reading a fraction `alpha` of every rotation scores (1-alpha)*I, so
+    # the paper's own numbers convert into a gain once the span is known -- and
+    # the vanilla agreement is what supplies the span.
+    if "vanilla" in need:
+        I_ref = need["vanilla"]
+        print(f"\n=== rotation gain at the span the vanilla agreement implies "
+              f"(I = {I_ref:.1f} deg) ===")
+        print("  a gain of 1.000 means the full rotation is recovered; the paper's "
+              "column\n  assumes our fitted floor, so read it as approximate.")
+        print(f"  {'method':10s} {'ours (measured)':>16s} {'paper (implied)':>16s}")
+        for m in methods:
+            if m not in target or m not in fits:
+                continue
+            near = min(rows[m].values(), key=lambda r: abs(r["identity"] - I_ref),
+                       default=None)
+            if near is None:
+                continue
+            paper_gain = 1.0 - (target[m]["R_deg"] - fits[m]["floor_deg"]) / I_ref
+            print(f"  {m:10s} {near['gain']:16.3f} {paper_gain:16.3f}"
+                  f"   (ours at I={near['identity']:.1f})")
+        print("  a large R ratio between two methods that both sit near gain 1.0 is "
+              "an\n  artefact of dividing small errors, not a disagreement about "
+              "geometry.")
 
     # Ratios are the same test with no fitting and no absolute level: they are
     # dimensionless, so they survive both the span question and (for Tab. 1) the

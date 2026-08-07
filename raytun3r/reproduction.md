@@ -478,3 +478,125 @@ clone it beside this repo or set `$PI3_ROOT`. Needs **torch ≥ 2.3** —
 `BACKBONE_NAMES` is now the single source for every `--backbone` choice list —
 adding a backbone used to mean editing seven argparsers, and five of them would
 have kept silently rejecting `pi3`.
+
+## 6g. Ticket 10 — the protocol is identified, and `R°` decomposes (2026-08-07)
+
+GPU-Claude ran `protocol_identify` on all three backbones, twice (100 and 300
+pairs). Full tables in `results/protocol-identify-3f15a9266d/` on `results`.
+
+### Vanilla agrees at stride 60, on two backbones at once
+
+| backbone | our `R°` @ stride 60 (n=300) | paper | off by |
+|---|---|---|---|
+| VGGT | **7.242** | 7.21 | 0.032 |
+| π³ | **6.392** | 6.17 | 0.222 |
+
+And it is not a curve crossing: stride 40 gives 5.312 / 4.627 and stride 80 gives
+8.867 / 7.594, missing both targets. The fits concur — `I*` = 44.30 (VGGT,
+R²=0.9957) and 43.19 (π³, R²=0.9851), bracketing stride 60's `I` = 43.706.
+
+**This also kills the ticket-9 configuration.** These runs are `square=False`, so
+both `square=True, stride 40` and `square=False, stride 60` reach 7.21 for VGGT —
+exactly the degeneracy §6c predicted. π³ is the tiebreak: at stride 40 it gives
+4.627 against its own target of 6.17, a clear miss. Only stride 60 satisfies both.
+**The protocol is the span, not the resolution.**
+
+Honest weight: this is *one* degree of freedom checked, not two. The two `I*`
+values are not fully independent — their agreement is close to the statement that
+our vanilla `R°` ratio between backbones matches the paper's. That is a real test
+that could have failed, and it passed; it is not the same as two independent
+confirmations.
+
+**The vanilla path of the harness is validated** — loader, camera model, pose
+convention, metric, on two architectures.
+
+### `R° = a + b·I` is not a curve fit, it is a measurement of rotation gain
+
+If a model recovers a fraction `α` of every rotation about roughly the right axis,
+its error is exactly `(1−α)·I`. So **`b = 1 − α`**, and `α` is a span-invariant
+property of the model. Confirmed on the Mac with a different statistic — regressing
+*predicted* rotation angle on *GT* angle through the origin, rather than error on
+identity:
+
+| | measured α | implied `1−α` | GPU-Claude's fitted `b` |
+|---|---|---|---|
+| DA3 vanilla | 0.816 | 0.184 | 0.1668 |
+| DA3 Center-PH | 0.867 | 0.133 | 0.1375 |
+
+Two independent code paths, two statistics, agreement to ~0.02. `protocol_identify`
+now reports `gain` per span directly.
+
+On raw fisheye all three backbones sit at α ≈ 0.82–0.88: **they under-read every
+rotation by 12–18%**, which is what fisheye angular compression does to a
+pinhole-trained model. That is the paper's thesis, measured directly.
+
+### Our Center-PH is not leaking — that reading inverts
+
+GPU-Claude flagged π³ Center-PH as non-physical: error grows 4× (0.048° → 0.206°)
+while the rotation to estimate grows 68× (0.84° → 57.2°). Checked and rejected:
+
+* **No ground truth can reach that path.** `ProjectionBaseline.__call__` receives
+  only images; the hooks return immediately when `adapter is None`.
+* **The rectification is correct.** Rendered and inspected: ceiling and shelf
+  edges that curve in the fisheye are straight in the virtual view.
+* **The virtual view is not degenerate** — at 110° it is 95.3% live (4.7% black
+  caps) and covers 66% of the fisheye pixels. The dead-pixel confound that bit the
+  earlier FoV sweep does not apply here.
+* **A flat error curve is what a *correct* estimator looks like.** Error
+  proportional to rotation is a *bias* (α < 1); error independent of rotation is a
+  noise floor. Rectifying removes the bias, so flatness is the expected signature,
+  not a suspicious one.
+
+Gains after rectification: VGGT 0.849 → **0.992**, π³ 0.878 → **0.998**. Center-PH
+does exactly what it is supposed to do.
+
+### The "4–14× Center-PH disagreement" is 4–5% of rotation gain
+
+Ratios of two near-zero errors explode. Converting the paper's numbers to gain at
+the span its own vanilla implies:
+
+| backbone | method | our gain | paper's implied gain | our `R°` | paper `R°` | `R°` ratio |
+|---|---|---|---|---|---|---|
+| VGGT | vanilla | 0.849 | 0.849 | 7.21 | 7.21 | 1.0× |
+| VGGT | Center-PH | 0.992 | **0.949** | 0.56 | 2.45 | 4.4× |
+| π³ | vanilla | 0.878 | 0.878 | 6.17 | 6.17 | 1.0× |
+| π³ | Center-PH | 0.998 | **0.949** | 0.20 | 2.28 | 11.4× |
+
+The vanilla rows match by construction (`I*` is defined from them). The Center-PH
+rows are free, and both land on **0.949** — the paper's Center-PH recovers ~95% of
+rotation, ours ~99%. A 4–5% gain difference, not a 4–14× failure. *(Caveat: that
+0.949/0.949 agreement is mutual consistency between the paper's two backbones; it
+holds under any common rescaling of the span, so it does **not** independently
+confirm stride 60.)*
+
+`protocol_identify` prints this block whenever vanilla yields an `I*`.
+
+### The real anomaly is DA3, in the opposite direction
+
+Rectification restores VGGT and π³ to gain ≈ 0.99. **DA3-Small only reaches 0.867**
+— it still under-reads rotation by 13% on a clean pinhole image, so its Center-PH
+barely beats its vanilla (paper: 3.12×, ours: 1.2–1.4×). This is a property of
+DA3's pose head, not of the fisheye or of our baseline, and it is consistent with
+the paper's own Tab. 6, where DA3-Small is the weakest pose backbone by a wide
+margin (ETH3D vanilla 8.59 vs π³ 2.66, VGGT 3.19).
+
+It matters because DA3-Small is the paper's *primary* backbone, so Tab. 1, 3, 4
+and 7b all rest on it.
+
+### The tension this leaves
+
+Stride 60 means the paper evaluates pairs **~44° of rotation apart**, on a
+sequence whose consecutive frames are 0.94° apart. The paper says "consecutive
+image pairs". Those cannot both be literally true of the 896-frame DSLR set.
+
+The gain framing makes the alternative testable, and it fails badly: for the
+paper's vanilla 7.21 to be a consecutive-pair number (`I` = 0.94), its gain would
+have to be `1 − (7.21−0.54)/0.94 = −6.1`. A negative gain means predicted rotation
+*anti-correlated* with truth. Their Center-PH would need −1.39 and even RayTun3R
+only 0.22. An entire published table of methods with near-zero or negative
+rotation gain is not credible.
+
+**So the most likely reading is that "consecutive" refers to a subsampled frame
+set, not to adjacent DSLR frames** — 896/60 ≈ 15 frames, which is a plausible
+keyframe count. Whether ScanNet++ ships such a list is a cheap thing to check and
+is the first item of the next ticket.
