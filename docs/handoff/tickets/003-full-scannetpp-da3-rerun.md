@@ -1,413 +1,112 @@
-# Reproduce one paper number first, then scale out: DA3-Small on ScanNet++
+# Does the adapter close the gap to classical geometry? The actual reproduction
 
-**Owner:** cpu (parked)
-**Files I may touch:** nothing under `raytun3r/` — this is runs only. Results go
-to the `results` branch.
-**Blocked by:** [ticket 004](004-validate-harness-vanilla.md) — **do not run any of
-this until vanilla reproduces.**
-
-> **PARKED, 2026-08-07.** Everything below compares *adapted* models against the
-> paper. But our `vanilla` — no adapter, no training, no randomness — does not
-> match the paper's on the same scene and backbone (2.379° vs 7.21°). Until that is
-> explained, an adapter number here cannot be interpreted, because it is not being
-> measured against the same thing. Twice now we have drawn a conclusion from these
-> runs and had to withdraw it.
->
-> Ticket 004 settles the protocol in one command. Come back here afterwards; what
-> this ticket becomes depends on its answer, and the Phase 1/1b commands below will
-> need whatever protocol 004 establishes.
-
-> **Read [`raytun3r/PAPER.md`](../../../raytun3r/PAPER.md) — the paper and only the
-> paper**: every hyperparameter, all six result tables, all four ablation tables,
-> the named sequences, the twelve things it never specifies, six errata. And
-> [`raytun3r/reproduction.md`](../../../raytun3r/reproduction.md) — what is *ours*:
-> how each gap was resolved and how to read a run. Neither needs the PDF open.
+**Owner:** gpu
+**Files I may touch:** nothing under `raytun3r/` — runs only. Results to `results`.
+**Blocked by:** nothing. This supersedes #9, #10 and #12.
 
 ## Goal
 
-We can say, with a committed number, whether RayTun3R reproduces on ScanNet++:
-`raytun3r` on scene `3f15…` with DA3-Small lands near the paper's **0.40° `R°`**
-(Tab. 5), or it does not and we know which of three explanations is responsible.
+Measure whether RayTun3R moves the frozen backbone's **rotation gain** from ~0.85
+toward the ~0.97 that classical geometry reaches on the same pairs — on
+ScanNet++ `3f15a9266d`, with DA3-Small, VGGT and π³.
 
-**Work the phases in order.** Phase 1 is the actual reproduction and costs ~15
-GPU-minutes; Phases 2 and 3 only make sense once it has an answer. The previous
-version of this ticket led with a full-dataset sweep, which cannot reproduce any
-paper number — Tab. 1 and Tab. 3 are means over scene sets the paper never names.
+## What changed, and why the last three tickets were the wrong shape
 
-## Why this supersedes the earlier runs
+Tickets 9, 10 and 12 all asked the same question: *what settings make our number
+equal the paper's?* That is fitting, not verifying. `R°` is an **absolute** angle,
+so its value is set by which pairs you evaluate — and the paper never says. Some
+stride, some resolution, some FOV was always going to land on 7.21. Agreement
+proved nothing; disagreement diagnosed nothing.
 
-Three bugs since `bfdb47e`, all now fixed; the first two invalidate `d_reproj` on
-the `results` branch. **None of them affect `R°`/`t°`** — pose comes from the
-camera head — so the rotation findings still stand.
+**The harness is now verified directly, with no paper number involved.**
+`harness_verify.py` runs SIFT on two real frames, unprojects the matches through
+*our* camera model, recovers the pose with MAGSAC++, and compares to *our* ground
+truth — a loop containing every component that was in doubt. It recovers the
+ground truth to **0.14–0.73°** across GT rotations from 1° to 23°.
 
-1. **The depth convention was inconsistent between methods.** The virtual-pinhole
-   baselines were converted planar z → euclidean range, the direct fisheye path
-   (`vanilla`, `param_free`, `raytun3r`) was not. Worth **~0.99 px of `d_reproj`**
-   on ScanNet++ geometry against a method-to-method spread of 0.10 px. Backbones
-   now declare `native_depth`, `install(depth_convention=...)` converts once at
-   the boundary, consumers call `require_convention`.
-2. **`d_reproj` was averaged the wrong way.** Eq. 8 carries `w_ij` inside the sum;
-   **Eq. 16 carries no weights at all.** We were computing `sum(w·e)/sum(w)` — the
-   mean over the *confidently matched* subset — where Eq. 16 is an unweighted mean
-   over all of Ω. UFM's covisibility collapses exactly where reprojection error is
-   worst, so the old number dropped the hardest pixels and renormalised by their
-   absence. On synthetic 170° geometry the two differ by **1× to 170×** depending
-   on how much of Ω the matcher abandons. `eval.py` now reports **both**:
-   `d_reproj` (Eq. 16, the only one comparable to the paper) and `d_reproj_conf`
-   (the old behaviour, so pre-fix runs stay interpretable).
-3. **`da3` never worked** — the paper's primary backbone, and Tab. 1/4/5/7b are
-   DA3-Small numbers. Four bugs, now fixed and covered by a CPU test against real
-   `depth_anything_3` 0.1.1: the public `forward` is wrapped in `torch.no_grad()`
-   (the adapter could never have trained), the DPT hook targeted
-   `_apply_pos_embed` instead of `_add_pos_embed`, a wrong helper import path, and
-   `load()` fetched GIANT regardless of `--variant`.
+The evaluation is correct. Your measurements from #10 were all sound; they were
+answering a question that could not be answered.
 
----
+## The reference this gives us
 
-## Phase −1 — audit the evaluation data first (seconds, no GPU)
+Same pairs, same ground truth, on `3f15a9266d`:
 
-**Phase 1 ran and missed (see below), so this now precedes everything.** `vanilla`
-is the easiest thing in the paper to reproduce — frozen backbone, no adapter, no
-training, no randomness — and ours does not match: paper 7.21° `R°` on this scene
-with VGGT, we measure 0.554 at stride 1 and 2.379 at stride 10. Until that is
-explained, no adapter result means anything.
+| | median error | rotation gain |
+|---|---|---|
+| SIFT + MAGSAC | 0.31° | **0.97** |
+| DA3-Small vanilla | 2.63° | 0.72 |
+| DA3-Small Center-PH | 1.16° | 0.82 |
+
+The fisheye damage is real — a frozen DA3 is 8× worse than a 1990s algorithm on
+identical pairs. Center-PH removes about half. **Classical geometry is the bar,
+and closing that gap is what the adapter claims to do.** That is a reproduction
+target that does not depend on the paper's pair selection.
+
+## Read gain, not `R°`
+
+A model recovering a fraction `α` of every rotation scores exactly `(1−α)·I`. So
+`R°` slides with pair separation while `α` does not. **Gain is comparable across
+strides, scenes and datasets; bare `R°` is comparable across none of them.** Quote
+`R°` only with the pair separation printed beside it — both scripts now do.
+
+## Step 1 — establish the reference on the full sequence (cheap, no training)
 
 ```bash
-python -m raytun3r.experiments.data_audit --path /netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d --json runs/audit/3f15a9266d.json
+python -m raytun3r.experiments.harness_verify --path /netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d --backbone da3 --weights pretrained --out runs/verify/3f15-da3.json
 ```
 
-Reads `transforms.json` only — no images, no weights, no GPU. Report the whole
-output on the issue. It answers four things:
+Repeat with `--backbone vggt` and `--backbone pi3`. Paste the three summary blocks.
 
-1. **Keys the loader ignores.** `test_frames`, `applied_transform`,
-   `applied_scale`, and per-frame **`mask_path`**. ScanNet++ ships per-frame DSLR
-   masks and we ignore them — if those masks define the valid fisheye region, then
-   the paper's Ω is the mask and ours is the whole rectangle, which would explain
-   the 115°/170° disagreement outright.
-2. **The FOV the intrinsics actually imply**, at frame edges and corner
-   (horizontal / vertical / diagonal). One of those may be the paper's 115°.
-3. **Whether the poses are metric.** If the camera bbox is ~1 rather than metres,
-   every distance we have quoted — including the 1.09 cm baseline — is in the
-   wrong unit.
-4. **The identity-predictor score per stride.** This is the important one.
-   `R°` is an *absolute* angular error, so a model predicting identity scores
-   exactly the median GT rotation. **Two runs' `R°` are only comparable when their
-   GT rotation distributions match**, and `--stride` changes that distribution
-   directly. If our stride-1 median GT rotation is ~0.5°, then `vanilla`'s 0.554°
-   is the identity score and that evaluation carries no information at all.
+**Stop here and report if the verdict is `HARNESS SUSPECT`** — that would mean
+classical geometry cannot recover our ground truth at scale, which contradicts the
+staged-sample result and would have to be understood before anything else runs.
 
-Then the pixel-level questions, still without moving any pixels:
+## Step 2 — the adapter, measured against that reference
 
-```bash
-python -m raytun3r.experiments.data_probes --path /netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d --json runs/audit/3f15a9266d-probes.json
-```
+Fit RayTun3R per the paper's Sec. 4.3 (30 three-frame windows, 2 px static filter
+on the *adaptation set only*, evaluate on the full sequence) and report, for each
+backbone, gain and median `R°` for **vanilla / Center-PH / RayTun3R** on the same
+pairs as step 1.
 
-* **Probe 1 — is the frame corner real content or dead vignette?** Intensity mean
-  and std per incidence-angle bin. Near-zero std in the outer bins means the image
-  circle is smaller than the sensor, Ω is a circle, and the paper's 115° is right;
-  std like the inner bins means content out to the corner and our ~170° is right.
-* **Probe 2 — what is `mask_path`?** A lens mask is radially symmetric, identical
-  across frames, and cuts at a fixed incidence angle; an anonymisation mask is
-  small, irregular and frame-varying. If it is a lens mask, **Ω should come from
-  it** and we have Ω wrong.
-* **Probe 3 — planar z or euclidean range?** Regresses `log(D)` on
-  `log(cos θ)`: planar z gives slope ≈ 1, range gives ≈ 0. Verified on a synthetic
-  scene with a known answer (0.95 → `z`, −0.05 → `range`). Only matters for
-  `d_reproj`/AbsRel, never for `R°`/`t°`.
+Use `--stride 10` unless step 1 suggests otherwise. The value is not critical any
+more — gain is stride-invariant, which is the point — but it must be **identical
+across the three methods and stated in the report**.
 
-**Both scripts are read-only, need no GPU or weights, and emit JSON.** Commit the
-two JSON files to `results`.
+Iteration count is the one hyperparameter Sec. 4.3 never gives, and App. D quotes
+2–3 h per scene, so 300 is likely far too few. Run `--iters 300` and `--iters 3000`
+for DA3-Small; if they differ materially, say so and stop rather than sweeping
+further.
 
-### Also stage a local sample (~5 MB) so this stops needing a round-trip
+## How to read the result
 
-```bash
-python -m raytun3r.experiments.make_local_sample --src /netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d --out /sdcard/data/scannetpp_example
-```
+* **Gain rises toward ~0.97** → the paper's mechanism reproduces. That is the
+  headline, and it does not require matching 0.93.
+* **Gain rises but stalls below Center-PH's** → RayTun3R underperforms a pinhole
+  crop on our harness. Given Center-PH already reaches 0.99 on VGGT/π³, this is a
+  real possibility and a legitimate finding, not a failure to report.
+* **Gain does not move** → the adapter is not learning; then `--iters` and the
+  loss terms are the next suspects, not the protocol.
 
-Then tell Fengji it is ready; **he moves it out of band** and CPU-Claude works
-against it directly. The output has the same layout as a real scene, so
-`ScanNetPPFisheye(<copied>)` opens it unchanged and `data_audit`, `data_probes`,
-even `train`/`eval` on a couple of frames all run off-box.
+## What NOT to do
 
-It keeps **the full `transforms.json`** — so the trajectory-wide stride and
-identity-predictor analysis stays exact — plus 24 frames sampled as offsets
-`{0,1,2,5,10,20,40,60}` from 3 anchors, which is what makes pairs at stride 1, 2,
-5, 10, 20, 40 and 60 all available locally. Masks and `render_depth` come too when
-present. Verified end to end on a synthetic scene: 24/24/24 at 4.6 MB, and the
-probes give the same verdicts against the staged copy as against the original.
-
-**Do not commit the sample.** ScanNet++ is licensed per-recipient and this repo is
-public; `git rm` would not take it back, since history here is permanent and
-mirrored. `.gitignore` now blocks the usual paths, but the transfer is out of band
-regardless.
-
-**Decision rule.** If some stride puts the median GT rotation near 7°, that is the
-operating point the paper is at and Phase 1 should be re-run there. If *no* stride
-reaches it, then our frame set differs from the paper's — that is the finding, and
-it is worth more than any further sweep. Either way, stop and report before
-spending GPU time.
-
-## Phase 1b — re-run Phase 1 on the corrected frame set (~20 GPU-min)
-
-**Phase −1 came back and changed two things about how Phase 1 must be run.** Do
-this before Phase 2; it is cheap and Phase 2's diagnostics are unreadable until
-the frame set and the metric are right.
-
-1. **16% of the frames should never have been evaluated.** `is_bad` is true for
-   143 of 896 on `3f15a9266d`, in 8 contiguous runs, the longest 132 frames.
-   `data.py` now drops them by default (`--keep-bad` restores the old behaviour),
-   so **every Phase 1 number needs re-measuring** — the frame set changed.
-2. **`t°` below stride 20 is measuring nothing.** A random direction in 3D scores
-   90°; we measure 121 / 98 / 65 / 139° at strides 1–10 locally, and your
-   stride-10 DA3 run gave 40.3°. Translation direction only becomes observable at
-   stride 20–60 (26.6 / 24.0 / 31.8). So run stride 10 **and** stride 40.
-
-```bash
-S=/netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d
-for ST in 10 40; do
-  for M in raytun3r lora caltok; do
-    python -m raytun3r.train --backbone da3 --variant small --weights pretrained \
-      --dataset scannetpp --path $S --method $M --stride $ST \
-      --out runs/rt3r/tab5-3f15-da3s-s$ST-$M
-  done
-  python -m raytun3r.eval --backbone da3 --variant small --weights pretrained \
-    --dataset scannetpp --path $S --stride $ST \
-    --adapter runs/rt3r/tab5-3f15-da3s-s$ST-raytun3r/adapter.pt \
-    --methods vanilla,param_free,raytun3r,center_ph,multi_ph \
-    --out runs/rt3r/tab5-3f15-da3s-s$ST/results.json
-done
-```
-
-(plus the separate `lora` / `caltok` evals against their own checkpoints, as in
-Phase 1.)
-
-`eval.py` now emits **`R_deg_identity`** and **`R_skill`** on every run. Report
-`R_skill`, not raw `R°`: a bare `R°` is not comparable across strides, and it is
-what made two rounds of our numbers look like they disagreed with the paper when
-they were measured at different rotation scales.
-
-**The target to beat is skill, not degrees.** At stride 10 the paper's VGGT
-vanilla (7.21°) is **1.08× skill — at chance** — while its RayTun3R (0.93°) is
-**8.38×**. Ours are vanilla 3.1×, raytun3r 4.9×. So we have *two* gaps: our
-unadapted model is much healthier than theirs, and our adapted one is much worse.
-
-**Also worth one cheap question:** can `dslr/masks/` and `dslr/render_depth/` be
-fetched for this scene? Both are absent from the current download, which is why Ω
--from-mask and all of Tab. 3 (AbsRel, δ₁.₂₅) remain untestable. `transforms.json`
-references masks per frame, so they exist upstream.
-
-## Phase 0 — setup and two cheap checks (~10 min)
-
-```bash
-git -C /user/f.zhang2/projects/vggt-omega-organized pull --ff-only origin organized
-```
-
-```bash
-pip install depth-anything-3
-```
-
-**Check A — the geometry of the pairs being scored.** Our one real run has
-*unadapted* numbers far better than the paper's (vanilla `R°` 2.379 vs 7.21,
-Center-PH 0.378 vs 2.45) and only the *adapted* one worse. That is the signature
-of an evaluation easier than theirs: there is only 2.4° of error available to
-remove where they had 7.2°.
-
-```bash
-python -c "
-from raytun3r.data import ScanNetPPFisheye
-import torch
-s = ScanNetPPFisheye('/netapp/datasets/scannetpp/data/3f15a9266d')
-P = [s.pose(i) for i in range(len(s))]
-ok = [i for i,p in enumerate(P) if p is not None]
-C = {i: (-P[i][0].T @ P[i][1]) for i in ok}
-d = torch.tensor([ (C[b]-C[a]).norm() for a,b in zip(ok, ok[1:]) ])
-print('frames', len(s), 'posed', len(ok))
-print('consecutive baseline  median %.4f m  mean %.4f m' % (d.median(), d.mean()))
-"
-```
-
-We measured ~1.1 cm at stride 1 against ~3 m of scene depth, which is why
-`--stride 10` exists. ScanNet++ DSLR is a *sparse* handheld capture of a few
-hundred images per scene — 1.1 cm between consecutive shots is not what that
-should look like. If it comes back that small, check whether `transforms.json` is
-read in capture order and whether we are picking up a denser image set than the
-DSLR one. **If our pairs are much closer together than the paper's
-consecutive-pair protocol, that alone could explain the too-good vanilla**, and it
-is cheaper to fix than anything in Phase 2.
-
-**Check B — the FOV disagreement.** Print the half-angle at the frame corner. The
-paper says ScanNet++ DSLR is 115°; we measure ~170°. Confirm which it is on the
-actual download before Phase 2 spends GPU time on it.
-
----
-
-## Phase 1 — the reproduction (~15 GPU-min, one scene)
-
-**This is the run that answers "does it reproduce".** Tab. 5 (the AnyCalib
-appendix) is the only place in the paper with **per-sequence DA3-Small** numbers,
-and `3f15…` is a scene we have. So it is the single tightest target available —
-tighter than Tab. 2, and on the right backbone.
-
-Targets, DA3-Small + GT calibration on ScanNet++ `3f15…`, as `R° / t° / d_reproj`:
-
-| method | paper (Tab. 5) |
-|---|---|
-| **`raytun3r`** | **0.40 / 2.2 / 1.7** |
-| `lora` (r=8, α=16) | 4.22 / 23.0 / 2.9 |
-| `caltok` (t=4) | 3.09 / 20.0 / 4.4 |
-
-All three are implemented, and `lora`/`caltok` each need their own fit — they
-share the objective, so only `--method` changes. Three fits plus one eval:
-
-```bash
-S=/netapp/datasets/scannetpp/data/3f15a9266d
-for M in raytun3r lora caltok; do
-  python -m raytun3r.train --backbone da3 --variant small --weights pretrained \
-    --dataset scannetpp --path $S --method $M --stride 10 \
-    --out runs/rt3r/tab5-3f15-da3s-$M
-done
-```
-
-```bash
-python -m raytun3r.eval --backbone da3 --variant small --weights pretrained \
-  --dataset scannetpp --path $S --stride 10 \
-  --adapter runs/rt3r/tab5-3f15-da3s-raytun3r/adapter.pt \
-  --methods vanilla,param_free,raytun3r,center_ph,multi_ph \
-  --out runs/rt3r/tab5-3f15-da3s/results.json
-```
-
-Then evaluate `lora` and `caltok` against **their own** checkpoints — `--adapter`
-is applied only to the method it was fitted for, and feeding one method's state to
-another is a hard error:
-
-```bash
-python -m raytun3r.eval --backbone da3 --variant small --weights pretrained \
-  --dataset scannetpp --path $S --stride 10 \
-  --adapter runs/rt3r/tab5-3f15-da3s-lora/adapter.pt --methods lora \
-  --out runs/rt3r/tab5-3f15-da3s/results_lora.json
-```
-
-(and the same for `caltok`).
-
-**Report `d_reproj` and `d_reproj_conf` side by side.** Their ratio is the first
-real measurement of how much of Ω UFM gives up on, and it tells us immediately
-whether bug 2 above explains the old 14–30× `d_reproj` gap.
-
-**Phase 1 succeeds** if `raytun3r` lands near 0.40° and beats `lora`/`caltok` by
-the margin Tab. 5 shows. If so, say so on the issue and go straight to Phase 3 —
-Phase 2 is only for a miss.
-
----
-
-## Phase 2 — only if Phase 1 misses (~4 GPU-h)
-
-Two orthogonal explanations, both cheap. **Run 2a before 2b**: an undertrained
-adapter would also make the FOV sweep unreadable.
-
-### 2a — is 300 iterations simply too few?
-
-```bash
-python -m raytun3r.experiments.iters_sweep --backbone da3 --variant small --weights pretrained --dataset scannetpp --path /netapp/datasets/scannetpp/data/3f15a9266d --out runs/iters-sweep/3f15a9266d-da3s
-```
-
-The step count is the one hyperparameter Sec. 4.3 never states. We guessed
-`--iters 300` (~3 min); App. D quotes **2–3 h per ScanNet++ scene**. Even allowing
-that their figure covers full-sequence evaluation and every baseline, three
-minutes of fitting does not sit comfortably inside two hours. If `R_deg` is still
-falling at 300, that is the answer and everything else needs redoing at the elbow.
-
-### 2b — does the FOV disagreement explain the baseline ordering?
-
-```bash
-python -m raytun3r.experiments.fov_sweep --backbone da3 --variant small --weights pretrained --dataset scannetpp --path /netapp/datasets/scannetpp/data/3f15a9266d --out runs/fov-sweep/3f15a9266d-da3s
-```
-
-Center-PH beat RayTun3R ~5× on `R°`, the reverse of the paper. If ScanNet++'s DSLR
-is really ~170°, re-projecting to a 110° pinhole discards the hard pixels rather
-than handling them. `--max-fov` narrows Ω only — images untouched — so this
-isolates where a method is *scored*. Gap closes as the cone narrows → FOV is the
-answer; flat → look elsewhere.
-
----
-
-## Phase 3 — scale out, once Phase 1 has an answer
-
-These produce our own aggregates. They are **not** comparable to Tab. 1/3 (means
-over unnamed scene sets), so they are for *our* error bars, not for reproduction.
-
-```bash
-python -m raytun3r.experiments.scannetpp_all --backbone da3 --variant small --weights pretrained --root /netapp/datasets/scannetpp/data --out runs/rt3r/snpp-all-da3s --workers 4
-```
-
-Sanity-check with `--limit 2` first; ~3 min fit plus eval per scene, one scene per
-GPU. Same command with `--backbone vggt` for the VGGT aggregate, which makes the
-earlier single-scene VGGT run comparable and separates "the method does not
-reproduce" from "VGGT is not the paper's backbone".
-
-Then, cheap and worth doing:
-
-* **`--backbone vggt_omega` on one scene.** Expected to barely help — DINOv3,
-  RoPE-only, 20 adapter parameters. It is the direct test of Tab. 7b's "RoPE only"
-  row (19.52° vs 0.48°). A *large* improvement would contradict the paper and
-  would be the most interesting result available.
-* **The queued `s10-adt-seq131` run**, now that conventions are fixed.
-* **Find ScanNet++ `render_depth/`.** It was absent, so `AbsRel`/`δ₁.₂₅` (Tab. 3)
-  have never been measured on ScanNet++ at all. If it is not in the download, say
-  so and Tab. 3 stays out of scope for this dataset.
-
----
-
-## Protocol notes
-
-Defaults already match the paper — Adam 1e-3, clip 1.0, 300 iters, 30 three-frame
-windows, 2 px flow filter, 504 max side, UFM, LoRA r=8 α=16, CalTok t=4 — with one
-deliberate deviation: **`--stride 10`, not 1**. At stride 1 the baseline is ~1.1 cm
-against ~3 m of depth, translation direction is unobservable (MAGSAC++ is itself
-11.1° off ground truth) and `d_reproj` stops depending on depth. The paper does not
-specify a stride; Check A above may change this. Do not change it back without
-saying so in `meta.json`.
-
-**"Same number of GPUs as the paper" is settled.** App. D: single RTX A6000/A4000
-cards, "independent scenes, sequences, and baselines executed in parallel when
-possible", ~180–250 GPU-h total. The paper's setting *is* one GPU per scene with
-scenes in parallel — what `--workers` does. Nothing to shard within a scene; a
-shared adapter across scenes would be a different method.
-
-## How to read the numbers — three ways to call a reproduction a failure
-
-* **RayTun3R is not supposed to win `d_reproj`.** It loses that column to
-  Center-PH or Multi-PH on **4 of 5 datasets** in the paper's own Tab. 1, and
-  Center-PH wins ScanNet++ depth outright (AbsRel 0.066 vs 0.108, Tab. 3). The
-  claim is about **pose**.
-* **Do not tune toward Tab. 4a.** The full model has the second-worst `R°` in its
-  own component ablation — six of seven ablated variants beat it on rotation. It
-  is selected on `d_reproj`.
-* **Parameter-free corrections hurting alone reproduces the paper.** Tab. 8 has
-  them making FIORD Kitchen worse (28.09 → 39.04 `R°`); they only help combined
-  with the learned residual.
+Do not tune anything to bring a number closer to 7.21, 2.45 or 0.93. Those are a
+sanity check on *mechanism* — does fisheye cost rotation gain, does rectification
+restore it, does the adapter restore it — not targets. Three tickets went into
+chasing them and produced one withdrawn conclusion.
 
 ## Recording
 
-Per POLICY.md, results to the `results` branch, JSON and trimmed logs only.
-
-* **Pin the commit each run actually used**, not one per batch. Last time all
-  three runs were labelled `bfdb47e`, but the two stride-1 runs predate it — they
-  lack the `coverage` key it introduced and carry the 117 px `center_ph`
-  `d_reproj` it fixed. Record `git rev-parse HEAD` per run.
-* Record `depth-anything-3` and `torch` versions alongside the matcher, and the
-  `--stride` / `--max-fov` actually used.
+`results/adapter-3f15a9266d/` with the JSONs, `adapter.pt`, and a `meta.json`
+carrying `git rev-parse HEAD`, torch version, checkpoint ids and the stride used.
 
 ## Done when
 
-- [ ] Phase 0 Check A reported on the issue (frames, posed, median baseline)
-- [ ] **Phase 1: `raytun3r` / `lora` / `caltok` on `3f15…` with DA3-Small, scored
-      against Tab. 5**, with `d_reproj` and `d_reproj_conf` both reported
-- [ ] a plain statement of whether Phase 1 reproduced 0.40° or not
-- [ ] Phase 2 sweeps, if Phase 1 missed
-- [ ] Phase 3 aggregates for DA3-Small and VGGT
-- [ ] pushed to `results`, this issue commented with the branch sha
-- [ ] handed back to `cpu` for the README rewrite against real numbers
+- [ ] step 1's three summary blocks pasted, with the `HARNESS OK` verdicts
+- [ ] a gain table: vanilla / Center-PH / RayTun3R × three backbones
+- [ ] one line on whether the adapter closes the gap to classical geometry
+- [ ] pushed to `results`; hand back to `cpu`
 
 ## Needs CPU-Claude afterwards?
 
-yes — README rewrite, and interpretation of Phase 2 if it runs.
+yes — folding this into README.md (#1), which has been waiting for a number
+worth publishing since the start.
