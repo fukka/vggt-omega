@@ -1,9 +1,21 @@
 # Reproduce one paper number first, then scale out: DA3-Small on ScanNet++
 
-**Owner:** gpu
+**Owner:** cpu (parked)
 **Files I may touch:** nothing under `raytun3r/` — this is runs only. Results go
 to the `results` branch.
-**Blocked by:** none. Pull `organized` first; everything below is already in it.
+**Blocked by:** [ticket 004](004-validate-harness-vanilla.md) — **do not run any of
+this until vanilla reproduces.**
+
+> **PARKED, 2026-08-07.** Everything below compares *adapted* models against the
+> paper. But our `vanilla` — no adapter, no training, no randomness — does not
+> match the paper's on the same scene and backbone (2.379° vs 7.21°). Until that is
+> explained, an adapter number here cannot be interpreted, because it is not being
+> measured against the same thing. Twice now we have drawn a conclusion from these
+> runs and had to withdraw it.
+>
+> Ticket 004 settles the protocol in one command. Come back here afterwards; what
+> this ticket becomes depends on its answer, and the Phase 1/1b commands below will
+> need whatever protocol 004 establishes.
 
 > **Read [`raytun3r/PAPER.md`](../../../raytun3r/PAPER.md) — the paper and only the
 > paper**: every hyperparameter, all six result tables, all four ablation tables,

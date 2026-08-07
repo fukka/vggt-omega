@@ -234,6 +234,11 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--max-fov", type=float, default=None,
                    help="restrict Omega to this total FOV in degrees (never widens); "
                         "the knob for the paper's stated 115 deg vs ScanNet++'s real ~170")
+    p.add_argument("--eval-min-flow", type=float, default=0.0,
+                   help="static-pair filter at EVALUATION time. The paper applies "
+                        "its 2 px filter to the adaptation set only and evaluates "
+                        "on the full sequence, so this defaults to 0 (no filtering). "
+                        "--min-flow-px still governs the adaptation set in train.py")
     p.add_argument("--keep-bad", action="store_true",
                    help="keep ScanNet++ frames the dataset flags is_bad; they are "
                         "dropped by default (143 of 896 on 3f15a9266d)")
@@ -263,8 +268,13 @@ def main(argv=None) -> None:
     args._h, args._w = source.h, source.w
 
     matcher = build_matcher(args.matcher, device=args.device)
+    # The paper's 2 px static filter applies to the *adaptation set* only -- "we
+    # build a short adaptation set of 30 three-frame windows, filtering out nearly
+    # static windows [...] and evaluate on the full sequence". Filtering at
+    # evaluation time silently drops the easiest pairs and biases every metric
+    # toward high-motion ones, so it is off here by default.
     windows = build_windows(source, matcher, n_windows=args.windows, seq_len=2,
-                            stride=args.stride, min_flow_px=args.min_flow_px,
+                            stride=args.stride, min_flow_px=args.eval_min_flow,
                             with_pose_targets=False, with_gt=True, seed=args.seed,
                             device=args.device)
 
