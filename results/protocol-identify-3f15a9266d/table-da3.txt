@@ -1,0 +1,51 @@
+=== R as an affine function of the identity score, per method ===
+  vanilla    R =  0.760 + 0.1668 * I     R^2=0.9787   (I swept 0.94..58.84 deg)
+  center_ph  R =  0.493 + 0.1375 * I     R^2=0.9817   (I swept 0.94..58.84 deg)
+  multi_ph   R =  0.839 + 0.1037 * I     R^2=0.9483   (I swept 0.94..58.84 deg)
+
+=== I*: the median GT rotation each method needs to score its paper R ===
+  vanilla    paper R=10.21  ->  I* =    56.64 deg
+  center_ph  paper R= 3.27  ->  I* =    20.20 deg
+  multi_ph   paper R= 1.66  ->  I* =     7.92 deg
+
+[proto] 3 methods, required spans differ by 151% (I* from 7.92 to 56.64 deg)
+[proto] NO VERDICT on I*: Tab. 1 (ScanNet++ mean) is a mean over unnamed scenes, so the absolute level carries a scene-composition offset this run cannot separate from a protocol offset. Read the spread as indicative and the ratio cross-check below as the real signal.
+
+=== cross-check without fitting: R(vanilla) / R(center_ph) ===
+  paper wants 3.12 at every span it evaluates
+  stride   1  ours =   1.34   
+  stride   2  ours =   1.39   
+  stride   5  ours =   1.21   
+  stride  10  ours =   1.26   
+  stride  20  ours =   1.42   
+  stride  40  ours =   1.37   
+  stride  60  ours =   1.13   
+  stride  80  ours =   1.25   
+  none of the swept spans reproduces 3.12 -- a span-free disagreement between us and the paper on these two methods.
+
+=== cross-check without fitting: R(vanilla) / R(multi_ph) ===
+  paper wants 6.15 at every span it evaluates
+  stride   1  ours =   1.22   
+  stride   2  ours =   1.19   
+  stride   5  ours =   0.95   
+  stride  10  ours =   1.17   
+  stride  20  ours =   1.37   
+  stride  40  ours =   1.43   
+  stride  60  ours =   1.42   
+  stride  80  ours =   1.60   
+  none of the swept spans reproduces 6.15 -- a span-free disagreement between us and the paper on these two methods.
+
+=== cross-check without fitting: R(center_ph) / R(multi_ph) ===
+  paper wants 1.97 at every span it evaluates
+  stride   1  ours =   0.91   
+  stride   2  ours =   0.86   
+  stride   5  ours =   0.79   
+  stride  10  ours =   0.93   
+  stride  20  ours =   0.96   
+  stride  40  ours =   1.05   
+  stride  60  ours =   1.26   
+  stride  80  ours =   1.28   
+  none of the swept spans reproduces 1.97 -- a span-free disagreement between us and the paper on these two methods.
+
+[proto] wrote runs/protocol-identify/3f15-da3.json
+LANE_A_DA3_DONE

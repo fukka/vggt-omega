@@ -1,0 +1,26 @@
+{
+  "ticket": 10,
+  "run_id": "protocol-identify-3f15a9266d",
+  "what": "Seven training-free paper targets across three backbones, to test whether ANY frame span reproduces the paper's ScanNet++ numbers",
+  "scene": "3f15a9266d",
+  "dataset_path": "/netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d",
+  "code_commit": "7b7034f",
+  "code_patch": "none -- ran clean, the device fix from ticket 9 is committed upstream",
+  "host": "lambda_63",
+  "gpu": "NVIDIA RTX 6000 Ada Generation",
+  "torch": "2.11.0+cu128",
+  "checkpoints": {
+    "vggt": "facebook/VGGT-1B @ 860abec7937da0a4c03c41d3c269c366e82abdf9",
+    "pi3": "yyfz233/Pi3 (pi3 0.1, installed from git+https://github.com/yyfz/Pi3.git)",
+    "da3": "depth-anything-3 small, pretrained"
+  },
+  "runs": {
+    "pass1": "--strides 1,2,5,10,20,40,60,80 --pairs 100, all three backbones",
+    "pass2": "--pairs 300, vggt + pi3 only -- the ticket's prescribed remedy for the R^2 gate"
+  },
+  "verdict_vanilla": "AGREE at stride 60, fit-free, on two independent backbones. VGGT 7.242 vs paper 7.21 (off 0.032); pi3 6.392 vs paper 6.17 (off 0.222). Fitted I* agrees independently: 44.30 (VGGT) and 43.19 (pi3) bracket stride 60's measured I=43.706.",
+  "verdict_pinhole_methods": "DISAGREE at every swept span, fit-free, on all three backbones. All five ratio cross-checks miss: VGGT vanilla/center_ph wants 2.94 (ours 4.00-14.26), pi3 wants 2.71 (ours 9.17-36.94), DA3 wants 3.12/6.15/1.97 (ours ~1.2-1.6/~1.0-1.6/~0.8-1.3).",
+  "r2_gate": "Center-PH R^2 stayed below the 0.90 gate at BOTH 100 and 300 pairs (VGGT 0.856->0.874, pi3 0.658->0.652 -- pi3's got worse). More pairs cannot clear it: the fit is loose because Center-PH's R is nearly span-independent, so there is almost no variance for the line to explain. Structural, not noise. Per the ticket's guard rail NO I*-based verdict is claimed for Center-PH. The ratio block is fit-free and unaffected.",
+  "anomaly_center_ph": "Our Center-PH numbers look non-physical and reproduce EXACTLY across the two independent passes. pi3 Center-PH: R=0.048 deg at stride 1 rising only to 0.206 deg at stride 80, t=1.24 deg, skill 278x. The angular error stays ~0.2 deg while the true rotation it must estimate grows from 0.84 to 57.2 deg. A real estimator's error grows with the rotation being estimated. Flagged as measured, not diagnosed -- but every single disagreement above involves a pinhole-rectified method, so this path should be checked for leakage before concluding the paper is wrong.",
+  "note_da3_i_star": "No verdict on DA3's I* by the script's own design (Tab. 1 is a mean over unnamed scenes)."
+}

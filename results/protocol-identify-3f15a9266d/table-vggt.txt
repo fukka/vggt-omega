@@ -1,0 +1,24 @@
+=== R as an affine function of the identity score, per method ===
+  vanilla    R =  0.588 + 0.1509 * I     R^2=0.9936   (I swept 0.94..58.84 deg)
+  center_ph  R =  0.217 + 0.0075 * I     R^2=0.8564   (I swept 0.94..58.84 deg)
+
+=== I*: the median GT rotation each method needs to score its paper R ===
+  vanilla    paper R= 7.21  ->  I* =    43.88 deg
+  center_ph  paper R= 2.45  ->  I* =   296.61 deg  << EXTRAPOLATED beyond the swept range
+
+[proto] INCONCLUSIVE: worst fit is R^2=0.856, below 0.9. I* is read off these lines, so neither AGREE nor DISAGREE can be claimed. Widen --strides or raise --pairs and re-run.
+
+=== cross-check without fitting: R(vanilla) / R(center_ph) ===
+  paper wants 2.94 at every span it evaluates
+  stride   1  ours =   3.87   
+  stride   2  ours =   4.70   
+  stride   5  ours =   4.38   
+  stride  10  ours =   5.20   
+  stride  20  ours =   7.71   
+  stride  40  ours =  11.08   
+  stride  60  ours =  13.96   
+  stride  80  ours =  14.79   
+  none of the swept spans reproduces 2.94 -- a span-free disagreement between us and the paper on these two methods.
+
+[proto] wrote runs/protocol-identify/3f15-vggt.json
+LANE_A_VGGT_DONE
