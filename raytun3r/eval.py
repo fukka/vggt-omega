@@ -196,10 +196,13 @@ def _make_runner(method: str, backbone, camera, args, adapter_state=None):
     raise ValueError(f"unknown method {method!r}")
 
 
+from .backbones import BACKBONE_NAMES  # noqa: E402
+
+
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser("raytun3r.eval", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--backbone", default="vggt", choices=["vggt", "vggt_omega", "da3"])
+    p.add_argument("--backbone", default="vggt", choices=BACKBONE_NAMES)
     p.add_argument("--weights", default="pretrained")
     p.add_argument("--variant", default="small",
                    choices=["small", "base", "large", "giant"])

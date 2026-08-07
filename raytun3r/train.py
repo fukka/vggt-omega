@@ -92,10 +92,13 @@ def fit_adapter(backbone, windows: List, camera, *, iters: int = 300,
     return {"history": history, "seconds": time.time() - t0}
 
 
+from .backbones import BACKBONE_NAMES  # noqa: E402
+
+
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser("raytun3r.train", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--backbone", default="vggt", choices=["vggt", "vggt_omega", "da3"])
+    p.add_argument("--backbone", default="vggt", choices=BACKBONE_NAMES)
     p.add_argument("--weights", default="pretrained")
     p.add_argument("--variant", default="small",
                    choices=["small", "base", "large", "giant"],

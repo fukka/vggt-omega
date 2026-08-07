@@ -133,11 +133,13 @@ def _aggregate(rows: List[Dict], methods: List[str]) -> Dict:
 
 
 def main(argv=None) -> None:
+    from ..backbones import BACKBONE_NAMES
+
     p = argparse.ArgumentParser("raytun3r.experiments.scannetpp_all", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--root", required=True, help="ScanNet++ data root holding scene dirs")
     p.add_argument("--out", required=True)
-    p.add_argument("--backbone", default="da3", choices=["vggt", "vggt_omega", "da3"])
+    p.add_argument("--backbone", default="da3", choices=BACKBONE_NAMES)
     p.add_argument("--variant", default="small",
                    choices=["small", "base", "large", "giant"])
     p.add_argument("--weights", default="pretrained")

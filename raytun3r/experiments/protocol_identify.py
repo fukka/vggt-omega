@@ -14,15 +14,25 @@ GT rotation, fixed by the frame span alone)::
 free parameter to one number cannot fail, so it carries no evidence. The stride
 40 result is a curve crossing.
 
-**The fix is a second target measured under the same protocol.** Tab. 2 gives
-three methods on ScanNet++ 3f15 with a VGGT backbone::
+**The fix is more targets measured under the same protocol.** The paper gives
+several training-free ScanNet++ rows, and every one is a free extra constraint
+because none of them needs fitting:
 
-    vanilla     R = 7.21   t = 16.6   d_reproj = 39.4
-    Center-PH   R = 2.45   t = 27.3   d_reproj =  6.1
-    RayTun3R    R = 0.93   t =  6.0   d_reproj =  3.2
+===========  =======================  =========================================
+backbone     table                    training-free methods
+===========  =======================  =========================================
+``vggt``     Tab. 2, named ``3f15``   vanilla 7.21, Center-PH 2.45
+``pi3``      Tab. 2, named ``3f15``   vanilla 6.17, Center-PH 2.28
+``da3``      Tab. 1, ScanNet++ mean   vanilla 10.21, Center-PH 3.27, Multi-PH 1.66
+===========  =======================  =========================================
 
-`vanilla` and `Center-PH` are both training-free and need no matcher, so both
-are as cheap as ticket 9. They share exactly one unknown -- the span the paper
+Tab. 1's row is "the mean of per-scene means" over scenes the paper never names,
+so its *absolute* level cannot be matched from one scene -- but it is the only
+row with **three** training-free methods, and ratios between methods survive both
+the unknown span and the unknown scene set. Tab. 2's two backbones are the tight
+targets: same sequence, same protocol, four numbers.
+
+Within one run, the methods share exactly one unknown -- the span the paper
 evaluates at -- and each contributes its own constraint, which makes the fit
 over-determined and therefore able to fail:
 
@@ -55,9 +65,30 @@ import torch
 
 __all__ = ["main"]
 
-#: Tab. 2, ScanNet++ 3f15, VGGT backbone. Only the training-free rows are used.
-PAPER = {"vanilla": {"R_deg": 7.21, "t_deg": 16.6},
-         "center_ph": {"R_deg": 2.45, "t_deg": 27.3}}
+#: Training-free ScanNet++ rows, per backbone. Only methods that need no fitting
+#: appear here, because each one has to be runnable at every span for free.
+#:
+#: `vggt` and `pi3` are Tab. 2, single **named** sequence 3f15a9266d -- the tight
+#: targets. `da3` is Tab. 1, whose ScanNet++ row is "the mean of per-scene means"
+#: over scenes the paper never names, so its absolute values are NOT expected to
+#: match a single-scene run; `aggregate` marks that. It is still worth running,
+#: because it is the only row with **three** training-free methods, and the
+#: cross-method structure is informative even when the absolute level is not.
+PAPER = {
+    "vggt": {"table": "Tab. 2 (3f15a9266d)", "aggregate": False,
+             "vanilla":   {"R_deg": 7.21, "t_deg": 16.6},
+             "center_ph": {"R_deg": 2.45, "t_deg": 27.3}},
+    "pi3":  {"table": "Tab. 2 (3f15a9266d)", "aggregate": False,
+             "vanilla":   {"R_deg": 6.17, "t_deg": 19.7},
+             "center_ph": {"R_deg": 2.28, "t_deg": 25.7}},
+    "da3":  {"table": "Tab. 1 (ScanNet++ mean)", "aggregate": True,
+             "vanilla":   {"R_deg": 10.21, "t_deg": 30.26},
+             "center_ph": {"R_deg": 3.27,  "t_deg": 22.77},
+             "multi_ph":  {"R_deg": 1.66,  "t_deg": 10.43}},
+}
+
+#: keys of PAPER[bb] that are methods rather than metadata
+_META = ("table", "aggregate")
 
 DEFAULT_STRIDES = (1, 2, 5, 10, 20, 40)
 
@@ -113,15 +144,16 @@ def _load_source(path: str, keep_bad: bool, max_size: int, square: bool, patch: 
 
 
 def _predictor(bb, src, method: str, ph_fov: float):
-    """Both methods run the frozen backbone with every correction switched off."""
+    """Every method runs the frozen backbone with all corrections switched off."""
     bb.install(None, src.camera, (src.h, src.w), patch_undistort=False,
                border_token=False, dpt_grid=False, depth_convention="range")
     if method == "vanilla":
         return lambda imgs: bb.forward(imgs[None])
-    if method == "center_ph":
-        from ..baselines import CenterPH
+    if method in ("center_ph", "multi_ph"):
+        from ..baselines import CenterPH, MultiPH
+        ctor = CenterPH if method == "center_ph" else MultiPH
         # ProjectionBaseline takes [s,3,H,W] and adds its own batch dim.
-        return CenterPH(bb, src.camera, fov_deg=ph_fov, depth_convention="range")
+        return ctor(bb, src.camera, fov_deg=ph_fov, depth_convention="range")
     raise ValueError(f"unknown method {method!r}")
 
 
@@ -166,10 +198,12 @@ def _run(pred_fn, src, stride: int, seq_len: int, n_pairs: int,
 
 
 def main(argv=None) -> None:
+    from ..backbones import BACKBONE_NAMES
+
     p = argparse.ArgumentParser("raytun3r.experiments.protocol_identify",
                                 description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--backbone", default="vggt", choices=["vggt", "vggt_omega", "da3"])
+    p.add_argument("--backbone", default="vggt", choices=BACKBONE_NAMES)
     p.add_argument("--variant", default="small")
     p.add_argument("--weights", default="pretrained")
     p.add_argument("--path", required=True)
@@ -207,11 +241,23 @@ def main(argv=None) -> None:
                        bb.patch_size, args.existing_only)
     print(f"[proto] {len(src)} frames, working grid {src.w}x{src.h}\n", flush=True)
 
+    target = PAPER.get(args.backbone, {})
+    if not target:
+        print(f"[proto] WARNING: no ScanNet++ paper row for backbone "
+              f"{args.backbone!r}; measuring only, no verdict.", flush=True)
+    elif target["aggregate"]:
+        print(f"[proto] targets from {target['table']} -- this row is a mean over "
+              f"scenes the paper does not name, so the ABSOLUTE level is not "
+              f"expected to match a single scene. The cross-method comparison "
+              f"below is still meaningful; I* is not.\n", flush=True)
+    else:
+        print(f"[proto] targets from {target['table']}\n", flush=True)
+
     rows: Dict[str, Dict[int, Dict]] = {}
     for m in methods:
         pred_fn = _predictor(bb, src, m, args.ph_fov)
         rows[m] = {}
-        tgt = PAPER.get(m, {})
+        tgt = target.get(m, {})
         print(f"[proto] {m}   (paper: R={tgt.get('R_deg', '?')} t={tgt.get('t_deg', '?')})",
               flush=True)
         for st in strides:
@@ -229,7 +275,7 @@ def main(argv=None) -> None:
     fits, need = {}, {}
     for m in methods:
         pts = sorted(rows[m].values(), key=lambda r: r["identity"])
-        if len(pts) < 2 or m not in PAPER:
+        if len(pts) < 2 or m not in target:
             continue
         f = _fit([r["identity"] for r in pts], [r["R_deg"] for r in pts])
         if f is None:
@@ -240,7 +286,7 @@ def main(argv=None) -> None:
         print(f"  {m:10s} R = {a:6.3f} + {b:6.4f} * I     R^2={r2:.4f}   "
               f"(I swept {span[0]:.2f}..{span[1]:.2f} deg)")
         if b > 1e-6:
-            istar = (PAPER[m]["R_deg"] - a) / b
+            istar = (target[m]["R_deg"] - a) / b
             need[m] = istar
             fits[m]["I_star"] = istar
             fits[m]["extrapolated"] = not (span[0] <= istar <= span[1])
@@ -248,7 +294,7 @@ def main(argv=None) -> None:
     print("\n=== I*: the median GT rotation each method needs to score its paper R ===")
     for m, istar in need.items():
         flag = "  << EXTRAPOLATED beyond the swept range" if fits[m]["extrapolated"] else ""
-        print(f"  {m:10s} paper R={PAPER[m]['R_deg']:5.2f}  ->  I* = {istar:8.2f} deg{flag}")
+        print(f"  {m:10s} paper R={target[m]['R_deg']:5.2f}  ->  I* = {istar:8.2f} deg{flag}")
 
     print()
     worst_r2 = min((fits[m]["r2"] for m in need), default=float("nan"))
@@ -266,37 +312,50 @@ def main(argv=None) -> None:
         vals = list(need.values())
         lo, hi = min(vals), max(vals)
         rel = (hi - lo) / ((hi + lo) / 2) if (hi + lo) > 0 else float("inf")
-        print(f"[proto] required spans differ by {rel*100:.0f}% "
+        n_m, tbl = len(need), target["table"]
+        print(f"[proto] {n_m} methods, required spans differ by {rel*100:.0f}% "
               f"(I* from {lo:.2f} to {hi:.2f} deg)")
-        if rel <= AGREE_TOL:
-            print(f"[proto] AGREE: both methods want the same protocol, I* ~ "
+        if target["aggregate"]:
+            print(f"[proto] NO VERDICT on I*: {tbl} is a mean over unnamed scenes, so "
+                  f"the absolute level carries a scene-composition offset this run "
+                  f"cannot separate from a protocol offset. Read the spread as "
+                  f"indicative and the ratio cross-check below as the real signal.")
+        elif rel <= AGREE_TOL:
+            print(f"[proto] AGREE: all {n_m} methods want the same protocol, I* ~ "
                   f"{(lo+hi)/2:.1f} deg of GT rotation per pair. That span IS the "
-                  f"paper's, and the harness now reproduces Tab. 2 at two "
-                  f"independent operating points. Re-run ticket 003 under it.")
+                  f"paper's, and the harness reproduces {tbl} at {n_m} independent "
+                  f"operating points. Re-run ticket 003 under it.")
         else:
-            print(f"[proto] DISAGREE: no single span reproduces Tab. 2. The two "
+            print(f"[proto] DISAGREE: no single span reproduces {tbl}. The {n_m} "
                   f"methods need protocols {rel*100:.0f}% apart, so the gap is NOT "
                   f"the evaluation protocol -- it is the backbone or its "
                   f"preprocessing. Ticket 9's stride-40 R match was a curve "
                   f"crossing, as suspected.")
 
-    # The ratio is the same test seen without any fitting: it is dimensionless,
-    # so a protocol that explains Tab. 2 must reproduce it at some span.
-    if len(methods) >= 2 and all(m in PAPER for m in methods[:2]):
-        m0, m1 = methods[0], methods[1]
-        want = PAPER[m0]["R_deg"] / PAPER[m1]["R_deg"]
+    # Ratios are the same test with no fitting and no absolute level: they are
+    # dimensionless, so they survive both the span question and (for Tab. 1) the
+    # unknown scene set. A protocol that explains the paper must reproduce them.
+    pairs = [(a, b) for i, a in enumerate(methods) for b in methods[i + 1:]
+             if a in target and b in target]
+    for m0, m1 in pairs:
+        want = target[m0]["R_deg"] / target[m1]["R_deg"]
         print(f"\n=== cross-check without fitting: R({m0}) / R({m1}) ===")
         print(f"  paper wants {want:.2f} at every span it evaluates")
+        hit = False
         for st in strides:
             if st in rows.get(m0, {}) and st in rows.get(m1, {}):
                 got = rows[m0][st]["R_deg"] / rows[m1][st]["R_deg"]
-                print(f"  stride {st:3d}  ours = {got:6.2f}"
-                      f"   {'<-- matches' if abs(got-want) < 0.3 else ''}")
+                ok = abs(got - want) < 0.3
+                hit = hit or ok
+                print(f"  stride {st:3d}  ours = {got:6.2f}   {'<-- matches' if ok else ''}")
+        if not hit:
+            print(f"  none of the swept spans reproduces {want:.2f} -- a span-free "
+                  f"disagreement between us and the paper on these two methods.")
 
     if args.out:
         os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
         with open(args.out, "w") as f:
-            json.dump({"paper": PAPER, "backbone": args.backbone,
+            json.dump({"paper": target, "backbone": args.backbone,
                        "scene": os.path.basename(args.path.rstrip("/")),
                        "square": args.square, "keep_bad": args.keep_bad,
                        "seq_len": args.seq_len, "pairs": args.pairs,

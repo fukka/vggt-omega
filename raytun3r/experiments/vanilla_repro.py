@@ -128,10 +128,12 @@ def _run_config(bb, src, stride: int, seq_len: int, n_pairs: int,
 
 
 def main(argv=None) -> None:
+    from ..backbones import BACKBONE_NAMES
+
     p = argparse.ArgumentParser("raytun3r.experiments.vanilla_repro",
                                 description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--backbone", default="vggt", choices=["vggt", "vggt_omega", "da3"])
+    p.add_argument("--backbone", default="vggt", choices=BACKBONE_NAMES)
     p.add_argument("--variant", default="small")
     p.add_argument("--weights", default="pretrained")
     p.add_argument("--path", required=True)

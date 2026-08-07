@@ -370,3 +370,111 @@ Guarded by `MIN_R2 = 0.90`, since every `I*` is read off a fitted line.
   strong barrel distortion, `OPENCV_FISHEYE` with `k1..k4`, 146.3° horizontal.
   `has_mask: true` in `transforms.json`, so masks exist in the dataset even
   though the staged sample carries none.
+
+## 6d. Correction: how many training-free targets ScanNet++ actually gives (2026-08-07)
+
+Tickets 004 and 005 said "DA3-Small has no per-scene vanilla number, so only VGGT
+can be checked". That is true as literally stated and **wrong in effect** — it was
+used to justify running one backbone against one number, which is exactly the
+degeneracy §6c is about. The full inventory:
+
+| source | backbone | scene | training-free rows available |
+|---|---|---|---|
+| Tab. 2 | VGGT | `3f15a9266d` (**named**) | vanilla 7.21, Center-PH 2.45 |
+| Tab. 2 | π³ | `3f15a9266d` (**named**) | vanilla 6.17, Center-PH 2.28 |
+| Tab. 1 | DA3-Small | ScanNet++ (mean, unnamed scenes) | vanilla 10.21, Center-PH 3.27, **Multi-PH 1.66** |
+| Tab. 5 | DA3-Small | `3f15a9266d` (**named**) | none — RayTun3R/LoRA/CalTok only, all fitted |
+| Tab. 3 left | DA3-Small | ScanNet++ (mean) | vanilla 0.282/0.601, Center-PH 0.066/0.961 — **depth** |
+
+So there are **seven** training-free ScanNet++ pose numbers, not one. Tab. 2's four
+are the tight ones (named sequence, one protocol). Tab. 1's three cannot be matched
+in absolute terms from a single scene, but they are the only row carrying Multi-PH,
+and **ratios between methods survive both the unknown span and the unknown scene
+set** — which is the property §6c showed absolute `R°` lacks.
+
+`experiments/protocol_identify.py` now carries all of them keyed by backbone, runs
+`multi_ph`, prints every pairwise ratio, and refuses to give an `I*` verdict on an
+aggregate row.
+
+### Tab. 3 left is the one target that does not slide with span
+
+`AbsRel` and `δ₁.₂₅` are per-pixel depth metrics: unlike `R°` they have no
+dependence on how much rotation is in the pair, so **the whole curve-crossing
+degeneracy does not apply to them**. That makes them the strongest available check
+on backbone health, independent of the protocol question.
+
+They are blocked on ground-truth depth — see below.
+
+## 6e. What the phone transfer settled about masks and depth (2026-08-07)
+
+GPU-Claude re-staged the sample with the mask directories and left `MASKS_ADDED.json`.
+
+**The mask bug was ours, twice over.** `transforms.json` gives `mask_path` as a
+**bare filename** (`DSC07484.png`, no directory), and ScanNet++ stores masks in a
+sibling directory named after the image set — `dslr/resized_anon_masks/` beside
+`dslr/resized_images/`. `dslr/masks/` does not exist. Every earlier candidate path
+(`masks/<stem>.png`, `dslr/<mask_path>`, `masks/<basename>`) missed, and a miss
+reads exactly like "this dataset ships no masks". `data.py` now has `anon_mask()`
+with the right resolution and a test.
+
+**Both mask sets are anonymisation masks, and neither defines Ω.** Measured on all
+24 staged frames of `3f15a9266d`:
+
+| set | usable fraction | identical across frames? | radial structure |
+|---|---|---|---|
+| `resized_anon_masks` | 0.9978 (0.9940–0.9993) | no | none — off-fraction 0.0003/0.0039/0.0010/0.0017 by radius band |
+| `resized_undistorted_masks` | 0.9977 (0.9937–1.0000) | no | none — 0.0010/0.0045/0.0016/0.0004 |
+
+A lens/valid-region mask would be constant across frames, radially symmetric, and
+would remove a large fraction at high radius. Neither does any of the three; the
+off-fraction actually *peaks* in the mid-radius band, where objects are. These are
+blacked-out faces and screens (visible as a magenta blob in `DSC06719`).
+
+**So ScanNet++ ships no lens mask, and Ω stays `camera.valid_mask` / `theta_max`.**
+The hypothesis that the paper's 115° came from a shipped mask is dead — §4's FOV
+disagreement is not explained by masking, and `has_mask: true` in `transforms.json`
+means only that anonymisation masks exist.
+
+**`render_depth` is genuinely absent, not a path bug.** No `dslr/render_depth`, no
+`depth_file_path` on any frame, on this scene or any other GPU-Claude checked. The
+scene ships `scans/mesh_aligned_0.05.ply` (35 MB) and a 3-frame panoramic
+`panocam/depth`. Dense DSLR depth therefore has to be **rendered from the mesh with
+the ScanNet++ toolkit** — a real job, not a copy. Until it exists, Tab. 3 left and
+every `AbsRel`/`δ₁.₂₅` number stay untestable, which is the one target immune to
+the span degeneracy. That makes rendering it worth doing.
+
+## 6f. π³ backbone implemented (2026-08-07)
+
+`--backbone pi3` (`backbones.Pi3Backbone`), so Tab. 2's second named-sequence row
+is reachable: vanilla 6.17 / 19.7 / 38.6 and Center-PH 2.28 / 25.7 / 5.2 on the
+same scene, same protocol as the VGGT rows.
+
+Four things about upstream `yyfz/Pi3` that the wrapper has to handle:
+
+* **`camera_poses` is camera-to-world**, unlike VGGT's `extrinsics` and unlike
+  everything else here. Verified against π³'s own definition — it computes
+  `points = camera_poses @ homogenize(local_points)`, so a correct cam-from-world
+  `(R, t)` must satisfy `local = R @ points + t`. Measured on a random-weight
+  forward: max residual **4e-6**, `R Rᵀ = I` to 0.0, `det R = 1`. A test pins the
+  algebra without needing the checkpoint. Inverting this backwards is invisible at
+  small rotations and grows with baseline — the worst way for it to be wrong here.
+* **Depth is `local_points[..., 2]`** — planar z, so `native_depth = "z"` and
+  `_finalize` converts as usual.
+* **Only `decoder_size='large'` works upstream.** `small`/`base` build a
+  `dec_embed_dim`-wide register token and concatenate it with the 1024-wide encoder
+  output with no projection, so `decode()` raises. `large` is the released config.
+* **No DPT positional grid to correct** — π³'s heads are `LinearPts3d`, so the
+  `dpt_grid` parameter-free correction has no attachment point and warns rather
+  than silently no-op'ing, since a `pi3` run is then not comparable to a VGGT/DA3
+  run with `dpt_grid` on.
+
+Install: not on PyPI, but `pyproject.toml` declares the package, so
+`pip install git+https://github.com/yyfz/Pi3.git` works on Python ≥ 3.10; otherwise
+clone it beside this repo or set `$PI3_ROOT`. Needs **torch ≥ 2.3** —
+`pi3/models/layers/attention.py` imports `torch.nn.attention`, which fails at
+*import* time on older torch, not at run time. Encoder is `dinov2_vitl14_reg`, so
+`has_abs_pe` is true and Eq. 5 applies; decoder is RoPE-only (`rope100`).
+
+`BACKBONE_NAMES` is now the single source for every `--backbone` choice list —
+adding a backbone used to mean editing seven argparsers, and five of them would
+have kept silently rejecting `pi3`.

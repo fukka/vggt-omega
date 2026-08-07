@@ -647,3 +647,94 @@ def test_scannetpp_drops_frames_the_dataset_flags_as_bad(tmp_path):
     assert [f["file_path"] for f in dropped.frames] == \
         ["DSC00000.JPG", "DSC00001.JPG", "DSC00002.JPG",
          "DSC00007.JPG", "DSC00008.JPG", "DSC00009.JPG"]
+
+
+# ---------------------------------------------------------------------------
+# pi^3 backbone (Tab. 2's second named-sequence backbone)
+# ---------------------------------------------------------------------------
+
+
+def test_pi3_is_registered():
+    from raytun3r.backbones import BACKBONE_NAMES, BACKBONES, Pi3Backbone
+
+    assert BACKBONES["pi3"] is Pi3Backbone
+    assert "pi3" in BACKBONE_NAMES
+    # every argparser reads this list, so a new backbone must land in all of them
+    assert BACKBONE_NAMES == sorted(BACKBONES)
+
+
+def test_pi3_camera_pose_inversion_matches_its_own_unprojection():
+    """pi^3 emits camera-TO-world, unlike everything else here.
+
+    Its forward defines ``points = camera_poses @ homogenize(local_points)``, so
+    the cam-from-world ``(R, t)`` the backbone reports must satisfy
+    ``local = R @ points + t``. This pins the convention without needing the
+    1 GB checkpoint: it is the same algebra ``Pi3Backbone.forward`` runs, checked
+    against pi^3's own definition of ``points``.
+
+    Getting this backwards is invisible at small rotations and grows with the
+    baseline -- the worst failure mode for a metric already suspected of sliding
+    with frame span.
+    """
+    torch.manual_seed(0)
+    S = 3
+    A = torch.randn(S, 3, 3)
+    R_c2w = torch.linalg.qr(A)[0]
+    R_c2w[torch.linalg.det(R_c2w) < 0] *= -1          # proper rotations
+    t_c2w = torch.randn(S, 3)
+
+    c2w = torch.eye(4).repeat(S, 1, 1)
+    c2w[:, :3, :3], c2w[:, :3, 3] = R_c2w, t_c2w
+
+    # exactly what Pi3Backbone.forward does
+    R = c2w[:, :3, :3].transpose(-1, -2)
+    t = -torch.einsum("sij,sj->si", R, c2w[:, :3, 3])
+
+    local = torch.randn(S, 4, 5, 3)
+    world = torch.einsum("sij,shwj->shwi", R_c2w, local) + t_c2w[:, None, None, :]
+    recon = torch.einsum("sij,shwj->shwi", R, world) + t[:, None, None, :]
+    assert torch.allclose(recon, local, atol=1e-5)
+
+    # and it is a genuine inverse, not a transpose that happens to look like one
+    assert torch.allclose(R @ R.transpose(-1, -2), torch.eye(3).expand(S, 3, 3), atol=1e-5)
+    assert torch.allclose(torch.linalg.det(R), torch.ones(S), atol=1e-5)
+
+
+def test_scannetpp_anon_mask_path_resolution(tmp_path):
+    """`mask_path` is a bare filename and masks live beside the image set.
+
+    Guessing ``masks/<stem>.png`` resolves nothing and looks exactly like
+    "ScanNet++ ships no masks", which is how this was missed twice.
+    """
+    import json as _json
+
+    from PIL import Image
+
+    from raytun3r.data import ScanNetPPFisheye
+
+    d = tmp_path / "scene" / "dslr"
+    (d / "resized_images").mkdir(parents=True)
+    (d / "resized_anon_masks").mkdir(parents=True)
+    (d / "nerfstudio").mkdir(parents=True)
+
+    frames = []
+    for i in range(3):
+        stem = f"DSC{i:05d}"
+        Image.new("RGB", (64, 48)).save(d / "resized_images" / f"{stem}.JPG")
+        m = torch.full((48, 64), 255, dtype=torch.uint8)
+        m[:4, :4] = 0                                   # a small anonymised patch
+        Image.fromarray(m.numpy()).save(d / "resized_anon_masks" / f"{stem}.png")
+        frames.append({"file_path": f"{stem}.JPG", "mask_path": f"{stem}.png",
+                       "transform_matrix": [[1, 0, 0, i * 0.01], [0, 1, 0, 0],
+                                            [0, 0, 1, 0], [0, 0, 0, 1]]})
+
+    (d / "nerfstudio" / "transforms.json").write_text(_json.dumps({
+        "camera_model": "OPENCV_FISHEYE", "w": 64, "h": 48,
+        "fl_x": 30.0, "fl_y": 30.0, "cx": 32.0, "cy": 24.0,
+        "k1": 0.0, "k2": 0.0, "k3": 0.0, "k4": 0.0, "frames": frames}))
+
+    src = ScanNetPPFisheye(str(tmp_path / "scene"), max_size=28, patch=14)
+    mask = src.anon_mask(0)
+    assert mask is not None, "mask_path is a bare filename; resolve it beside the images"
+    assert mask.shape == (src.h, src.w) and mask.dtype == torch.bool
+    assert mask.any() and not mask.all()

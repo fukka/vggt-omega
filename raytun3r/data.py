@@ -182,6 +182,9 @@ class ScanNetPPFisheye(SequenceSource):
         if not os.path.isdir(self._image_root):
             self._image_root = os.path.join(scene_dir, "dslr", "undistorted_images")
         self._depth_root = os.path.join(scene_dir, "dslr", "render_depth")
+        # Named after the image set, not "masks/". See `anon_mask`.
+        self._mask_roots = [os.path.join(scene_dir, "dslr", d) for d in
+                            ("resized_anon_masks", "resized_undistorted_masks", "masks")]
 
     def __len__(self) -> int:
         return len(self.frames)
@@ -195,6 +198,36 @@ class ScanNetPPFisheye(SequenceSource):
 
     def image(self, i: int) -> Tensor:
         return self._read_rgb(os.path.join(self._image_root, self.frames[i]["file_path"]))
+
+    def anon_mask(self, i: int) -> Optional[Tensor]:
+        """ScanNet++'s per-frame **anonymisation** mask, ``True`` where usable.
+
+        Not a lens or valid-region mask, so **Ω must not come from it** -- that
+        stays :meth:`Camera.valid_mask`. Measured on ``3f15a9266d``: ~0.2% of
+        pixels masked, varying frame to frame, with no radial structure, i.e.
+        blacked-out faces and screens. ScanNet++ ships no lens mask at all.
+
+        The path is easy to get wrong. ``transforms.json`` gives ``mask_path`` as
+        a **bare filename** with no directory, and the masks live in a sibling
+        directory named after the image set (``resized_anon_masks`` beside
+        ``resized_images``) -- not in a ``masks/`` directory, which does not
+        exist. Earlier code guessed ``masks/<stem>.png`` and silently found
+        nothing, which reads identically to "this dataset ships no masks".
+        """
+        from PIL import Image
+
+        name = self.frames[i].get("mask_path") or (
+            os.path.splitext(os.path.basename(self.frames[i]["file_path"]))[0] + ".png")
+        name = os.path.basename(name)
+        for root in self._mask_roots:
+            path = os.path.join(root, name)
+            if os.path.exists(path):
+                m = torch.from_numpy(np.asarray(Image.open(path)).copy())
+                if m.dim() == 3:
+                    m = m[..., 0]
+                m = _resize_to(m[None].float(), (self.h, self.w), mode="nearest")[0]
+                return m > 127
+        return None
 
     def pose(self, i: int) -> Optional[Tuple[Tensor, Tensor]]:
         m = self.frames[i].get("transform_matrix")

@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import math
 import types
+import warnings
 from dataclasses import dataclass
 from typing import Any, Callable, List, Optional, Tuple
 
@@ -753,11 +754,167 @@ class DA3Backbone(Backbone):
                        R=pose[:, :3, :3].float(), t=pose[:, :3, 3].float()))
 
 
+# ---------------------------------------------------------------------------
+# pi^3 -- the paper's second named-sequence backbone (Tab. 2)
+# ---------------------------------------------------------------------------
+
+
+class Pi3Backbone(Backbone):
+    """``pi^3``: Scalable Permutation-Equivariant Visual Geometry Learning.
+
+    The paper's Tab. 2 reports this backbone on the same named sequences as VGGT,
+    so it doubles the number of *named-scene* targets available on ScanNet++
+    ``3f15``: vanilla 6.17 / 19.7 / 38.6 and Center-PH 2.28 / 25.7 / 5.2, both
+    training-free and both measured under the same protocol as the VGGT rows.
+
+    Three facts about the upstream package shape the code below, all read off
+    ``yyfz/Pi3@main``:
+
+    * **It is not on PyPI**, but its ``pyproject.toml`` does declare a ``pi3``
+      package, so ``pip install git+https://github.com/yyfz/Pi3.git`` works on
+      Python >= 3.10. :meth:`load` tries the plain import first and falls back to
+      finding a clone on ``sys.path``, the way :class:`VGGTBackbone` does.
+    * **Only ``decoder_size='large'`` is coherent upstream.** The ``small``/``base``
+      branches build a ``dec_embed_dim``-wide register token and concatenate it
+      with the 1024-wide encoder output without a projection, so ``decode()``
+      raises. ``large`` is what the released config uses, and the only value here.
+    * ``pi3/models/layers/attention.py`` imports ``torch.nn.attention``, which
+      landed in **torch 2.3** -- older torch fails at import, not at run time.
+    * **``camera_poses`` is camera-to-world**, unlike VGGT's ``extrinsics`` and
+      unlike everything else in this repo, which is cam-from-world. The forward
+      below inverts it. Getting this backwards costs nothing at small rotations
+      and grows with the baseline, which is the worst way for it to be wrong.
+    * **Depth is ``local_points[..., 2]``**, i.e. planar z, so ``native_depth``
+      stays ``"z"`` and :meth:`_finalize` does the conversion as usual.
+
+    The RoPE fallback in ``pi3/models/layers/pos_embed.py`` is pure PyTorch and
+    ``FlashAttentionRope`` calls ``torch.nn.functional.scaled_dot_product_attention``,
+    so nothing here needs a CUDA extension compiled.
+    """
+
+    patch_size = 14
+    embed_dim = 1024        # DINOv2 ViT-L/14 with registers
+    has_abs_pe = True       # encoder is dinov2_vitl14_reg -> carries pos_embed
+    has_rope = True         # decoder RoPE2D, pos_type='rope100'
+    native_depth = "z"
+
+    #: released weights; the repo's config is {"decoder_size": "large",
+    #: "pos_type": "rope100"} and the class is a PyTorchModelHubMixin.
+    HUB_ID = "yyfz233/Pi3"
+
+    @classmethod
+    def _import_pi3(cls):
+        """``pi3.models.pi3.Pi3``, from a pip install or from a clone on disk."""
+        import os
+        import sys
+        from pathlib import Path
+
+        try:
+            from pi3.models.pi3 import Pi3  # type: ignore
+            return Pi3
+        except ImportError:
+            pass
+
+        env = os.environ.get("PI3_ROOT")
+        candidates = ([Path(env)] if env else []) + [
+            Path(__file__).resolve().parents[1] / "Pi3",
+            Path(__file__).resolve().parents[2] / "Pi3",
+        ]
+        for c in candidates:
+            if (c / "pi3" / "models" / "pi3.py").exists():
+                if str(c) not in sys.path:
+                    sys.path.insert(0, str(c))
+                from pi3.models.pi3 import Pi3  # type: ignore
+                return Pi3
+        raise ImportError(
+            "The 'pi3' backbone needs https://github.com/yyfz/Pi3, which is not on "
+            "PyPI. Either\n"
+            "    pip install git+https://github.com/yyfz/Pi3.git      (needs Python >= 3.10)\n"
+            "or clone it beside this repo / point $PI3_ROOT at it:\n"
+            "    git clone https://github.com/yyfz/Pi3.git\n"
+            "It also needs torch >= 2.3 for torch.nn.attention. Searched: "
+            + ", ".join(str(c) for c in candidates))
+
+    @classmethod
+    def load(cls, weights: Optional[str] = None, device="cpu", **kw) -> "Pi3Backbone":
+        Pi3 = cls._import_pi3()
+        kw.setdefault("decoder_size", "large")   # the only coherent branch upstream
+
+        if weights in (None, "random"):
+            model = Pi3(**kw)                    # architecture only, for tests
+        else:
+            model = Pi3.from_pretrained(cls.HUB_ID if weights == "pretrained" else weights)
+        obj = cls(model.to(device))
+        obj.embed_dim = int(obj._vit().pos_embed.shape[-1])
+        return obj
+
+    def _vit(self) -> nn.Module:
+        return self.model.encoder
+
+    def _tokenizer_modules(self) -> List[nn.Module]:
+        return [self._vit().patch_embed]
+
+    def _hook_abs_pe(self) -> None:
+        # DINOv2's `interpolate_pos_encoding` returns (1, 1+N, C) with the class
+        # token first -- the same contract VGGT's does. Registers are concatenated
+        # *after* this call in `prepare_tokens_with_masks` and carry their own
+        # embedding, so they are untouched by Eq. 5, which is correct: they have
+        # no image position.
+        vit = self._vit()
+        outer = self
+
+        def interpolate_pos_encoding(self, x, w, h, _orig=vit.interpolate_pos_encoding):
+            pos = _orig(x, w, h)
+            gh, gw = outer._grid
+            if pos.shape[1] - 1 == gh * gw and outer._pe_table is None:
+                outer._pe_table = pos[0, 1:].detach()
+            if outer.adapter is None or outer.adapter.pe is None:
+                return pos
+            if pos.shape[1] - 1 != gh * gw:
+                return pos
+            res = outer.adapter.pe_residual().to(pos.dtype).to(pos.device)
+            return torch.cat((pos[:, :1], pos[:, 1:] + res.unsqueeze(0)), dim=1)
+
+        self._patch_method(vit, "interpolate_pos_encoding", interpolate_pos_encoding)
+
+    def _hook_dpt_grid(self, grid_mode: str) -> None:
+        # pi^3's heads are `LinearPts3d`, not a DPT with `_apply_pos_embed`: there
+        # is no positional grid inside the head to make camera-aware. So this
+        # parameter-free correction has no attachment point here, and silently
+        # doing nothing is the honest behaviour -- but it must be visible, because
+        # a `--backbone pi3` run is then not comparable to a VGGT/DA3 run that had
+        # `dpt_grid` on.
+        warnings.warn(
+            "pi3 has no DPT positional grid to correct (its heads are LinearPts3d); "
+            "the dpt_grid correction is a no-op for this backbone. Pass "
+            "--no-dpt-grid to make that explicit in the run config.", RuntimeWarning)
+
+    def forward(self, images: Tensor) -> Prediction:
+        if images.dim() == 4:
+            images = images.unsqueeze(0)
+        out = self.model(images)
+
+        # camera-to-world -> cam-from-world, the convention used everywhere here.
+        c2w = out["camera_poses"][0].float()               # (S, 4, 4)
+        R_c2w, t_c2w = c2w[:, :3, :3], c2w[:, :3, 3]
+        R = R_c2w.transpose(-1, -2)
+        t = -torch.einsum("sij,sj->si", R, t_c2w)
+
+        depth = out["local_points"][0, ..., 2].float()     # (S, H, W) planar z
+        conf = out["conf"][0, ..., 0].float()              # (S, H, W)
+        return self._finalize(Prediction(depth=depth, conf=conf, R=R, t=t))
+
+
 BACKBONES = {
     "vggt": VGGTBackbone,
     "vggt_omega": VGGTOmegaBackbone,
     "da3": DA3Backbone,
+    "pi3": Pi3Backbone,
 }
+
+#: Single source of truth for every ``--backbone`` choice list. Adding a backbone
+#: to BACKBONES without touching seven argparsers is the point.
+BACKBONE_NAMES = sorted(BACKBONES)
 
 
 def build_backbone(name: str, weights: Optional[str] = None, device="cpu", **kw) -> Backbone:
