@@ -1,0 +1,23 @@
+[repro] stage 1: stride
+  s1_bad0_sq0_L2               n=100  R=  0.460  t=  24.54  identity=  0.939  skill= 2.04x  |dR|= 6.750
+  s2_bad0_sq0_L2               n=100  R=  0.811  t=  21.00  identity=  1.805  skill= 2.22x  |dR|= 6.399
+  s5_bad0_sq0_L2               n=100  R=  1.200  t=  17.70  identity=  4.104  skill= 3.42x  |dR|= 6.010
+  s10_bad0_sq0_L2              n=100  R=  1.828  t=  19.19  identity=  8.312  skill= 4.55x  |dR|= 5.382
+  s20_bad0_sq0_L2              n=100  R=  3.110  t=  21.42  identity= 16.096  skill= 5.18x  |dR|= 4.100
+  s40_bad0_sq0_L2              n=100  R=  5.673  t=  23.29  identity= 30.777  skill= 5.43x  |dR|= 1.537
+[repro] stage 2: other axes at stride [40, 20]
+  s40_bad0_sq0_L3              n=100  R= 11.051  t=  16.61  identity= 58.842  skill= 5.32x  |dR|= 3.841
+  s40_bad0_sq1_L2              n=100  R=  7.189  t=  25.47  identity= 30.777  skill= 4.28x  |dR|= 0.021
+  s40_bad0_sq1_L3              n=100  R= 12.547  t=  20.16  identity= 58.842  skill= 4.69x  |dR|= 5.337
+  s40_bad1_sq0_L2              n=100  R=  5.618  t=  22.80  identity= 28.155  skill= 5.01x  |dR|= 1.592
+  s40_bad1_sq0_L3              n=100  R= 10.663  t=  18.18  identity= 49.977  skill= 4.69x  |dR|= 3.453
+  s40_bad1_sq1_L2              n=100  R=  7.087  t=  25.68  identity= 28.155  skill= 3.97x  |dR|= 0.123
+  s40_bad1_sq1_L3              n=100  R= 12.146  t=  20.94  identity= 49.977  skill= 4.11x  |dR|= 4.936
+  s20_bad0_sq0_L3              n=100  R=  6.114  t=  23.99  identity= 30.777  skill= 5.03x  |dR|= 1.096
+  s20_bad0_sq1_L2              n=100  R=  3.797  t=  24.93  identity= 16.096  skill= 4.24x  |dR|= 3.413
+  s20_bad0_sq1_L3              n=100  R=  7.772  t=  27.38  identity= 30.777  skill= 3.96x  |dR|= 0.562
+  s20_bad1_sq0_L2              n=100  R=  3.094  t=  21.45  identity= 14.185  skill= 4.58x  |dR|= 4.116
+  s20_bad1_sq0_L3              n=100  R=  6.033  t=  21.70  identity= 28.155  skill= 4.67x  |dR|= 1.177
+  s20_bad1_sq1_L2              n=100  R=  3.999  t=  22.57  identity= 14.185  skill= 3.55x  |dR|= 3.211
+  s20_bad1_sq1_L3              n=100  R=  7.359  t=  25.30  identity= 28.155  skill= 3.83x  |dR|= 0.149
+[repro] best: stride=40 keep_bad=False square=True seq_len=2 -> R=7.189 vs target 7.21 (off by 0.021)

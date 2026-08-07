@@ -1,0 +1,30 @@
+{
+  "ticket": 9,
+  "run_id": "vanilla-repro-3f15a9266d",
+  "what": "VGGT vanilla protocol sweep vs paper Tab. 2 target R=7.21 t=16.6 d_reproj=39.4",
+  "scene": "3f15a9266d",
+  "dataset_path": "/netapp/datasets/f.zhang2/scannetpp/data/3f15a9266d",
+  "backbone": "vggt",
+  "weights": "pretrained",
+  "vggt_checkpoint": "facebook/VGGT-1B @ 860abec7937da0a4c03c41d3c269c366e82abdf9",
+  "code_commit": "f7f79dedc7c230304b447d0d15da1dd66affa8c1",
+  "code_patch": "Ran with ONE local uncommitted line in raytun3r/experiments/vanilla_repro.py, inserted after line 114 (R_hat, t_hat = pred.relative(...)): moving R_hat/t_hat onto R_gt/t_gt. Without it the script dies on the very first pair -- src.pose() returns CPU tensors, pred.relative() returns CUDA ones, and rotation_error_deg raises a device mismatch. Not pushed to organized: that file is cpu-owned.",
+  "host": "lambda_63",
+  "gpu": "NVIDIA RTX 6000 Ada Generation",
+  "torch": "2.11.0+cu128",
+  "pairs_per_config": 100,
+  "n_configs": 20,
+  "best_R": {
+    "config": "s40_bad0_sq1_L2",
+    "stride": 40,
+    "keep_bad": false,
+    "square": true,
+    "seq_len": 2,
+    "R_deg": 7.189,
+    "target": 7.21,
+    "off_by": 0.021
+  },
+  "verdict_R": "HIT -- stride 40, is_bad honoured, square 504x504, seq_len 2 reproduces the paper R to 0.021 deg",
+  "caveat_t": "The same config gives t=25.47 vs the paper 16.6. No single config matches both R and t. The only config landing near t=16.6 (s40_bad0_sq0_L3, t=16.61) has R=11.05. Reported as measured; interpreting it is cpu work.",
+  "not_measured": "d_reproj (paper 39.4) -- the script emits R and t only"
+}
