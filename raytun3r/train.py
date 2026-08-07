@@ -140,6 +140,9 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--w-smooth", type=float, default=10.0)
     p.add_argument("--w-l2", type=float, default=2.0)
     p.add_argument("--w-tv", type=float, default=20.0)
+    p.add_argument("--keep-bad", action="store_true",
+                   help="keep ScanNet++ frames the dataset flags is_bad; they are "
+                        "dropped by default (143 of 896 on 3f15a9266d)")
     p.add_argument("--convention", default="range", choices=["range", "z"])
     p.add_argument("--seed", type=int, default=0)
     return p
@@ -155,7 +158,8 @@ def main(argv=None) -> None:
                            patch=backbone.patch_size, max_frames=args.max_frames,
                            **({"extrinsics_json": args.extrinsics_json,
                                "depth_convention": args.convention}
-                              if args.dataset == "adt" else {}))
+                              if args.dataset == "adt" else
+                              {"keep_bad": args.keep_bad}))
     if args.max_fov is not None:
         before = 2 * math.degrees(source.camera.theta_max)
         source.camera = source.camera.with_max_fov(args.max_fov)

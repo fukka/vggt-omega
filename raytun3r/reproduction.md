@@ -180,10 +180,66 @@ Full tables, the run configuration, and the two findings are in
   should not be quoted; `experiments/scannetpp_all.py` and
   `experiments/fov_sweep.py` are the reruns.
 
+## 6b. Phase −1 data audit — what it settled (2026-08-07)
+
+Run on `3f15a9266d` (896 frames), plus a 1.7 MB local sample of the same scene.
+
+**Stride 10 is the paper's operating point — hypothesis 1 is dead.** `R°` is an
+absolute angular error, so the identity predictor ("no rotation") scores exactly
+the median GT rotation. Measured:
+
+| stride | 1 | 5 | **10** | 20 | 40 | 60 |
+|---|---|---|---|---|---|---|
+| median GT rotation = identity `R°` | 0.89 | 4.06 | **7.79** | 14.76 | 28.23 | 41.90 |
+
+The paper's VGGT vanilla on this scene is **7.21°**. That sits on the stride-10
+identity score, so our stride-10 pairs are at the paper's rotation scale. The
+"easier evaluation" explanation is refuted at stride 10.
+
+**What replaces it: the paper's vanilla is at chance and ours is not.** Skill =
+identity `R°` / measured `R°`; ≤ 1.0 means the method carries no information.
+
+| | vanilla | raytun3r | center_ph |
+|---|---|---|---|
+| paper (VGGT, Tab. 2) @ stride 10 | 7.21 → **1.08×** | 0.93 → **8.38×** | 2.45 → 3.18× |
+| ours (VGGT) @ stride 10 | 2.379 → **3.27×** | 1.858 → 4.19× | 0.378 → 20.6× |
+| ours (DA3-S) @ stride 10 | 2.496 → **3.12×** | 1.581 → 4.93× | 1.697 → 4.59× |
+
+So there are **two gaps, not one**: our unadapted backbone is ~3× *better* than
+the paper's (3.1–3.3× skill vs their 1.08×), leaving far less pinhole bias for the
+adapter to remove; and our adapted model is ~2–4× *worse* than theirs (4–5× skill
+vs 8.4×). Read at stride 1 the paper is stranger still: its vanilla scores 0.12×
+identity — eight times worse than predicting nothing — and its RayTun3R lands at
+0.96×, i.e. exactly the no-op baseline.
+
+`eval.py` now reports `R_deg_identity` and `R_skill` on every run, because a bare
+`R°` is not interpretable across strides or datasets.
+
+**Bug found and fixed: we were evaluating on frames ScanNet++ flags as unusable.**
+`is_bad` is true for **143 of 896 frames (16%)**, in 8 contiguous runs, the longest
+132 frames. The loader now drops them (`--keep-bad` restores the old behaviour).
+Every number measured before 2026-08-07 includes them.
+
+**FOV settled: our ~170° is right.** Intensity std at 80–85° incidence is 0.148
+against 0.230 at 0–30° — real structure, not dead vignette. The frame carries
+content to the corner, so Ω is the rectangle. The intrinsics give horizontal
+146.3°, vertical 103.7°, diagonal 169.5°; **the paper's 115° matches none of
+them.** Poses are metric (camera bbox 1.12 × 1.94 × 0.29 m, 11.2 m path).
+
+**Still unmeasurable on this download:** `dslr/masks/` and `render_depth/` are
+absent, so Ω-from-mask and AbsRel (Tab. 3) remain untested. `transforms.json`
+does reference masks per frame (`mask_path`), so they exist upstream.
+
 **Live hypotheses, in the order worth testing:**
 
-1. **Our evaluation is easier than the paper's.** Two independent mechanisms, both
-   now actionable:
+0. **Our vanilla is healthier than the paper's** — the newest and most likely to
+   explain everything downstream. If their frozen backbone is at chance on this
+   data and ours is not, we are not reproducing the *condition* the adapter is
+   meant to repair. Prime suspects: the 16% `is_bad` frames they may have dropped
+   and we did not, and whatever preprocessing makes their vanilla so much worse.
+1. ~~**Our evaluation is easier than the paper's.**~~ **Refuted at stride 10** by
+   the table above. Retained below only for the `d_reproj` weighting, which is a
+   separate matter:
    * **The `d_reproj` weighting bug above.** We scored only the confidently
      matched subset where Eq. 16 scores all of Ω. This alone can account for
      anywhere from 1× to >100×, and our observed gap is 14–30× — squarely inside

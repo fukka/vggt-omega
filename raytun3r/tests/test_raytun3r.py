@@ -614,3 +614,36 @@ def test_vggt_omega_has_no_absolute_pe():
     bb = tiny_vggt_omega()
     assert bb.has_abs_pe is False
     assert bb.make_adapter().param_breakdown()["total"] == 20
+
+
+def test_scannetpp_drops_frames_the_dataset_flags_as_bad(tmp_path):
+    """ScanNet++ marks unusable DSLR frames; evaluating on them corrupts every metric.
+
+    On 3f15a9266d that is 143 of 896 frames in 8 contiguous runs, the longest 132
+    -- a whole stretch of the capture the dataset itself says not to use.
+    """
+    import json as _json
+
+    from raytun3r.data import ScanNetPPFisheye
+
+    d = tmp_path / "scene" / "dslr" / "nerfstudio"
+    d.mkdir(parents=True)
+    frames = [{"file_path": f"DSC{i:05d}.JPG", "is_bad": (3 <= i < 7),
+               "transform_matrix": [[1, 0, 0, i * 0.01], [0, 1, 0, 0],
+                                    [0, 0, 1, 0], [0, 0, 0, 1]]} for i in range(10)]
+    (d / "transforms.json").write_text(_json.dumps({
+        "camera_model": "OPENCV_FISHEYE", "w": 1752, "h": 1168,
+        "fl_x": 710.0, "fl_y": 710.0, "cx": 875.5, "cy": 583.5,
+        "k1": 0.0, "k2": 0.0, "k3": 0.0, "k4": 0.0, "frames": frames}))
+
+    scene = str(tmp_path / "scene")
+    dropped = ScanNetPPFisheye(scene)
+    kept = ScanNetPPFisheye(scene, keep_bad=True)
+
+    assert dropped.n_bad == 4
+    assert len(dropped) == 6 and len(kept) == 10
+    assert not any(f.get("is_bad") for f in dropped.frames)
+    # and the survivors stay in capture order, so stride still means what it says
+    assert [f["file_path"] for f in dropped.frames] == \
+        ["DSC00000.JPG", "DSC00001.JPG", "DSC00002.JPG",
+         "DSC00007.JPG", "DSC00008.JPG", "DSC00009.JPG"]

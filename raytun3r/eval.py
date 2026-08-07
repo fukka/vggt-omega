@@ -29,7 +29,7 @@ from .baselines import CenterPH, MultiPH, attach_caltok, attach_lora
 from .data import build_windows, load_sequence
 from .matching import build_matcher
 from .metrics import (aggregate, depth_metrics, pose_errors,
-                      reprojection_depth_error)
+                      reprojection_depth_error, rotation_error_deg)
 
 __all__ = ["evaluate", "main"]
 
@@ -79,6 +79,15 @@ def evaluate(runner, windows, camera, *, convention: str = "range",
             R_hat, t_hat = pred.relative(i, j)
             row.update(pose_errors(R_hat, t_hat, R_gt, t_gt))
 
+            # What a model that predicts *no rotation at all* would score. R_deg
+            # is an absolute angular error, so its scale is set by how much
+            # rotation there is to estimate -- which `--stride` changes directly.
+            # Without this column an R_deg is uninterpretable on its own and not
+            # comparable across strides or datasets. Skill is R_deg_identity /
+            # R_deg; at or below 1.0 the method carries no information.
+            row["R_deg_identity"] = rotation_error_deg(
+                torch.eye(3, dtype=R_gt.dtype, device=R_gt.device), R_gt)
+
             # Both averagings, every run: `d_reproj` is Eq. 16 as written and is
             # the only one comparable to the paper's tables, while
             # `d_reproj_conf` is the confidence-weighted number we reported
@@ -112,9 +121,12 @@ def evaluate(runner, windows, camera, *, convention: str = "range",
         out["_depth_skipped"] = n_no_depth
     if n_cov:
         out["coverage"] = coverage_sum / n_cov
+    if out.get("R_deg", 0) > 0 and "R_deg_identity" in out:
+        out["R_skill"] = out["R_deg_identity"] / out["R_deg"]
     if label:
-        keys = [k for k in ("R_deg", "t_deg", "d_reproj", "d_reproj_conf",
-                            "AbsRel", "delta_1.25", "coverage") if k in out]
+        keys = [k for k in ("R_deg", "R_deg_identity", "R_skill", "t_deg", "d_reproj",
+                            "d_reproj_conf", "AbsRel", "delta_1.25", "coverage")
+                if k in out]
         print(f"[eval] {label:12s} " + "  ".join(f"{k}={out[k]:.4f}" for k in keys)
               + (f"   (no GT pose in {n_no_pose} pairs)" if n_no_pose else ""))
     return out
@@ -222,6 +234,9 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--max-fov", type=float, default=None,
                    help="restrict Omega to this total FOV in degrees (never widens); "
                         "the knob for the paper's stated 115 deg vs ScanNet++'s real ~170")
+    p.add_argument("--keep-bad", action="store_true",
+                   help="keep ScanNet++ frames the dataset flags is_bad; they are "
+                        "dropped by default (143 of 896 on 3f15a9266d)")
     p.add_argument("--convention", default="range", choices=["range", "z"])
     p.add_argument("--seed", type=int, default=0)
     return p
@@ -236,7 +251,8 @@ def main(argv=None) -> None:
                            patch=backbone.patch_size, max_frames=args.max_frames,
                            **({"extrinsics_json": args.extrinsics_json,
                                "depth_convention": args.convention}
-                              if args.dataset == "adt" else {}))
+                              if args.dataset == "adt" else
+                              {"keep_bad": args.keep_bad}))
     if args.max_fov is not None:
         before = 2 * math.degrees(source.camera.theta_max)
         source.camera = source.camera.with_max_fov(args.max_fov)

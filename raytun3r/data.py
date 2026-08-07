@@ -139,7 +139,7 @@ class ScanNetPPFisheye(SequenceSource):
 
     def __init__(self, scene_dir: str, *, max_size: int = 504, patch: int = 14,
                  max_frames: Optional[int] = None, transforms: Optional[str] = None,
-                 depth_scale: float = 1e-3):
+                 depth_scale: float = 1e-3, keep_bad: bool = False):
         self.scene_dir = scene_dir
         self.name = os.path.basename(scene_dir.rstrip("/"))
         self.depth_scale = depth_scale
@@ -165,6 +165,13 @@ class ScanNetPPFisheye(SequenceSource):
 
         frames = meta["frames"]
         frames = sorted(frames, key=lambda fr: fr["file_path"])
+        # ScanNet++ flags unusable DSLR frames with `is_bad`. On 3f15a9266d that
+        # is 143 of 896 (16%), in 8 contiguous runs, the longest 132 frames -- a
+        # whole stretch of the capture the dataset itself says not to use. They
+        # were being evaluated on, which corrupts every metric downstream.
+        self.n_bad = sum(1 for fr in frames if fr.get("is_bad"))
+        if not keep_bad and self.n_bad:
+            frames = [fr for fr in frames if not fr.get("is_bad")]
         if max_frames:
             frames = frames[:max_frames]
         self.frames = frames
