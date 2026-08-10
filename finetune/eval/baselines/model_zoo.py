@@ -15,6 +15,11 @@ Each :class:`ModelSpec` describes one model *variant* (a family + size). An
     "hf_depth"     -- anything exposed via ``transformers.AutoModelForDepthEstimation``
                       (Depth-Anything V2/V3, MiDaS/DPT, ZoeDepth, Depth Pro, ...).
     "metric3d_hub" -- Metric3D v2 via ``torch.hub`` (best-effort).
+    "vggt" /
+    "vggt_omega" /
+    "da3"          -- 3D foundation models, wrapped by ``raytun3r.backbones``,
+                      run **single-view** so they sit in the same monocular
+                      comparison as the rows above. See ``BackboneAdapter``.
 
 Everything imports lazily, so listing the registry and checking availability work
 without transformers / the third-party repos installed, and one missing dependency
@@ -32,6 +37,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import sys
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
@@ -116,11 +122,29 @@ class ModelSpec:
         return tuple(out)
 
 
-# disparity-space affine for relative (MiDaS/Depth-Anything); median scale for metric.
+# disparity-space affine for relative (MiDaS/Depth-Anything); median scale for
+# metric; depth-space affine for up-to-scale DEPTH heads (the VGGT family and
+# DA3 emit depth, not disparity, so a disparity-space fit would be the wrong
+# protocol and a median scale cannot absorb their offset).
 _REL = ("disparity_scale_shift",)
 _MET = ("scale_only",)
+_AFF = ("scale_shift",)
+
+#: Local VGGT-Omega checkpoint (gated; no automatic download). Override with
+#: ``$VGGT_OMEGA_CKPT`` or ``build_adapter(spec, checkpoint=...)``.
+OMEGA_CKPT = os.environ.get(
+    "VGGT_OMEGA_CKPT", os.path.join(_CKPT, "VGGT-Omega-1B-512", "model.pt"))
 
 REGISTRY: List[ModelSpec] = [
+    # ── 3D foundation models, run single-view ───────────────────────────────
+    ModelSpec("vggt_1b", "VGGT", "1B", "vggt", "facebook/VGGT-1B",
+              "up_to_scale", _AFF, note="vendored vggt_visfeat; DINOv2 + RoPE"),
+    ModelSpec("vggt_omega", "VGGT-Omega", "1B/512", "vggt_omega", OMEGA_CKPT,
+              "up_to_scale", _AFF, note="local .pt (gated); DINOv3, RoPE only"),
+    ModelSpec("da3_large", "Depth-Anything-3", "Large", "da3", "large",
+              "up_to_scale", _AFF, note="needs the depth_anything_3 package"),
+    ModelSpec("da3_small", "Depth-Anything-3", "Small", "da3", "small",
+              "up_to_scale", _AFF, on_device=True),
     # ── Depth-Any-Camera (ERP-native, metric, fisheye/360) ──────────────────
     ModelSpec("dac_swinl_indoor", "Depth-Any-Camera", "Swin-L", "dac",
               "dac_swinl_indoor", "metric", _MET, note="indoor; best on Aria fisheye"),
@@ -269,6 +293,11 @@ def _dac_files(spec: ModelSpec) -> Tuple[str, str]:
             os.path.join(_CKPT, f"{spec.ref}.pt"))
 
 
+#: DA3 variant -> released HuggingFace repo (mirrors ``raytun3r.backbones``).
+DA3_REPOS = {"small": "depth-anything/DA3-SMALL", "base": "depth-anything/DA3-BASE",
+             "large": "depth-anything/DA3-LARGE", "giant": "depth-anything/DA3-GIANT"}
+
+
 def status(spec: ModelSpec) -> Tuple[str, str]:
     """Return (state, detail). state ∈ {ready, download, unavailable}.
 
@@ -299,6 +328,25 @@ def status(spec: ModelSpec) -> Tuple[str, str]:
             return "unavailable", "pip install torch"
         return "download", f"torch.hub yvanyin/metric3d:{spec.ref} (best-effort)"
 
+    if spec.kind == "vggt":
+        if not os.path.isdir(os.path.join(_REPO, "VGGT-360-fisheye", "vggt_visfeat")):
+            return "unavailable", "the vendored vggt_visfeat package is missing"
+        return _hf_status(spec.ref)
+
+    if spec.kind == "vggt_omega":
+        # Gated weights: there is no download path, only a pointer.
+        if os.path.isfile(spec.ref):
+            return "ready", _disp(spec.ref)
+        return "unavailable", (
+            f"checkpoint not found at {_disp(spec.ref)} — request access at "
+            f"https://huggingface.co/facebook/VGGT-Omega, then set $VGGT_OMEGA_CKPT")
+
+    if spec.kind == "da3":
+        if not _have("depth_anything_3"):
+            return "unavailable", ("pip install --no-deps depth-anything-3 && "
+                                   "pip install omegaconf addict einops")
+        return _hf_status(DA3_REPOS[spec.ref])
+
     return "unavailable", f"unknown kind {spec.kind!r}"
 
 
@@ -324,8 +372,9 @@ def download(spec: ModelSpec) -> Tuple[bool, str]:
                 hf_hub_download(repo_id="yuliangguo/depth-any-camera", filename=fn,
                                 repo_type="model", local_dir=_CKPT)
             return True, f"downloaded DAC config+weights → {_CKPT}"
-        if spec.kind in ("unik3d", "hf_depth"):
-            repo = (f"lpiccinelli/unik3d-{spec.ref}" if spec.kind == "unik3d" else spec.ref)
+        if spec.kind in ("unik3d", "hf_depth", "vggt", "da3"):
+            repo = {"unik3d": f"lpiccinelli/unik3d-{spec.ref}",
+                    "da3": DA3_REPOS.get(spec.ref, spec.ref)}.get(spec.kind, spec.ref)
             # 1) already repo-local — nothing to do (survives image reloads)
             if _hf_cached_in(repo, _HF_HUB):
                 return True, f"already in {_disp(_HF_HUB)}"
@@ -392,7 +441,85 @@ def build_adapter(spec: ModelSpec, **kw) -> Adapter:
         "unik3d": UniK3DAdapter,
         "hf_depth": HFDepthAdapter,
         "metric3d_hub": Metric3DAdapter,
+        "vggt": BackboneAdapter,
+        "vggt_omega": BackboneAdapter,
+        "da3": BackboneAdapter,
     }[spec.kind](spec, **kw)
+
+
+def patch_align(H: int, W: int, patch: int) -> Tuple[int, int]:
+    """Nearest ``patch``-multiple size, at least one patch on each side."""
+    return (max(patch, int(round(H / patch)) * patch),
+            max(patch, int(round(W / patch)) * patch))
+
+
+class BackboneAdapter(Adapter):
+    """VGGT / VGGT-Omega / Depth-Anything-3 behind ``predict_frame``.
+
+    All three are *multi-view* 3D foundation models, and all three are run here
+    with **one image per forward pass**. That is deliberate, not a limitation:
+    the benchmark compares them against monocular depth nets, and a multi-view
+    run would let cross-view attention fuse evidence the monocular rows never
+    see — the comparison would then be about view count, not about the models.
+    ``vggt_visfeat``'s own preprocessing is bypassed for the same reason the
+    ``hf_depth`` rows bypass theirs: the caller renders each view at the model's
+    native token grid, so nothing is resampled between the view construction and
+    the network.
+
+    The wrapping lives in :mod:`raytun3r.backbones`, which already owns the
+    loaders, the CPU fallbacks and — the reason to reuse it rather than reload
+    the models here — the depth-convention discipline: an uninstalled backbone
+    returns its head's native **planar z**, tagged, which is exactly the
+    quantity ``predict_frame`` is contracted to return.
+    """
+
+    #: spec.kind -> raytun3r.backbones.BACKBONES key (they coincide today, but
+    #: the zoo's kinds are a public CLI surface and that module's are not).
+    _BACKBONE = {"vggt": "vggt", "vggt_omega": "vggt_omega", "da3": "da3"}
+
+    def load(self, device):
+        import torch
+        if _REPO not in sys.path:
+            sys.path.insert(0, _REPO)
+        from raytun3r.backbones import build_backbone
+
+        kind = self.spec.kind
+        kw = {}
+        if kind == "vggt":
+            weights = None                       # -> VGGT.from_pretrained(spec.ref)
+        elif kind == "vggt_omega":
+            weights = self.kw.get("checkpoint") or self.spec.ref
+            if not os.path.isfile(weights):
+                raise FileNotFoundError(
+                    f"VGGT-Omega checkpoint not found: {weights} (set "
+                    f"$VGGT_OMEGA_CKPT or pass checkpoint=...)")
+        else:                                    # da3
+            weights, kw["variant"] = "pretrained", self.spec.ref
+
+        self.backbone = build_backbone(self._BACKBONE[kind], weights=weights,
+                                       device=device, **kw)
+        self.backbone.eval()
+        self.device = device
+        self.torch_modules = [self.backbone]
+        return self
+
+    def predict_frame(self, rgb01: np.ndarray, cam, frame: str) -> np.ndarray:
+        import torch
+        import torch.nn.functional as F
+
+        H, W = rgb01.shape[:2]
+        x = torch.from_numpy(
+            np.ascontiguousarray(np.clip(rgb01, 0, 1).transpose(2, 0, 1))
+        )[None].float().to(self.device)
+        h, w = patch_align(H, W, self.backbone.patch_size)
+        if (h, w) != (H, W):
+            x = F.interpolate(x, (h, w), mode="bilinear", align_corners=False)
+        with torch.no_grad():
+            depth = self.backbone(x).depth[0]            # (h, w) planar z
+        if depth.shape != (H, W):
+            depth = F.interpolate(depth[None, None].float(), (H, W),
+                                  mode="bilinear", align_corners=False)[0, 0]
+        return depth.float().clamp_min(1e-3).cpu().numpy()
 
 
 class HFDepthAdapter(Adapter):

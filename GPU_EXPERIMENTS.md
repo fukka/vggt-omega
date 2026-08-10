@@ -14,6 +14,77 @@ When done: `git add -Af VGGT-360-fisheye/outputs && git commit -m "results" && g
 
 ---
 
+## 0. ADT-FOV test — distortion vs FOV location, four vanilla models
+
+The cross-model experiment: VGGT, VGGT-Omega, DAv2 and DAv3, on rectified
+perspective *and* raw fisheye, on synthetic *and* real input, with the error
+resolved by where in the field of view it happened. Protocol and how to read the
+output: `fovbench/README.md`.
+
+**Check availability first** — DAv3 needs the `depth_anything_3` package and
+VGGT-Omega's weights are gated, so both fail with an instruction rather than a
+traceback:
+
+```bash
+python -m finetune.eval.baselines.benchmark_adt --list | head -8
+```
+
+```bash
+pip install --no-deps depth-anything-3 && pip install omegaconf addict einops
+export VGGT_OMEGA_CKPT=$OMEGA_CKPT
+python -m finetune.eval.baselines.benchmark_adt --download --models vggt_1b,da3_large,dav2_large
+```
+
+The run itself. `--n-frames` is **per sequence**, spread evenly (not a prefix):
+
+```bash
+python -m fovbench.run --adt-root "$ADT" --n-frames 25 \
+  --models vggt_1b,vggt_omega,dav2_large,da3_large \
+  --out eval_out/fovbench_main 2>&1 | tee eval_out/fovbench_main.log
+```
+
+A 30-minute smoke of the same command before committing to the full grid:
+
+```bash
+python -m fovbench.run --adt-root "$ADT" --n-frames 3 \
+  --models vggt_1b --protocols radial \
+  --out eval_out/fovbench_smoke 2>&1 | tee eval_out/fovbench_smoke.log
+```
+
+### Optional follow-ups — a *different* axis, not the FOV-location result
+
+The two blocks below do not belong to the main table. The first varies window
+**width**, which is a different question from where the window is aimed; it is
+here only because the old block-A sweep confounded the two, and `--window-fov` is
+held fixed *inside* a run, so sweeping it across runs is the honest way to vary
+it. The second adds two small models beyond the four the experiment is about.
+Run them only if the main table is already in hand.
+
+```bash
+for F in 30 40 60 80; do
+  python -m fovbench.run --adt-root "$ADT" --n-frames 10 --protocols window \
+    --window-fov $F --models vggt_1b,vggt_omega,dav2_large,da3_large \
+    --out eval_out/fovbench_w$F 2>&1 | tee eval_out/fovbench_w${F}.log
+done
+```
+
+```bash
+python -m fovbench.run --adt-root "$ADT" --n-frames 25 --protocols radial \
+  --models da3_small,dav2_small --out eval_out/fovbench_small \
+  2>&1 | tee eval_out/fovbench_small.log
+```
+
+Push `eval_out/fovbench_*/results.json`, `results.csv` and `report.txt` — not the
+figures, they regenerate from the JSON with
+`python -c "import json,fovbench.report as R; R.write_all(json.load(open('eval_out/fovbench_main/results.json')),'eval_out/fovbench_main')"`.
+
+**Verified before handoff:** 72 CPU tests green, and the whole pipeline run
+end-to-end on a real ADT frame with `--models analytic`, which reads a known
+injected radial bias back to within 0.3%. **Not** verified: any number from a
+real network — no weights ran on this machine.
+
+---
+
 ## A. Pipeline metrics vs per-view FoV  — the 60-vs-110 question
 
 Upstream VGGT-360 runs 110°; this port defaults to 60°. These four runs decide
