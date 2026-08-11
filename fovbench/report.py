@@ -138,7 +138,7 @@ def _table(runs: List[dict], protocol: str, view: str, metric: str) -> List[str]
     cols, _ = _axis(sel[0])
     unit = "deg off-axis" if protocol == "radial" else "window aim (deg off-axis)"
     head = (f"{'model':14s}{'stream':10s}" + "".join(f"{c:>8s}" for c in cols)
-            + f"{'pen':>8s}{'drift':>8s}")
+            + f"{'pen':>8s}{'drift*':>8s}")
     lines = [f"  {protocol.upper()} · {view} · {metric}   ({unit})", "  " + "-" * len(head),
              "  " + head, "  " + "-" * len(head)]
     for r in sorted(sel, key=lambda r: (r["model"], r["stream"])):
@@ -207,12 +207,23 @@ def render_report(payload: dict) -> str:
                 f"{len(payload.get('requested_models', []))} requested models are "
                 f"missing from every table below.", ""]
     out += [
-        "  pen   = AbsRel(outermost bin) / AbsRel(innermost)  — how much worse the periphery is",
-        "  drift = anchored_ratio(innermost) / anchored_ratio(outermost), the model's",
-        "          own affine fitted on the innermost bin alone.  > 1 = over-predicts",
-        "          depth toward the rim.  Radial protocol ONLY: window cells are",
-        "          separate forward passes of up-to-scale models, so a window-to-window",
-        "          ratio compares two arbitrary constants and is left blank.",
+        "  PROTOCOL: the scale (and shift) is fitted ONCE per frame, over every valid",
+        "  pixel, and then frozen; binning is a masking step applied afterwards. Every",
+        "  cell above — AbsRel, delta1, RMSE, and `pen` — obeys that.",
+        "",
+        "  pen    = AbsRel(outermost bin) / AbsRel(innermost)  — how much worse the",
+        "           periphery is, in the metric a downstream user reads.",
+        "  drift* = OUTSIDE THE PROTOCOL, and the only column that is. anchored_ratio",
+        "           fits the model's own affine on the INNERMOST BIN ALONE, then takes",
+        "           median(gt/pred) per bin; drift* is innermost / outermost, > 1 =",
+        "           over-predicts depth toward the rim. It is kept because it separates",
+        "           'the model bends depth with radius' from 'the model is just noisier",
+        "           at the rim', which no whole-frame-fitted column can do — a global",
+        "           affine spends itself on the radial trend and reads 0.965 for a real",
+        "           +0.6*theta^2 bias. Read it as a diagnostic, not as a headline, and",
+        "           never mix it with the columns above when quoting a protocol.",
+        "           Radial only: window cells are separate forward passes of up-to-scale",
+        "           models, so a window-to-window ratio compares two arbitrary constants.",
         "  Absolute AbsRel is NOT comparable across models (each keeps its own",
         "  alignment protocol); pen and drift are, being within-model ratios.",
         "",

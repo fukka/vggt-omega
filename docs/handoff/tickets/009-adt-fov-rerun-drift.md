@@ -58,7 +58,11 @@ Two of your readings need revisiting once the new numbers land:
 
 `organized` @ `915b109`:
 
-* `drift` is now `anchored_ratio` — the model's own affine fitted on the
+* `drift` is now `anchored_ratio`, **printed as `drift*` and labelled OUTSIDE
+  THE PROTOCOL** — the protocol being one whole-frame fit per frame with binning
+  applied afterwards by masking, which every other column obeys. Quote it as a
+  diagnostic, never alongside AbsRel/delta1/pen as if it shared their rules.
+  It is the model's own affine fitted on the
   **innermost bin alone**, then `median(gt/pred)` per bin. Exactly 1.000 on all
   four no-distortion cases above; 1.37 against a true 1.49. Under-reports by
   <10%, never invents.

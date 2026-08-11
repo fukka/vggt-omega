@@ -23,6 +23,13 @@ model × stream × view × protocol
   pixel-registered to the GT) and `real` (`videos_rgb`, the actual sensor: motion
   blur, rolling shutter, real photometry). Both are scored on the **same frames**;
   see [`split.py`](split.py).
+* **binning axis** — every radial run is binned twice off the same fit: by
+  **distance from the optical centre** (in half-widths of that view's own frame;
+  1.0 = middle of a frame edge, √2 = a corner) and by **incidence angle**. They
+  are not interchangeable: on the raw fisheye radius is near-proportional to θ,
+  on the rectified pinhole it goes as `tan θ`, so **a given radius is a different
+  direction in the two views**. Radius answers *where in the picture*; θ answers
+  *which ray*, and `rect` vs `fisheye` is like-for-like only on θ.
 * **view** — `rect` (rectified perspective) and `fisheye` (raw pixels, no
   undistortion). In the window protocol the two are *paired*: the raw window is
   the square containing the rectified window's own source footprint, so it sees
@@ -58,6 +65,18 @@ Check availability before committing to a run:
 python -m finetune.eval.baselines.benchmark_adt --list
 ```
 
+## The scoring protocol
+
+**The scale (and shift) is fitted once per frame, over every valid pixel, and
+then frozen. Binning is a masking step applied afterwards to that frozen
+prediction.** Both binning axes below read off the same single fit, so they are
+two readings of one measurement (`geometry.bin_by`). Fitting per bin would hand
+an up-to-scale model a separate scale at every radius and flatten exactly the
+effect being looked for.
+
+`AbsRel`, `delta1`, `RMSE` and `pen` all obey this. **`drift*` does not, and it
+is the only column that does not** — see below.
+
 ## Reading the output
 
 Two summary columns, and they answer different questions.
@@ -65,11 +84,18 @@ Two summary columns, and they answer different questions.
 **`pen`** — AbsRel in the outermost populated bin ÷ AbsRel in the innermost.
 How much worse the periphery is, in the metric a downstream user reads.
 
-**`drift`** — `median(gt/pred)` after the model's own affine is fitted **on the
-innermost bin alone**, innermost ÷ outermost. Above 1.0 the model over-predicts
-depth toward the rim. **`radial` protocol only**: every window is a separate
-forward pass of an up-to-scale model, so a window-to-window ratio compares two
-arbitrary constants — the column is left blank there.
+**`drift*`** — **outside the protocol above, deliberately, and marked with the
+asterisk everywhere it appears.** `median(gt/pred)` after the model's own affine
+is fitted **on the innermost bin alone**, innermost ÷ outermost. Above 1.0 the
+model over-predicts depth toward the rim. **`radial` protocol only**: every
+window is a separate forward pass of an up-to-scale model, so a window-to-window
+ratio compares two arbitrary constants — blank there.
+
+It is kept because it separates *the model bends depth with radius* from *the
+model is just noisier at the rim*, and no whole-frame-fitted column can: a global
+affine spends its scale and shift on the radial trend itself and reads 0.965 for
+a real `+0.6·θ²` bias. Read it as a diagnostic beside the protocol, never as part
+of it, and do not quote it in the same breath as the columns above.
 
 Why anchored, and not the two obvious alternatives. Fitting *nothing* looks
 alignment-free but every model here has an additive degree of freedom, and an
@@ -136,7 +162,7 @@ between the streams is *sensor reality plus registration*, not blur alone.
 | `models.py` | the four models behind one call + the analytic stand-in |
 | `run.py` | the driver (CLI) |
 | `report.py` | tables, CSV, figures, `pen`/`drift` |
-| `tests/` | 77 CPU tests: no weights, no data, ~7 s |
+| `tests/` | 79 CPU tests: no weights, no data, ~7 s |
 
 Model loading, availability and downloads live in
 [`finetune/eval/baselines/model_zoo.py`](../finetune/eval/baselines/model_zoo.py);

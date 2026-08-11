@@ -194,3 +194,14 @@ def test_figures_are_emitted_for_both_binning_axes(tmp_path):
     assert "radial_AbsRel.png" in names
     assert "radial_AbsRel_radius.png" in names
     assert "radial_delta1_radius.png" in names
+
+
+def test_report_marks_drift_as_outside_the_protocol():
+    """The protocol is one whole-frame fit per frame, with binning applied
+    afterwards by masking. `drift` is the single column that departs from it —
+    it anchors on the innermost bin — and the report has to say so where the
+    number is read, not in a docstring."""
+    txt = R.render_report(_payload([_run()]))
+    assert "drift*" in txt
+    assert "OUTSIDE THE PROTOCOL" in txt
+    assert "fitted ONCE per frame" in txt
