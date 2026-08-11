@@ -49,6 +49,12 @@ from fovbench import geometry as G
 MIN_BIN_FRAMES = 1
 MIN_BIN_PX = 64.0
 
+#: Below this many pixels a bin is corner slivers rather than a measurement, and
+#: figures ring it. Set between the rectified rim bin (2874-2940 px on the first
+#: real run — image corners only) and the innermost bin (4825-4945 px), which is
+#: small for an honest geometric reason and IS a measurement.
+THIN_BIN_PX = 3500.0
+
 
 def _finite(x) -> bool:
     return isinstance(x, (int, float)) and np.isfinite(x)
@@ -264,7 +270,8 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
         # aligned map and inherits the same bowl the alignment puts into
         # AbsRel, so plotting it would show the distorted column under the
         # figure that exists to show the undistorted one.
-        for metric, ylab in (("AbsRel", "AbsRel (lower is better)"),
+        for metric, ylab in (("AbsRel", "AbsRel  (lower is better)"),
+                             ("delta1", r"$\delta_1$  (higher is better)"),
                              ("raw_scale_ratio", "median(gt/pred), unaligned")):
             sel = [r for r in payload["runs"] if r["protocol"] == protocol]
             if not sel:
@@ -290,6 +297,13 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                             styles.get(r["stream"], ":"), marker="o", ms=4,
                             color=cmap[r["model"]],
                             label=f"{r['model']} · {r['stream']}")
+                    # A bin held up by a few corner pixels is not a measurement;
+                    # ring it so the rectified rim cannot be read as one.
+                    thin = [(x, y, c) for (x, y), c in zip(zip(xs, ys), cells)
+                            if _finite(y) and c.get("n_px_mean", 1e9) < THIN_BIN_PX]
+                    if thin:
+                        ax.plot([t[0] for t in thin], [t[1] for t in thin], "o",
+                                ms=11, mfc="none", mec=cmap[r["model"]], mew=1.2)
                 ax.set_title(f"{protocol} · {view}")
                 ax.set_xlabel("incidence angle from the optical axis (deg)"
                               if protocol == "radial" else "window aim (deg off-axis)")

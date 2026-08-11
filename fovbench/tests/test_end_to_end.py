@@ -121,14 +121,11 @@ def test_window_sweep_reads_back_the_bias_as_a_rising_absrel_curve():
     *within* that window — and a window aimed further out spans higher theta, so
     the curve rises. AbsRel is the column that carries this."""
     absrel = [r["AbsRel"] for r in _window_rows()]
-    # Not asserted monotone: the aims sample different scene content, and this
-    # arm carries a resampling confound of its own (a window aimed at 40 deg is
-    # built from fewer raw pixels, so it is simply softer). The claim is the
-    # end-to-end rise, which is what `pen` reports.
-    # End-to-end rise only. On this box the curve peaks at t20 and dips at t40:
-    # each aim sees different content, and the arm carries a resampling confound
-    # (a window aimed at 40 deg is built from fewer raw pixels, so it is softer).
-    # A monotone window curve is not something this protocol can promise.
+    # End-to-end rise only, not monotone: on this box the curve peaks at t20 and
+    # dips at t40, because each aim sees different scene content. The arm also
+    # carries a sampling confound — but it runs the *other* way, see
+    # test_geometry.py::test_a_window_aimed_off_axis_is_sampled_at_least_as_
+    # densely_as_the_centre: an on-axis window is upsampled and a rim one is not.
     assert absrel[-1] > 1.25 * absrel[0]
 
 
