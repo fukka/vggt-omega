@@ -1,0 +1,237 @@
+{
+  "protocol": "adt-fov-v1",
+  "root": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean",
+  "streams": {
+    "synthetic": "videos_synthetic",
+    "real": "videos_rgb"
+  },
+  "digest": "2ab412af0ccc",
+  "n_frames": 25,
+  "frames": [
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "313",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_000313_13860384112587.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_000313_13860384112587.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_000313_13860384112587.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "433",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_000433_13864383476125.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_000433_13864383476125.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_000433_13864383476125.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "553",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_000553_13868382838500.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_000553_13868382838500.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_000553_13868382838500.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "673",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_000673_13872382187712.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_000673_13872382187712.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_000673_13872382187712.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "793",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_000793_13876381550162.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_000793_13876381550162.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_000793_13876381550162.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "912",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_000912_13880347653875.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_000912_13880347653875.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_000912_13880347653875.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "1032",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_001032_13884346938375.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_001032_13884346938375.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_001032_13884346938375.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "1152",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_001152_13888346305375.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_001152_13888346305375.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_001152_13888346305375.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "1272",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_001272_13892345658912.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_001272_13892345658912.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_001272_13892345658912.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "1392",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_001392_13896345024712.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_001392_13896345024712.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_001392_13896345024712.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "1512",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_001512_13900344381412.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_001512_13900344381412.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_001512_13900344381412.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "1632",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_001632_13904343741000.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_001632_13904343741000.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_001632_13904343741000.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "1751",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_001751_13908309773412.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_001751_13908309773412.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_001751_13908309773412.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "1871",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_001871_13912309140537.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_001871_13912309140537.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_001871_13912309140537.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "1991",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_001991_13916308495462.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_001991_13916308495462.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_001991_13916308495462.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "2111",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_002111_13920307851337.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_002111_13920307851337.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_002111_13920307851337.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "2231",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_002231_13924307214837.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_002231_13924307214837.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_002231_13924307214837.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "2351",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_002351_13928306577087.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_002351_13928306577087.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_002351_13928306577087.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "2471",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_002471_13932305934287.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_002471_13932305934287.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_002471_13932305934287.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "2591",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_002591_13936305290662.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_002591_13936305290662.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_002591_13936305290662.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "2711",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_002711_13940304655125.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_002711_13940304655125.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_002711_13940304655125.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "2830",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_002830_13944270685287.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_002830_13944270685287.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_002830_13944270685287.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "2950",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_002950_13948270052787.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_002950_13948270052787.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_002950_13948270052787.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "3070",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_003070_13952269405125.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_003070_13952269405125.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_003070_13952269405125.png"
+      }
+    },
+    {
+      "seq": "Apartment_release_clean_seq131_M1292",
+      "frame_id": "3190",
+      "depth": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/depth_npy/frame_003190_13956268766787.npy",
+      "rgb": {
+        "synthetic": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_synthetic/frame_003190_13956268766787.png",
+        "real": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292/videos_rgb/frame_003190_13956268766787.png"
+      }
+    }
+  ]
+}

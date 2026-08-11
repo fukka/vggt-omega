@@ -1,0 +1,140 @@
+========================================================================================
+  ADT-FOV test · adt-fov-v1 · split 2ab412af0ccc
+========================================================================================
+  25 frames over 1 sequence(s): Apartment_release_clean_seq131_M1292
+  streams ['synthetic', 'real'] · views ['rect', 'fisheye'] · protocols ['radial', 'window']
+  window FOV 40.0 deg held fixed; aims [0.0, 10.0, 20.0, 30.0, 40.0] deg x azimuths [0.0, 90.0, 180.0, 270.0]
+  GT valid <= 10.0 m; predictions beyond 100.0 m excluded from the metrics
+
+  pen   = AbsRel(outermost bin) / AbsRel(innermost)  — how much worse the periphery is
+  drift = raw_scale_ratio(innermost) / raw_scale_ratio(outermost) — no alignment
+          > 1 = over-predicts depth toward the rim.  drift is the monotone
+          read-out; pen is a residual after a global fit and can look flat.
+  Absolute AbsRel is NOT comparable across models (each keeps its own
+  alignment protocol); pen and drift are, being within-model ratios.
+
+  RADIAL · rect · AbsRel   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen   drift
+  ----------------------------------------------------------------------------------------
+  da3_large     real         0.068   0.070   0.062   0.066   0.074   0.076    1.12   1.034
+  da3_large     synthetic    0.045   0.044   0.045   0.058   0.067   0.070    1.56   1.013
+  dav2_large    real         0.067   0.060   0.059   0.065   0.070   0.070    1.05   0.690
+  dav2_large    synthetic    0.058   0.057   0.060   0.069   0.077   0.081    1.39   0.678
+  vggt_1b       real         0.088   0.086   0.078   0.079   0.088   0.102    1.17   1.034
+  vggt_1b       synthetic    0.066   0.062   0.061   0.069   0.075   0.082    1.25   1.023
+  vggt_omega    real         0.056   0.055   0.048   0.054   0.061   0.054    0.96   0.998
+  vggt_omega    synthetic    0.043   0.041   0.042   0.049   0.056   0.062    1.45   1.003
+
+  RADIAL · rect · delta1   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen   drift
+  ----------------------------------------------------------------------------------------
+  da3_large     real         0.949   0.946   0.949   0.939   0.933   0.938    1.12   1.034
+  da3_large     synthetic    0.968   0.973   0.974   0.966   0.957   0.942    1.56   1.013
+  dav2_large    real         0.952   0.960   0.968   0.964   0.950   0.951    1.05   0.690
+  dav2_large    synthetic    0.958   0.964   0.963   0.952   0.938   0.926    1.39   0.678
+  vggt_1b       real         0.926   0.922   0.932   0.930   0.901   0.856    1.17   1.034
+  vggt_1b       synthetic    0.955   0.961   0.964   0.950   0.932   0.898    1.25   1.023
+  vggt_omega    real         0.944   0.951   0.965   0.960   0.954   0.961    0.96   0.998
+  vggt_omega    synthetic    0.970   0.974   0.970   0.963   0.958   0.946    1.45   1.003
+
+  RADIAL · fisheye · AbsRel   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen   drift
+  ----------------------------------------------------------------------------------------
+  da3_large     real         0.101   0.093   0.082   0.086   0.106   0.136    1.35   1.158
+  da3_large     synthetic    0.062   0.060   0.066   0.086   0.106   0.126    2.04   1.164
+  dav2_large    real         0.090   0.084   0.082   0.085   0.088   0.100    1.12   0.771
+  dav2_large    synthetic    0.089   0.085   0.085   0.088   0.096   0.119    1.34   0.868
+  vggt_1b       real         0.091   0.089   0.085   0.096   0.129   0.159    1.75   1.185
+  vggt_1b       synthetic    0.078   0.078   0.080   0.095   0.118   0.144    1.85   1.159
+  vggt_omega    real         0.064   0.060   0.052   0.054   0.073   0.106    1.66   1.149
+  vggt_omega    synthetic    0.056   0.050   0.051   0.054   0.069   0.104    1.88   1.143
+
+  RADIAL · fisheye · delta1   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen   drift
+  ----------------------------------------------------------------------------------------
+  da3_large     real         0.897   0.919   0.935   0.916   0.891   0.863    1.35   1.158
+  da3_large     synthetic    0.967   0.970   0.960   0.923   0.895   0.883    2.04   1.164
+  dav2_large    real         0.927   0.948   0.947   0.943   0.920   0.903    1.12   0.771
+  dav2_large    synthetic    0.955   0.960   0.958   0.942   0.919   0.885    1.34   0.868
+  vggt_1b       real         0.926   0.924   0.927   0.900   0.849   0.832    1.75   1.185
+  vggt_1b       synthetic    0.959   0.955   0.936   0.896   0.847   0.837    1.85   1.159
+  vggt_omega    real         0.947   0.956   0.966   0.960   0.945   0.935    1.66   1.149
+  vggt_omega    synthetic    0.950   0.959   0.963   0.963   0.958   0.944    1.88   1.143
+
+  WINDOW · rect · AbsRel   (window aim (deg off-axis))
+  --------------------------------------------------------------------------------
+  model         stream          t0     t10     t20     t30     t40     pen   drift
+  --------------------------------------------------------------------------------
+  da3_large     real         0.079   0.072   0.073   0.077   0.119    1.51   1.002
+  da3_large     synthetic    0.049   0.047   0.054   0.060   0.096    1.97   1.055
+  dav2_large    real         0.072   0.062   0.063   0.074   0.076    1.05   1.743
+  dav2_large    synthetic    0.056   0.049   0.053   0.059   0.069    1.23   1.737
+  vggt_1b       real         0.073   0.072   0.071   0.072   0.096    1.31   0.960
+  vggt_1b       synthetic    0.057   0.058   0.064   0.065   0.127    2.24   0.979
+  vggt_omega    real         0.066   0.067   0.063   0.069   0.079    1.20   0.930
+  vggt_omega    synthetic    0.059   0.058   0.057   0.056   0.072    1.22   0.961
+
+  WINDOW · rect · delta1   (window aim (deg off-axis))
+  --------------------------------------------------------------------------------
+  model         stream          t0     t10     t20     t30     t40     pen   drift
+  --------------------------------------------------------------------------------
+  da3_large     real         0.924   0.931   0.931   0.911   0.850    1.51   1.002
+  da3_large     synthetic    0.966   0.967   0.957   0.945   0.893    1.97   1.055
+  dav2_large    real         0.938   0.947   0.950   0.933   0.927    1.05   1.743
+  dav2_large    synthetic    0.962   0.970   0.959   0.949   0.939    1.23   1.737
+  vggt_1b       real         0.932   0.936   0.930   0.919   0.882    1.31   0.960
+  vggt_1b       synthetic    0.963   0.952   0.944   0.941   0.840    2.24   0.979
+  vggt_omega    real         0.950   0.947   0.944   0.928   0.911    1.20   0.930
+  vggt_omega    synthetic    0.956   0.955   0.957   0.952   0.930    1.22   0.961
+
+  WINDOW · fisheye · AbsRel   (window aim (deg off-axis))
+  --------------------------------------------------------------------------------
+  model         stream          t0     t10     t20     t30     t40     pen   drift
+  --------------------------------------------------------------------------------
+  da3_large     real         0.077   0.073   0.084   0.095   0.109    1.41   0.970
+  da3_large     synthetic    0.050   0.050   0.061   0.077   0.095    1.89   1.026
+  dav2_large    real         0.072   0.067   0.080   0.109   0.100    1.40   1.102
+  dav2_large    synthetic    0.057   0.057   0.071   0.087   0.085    1.50   1.021
+  vggt_1b       real         0.069   0.070   0.081   0.093   0.101    1.46   0.954
+  vggt_1b       synthetic    0.057   0.061   0.072   0.080   0.116    2.05   0.967
+  vggt_omega    real         0.068   0.070   0.076   0.082   0.082    1.20   0.843
+  vggt_omega    synthetic    0.053   0.059   0.065   0.070   0.079    1.48   0.916
+
+  WINDOW · fisheye · delta1   (window aim (deg off-axis))
+  --------------------------------------------------------------------------------
+  model         stream          t0     t10     t20     t30     t40     pen   drift
+  --------------------------------------------------------------------------------
+  da3_large     real         0.925   0.930   0.923   0.905   0.885    1.41   0.970
+  da3_large     synthetic    0.963   0.966   0.959   0.939   0.907    1.89   1.026
+  dav2_large    real         0.937   0.946   0.936   0.904   0.908    1.40   1.102
+  dav2_large    synthetic    0.962   0.965   0.950   0.929   0.935    1.50   1.021
+  vggt_1b       real         0.936   0.939   0.926   0.908   0.897    1.46   0.954
+  vggt_1b       synthetic    0.962   0.953   0.947   0.938   0.862    2.05   0.967
+  vggt_omega    real         0.953   0.942   0.940   0.935   0.929    1.20   0.843
+  vggt_omega    synthetic    0.959   0.953   0.954   0.949   0.933    1.48   0.916
+
+  COVERAGE · mean valid pixels per incidence bin (radial protocol)
+  ----------------------------------------------------------------------------------
+  view      stream        px     0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye   real         512     4825    15659    29272    46485    66253    35411
+  fisheye   real         518     4945    16022    29947    47586    67828    36245
+  fisheye   synthetic    512     4825    15659    29272    46485    66253    35411
+  fisheye   synthetic    518     4945    16022    29947    47586    67828    36245
+  rect      real         512     7745    25249    50028    92342    83859     2874
+  rect      real         518     7927    25858    51190    94545    85819     2940
+  rect      synthetic    512     7745    25249    50028    92342    83859     2874
+  rect      synthetic    518     7927    25858    51190    94545    85819     2940
+  A rectified ~85 deg pinhole has no pixels past 42.3 deg off-axis except
+  in its corners (52.6 deg at most). Empty outer bins there are geometry,
+  not model failure — and are themselves the cost of rectifying.
+
+  MODELS
+  ------------------------------------------------------------
+  da3_large     Depth-Anything-3 Large · 411M · align=scale_shift · views at 518px
+  dav2_large    Depth-Anything-V2 Large · 335M · align=disparity_scale_shift · views at 518px
+  vggt_1b       VGGT 1B · 1191M · align=scale_shift · views at 518px
+  vggt_omega    VGGT-Omega 1B/512 · 1144M · align=scale_shift · views at 512px

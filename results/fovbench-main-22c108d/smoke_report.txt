@@ -1,0 +1,57 @@
+========================================================================================
+  ADT-FOV test · adt-fov-v1 · split de7d13d3fc87
+========================================================================================
+  3 frames over 1 sequence(s): Apartment_release_clean_seq131_M1292
+  streams ['synthetic', 'real'] · views ['rect', 'fisheye'] · protocols ['radial']
+  window FOV 40.0 deg held fixed; aims [0.0, 10.0, 20.0, 30.0, 40.0] deg x azimuths [0.0, 90.0, 180.0, 270.0]
+  GT valid <= 10.0 m; predictions beyond 100.0 m excluded from the metrics
+
+  pen   = AbsRel(outermost bin) / AbsRel(innermost)  — how much worse the periphery is
+  drift = raw_scale_ratio(innermost) / raw_scale_ratio(outermost) — no alignment
+          > 1 = over-predicts depth toward the rim.  drift is the monotone
+          read-out; pen is a residual after a global fit and can look flat.
+  Absolute AbsRel is NOT comparable across models (each keeps its own
+  alignment protocol); pen and drift are, being within-model ratios.
+
+  RADIAL · rect · AbsRel   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen   drift
+  ----------------------------------------------------------------------------------------
+  vggt_1b       real         0.125   0.130   0.112   0.092   0.100   0.145    1.16   1.021
+  vggt_1b       synthetic    0.067   0.062   0.067   0.079   0.086   0.098    1.46   0.990
+
+  RADIAL · rect · delta1   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen   drift
+  ----------------------------------------------------------------------------------------
+  vggt_1b       real         0.879   0.831   0.828   0.880   0.855   0.764    1.16   1.021
+  vggt_1b       synthetic    0.968   0.954   0.925   0.925   0.898   0.812    1.46   0.990
+
+  RADIAL · fisheye · AbsRel   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen   drift
+  ----------------------------------------------------------------------------------------
+  vggt_1b       real         0.125   0.119   0.099   0.081   0.109   0.125    1.00   1.242
+  vggt_1b       synthetic    0.091   0.082   0.084   0.104   0.121   0.143    1.57   1.182
+
+  RADIAL · fisheye · delta1   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen   drift
+  ----------------------------------------------------------------------------------------
+  vggt_1b       real         0.878   0.843   0.864   0.908   0.862   0.863    1.00   1.242
+  vggt_1b       synthetic    0.957   0.938   0.908   0.888   0.799   0.803    1.57   1.182
+
+  COVERAGE · mean valid pixels per incidence bin (radial protocol)
+  ----------------------------------------------------------------------------------
+  view      stream        px     0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye   real         518     4945    16024    29954    47586    67835    36252
+  fisheye   synthetic    518     4945    16024    29954    47586    67835    36252
+  rect      real         518     7927    25860    51201    94543    85822     2940
+  rect      synthetic    518     7927    25860    51201    94543    85822     2940
+  A rectified ~85 deg pinhole has no pixels past 42.3 deg off-axis except
+  in its corners (52.6 deg at most). Empty outer bins there are geometry,
+  not model failure — and are themselves the cost of rectifying.
+
+  MODELS
+  ------------------------------------------------------------
+  vggt_1b       VGGT 1B · 1191M · align=scale_shift · views at 518px
