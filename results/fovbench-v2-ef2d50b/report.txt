@@ -1,0 +1,153 @@
+========================================================================================
+  ADT-FOV test · adt-fov-v1 · split fcc6c600f83b
+========================================================================================
+  200 frames over 1 sequence(s): Apartment_release_clean_seq131_M1292
+  streams ['synthetic', 'real'] · views ['rect', 'fisheye'] · protocols ['radial', 'window']
+  window FOV 40.0 deg held fixed; aims [0.0, 10.0, 20.0, 30.0, 40.0] deg x azimuths [0.0, 90.0, 180.0, 270.0]
+  GT valid <= 10.0 m; predictions beyond 100.0 m excluded from the metrics
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame, over every valid
+  pixel, and then frozen; binning is a masking step applied afterwards. Every
+  cell above — AbsRel, delta1, RMSE, and `pen` — obeys that.
+
+  pen    = AbsRel(outermost bin) / AbsRel(innermost)  — how much worse the
+           periphery is, in the metric a downstream user reads.
+  drift* = OUTSIDE THE PROTOCOL, and the only column that is. anchored_ratio
+           fits the model's own affine on the INNERMOST BIN ALONE, then takes
+           median(gt/pred) per bin; drift* is innermost / outermost, > 1 =
+           over-predicts depth toward the rim. It is kept because it separates
+           'the model bends depth with radius' from 'the model is just noisier
+           at the rim', which no whole-frame-fitted column can do — a global
+           affine spends itself on the radial trend and reads 0.965 for a real
+           +0.6*theta^2 bias. Read it as a diagnostic, not as a headline, and
+           never mix it with the columns above when quoting a protocol.
+           Radial only: window cells are separate forward passes of up-to-scale
+           models, so a window-to-window ratio compares two arbitrary constants.
+  Absolute AbsRel is NOT comparable across models (each keeps its own
+  alignment protocol); pen and drift are, being within-model ratios.
+
+  RADIAL · rect · AbsRel   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen  drift*
+  ----------------------------------------------------------------------------------------
+  da3_large     real         0.071   0.068   0.063   0.069   0.077   0.080    1.13   0.960
+  da3_large     synthetic    0.051   0.047   0.046   0.055   0.062   0.063    1.25   1.000
+  dav2_large    real         0.122   0.093   0.087   0.090   0.089   0.089    0.73   1.013
+  dav2_large    synthetic    0.110   0.081   0.075   0.080   0.085   0.080    0.73   1.014
+  vggt_1b       real         0.100   0.095   0.086   0.087   0.090   0.108    1.08   0.934
+  vggt_1b       synthetic    0.067   0.061   0.061   0.071   0.074   0.079    1.18   0.950
+  vggt_omega    real         0.064   0.061   0.055   0.061   0.061   0.056    0.86   1.048
+  vggt_omega    synthetic    0.045   0.041   0.040   0.047   0.049   0.045    1.00   1.013
+
+  RADIAL · rect · delta1   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen  drift*
+  ----------------------------------------------------------------------------------------
+  da3_large     real         0.946   0.943   0.947   0.937   0.924   0.919    1.13   0.960
+  da3_large     synthetic    0.968   0.971   0.973   0.965   0.956   0.955    1.25   1.000
+  dav2_large    real         0.918   0.927   0.934   0.925   0.919   0.916    0.73   1.013
+  dav2_large    synthetic    0.948   0.951   0.951   0.943   0.937   0.933    0.73   1.014
+  vggt_1b       real         0.913   0.917   0.927   0.918   0.895   0.845    1.08   0.934
+  vggt_1b       synthetic    0.949   0.957   0.963   0.945   0.931   0.907    1.18   0.950
+  vggt_omega    real         0.935   0.942   0.954   0.945   0.948   0.955    0.86   1.048
+  vggt_omega    synthetic    0.969   0.973   0.975   0.967   0.965   0.972    1.00   1.013
+
+  RADIAL · fisheye · AbsRel   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen  drift*
+  ----------------------------------------------------------------------------------------
+  da3_large     real         0.090   0.085   0.078   0.083   0.102   0.133    1.48   1.012
+  da3_large     synthetic    0.064   0.060   0.064   0.080   0.099   0.126    1.97   1.034
+  dav2_large    real         0.117   0.115   0.110   0.106   0.105   0.118    1.00   1.111
+  dav2_large    synthetic    0.121   0.109   0.110   0.110   0.123   0.143    1.18   1.151
+  vggt_1b       real         0.110   0.105   0.099   0.104   0.119   0.143    1.30   1.029
+  vggt_1b       synthetic    0.068   0.066   0.070   0.085   0.102   0.122    1.79   1.022
+  vggt_omega    real         0.072   0.067   0.060   0.062   0.075   0.108    1.50   1.106
+  vggt_omega    synthetic    0.055   0.050   0.049   0.054   0.066   0.100    1.83   1.088
+
+  RADIAL · fisheye · delta1   (deg off-axis)
+  ----------------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen  drift*
+  ----------------------------------------------------------------------------------------
+  da3_large     real         0.920   0.926   0.935   0.926   0.899   0.860    1.48   1.012
+  da3_large     synthetic    0.964   0.967   0.963   0.932   0.903   0.876    1.97   1.034
+  dav2_large    real         0.904   0.915   0.917   0.911   0.901   0.879    1.00   1.111
+  dav2_large    synthetic    0.936   0.936   0.930   0.918   0.910   0.880    1.18   1.151
+  vggt_1b       real         0.900   0.903   0.907   0.888   0.866   0.841    1.30   1.029
+  vggt_1b       synthetic    0.954   0.957   0.950   0.913   0.891   0.882    1.79   1.022
+  vggt_omega    real         0.930   0.939   0.950   0.945   0.938   0.923    1.50   1.106
+  vggt_omega    synthetic    0.956   0.963   0.968   0.964   0.959   0.944    1.83   1.088
+
+  WINDOW · rect · AbsRel   (window aim (deg off-axis))
+  --------------------------------------------------------------------------------
+  model         stream          t0     t10     t20     t30     t40     pen  drift*
+  --------------------------------------------------------------------------------
+  da3_large     real         0.079   0.079   0.081   0.081   0.127    1.61       —
+  da3_large     synthetic    0.053   0.052   0.057   0.064   0.101    1.91       —
+  dav2_large    real         0.072   0.074   0.075   0.078   0.081    1.12       —
+  dav2_large    synthetic    0.052   0.052   0.059   0.061   0.071    1.35       —
+  vggt_1b       real         0.073   0.072   0.068   0.070   0.096    1.30       —
+  vggt_1b       synthetic    0.061   0.061   0.064   0.064   0.127    2.10       —
+  vggt_omega    real         0.071   0.070   0.068   0.064   0.081    1.14       —
+  vggt_omega    synthetic    0.056   0.055   0.055   0.055   0.071    1.26       —
+
+  WINDOW · rect · delta1   (window aim (deg off-axis))
+  --------------------------------------------------------------------------------
+  model         stream          t0     t10     t20     t30     t40     pen  drift*
+  --------------------------------------------------------------------------------
+  da3_large     real         0.914   0.916   0.913   0.914   0.837    1.61       —
+  da3_large     synthetic    0.961   0.961   0.955   0.945   0.885    1.91       —
+  dav2_large    real         0.932   0.934   0.929   0.923   0.918    1.12       —
+  dav2_large    synthetic    0.966   0.966   0.954   0.950   0.941    1.35       —
+  vggt_1b       real         0.934   0.935   0.936   0.931   0.896    1.30       —
+  vggt_1b       synthetic    0.957   0.952   0.947   0.945   0.845    2.10       —
+  vggt_omega    real         0.930   0.931   0.931   0.939   0.917    1.14       —
+  vggt_omega    synthetic    0.958   0.959   0.958   0.955   0.938    1.26       —
+
+  WINDOW · fisheye · AbsRel   (window aim (deg off-axis))
+  --------------------------------------------------------------------------------
+  model         stream          t0     t10     t20     t30     t40     pen  drift*
+  --------------------------------------------------------------------------------
+  da3_large     real         0.078   0.080   0.086   0.097   0.113    1.44       —
+  da3_large     synthetic    0.053   0.053   0.063   0.074   0.096    1.82       —
+  dav2_large    real         0.075   0.080   0.093   0.107   0.105    1.40       —
+  dav2_large    synthetic    0.052   0.058   0.076   0.086   0.087    1.68       —
+  vggt_1b       real         0.070   0.071   0.080   0.091   0.098    1.40       —
+  vggt_1b       synthetic    0.059   0.063   0.072   0.081   0.112    1.91       —
+  vggt_omega    real         0.071   0.070   0.075   0.080   0.085    1.21       —
+  vggt_omega    synthetic    0.052   0.056   0.062   0.069   0.077    1.47       —
+
+  WINDOW · fisheye · delta1   (window aim (deg off-axis))
+  --------------------------------------------------------------------------------
+  model         stream          t0     t10     t20     t30     t40     pen  drift*
+  --------------------------------------------------------------------------------
+  da3_large     real         0.916   0.918   0.916   0.904   0.876    1.44       —
+  da3_large     synthetic    0.960   0.963   0.957   0.943   0.910    1.82       —
+  dav2_large    real         0.930   0.933   0.921   0.901   0.904    1.40       —
+  dav2_large    synthetic    0.966   0.964   0.948   0.936   0.935    1.68       —
+  vggt_1b       real         0.940   0.939   0.930   0.916   0.907    1.40       —
+  vggt_1b       synthetic    0.959   0.954   0.947   0.934   0.878    1.91       —
+  vggt_omega    real         0.931   0.935   0.933   0.934   0.926    1.21       —
+  vggt_omega    synthetic    0.961   0.959   0.957   0.953   0.942    1.47       —
+
+  COVERAGE · mean valid pixels per incidence bin (radial protocol)
+  ----------------------------------------------------------------------------------
+  view      stream        px     0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye   real         512     4825    15660    29276    46487    66249    35411
+  fisheye   real         518     4943    16022    29952    47588    67824    36245
+  fisheye   synthetic    512     4825    15660    29276    46487    66249    35411
+  fisheye   synthetic    518     4943    16022    29952    47588    67824    36245
+  rect      real         512     7744    25247    50035    92346    83850     2873
+  rect      real         518     7925    25856    51195    94550    85809     2939
+  rect      synthetic    512     7744    25247    50035    92346    83850     2873
+  rect      synthetic    518     7925    25856    51195    94550    85809     2939
+  A rectified ~85 deg pinhole has no pixels past 42.3 deg off-axis except
+  in its corners (52.6 deg at most). Empty outer bins there are geometry,
+  not model failure — and are themselves the cost of rectifying.
+
+  MODELS
+  ------------------------------------------------------------
+  da3_large     Depth-Anything-3 Large · 411M · align=scale_shift · views at 518px
+  dav2_large    Depth-Anything-V2 Large · 335M · align=disparity_scale_shift · views at 518px
+  vggt_1b       VGGT 1B · 1191M · align=scale_shift · views at 518px
+  vggt_omega    VGGT-Omega 1B/512 · 1144M · align=scale_shift · views at 512px
