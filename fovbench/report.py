@@ -7,10 +7,11 @@ Two summary numbers carry the result, and they answer different questions:
           by AbsRel in the innermost. How much worse is the periphery than the
           centre, in the metric a user reads.
 
-``drift`` *radial scale drift* — ``raw_scale_ratio`` (median gt/pred on the
-          **unaligned** prediction) in the innermost bin divided by the
-          outermost. Above 1.0 the model over-predicts depth toward the rim
-          relative to the centre; below 1.0 it under-predicts.
+``drift`` *radial scale drift* — ``anchored_ratio`` (median gt/pred after the
+          model's own global affine is fitted **on the innermost bin alone**) in
+          the innermost bin divided by the outermost. Above 1.0 the model
+          over-predicts depth toward the rim relative to the centre; below 1.0 it
+          under-predicts. ``radial`` protocol only — see ``summarise``.
 
 Report both, because they can disagree and the disagreement is not noise. The
 per-bin AbsRel is a *residual after a global fit*, and a least-squares affine is
@@ -75,9 +76,17 @@ def summarise(run: dict) -> dict:
     key = "theta_lo" if run["protocol"] == "radial" else "tilt"
     pen = (b["AbsRel"] / a["AbsRel"]) if a["AbsRel"] > 1e-9 else float("nan")
     drift = float("nan")
-    if _finite(a.get("raw_scale_ratio")) and _finite(b.get("raw_scale_ratio")) \
-            and abs(b["raw_scale_ratio"]) > 1e-9:
-        drift = a["raw_scale_ratio"] / b["raw_scale_ratio"]
+    # `drift` exists only for the radial protocol. Its bins come from ONE forward
+    # pass, so the model's arbitrary global scale is shared and cancels in a
+    # bin-to-bin ratio. Every window is a SEPARATE forward pass, and every model
+    # here is up to scale, so a window-to-window ratio compares two arbitrary
+    # constants: measured on the first real run, the same models' per-window raw
+    # ratios sit at 2.87-3.14 with no anchoring possible between them. Reporting
+    # a number there would be reporting the models' self-scaling as distortion.
+    if run["protocol"] == "radial" \
+            and _finite(a.get("anchored_ratio")) and _finite(b.get("anchored_ratio")) \
+            and abs(b["anchored_ratio"]) > 1e-9:
+        drift = a["anchored_ratio"] / b["anchored_ratio"]
     return dict(pen=pen, drift=drift, lo=a[key], hi=b[key], n_cells=len(cells))
 
 
@@ -175,9 +184,11 @@ def render_report(payload: dict) -> str:
                 f"missing from every table below.", ""]
     out += [
         "  pen   = AbsRel(outermost bin) / AbsRel(innermost)  — how much worse the periphery is",
-        "  drift = raw_scale_ratio(innermost) / raw_scale_ratio(outermost) — no alignment",
-        "          > 1 = over-predicts depth toward the rim.  drift is the monotone",
-        "          read-out; pen is a residual after a global fit and can look flat.",
+        "  drift = anchored_ratio(innermost) / anchored_ratio(outermost), the model's",
+        "          own affine fitted on the innermost bin alone.  > 1 = over-predicts",
+        "          depth toward the rim.  Radial protocol ONLY: window cells are",
+        "          separate forward passes of up-to-scale models, so a window-to-window",
+        "          ratio compares two arbitrary constants and is left blank.",
         "  Absolute AbsRel is NOT comparable across models (each keeps its own",
         "  alignment protocol); pen and drift are, being within-model ratios.",
         "",

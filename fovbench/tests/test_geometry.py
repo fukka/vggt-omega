@@ -356,3 +356,27 @@ def test_radial_profile_reports_empty_bins_without_crashing():
     assert out["bins"][0]["n_valid"] > 0
     assert all(b["n_valid"] == 0 for b in out["bins"][1:])
     assert math.isnan(out["bins"][-1]["AbsRel"])
+
+
+@pytest.mark.parametrize("kind", ["rect", "fisheye"])
+def test_a_window_aimed_off_axis_is_sampled_at_least_as_densely_as_the_centre(kind):
+    """The window arm's resolution confound, and its direction.
+
+    The natural worry is that a window aimed at the rim is built from fewer raw
+    pixels — a fisheye compresses the periphery — so a rising error across aims
+    would be blur rather than geometry. On Aria's KB4 the opposite holds: a
+    40 deg window on axis covers a small central disc and is *upsampled* to the
+    model's grid (0.73 source px per output px), while the same window at 40 deg
+    covers a wider annulus and is sampled at 1.03 (rect) / 1.19 (fisheye).
+
+    So resolution *improves* toward the rim. Any error that still rises with aim
+    is not the sampling — which makes the window result stronger, not weaker.
+    Pinned here because the sign is counter-intuitive and was assumed backwards
+    when the first run was read.
+    """
+    cam = _cam()
+    gt, cone = _plane_scene(cam)
+    d = [G.render_window(_rgb(cam), gt, cone, cam, 0.0, t, 40.0, OUT,
+                         kind).src_px_per_out_px for t in (0.0, 40.0)]
+    assert d[1] >= d[0]
+    assert all(x > 0 for x in d)

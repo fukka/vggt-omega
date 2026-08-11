@@ -14,6 +14,7 @@ CPU-only, no ADT, no weights, under a second.
 from __future__ import annotations
 
 import argparse
+import math
 import os
 
 import numpy as np
@@ -29,19 +30,26 @@ OUT = 176
 BIAS = 0.6
 
 
-def _scene():
-    """A fisheye frame whose GT is a room-sized box seen from the middle.
+def _scene(offset=(0.7, 0.4, -0.9)):
+    """A fisheye frame whose GT is a room-sized box seen from OFF its centre.
 
-    Depth varies with direction, so the alignment has something to fit and the
-    metrics are not degenerate — unlike a constant plane, where every model
-    scores perfectly after a shift.
+    The offset matters and is not decoration. Viewed from the exact middle the
+    central band is one fronto-parallel wall at a constant range, and an affine
+    fit on it is undetermined — which is a degenerate scene, not a hard one, and
+    ``anchored_ratios`` refuses it (see the flat-anchor test below). Off-centre,
+    every band spans a range of depths, as a real egocentric frame does: measured
+    on ADT seq131, IQR/median per band runs 0.71-0.88.
     """
     cam = G.aria_cam(FRAME, FRAME)
     rays, cone = G.fisheye_rays(cam)
-    # distance to the box wall along each ray, then planar z about the axis
-    half = np.array([2.0, 1.4, 3.0], np.float32)
+    half = np.array([2.0, 1.4, 3.0], np.float64)
+    c = np.array(offset, np.float64)
+    # nearest positive intersection with the 6 planes of the box
     with np.errstate(divide="ignore", invalid="ignore"):
-        t = np.min(np.abs(half) / np.maximum(np.abs(rays), 1e-6), axis=-1)
+        cand = np.stack([(s * half[i] - c[i]) / rays[..., i]
+                         for i in range(3) for s in (-1.0, 1.0)], axis=-1)
+    cand = np.where(np.isfinite(cand) & (cand > 1e-6), cand, np.inf)
+    t = cand.min(axis=-1)
     gt = (t * rays[..., 2]).astype(np.float32) * cone
     rng = np.random.default_rng(7)
     rgb = (rng.random((FRAME, FRAME, 3)) * 255).astype(np.uint8)
@@ -97,20 +105,75 @@ def test_an_unbiased_model_reads_back_as_no_distortion(kind):
             assert b["AbsRel"] < 0.01
 
 
-def test_window_sweep_reads_back_the_bias_as_a_rising_curve():
-    """In a window the theta span is narrow, so a global fit cannot bowl the
-    curve — the aim's own eccentricity sets the error, and the sweep rises."""
+def _window_rows(bias=BIAS):
     cam, rgb, gt, cone = _scene()
-    model = M.load_model(M.ANALYTIC, device=None, radial_bias=BIAS)
+    model = M.load_model(M.ANALYTIC, device=None, radial_bias=bias)
     rows = []
     for tilt in (0.0, 10.0, 20.0, 30.0, 40.0):
         w = G.render_window(rgb, gt, cone, cam, 0.0, tilt, 40.0, OUT, "fisheye")
         assert w.in_cone_frac >= RUN.MIN_IN_CONE_FRAC
         rows.append(RUN._score_window(model, w, max_depth=100.0))
-    absrel = [r["AbsRel"] for r in rows]
-    drift = rows[0]["raw_scale_ratio"] / rows[-1]["raw_scale_ratio"]
-    assert absrel[-1] > 2 * absrel[0]
-    assert drift > 1.1
+    return rows
+
+
+def test_window_sweep_reads_back_the_bias_as_a_rising_absrel_curve():
+    """Each window is aligned on its own, so what survives is the bias's spread
+    *within* that window — and a window aimed further out spans higher theta, so
+    the curve rises. AbsRel is the column that carries this."""
+    absrel = [r["AbsRel"] for r in _window_rows()]
+    # Not asserted monotone: the aims sample different scene content, and this
+    # arm carries a resampling confound of its own (a window aimed at 40 deg is
+    # built from fewer raw pixels, so it is simply softer). The claim is the
+    # end-to-end rise, which is what `pen` reports.
+    # End-to-end rise only. On this box the curve peaks at t20 and dips at t40:
+    # each aim sees different content, and the arm carries a resampling confound
+    # (a window aimed at 40 deg is built from fewer raw pixels, so it is softer).
+    # A monotone window curve is not something this protocol can promise.
+    assert absrel[-1] > 1.25 * absrel[0]
+
+
+def test_window_drift_is_refused_because_each_window_has_its_own_scale():
+    """Every window is a SEPARATE forward pass of an up-to-scale model, so its
+    raw scale is an arbitrary constant and a window-to-window ratio compares two
+    of them. On the first real run those constants sat at 2.87-3.14 across aims
+    for the same model; reporting their ratio would be reporting the model's
+    self-scaling as distortion. `summarise` must return NaN, not a number."""
+    rows = _window_rows()
+    cells = [dict(r, n_frames=1, n_px_mean=5000.0) for r in rows]
+    s = R.summarise(dict(protocol="window", cells=cells))
+    assert math.isnan(s["drift"])
+    assert s["pen"] > 1.0                      # pen is still meaningful here
+
+
+def test_a_flat_inner_band_does_not_fabricate_drift():
+    """The degeneracy that broke the first version of ``anchored_ratios``. Viewed
+    from the exact centre of the box the inner bands are one fronto-parallel wall
+    at a constant range, so ``(scale, shift)`` is undetermined there. Anchoring on
+    it anyway reported drift **1.86** for a model with no radial error at all.
+    The guard must skip past it to a band that can determine the fit."""
+    cam, rgb, gt, cone = _scene(offset=(0.0, 0.0, 0.0))
+    view = G.full_frame_view(rgb, gt, cone, cam, OUT, "rect")
+    inner = view.valid & (view.theta < 10.0)
+    assert G._relative_spread(view.gt_z, inner) < G.MIN_ANCHOR_SPREAD
+
+    model = M.load_model(M.ANALYTIC, device=None, radial_bias=0.0)
+    prof = RUN._score_radial(model, view, G.THETA_EDGES, max_depth=100.0)
+    run = dict(protocol="radial", bins=[
+        dict(b, n_frames=1, n_px_mean=float(b["n_bin"])) for b in prof["bins"]])
+    assert R.summarise(run)["drift"] == pytest.approx(1.0, abs=0.05)
+
+
+def test_a_scene_with_no_depth_spread_anywhere_refuses_to_report_drift():
+    """And when NO band can determine the affine, the answer is NaN rather than
+    a number. A fronto-parallel plane is constant in every band at once."""
+    cam = G.aria_cam(FRAME, FRAME)
+    _, cone = G.fisheye_rays(cam)
+    gt = (np.full((FRAME, FRAME), 2.0, np.float32) * cone)
+    rgb = (np.random.default_rng(3).random((FRAME, FRAME, 3)) * 255).astype(np.uint8)
+    view = G.full_frame_view(rgb, gt, cone, cam, OUT, "fisheye")
+    ratios = G.anchored_ratios(view.gt_z, view.gt_z, view.valid, view.theta,
+                               G.THETA_EDGES, "scale_shift")
+    assert all(math.isnan(x) for x in ratios)
 
 
 def test_the_two_streams_score_identical_geometry():

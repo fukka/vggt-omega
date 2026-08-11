@@ -49,7 +49,7 @@ import math
 import os
 import sys
 from dataclasses import dataclass
-from typing import Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -73,10 +73,15 @@ THETA_EDGES: Tuple[float, ...] = (0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 55.0)
 #: driver's frame-averaging and the report's CSV cannot drift apart.
 METRIC_KEYS: Tuple[str, ...] = ("AbsRel", "SqRel", "RMSE", "RMSElog", "log10",
                                 "delta1", "delta2", "delta3",
-                                "scale_ratio", "raw_scale_ratio")
+                                "scale_ratio", "raw_scale_ratio",
+                                "anchored_ratio")
 
 #: ``finetune/data/rectify.py`` renders the pinhole at ``0.55 * max(H, W)``.
 RECTIFIER_FOCAL_FRAC = 0.55
+
+#: Minimum GT interquartile-range-over-median for a band to anchor an affine
+#: fit. Real ADT bands measure 0.71-0.88; a single flat wall measures 0.00.
+MIN_ANCHOR_SPREAD = 0.05
 
 _RAY_CACHE: dict = {}
 
@@ -220,6 +225,16 @@ class Window:
     cos_view: np.ndarray      # (N, N) float32 cos(angle from `axis`)
     theta: np.ndarray         # (N, N) float32 incidence from the camera axis, deg
     in_cone_frac: float       # analytic: share of the window the lens images
+    src_px_per_out_px: float  # sampling density — see below
+
+    # ``src_px_per_out_px`` is the mean number of *raw fisheye* pixels behind one
+    # window pixel. It is the window arm's own confound, made visible: a fisheye
+    # compresses the periphery, so a window of fixed angular width is built from
+    # progressively fewer source pixels as it is aimed off-axis, and is therefore
+    # progressively softer. A rising AbsRel across aims is then partly resolution
+    # and partly geometry, and nothing else in the table separates them. Below 1
+    # the window is upsampled — invented detail, and the error attributed to
+    # "the periphery" is at least in part the blur.
 
     @property
     def tag(self) -> str:
@@ -308,7 +323,12 @@ def _rect_window(rgb, gt_z, gt_valid, cam, azimuth, tilt, fov, out_size,
                         borderMode=cv2.BORDER_CONSTANT, borderValue=0) > 0
     cos_fish = d_cam[..., 2].astype(np.float32)
     in_cone = cone_f > 0.5
-    return (_to_u8(rgb_win), gt_win, gtv_win, cos_fish, cos_view, in_cone)
+    # |Jacobian| of (output pixel) -> (source pixel): source px per output px.
+    dudi, dudj = np.gradient(mapx.astype(np.float64))
+    dvdi, dvdj = np.gradient(mapy.astype(np.float64))
+    jac = np.abs(dudj * dvdi - dudi * dvdj)
+    dens = float(np.mean(jac[in_cone])) if in_cone.any() else float("nan")
+    return (_to_u8(rgb_win), gt_win, gtv_win, cos_fish, cos_view, in_cone, dens)
 
 
 def _fisheye_window(rgb, gt_z, gt_valid, cam, azimuth, tilt, fov, out_size):
@@ -338,7 +358,7 @@ def _fisheye_window(rgb, gt_z, gt_valid, cam, azimuth, tilt, fov, out_size):
     cos_fish = d_src[..., 2].astype(np.float32)
     cos_view = (d_src @ axis).astype(np.float32)
     return (_to_u8(rgb_win), gt_win, gtv_win, cos_fish, cos_view,
-            cone_win & in_frame)
+            cone_win & in_frame, (side / float(out_size)) ** 2)
 
 
 def render_window(rgb: np.ndarray, gt_z: np.ndarray, gt_valid: np.ndarray,
@@ -366,7 +386,7 @@ def render_window(rgb: np.ndarray, gt_z: np.ndarray, gt_valid: np.ndarray,
                                 out_size)
     else:
         raise ValueError(f"unknown window kind {kind!r} (choose 'rect' or 'fisheye')")
-    rgb_win, gt_win, gtv_win, cos_fish, cos_view, in_cone = parts
+    rgb_win, gt_win, gtv_win, cos_fish, cos_view, in_cone, density = parts
 
     # z about the camera axis -> ray range -> z about the window axis.
     gt_view = (gt_win * cos_view / np.clip(cos_fish, 1e-3, None)).astype(np.float32)
@@ -376,7 +396,8 @@ def render_window(rgb: np.ndarray, gt_z: np.ndarray, gt_valid: np.ndarray,
                   fov=float(fov), axis=view_center_dir(azimuth, tilt),
                   rgb=rgb_win, gt_z=gt_view * valid, valid=valid,
                   cos_view=cos_view, theta=theta,
-                  in_cone_frac=float(in_cone.mean()))
+                  in_cone_frac=float(in_cone.mean()),
+                  src_px_per_out_px=float(density))
 
 
 def full_frame_view(rgb: np.ndarray, gt_z: np.ndarray, gt_valid: np.ndarray,
@@ -461,10 +482,14 @@ def radial_profile(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
     aligned = align_depth(pred_z, gt_z, in_range, mode=align_mode)
     overall = depth_metrics(aligned, gt_z, in_range, min_depth, max_depth)
 
+    anchored = anchored_ratios(pred_z, gt_z, in_range, theta_deg, edges,
+                               align_mode)
+
     bins = []
-    for lo, hi in zip(edges[:-1], edges[1:]):
+    for i, (lo, hi) in enumerate(zip(edges[:-1], edges[1:])):
         m = in_range & (theta_deg >= lo) & (theta_deg < hi)
         met = depth_metrics(aligned, gt_z, m, min_depth, max_depth)
+        met["anchored_ratio"] = anchored[i]
         # depth_metrics returns an all-NaN dict for an empty bin; a count must
         # stay a count, so the report can say "no pixels" rather than "no value".
         n = met.get("n_valid", 0)
@@ -481,14 +506,99 @@ def radial_profile(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
             "n_frame_valid": int(in_range.sum())}
 
 
+def anchored_ratios(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
+                    theta_deg: np.ndarray, edges: Sequence[float],
+                    align_mode: str, min_anchor_px: int = 64) -> List[float]:
+    """Per-bin ``median(gt/pred)`` after fitting the model's own global affine
+    **on the innermost populated bin alone**. This is the benchmark's distortion
+    measure; the report's ``drift`` column is its first-over-last ratio.
+
+    Why the anchor, rather than fitting on the whole frame or not at all — the
+    two obvious choices, both of which are wrong in opposite directions:
+
+    * **No fit** (``raw_scale_ratio``): every one of these models has an additive
+      degree of freedom, and an offset makes ``gt/pred`` vary with the *scene
+      depth* of each bin. On a scene whose depth falls with eccentricity — which
+      an egocentric indoor frame is — a model with **no radial error at all**
+      reports 0.648 or 1.253 depending on the offset's sign, and an
+      affine-invariant disparity model reports 1.143. Those are the size of the
+      effect being looked for, so the measure has no specificity.
+    * **Fit on the whole frame** (``scale_ratio``): least squares then spends its
+      scale and shift partly on the radial trend itself. Correct 1.000 on the
+      no-distortion cases, but a real ``+0.6 theta^2`` bias reads 0.965 — the
+      effect is absorbed, so the measure has no sensitivity.
+
+    Anchoring gets both. The anchor band spans ~10 deg about the optical axis, so
+    it carries almost none of the radial variation the fit must not absorb, while
+    still removing the offset. Measured on analytic scenes
+    (``tests/test_geometry.py``): exactly 1.000 for pure-scale, for either sign
+    of offset, and for a disparity model — no false positive — and 1.37 against a
+    true 1.49 for a real bias. It under-reports by <10%, because the anchor band
+    itself carries a little bias, and never invents.
+
+    The anchor must be **conditioned**, not merely populated. The affine has two
+    parameters, so fitting it needs depth *spread*: on a band that is one flat
+    wall at a constant range, ``(s, t)`` is undetermined and the fit returns an
+    arbitrary pair that then corrupts every other bin. That is not hypothetical —
+    a synthetic box scene whose central 25 deg is a single wall drives this
+    function to report drift 1.86 for a model with no radial error whatever.
+    Real ADT is nowhere near that: measured on seq131, IQR/median of the GT
+    inside each band runs 0.71 to 0.88, because the centre of an egocentric frame
+    sees a table, objects and floor at many ranges. So the guard below almost
+    never fires on real data, and when it does the answer is NaN rather than a
+    fabricated one.
+
+    The anchor is the innermost band that is both populated and conditioned;
+    bands are merged inward-outward until one qualifies. Returns NaN per bin when
+    none does.
+    """
+    edges = [float(e) for e in edges]
+    bands = [mask & (theta_deg >= lo) & (theta_deg < hi)
+             for lo, hi in zip(edges[:-1], edges[1:])]
+    anchor = None
+    for b in bands:
+        if b.sum() < min_anchor_px:
+            continue
+        if _relative_spread(gt_z, b) >= MIN_ANCHOR_SPREAD:
+            anchor = b
+            break
+    if anchor is None:
+        return [float("nan")] * len(bands)
+    fitted = align_depth(pred_z, gt_z, anchor, mode=align_mode)
+    return [raw_scale_ratio(fitted, gt_z, b) for b in bands]
+
+
+def _relative_spread(gt_z: np.ndarray, mask: np.ndarray) -> float:
+    """Interquartile range of GT over ``mask``, as a fraction of its median.
+
+    The conditioning number for an affine fit on that region: 0 means every
+    pixel is at the same depth and ``(scale, shift)`` cannot be separated.
+    """
+    if not mask.any():
+        return 0.0
+    g = gt_z[mask].astype(np.float64)
+    g = g[np.isfinite(g) & (g > 0)]
+    if g.size < 4:
+        return 0.0
+    med = float(np.median(g))
+    if med <= 1e-9:
+        return 0.0
+    return float(np.percentile(g, 75) - np.percentile(g, 25)) / med
+
+
 def raw_scale_ratio(pred_z: np.ndarray, gt_z: np.ndarray,
                     mask: np.ndarray) -> float:
     """``median(gt / pred)`` on the **unaligned** prediction over ``mask``.
 
-    The benchmark's alignment-free read-out. Compared across incidence bins it
-    says, in one number, whether a model's depth drifts with eccentricity —
-    below 1 where it over-predicts, above 1 where it under-predicts — and unlike
-    every aligned metric it cannot be bent into a bowl by the global fit.
+    A diagnostic, **not** a distortion measure — see ``anchored_ratios``, which
+    is what the report's ``drift`` column uses. Compared across incidence bins
+    this quantity moves whenever the model carries an additive offset, whether
+    or not anything is bending: for ``pred = (gt - 1.5)/3`` on a scene whose
+    depth falls with eccentricity, and with no radial error whatever, it reports
+    0.648; for ``pred = (gt + 2)/3`` it reports 1.253; for an affine-invariant
+    disparity model it reports 1.143. Those are the size of the effect this
+    benchmark exists to detect. Kept because it is the raw number and someone
+    will want it, but do not read a trend off it.
     """
     if not mask.any():
         return float("nan")

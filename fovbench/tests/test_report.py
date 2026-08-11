@@ -16,6 +16,7 @@ EDGES = [(0, 10), (10, 20), (20, 30), (30, 40), (40, 50), (50, 55)]
 def _bin(lo, hi, absrel, scale_ratio=1.0, n_frames=4, n_px=5000.0):
     return dict(theta_lo=lo, theta_hi=hi, AbsRel=absrel, delta1=1 - absrel,
                 scale_ratio=scale_ratio, raw_scale_ratio=scale_ratio,
+                anchored_ratio=scale_ratio,
                 n_frames=n_frames, n_px_mean=n_px,
                 SqRel=absrel, RMSE=absrel, RMSElog=absrel, log10=absrel,
                 delta2=1.0, delta3=1.0, n_valid_total=int(n_px * n_frames))
@@ -50,9 +51,9 @@ def test_penalty_is_outer_over_inner_absrel():
 
 
 def test_drift_reads_over_prediction_toward_the_rim_as_greater_than_one():
-    """raw_scale_ratio = median(gt/pred), UNALIGNED. Falling with eccentricity
-    means pred is growing relative to GT, i.e. the model pushes the periphery
-    away."""
+    """anchored_ratio = median(gt/pred) after the model's affine is fitted on the
+    innermost bin. Falling with eccentricity means pred is growing relative to
+    GT, i.e. the model pushes the periphery away."""
     s = R.summarise(_run())
     assert s["drift"] > 1.0
     assert s["drift"] == pytest.approx(1.0 / (1.0 - 0.05 * 5))
@@ -88,11 +89,14 @@ def test_a_single_populated_bin_refuses_to_report_a_ratio():
 def test_window_runs_are_summarised_on_tilt():
     cells = [dict(tilt=t, AbsRel=0.05 + 0.01 * i, delta1=0.9,
                   scale_ratio=1.0, raw_scale_ratio=1.0 - 0.02 * i,
+                  anchored_ratio=1.0 - 0.02 * i,
                   n_frames=4, n_px_mean=5000.0)
              for i, t in enumerate((0, 10, 20, 30, 40))]
     s = R.summarise(_run(protocol="window", cells=cells, bins=None))
     assert s["lo"] == 0 and s["hi"] == 40
     assert s["pen"] == pytest.approx(0.09 / 0.05)
+    # Windows are separate forward passes of up-to-scale models: no drift.
+    assert math.isnan(s["drift"])
 
 
 def test_report_text_names_the_split_and_both_headline_columns():

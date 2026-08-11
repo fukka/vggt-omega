@@ -119,6 +119,7 @@ def _score_window(model, win: "G.Window", max_depth) -> Optional[dict]:
     # construction and only the UNALIGNED ratio can show drift between aims.
     met.update(tilt=win.tilt, azimuth=win.azimuth, fov=win.fov,
                in_cone_frac=win.in_cone_frac,
+               src_px_per_out_px=win.src_px_per_out_px,
                raw_scale_ratio=G.raw_scale_ratio(pred, win.gt_z, win.valid),
                theta_mean=float(win.theta[win.valid].mean()))
     return met
@@ -162,7 +163,8 @@ def _reduce_windows(runs: List[dict], tilts) -> dict:
     cells = []
     for t in tilts:
         rows = [r for r in runs if abs(r["tilt"] - t) < 1e-6]
-        c = _mean_metrics(rows, G.METRIC_KEYS + ("in_cone_frac", "theta_mean"))
+        c = _mean_metrics(rows, G.METRIC_KEYS
+                          + ("in_cone_frac", "theta_mean", "src_px_per_out_px"))
         c["tilt"] = t
         cells.append(c)
     return {"overall": _mean_metrics(runs, G.METRIC_KEYS), "cells": cells}

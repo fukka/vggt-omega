@@ -65,19 +65,35 @@ Two summary columns, and they answer different questions.
 **`pen`** — AbsRel in the outermost populated bin ÷ AbsRel in the innermost.
 How much worse the periphery is, in the metric a downstream user reads.
 
-**`drift`** — `median(gt/pred)` on the **unaligned** prediction, innermost ÷
-outermost. Above 1.0 the model over-predicts depth toward the rim.
+**`drift`** — `median(gt/pred)` after the model's own affine is fitted **on the
+innermost bin alone**, innermost ÷ outermost. Above 1.0 the model over-predicts
+depth toward the rim. **`radial` protocol only**: every window is a separate
+forward pass of an up-to-scale model, so a window-to-window ratio compares two
+arbitrary constants — the column is left blank there.
+
+Why anchored, and not the two obvious alternatives. Fitting *nothing* looks
+alignment-free but every model here has an additive degree of freedom, and an
+offset makes `median(gt/pred)` track each bin's *scene depth*: on a scene whose
+depth falls with eccentricity, a model with **no radial error at all** reports
+0.648 or 1.253 depending on the offset's sign, and an affine-invariant disparity
+model reports 1.143 — the size of the effect being looked for. Fitting on the
+*whole frame* spends the scale and shift partly on the radial trend itself:
+correct on the no-distortion cases, but a real `+0.6·θ²` bias then reads 0.965.
+Anchoring on a ~10° central band removes the offset without absorbing the trend:
+exactly 1.000 on all four no-distortion cases, 1.37 against a true 1.49. It
+under-reports by <10% and never invents. The anchor must have depth *spread* to
+determine an affine — real ADT bands measure IQR/median 0.71–0.88; a single flat
+wall measures 0.00 and is refused.
 
 Report both. Per-bin AbsRel is a *residual after one global fit*, and a
 least-squares affine chooses the radius at which it is right — so a cleanly
 monotone radial error comes out **U-shaped**, and `pen` can read ≈1.0 for a model
 that is wrong by 50% at the rim. Measured on the analytic stand-in with a known
-`+0.6·θ²` bias: the AbsRel curve comes out a bowl — `0.175 0.153 0.112 0.047
-0.081 0.172` on one small run — so `pen` = 0.98, while `drift` recovers the
-injected bias (to within 0.3% of its analytic value on that run;
-[`tests/test_end_to_end.py`](tests/test_end_to_end.py) asserts the same thing
-against an independently derived value, with no data needed). `pen` says how it feels; `drift` says
-what the model did.
+`+0.6·θ²` bias the AbsRel curve comes out a bowl, so `pen` reads ≈1.0 while
+`drift` recovers the bias;
+[`tests/test_end_to_end.py`](tests/test_end_to_end.py) asserts that against an
+independently derived value, with no data needed. `pen` says how it feels;
+`drift` says what the model did.
 
 Absolute AbsRel is **not** comparable across models — DAv2 is scored under a
 disparity-space affine and the depth heads under a depth-space one, because those
@@ -120,7 +136,7 @@ between the streams is *sensor reality plus registration*, not blur alone.
 | `models.py` | the four models behind one call + the analytic stand-in |
 | `run.py` | the driver (CLI) |
 | `report.py` | tables, CSV, figures, `pen`/`drift` |
-| `tests/` | 72 CPU tests: no weights, no data, ~5 s |
+| `tests/` | 77 CPU tests: no weights, no data, ~7 s |
 
 Model loading, availability and downloads live in
 [`finetune/eval/baselines/model_zoo.py`](../finetune/eval/baselines/model_zoo.py);
