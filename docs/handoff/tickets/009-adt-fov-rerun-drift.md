@@ -6,9 +6,10 @@
 
 ## Goal
 
-Re-run the same grid on `organized` @ `23d1583` so the distortion column is
-measured by an estimator that works. Everything else about run
-`fovbench-main-22c108d` stands and does not need repeating.
+Re-run the grid on `organized` @ HEAD with **three** changes the first run needs:
+a distortion estimator that works, **100 frames instead of 25**, and a second
+binning axis (distance from the optical centre). Everything else about run
+`fovbench-main-22c108d` stands.
 
 ## What was wrong, and what survives
 
@@ -68,6 +69,17 @@ Two of your readings need revisiting once the new numbers land:
 * `drift` is refused for the `window` protocol.
 * `src_px_per_out_px` is recorded per window cell.
 * `raw_scale_ratio` and `scale_ratio` are still in `results.json` as diagnostics.
+* **A second binning axis: distance from the optical centre**, in units of the
+  frame's half width (1.0 = the middle of a frame edge, sqrt(2) = a corner),
+  `--radius-edges 0,0.2,0.4,0.6,0.8,1.0,1.45`. It lands in `results.json` as
+  `radius_bins` alongside the existing `bins`, and gets its own figures. Both
+  axes are read off **one** alignment fit over the whole valid frame — the scale
+  is never fitted per bin, on either axis (`geometry.bin_by`).
+  Note the two views use different image planes, so a given radius is a
+  *different direction* in each: on the raw fisheye radius is nearly proportional
+  to the incidence angle, on the rectified pinhole it goes as `tan(theta)`.
+  Radius answers "where in the picture"; theta answers "which ray". Report both,
+  compare `rect` against `fisheye` only on theta.
 
 77 CPU tests green. No network has run against the new column.
 
@@ -78,14 +90,24 @@ Identical to #13 except the commit. Same split, so the digest should come back
 the two runs are not comparable and something moved under us.
 
 ```bash
-git -C <repo> pull --ff-only origin organized     # 23d1583
-python -m fovbench.run --adt-root "$ADT" --n-frames 25 \
+git -C <repo> pull --ff-only origin organized
+python -m fovbench.run --adt-root "$ADT" --n-frames 100 \
   --models vggt_1b,vggt_omega,dav2_large,da3_large \
-  --out eval_out/fovbench_drift 2>&1 | tee eval_out/fovbench_drift.log
+  --out eval_out/fovbench_v2 2>&1 | tee eval_out/fovbench_v2.log
 ```
 
-~30 min, same as before. No setup needed — the env from #13 is unchanged, and
-VGGT-Omega's checkpoint is already on the box from that run.
+**`--n-frames 100`, not 25.** 25 frames of a single sequence is too thin to
+carry the claim; the sequence has 2939 depth frames and the split spreads the
+sample evenly across all of them, so 100 costs nothing but time. Budget ~2 h
+(the first run was 30 min at 25 frames and the cost is linear). If you have the
+GPU hours, 200 is better still — say which you used.
+
+The split therefore **changes**, and its digest with it: `2ab412af0ccc` was the
+25-frame set. Record the new digest; the two runs are not bin-for-bin comparable
+and are not meant to be.
+
+No setup needed — the env from #13 is unchanged and VGGT-Omega's checkpoint is
+already on the box.
 
 ## What to report
 
@@ -109,9 +131,10 @@ VGGT-Omega's checkpoint is already on the box from that run.
 
 ## Done when
 
-- [ ] digest confirmed `2ab412af0ccc`, or the mismatch reported
+- [ ] the new split digest recorded (it will NOT be `2ab412af0ccc` — 100 frames)
+- [ ] `--n-frames` actually used, stated
 - [ ] `report.txt` pasted in full
-- [ ] the four items above answered
+- [ ] the six items above answered
 - [ ] pushed to `results` under a new run id; hand back to `cpu`
 
 ## Needs CPU-Claude afterwards?

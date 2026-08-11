@@ -74,12 +74,12 @@ def summarise(run: dict) -> dict:
     which is the normal state of the rectified arm's outer bins, and must read
     as "not measurable here" rather than as a good score.
     """
-    cells = _populated(run["bins"] if run["protocol"] == "radial" else run["cells"])
+    cells = _populated(_cells_of(run, run.get("_axis", "theta")))
     if len(cells) < 2:
         return dict(pen=float("nan"), drift=float("nan"),
                     lo=float("nan"), hi=float("nan"), n_cells=len(cells))
     a, b = cells[0], cells[-1]
-    key = "theta_lo" if run["protocol"] == "radial" else "tilt"
+    key = "bin_lo" if "bin_lo" in a else ("theta_lo" if "theta_lo" in a else "tilt")
     pen = (b["AbsRel"] / a["AbsRel"]) if a["AbsRel"] > 1e-9 else float("nan")
     drift = float("nan")
     # `drift` exists only for the radial protocol. Its bins come from ONE forward
@@ -100,11 +100,29 @@ def summarise(run: dict) -> dict:
 # Text tables
 # --------------------------------------------------------------------------- #
 
-def _axis(run: dict) -> Tuple[List[str], List[dict]]:
-    if run["protocol"] == "radial":
-        return ([f"{int(b['theta_lo'])}-{int(b['theta_hi'])}" for b in run["bins"]],
-                run["bins"])
-    return ([f"t{int(c['tilt'])}" for c in run["cells"]], run["cells"])
+def _lo(c: dict) -> float:
+    """Bin lower edge. ``bin_lo`` is the current key; ``theta_lo`` is what runs
+    before the radius axis existed wrote, and those JSONs are still read."""
+    return float(c.get("bin_lo", c.get("theta_lo", c.get("tilt", 0.0))))
+
+
+def _hi(c: dict) -> float:
+    return float(c.get("bin_hi", c.get("theta_hi", c.get("tilt", 0.0))))
+
+
+def _cells_of(run: dict, axis: str = "theta") -> List[dict]:
+    if run["protocol"] != "radial":
+        return run["cells"]
+    return run["radius_bins"] if axis == "radius" else run["bins"]
+
+
+def _axis(run: dict, axis: str = "theta") -> Tuple[List[str], List[dict]]:
+    cells = _cells_of(run, axis)
+    if run["protocol"] != "radial":
+        return ([f"t{int(c['tilt'])}" for c in cells], cells)
+    if axis == "radius":
+        return ([f"{_lo(b):.1f}-{_hi(b):.1f}" for b in cells], cells)
+    return ([f"{int(_lo(b))}-{int(_hi(b))}" for b in cells], cells)
 
 
 def _fmt(x, nd=3, width=7) -> str:
@@ -234,12 +252,12 @@ def write_csv(payload: dict, path: str) -> str:
             s = summarise(r)
             _, cells = _axis(r)
             for c in cells:
-                label = (f"{int(c['theta_lo'])}-{int(c['theta_hi'])}"
+                label = (f"{_lo(c):g}-{_hi(c):g}"
                          if r["protocol"] == "radial" else f"tilt{int(c['tilt'])}")
                 w.writerow([payload["digest"], r["model"], r["family"], r["size"],
                             f"{r['params_m']:.2f}", r["align"], r["protocol"],
                             r["stream"], r["view"], label,
-                            c.get("theta_lo", ""), c.get("theta_hi", ""),
+                            _lo(c), _hi(c),
                             c.get("tilt", ""), c.get("n_frames", 0),
                             f"{c.get('n_px_mean', 0):.0f}"]
                            + [f"{c[k]:.6f}" if _finite(c.get(k)) else ""
@@ -265,7 +283,10 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
     os.makedirs(out_dir, exist_ok=True)
     written = []
     styles = {"synthetic": "-", "real": "--"}
-    for protocol in ("radial", "window"):
+    axes = [("radial", "theta", "incidence angle from the optical axis (deg)"),
+            ("radial", "radius", "distance from the optical centre (half-widths)"),
+            ("window", "theta", "window aim (deg off-axis)")]
+    for protocol, axis, xlab in axes:
         # raw_scale_ratio, NOT scale_ratio: the latter is measured on the
         # aligned map and inherits the same bowl the alignment puts into
         # AbsRel, so plotting it would show the distorted column under the
@@ -274,6 +295,8 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                              ("delta1", r"$\delta_1$  (higher is better)"),
                              ("raw_scale_ratio", "median(gt/pred), unaligned")):
             sel = [r for r in payload["runs"] if r["protocol"] == protocol]
+            if axis == "radius":
+                sel = [r for r in sel if "radius_bins" in r]
             if not sel:
                 continue
             views = sorted({r["view"] for r in sel})
@@ -285,8 +308,8 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                 for r in sorted(sel, key=lambda r: (r["model"], r["stream"])):
                     if r["view"] != view:
                         continue
-                    _, cells = _axis(r)
-                    xs = [(0.5 * (c["theta_lo"] + c["theta_hi"])
+                    _, cells = _axis(r, axis)
+                    xs = [(0.5 * (_lo(c) + _hi(c))
                            if protocol == "radial" else c["tilt"]) for c in cells]
                     ys = [c.get(metric, float("nan")) for c in cells]
                     pts = [(x, y) for x, y in zip(xs, ys)
@@ -305,8 +328,7 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                         ax.plot([t[0] for t in thin], [t[1] for t in thin], "o",
                                 ms=11, mfc="none", mec=cmap[r["model"]], mew=1.2)
                 ax.set_title(f"{protocol} · {view}")
-                ax.set_xlabel("incidence angle from the optical axis (deg)"
-                              if protocol == "radial" else "window aim (deg off-axis)")
+                ax.set_xlabel(xlab)
                 ax.grid(alpha=0.3)
             axes[0][0].set_ylabel(ylab)
             if metric == "raw_scale_ratio":
@@ -316,10 +338,14 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
             if handles:
                 fig.legend(handles, labels, loc="lower center", ncol=4, fontsize=7,
                            frameon=False)
-            fig.suptitle(f"ADT-FOV · {metric} vs eccentricity · split "
-                         f"{payload['digest']}", fontsize=10)
+            sub = ("  ·  radius is measured in each view's OWN image plane, so a "
+                   "given radius is a different direction in the two panels"
+                   if axis == "radius" else "")
+            fig.suptitle(f"ADT-FOV · {metric} vs {axis} · split "
+                         f"{payload['digest']}{sub}", fontsize=10)
             fig.tight_layout(rect=(0, 0.10, 1, 0.95))
-            path = os.path.join(out_dir, f"{protocol}_{metric}.png")
+            name = f"{protocol}_{metric}" + ("_radius" if axis == "radius" else "")
+            path = os.path.join(out_dir, f"{name}.png")
             fig.savefig(path, dpi=150)
             plt.close(fig)
             written.append(path)

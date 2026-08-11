@@ -97,13 +97,23 @@ def _load_frame(frame, stream: str, depth_scale: float, depth_max_m: float,
 # Protocols
 # --------------------------------------------------------------------------- #
 
-def _score_radial(model, view: "G.FrameView", edges, max_depth) -> Optional[dict]:
-    """Whole frame, one alignment fit, metrics per incidence-angle bin."""
+def _score_radial(model, view: "G.FrameView", edges, radius_edges,
+                  max_depth) -> Optional[dict]:
+    """Whole frame, ONE alignment fit, metrics per bin on two axes.
+
+    The two axes — incidence angle and distance from the optical centre — are
+    two readings of the same frozen prediction, not two measurements: the scale
+    (and shift) is fitted once over every valid pixel and then never touched,
+    and each axis only applies a different set of masks afterwards.
+    """
     if view.valid.sum() < 256:
         return None
     pred = model.predict(view.rgb, gt_z=view.gt_z, theta_deg=view.theta)
-    prof = G.radial_profile(pred, view.gt_z, view.valid, view.theta, edges,
-                            model.align_mode, max_depth=max_depth)
+    prof = G.bin_by(pred, view.gt_z, view.valid, model.align_mode,
+                    {"theta": (view.theta, edges),
+                     "radius": (view.radius, radius_edges)},
+                    max_depth=max_depth)
+    prof["bins"], prof["radius_bins"] = prof.pop("theta"), prof.pop("radius")
     prof["in_cone_frac"] = view.in_cone_frac
     return prof
 
@@ -142,18 +152,24 @@ def _mean_metrics(rows: List[dict], keys) -> dict:
     return out
 
 
-def _reduce_radial(runs: List[dict], edges) -> dict:
-    """Average per-bin metrics across frames, keeping the bin structure."""
-    bins = []
+def _reduce_axis(runs: List[dict], key: str, edges) -> list:
+    """Average one axis's per-bin metrics across frames, keeping the structure."""
+    out = []
     for i, (lo, hi) in enumerate(zip(edges[:-1], edges[1:])):
-        rows = [r["bins"][i] for r in runs if r["bins"][i]["n_valid"] > 0]
+        rows = [r[key][i] for r in runs if r[key][i]["n_valid"] > 0]
         b = _mean_metrics(rows, G.METRIC_KEYS)
-        b.update(theta_lo=lo, theta_hi=hi,
-                 n_px_mean=float(np.mean([r["bins"][i]["n_bin"] for r in runs]))
+        b.update(bin_lo=lo, bin_hi=hi,
+                 n_px_mean=float(np.mean([r[key][i]["n_bin"] for r in runs]))
                  if runs else 0.0)
-        bins.append(b)
+        out.append(b)
+    return out
+
+
+def _reduce_radial(runs: List[dict], edges, radius_edges) -> dict:
+    """Average per-bin metrics across frames, on both axes."""
     return {"overall": _mean_metrics([r["overall"] for r in runs], G.METRIC_KEYS),
-            "bins": bins,
+            "bins": _reduce_axis(runs, "bins", edges),
+            "radius_bins": _reduce_axis(runs, "radius_bins", radius_edges),
             "in_cone_frac": float(np.mean([r["in_cone_frac"] for r in runs]))
             if runs else float("nan")}
 
@@ -165,7 +181,7 @@ def _reduce_windows(runs: List[dict], tilts) -> dict:
         rows = [r for r in runs if abs(r["tilt"] - t) < 1e-6]
         c = _mean_metrics(rows, G.METRIC_KEYS
                           + ("in_cone_frac", "theta_mean", "src_px_per_out_px"))
-        c["tilt"] = t
+        c["tilt"] = c["bin_lo"] = c["bin_hi"] = t
         cells.append(c)
     return {"overall": _mean_metrics(runs, G.METRIC_KEYS), "cells": cells}
 
@@ -185,6 +201,7 @@ def run(a: argparse.Namespace) -> dict:
     protocols = [p.strip() for p in a.protocols.split(",") if p.strip()]
     keys = [k.strip() for k in a.models.split(",") if k.strip()]
     edges = tuple(float(x) for x in a.theta_edges.split(","))
+    radius_edges = tuple(float(x) for x in a.radius_edges.split(","))
     tilts = tuple(float(x) for x in a.tilts.split(","))
     azimuths = tuple(float(x) for x in a.azimuths.split(","))
 
@@ -249,7 +266,8 @@ def run(a: argparse.Namespace) -> dict:
                     if "radial" in protocols:
                         fv = G.full_frame_view(rgb, gt, gt_valid, cam, n, kind)
                         _accumulate(acc, f"radial|{stream}|{kind}",
-                                    _score_radial(model, fv, edges, a.metric_max_depth))
+                                    _score_radial(model, fv, edges, radius_edges,
+                                                  a.metric_max_depth))
                     if "window" in protocols:
                         for tilt in tilts:
                             for az in (azimuths if tilt > 0 else (0.0,)):
@@ -267,8 +285,8 @@ def run(a: argparse.Namespace) -> dict:
 
         for tag, rows in sorted(acc.items()):
             protocol, stream, kind = tag.split("|")
-            body = (_reduce_radial(rows, edges) if protocol == "radial"
-                    else _reduce_windows(rows, tilts))
+            body = (_reduce_radial(rows, edges, radius_edges)
+                    if protocol == "radial" else _reduce_windows(rows, tilts))
             runs.append(dict(model=key, family=model.family, size=model.size,
                              params_m=model.params_m, align=model.align_mode,
                              input_size=n, protocol=protocol, stream=stream,
@@ -285,7 +303,8 @@ def run(a: argparse.Namespace) -> dict:
         requested_models=keys,
         skipped_models=[dict(model=k, state=s, detail=d) for k, s, d in skipped],
         config=dict(streams=streams, views=views, protocols=protocols,
-                    theta_edges=list(edges), tilts=list(tilts),
+                    theta_edges=list(edges), radius_edges=list(radius_edges),
+                    tilts=list(tilts),
                     azimuths=list(azimuths), window_fov=a.window_fov,
                     depth_max_m=a.depth_max_m,
                     metric_max_depth=a.metric_max_depth,
@@ -316,6 +335,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--protocols", default="radial,window")
     p.add_argument("--theta-edges", default="0,10,20,30,40,50,55",
                    help="incidence-angle bin edges (deg); top edge = usable cone")
+    p.add_argument("--radius-edges", default="0,0.2,0.4,0.6,0.8,1.0,1.45",
+                   help="distance-from-optical-centre bin edges, in half-widths "
+                        "(1.0 = middle of a frame edge, sqrt(2) = a corner)")
     p.add_argument("--tilts", default=",".join(str(t) for t in DEFAULT_TILTS),
                    help="window eccentricities (deg)")
     p.add_argument("--azimuths", default=",".join(str(t) for t in DEFAULT_AZIMUTHS),

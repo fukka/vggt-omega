@@ -76,6 +76,14 @@ METRIC_KEYS: Tuple[str, ...] = ("AbsRel", "SqRel", "RMSE", "RMSElog", "log10",
                                 "scale_ratio", "raw_scale_ratio",
                                 "anchored_ratio")
 
+#: Distance-from-the-optical-centre bin edges, in units of the frame's HALF
+#: WIDTH: 1.0 is the middle of a frame edge, and a corner sits at sqrt(2).
+#: This is the image-plane reading of "where in the field of view"; THETA_EDGES
+#: is the ray-geometry reading. They are not interchangeable — see
+#: ``radius_map_*``, and the caveat that the two views use different image
+#: planes, so a given radius is a different direction in each.
+RADIUS_EDGES: Tuple[float, ...] = (0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.45)
+
 #: ``finetune/data/rectify.py`` renders the pinhole at ``0.55 * max(H, W)``.
 RECTIFIER_FOCAL_FRAC = 0.55
 
@@ -158,6 +166,28 @@ def theta_map_pinhole(H: int, W: int,
     x = (xs - cx) / f
     y = (ys - cy) / f
     return np.degrees(np.arctan(np.sqrt(x * x + y * y))).astype(np.float32)
+
+
+def radius_map(H: int, W: int, cx: Optional[float] = None,
+               cy: Optional[float] = None) -> np.ndarray:
+    """Per-pixel distance from the optical centre, in HALF-WIDTHS.
+
+    ``1.0`` is the middle of a frame edge; a corner is ``sqrt(2)``. Normalising
+    by the half width rather than leaving pixels makes the number independent of
+    the render size (518 vs 512) while staying a plain image-plane distance.
+
+    Read against ``theta_map_*`` with care: on the raw fisheye, radius is nearly
+    proportional to the incidence angle (KB4 is close to equidistant), whereas
+    the rectified pinhole puts radius at ``f*tan(theta)``, which runs away near
+    the edge. The same radius is therefore a *different direction* in the two
+    views, and a radius-binned comparison between them is not like-for-like.
+    ``theta`` is the axis on which the two views mean the same thing.
+    """
+    cx = (W / 2.0 - 0.5) if cx is None else cx
+    cy = (H / 2.0 - 0.5) if cy is None else cy
+    ys, xs = np.mgrid[0:H, 0:W].astype(np.float64)
+    return (np.sqrt((xs - cx) ** 2 + (ys - cy) ** 2)
+            / (0.5 * W)).astype(np.float32)
 
 
 def project_dirs(cam: FisheyeCam, dirs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -250,6 +280,8 @@ class FrameView:
     gt_z: np.ndarray          # (N, N) float32 metres, planar z about the camera axis
     valid: np.ndarray         # (N, N) bool
     theta: np.ndarray         # (N, N) float32 incidence angle, deg
+    radius: np.ndarray        # (N, N) float32 distance from the optical centre,
+                              #        in half-widths (see ``radius_map``)
     in_cone_frac: float
 
 
@@ -440,8 +472,17 @@ def full_frame_view(rgb: np.ndarray, gt_z: np.ndarray, gt_valid: np.ndarray,
         raise ValueError(f"unknown frame kind {kind!r} (choose 'rect' or 'fisheye')")
 
     valid = in_cone & gtv & (gt_v > 0)
+    # The fisheye's principal point is off-centre by ~4 px at 1408; carry it, so
+    # "distance from the optical centre" is from the optical centre and not from
+    # the middle of the sensor.
+    if kind == "fisheye":
+        sc = scaled_cam(cam, out_size)
+        radius = radius_map(out_size, out_size, cx=sc.cx, cy=sc.cy)
+    else:
+        radius = radius_map(out_size, out_size)
     return FrameView(kind=kind, rgb=rgb_v, gt_z=gt_v * valid, valid=valid,
-                     theta=theta, in_cone_frac=float(in_cone.mean()))
+                     theta=theta, radius=radius,
+                     in_cone_frac=float(in_cone.mean()))
 
 
 # --------------------------------------------------------------------------- #
@@ -479,7 +520,10 @@ def radial_profile(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
         raise ValueError("no valid pixels inside the theta range "
                          f"[{edges[0]}, {edges[-1]}) — check the view's masks")
 
-    aligned = align_depth(pred_z, gt_z, in_range, mode=align_mode)
+    # ONE fit, over every valid pixel of the frame — never per bin. Binning is a
+    # masking step applied afterwards to an already-frozen prediction. See
+    # ``bin_by`` for the multi-axis form, which shares this single fit.
+    aligned = align_depth(pred_z, gt_z, mask, mode=align_mode)
     overall = depth_metrics(aligned, gt_z, in_range, min_depth, max_depth)
 
     anchored = anchored_ratios(pred_z, gt_z, in_range, theta_deg, edges,
@@ -504,6 +548,44 @@ def radial_profile(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
     overall["raw_scale_ratio"] = raw_scale_ratio(pred_z, gt_z, in_range)
     return {"align": align_mode, "overall": overall, "bins": bins,
             "n_frame_valid": int(in_range.sum())}
+
+
+def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
+           align_mode: str, axes: dict,
+           min_depth: float = 0.01, max_depth: float = 100.0) -> dict:
+    """Score one prediction on several binning axes under **one** alignment fit.
+
+    ``axes`` maps a name to ``(coordinate_map, edges)`` — e.g. incidence angle
+    and distance from the optical centre. The scale (and shift) is fitted once,
+    over every valid pixel of the frame, and then frozen; each axis only applies
+    a different set of masks to that same frozen prediction. Nothing about the
+    binning can reach back into the alignment, so the axes are two readings of
+    one measurement rather than two measurements.
+
+    Fitting per bin instead would hand an up-to-scale model a separate scale at
+    every radius, which flattens exactly the effect the benchmark exists to find
+    (``tests/test_geometry.py::test_per_bin_alignment_would_erase_the_effect``).
+    """
+    aligned = align_depth(pred_z, gt_z, mask, mode=align_mode)
+    out = {"align": align_mode, "n_frame_valid": int(mask.sum()),
+           "overall": depth_metrics(aligned, gt_z, mask, min_depth, max_depth)}
+    out["overall"]["raw_scale_ratio"] = raw_scale_ratio(pred_z, gt_z, mask)
+    for name, (coord, edges) in axes.items():
+        edges = [float(e) for e in edges]
+        anchored = anchored_ratios(pred_z, gt_z, mask, coord, edges, align_mode)
+        bins = []
+        for i, (lo, hi) in enumerate(zip(edges[:-1], edges[1:])):
+            m = mask & (coord >= lo) & (coord < hi)
+            met = depth_metrics(aligned, gt_z, m, min_depth, max_depth)
+            n = met.get("n_valid", 0)
+            met["n_valid"] = 0 if not np.isfinite(n) else int(n)
+            met["n_bin"] = int(m.sum())
+            met["raw_scale_ratio"] = raw_scale_ratio(pred_z, gt_z, m)
+            met["anchored_ratio"] = anchored[i]
+            met["bin_lo"], met["bin_hi"] = lo, hi
+            bins.append(met)
+        out[name] = bins
+    return out
 
 
 def anchored_ratios(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,

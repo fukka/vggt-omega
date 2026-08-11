@@ -68,7 +68,7 @@ def _predicted_drift(bins, bias=BIAS):
     lo, hi = live[0], live[-1]
 
     def f(b):
-        mid = np.radians(0.5 * (b["theta_lo"] + b["theta_hi"]))
+        mid = np.radians(0.5 * (b["bin_lo"] + b["bin_hi"]))
         return 1.0 + bias * mid ** 2
     return f(hi) / f(lo)
 
@@ -79,7 +79,8 @@ def test_radial_profile_reads_back_the_injected_radial_bias(kind):
     view = G.full_frame_view(rgb, gt, cone, cam, OUT, kind)
     model = M.load_model(M.ANALYTIC, device=None, radial_bias=BIAS)
 
-    prof = RUN._score_radial(model, view, G.THETA_EDGES, max_depth=100.0)
+    prof = RUN._score_radial(model, view, G.THETA_EDGES, G.RADIUS_EDGES,
+                              max_depth=100.0)
     run = dict(protocol="radial", bins=[
         dict(b, n_frames=1, n_px_mean=float(b["n_bin"])) for b in prof["bins"]])
     got = R.summarise(run)["drift"]
@@ -95,7 +96,8 @@ def test_an_unbiased_model_reads_back_as_no_distortion(kind):
     view = G.full_frame_view(rgb, gt, cone, cam, OUT, kind)
     model = M.load_model(M.ANALYTIC, device=None, radial_bias=0.0)
 
-    prof = RUN._score_radial(model, view, G.THETA_EDGES, max_depth=100.0)
+    prof = RUN._score_radial(model, view, G.THETA_EDGES, G.RADIUS_EDGES,
+                              max_depth=100.0)
     run = dict(protocol="radial", bins=[
         dict(b, n_frames=1, n_px_mean=float(b["n_bin"])) for b in prof["bins"]])
     s = R.summarise(run)
@@ -154,7 +156,8 @@ def test_a_flat_inner_band_does_not_fabricate_drift():
     assert G._relative_spread(view.gt_z, inner) < G.MIN_ANCHOR_SPREAD
 
     model = M.load_model(M.ANALYTIC, device=None, radial_bias=0.0)
-    prof = RUN._score_radial(model, view, G.THETA_EDGES, max_depth=100.0)
+    prof = RUN._score_radial(model, view, G.THETA_EDGES, G.RADIUS_EDGES,
+                              max_depth=100.0)
     run = dict(protocol="radial", bins=[
         dict(b, n_frames=1, n_px_mean=float(b["n_bin"])) for b in prof["bins"]])
     assert R.summarise(run)["drift"] == pytest.approx(1.0, abs=0.05)
@@ -182,11 +185,11 @@ def test_the_two_streams_score_identical_geometry():
     model = M.load_model(M.ANALYTIC, device=None, radial_bias=BIAS, seed=0)
     a = RUN._score_radial(model, G.full_frame_view(rgb, gt, cone, cam, OUT,
                                                    "fisheye"),
-                          G.THETA_EDGES, 100.0)
+                          G.THETA_EDGES, G.RADIUS_EDGES, 100.0)
     model = M.load_model(M.ANALYTIC, device=None, radial_bias=BIAS, seed=0)
     b = RUN._score_radial(model, G.full_frame_view(other, gt, cone, cam, OUT,
                                                    "fisheye"),
-                          G.THETA_EDGES, 100.0)
+                          G.THETA_EDGES, G.RADIUS_EDGES, 100.0)
     assert a["overall"]["AbsRel"] == pytest.approx(b["overall"]["AbsRel"], rel=1e-6)
     assert [x["n_bin"] for x in a["bins"]] == [x["n_bin"] for x in b["bins"]]
 

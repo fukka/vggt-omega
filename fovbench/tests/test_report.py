@@ -177,3 +177,20 @@ def test_report_shouts_when_a_requested_model_did_not_run():
     head = txt.split("RADIAL")[0]
     assert "NOT RUN: vggt_omega" in head and "NOT RUN: da3_large" in head
     assert "2 of 4" in head
+
+
+def test_figures_are_emitted_for_both_binning_axes(tmp_path):
+    """Distance from the optical centre is the axis that was asked for; the
+    incidence angle is the one on which the two views mean the same thing. Both
+    are produced, from the same single alignment fit."""
+    r = _run()
+    r["radius_bins"] = [dict(b, bin_lo=lo, bin_hi=hi) for b, (lo, hi) in
+                        zip(r["bins"], [(0, .2), (.2, .4), (.4, .6),
+                                        (.6, .8), (.8, 1.), (1., 1.45)])]
+    figs = R.write_figures(_payload([r]), str(tmp_path))
+    if not figs:
+        pytest.skip("matplotlib not installed")
+    names = {os.path.basename(f) for f in figs}
+    assert "radial_AbsRel.png" in names
+    assert "radial_AbsRel_radius.png" in names
+    assert "radial_delta1_radius.png" in names
