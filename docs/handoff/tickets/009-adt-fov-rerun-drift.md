@@ -56,7 +56,7 @@ Two of your readings need revisiting once the new numbers land:
 
 ## What changed in the code
 
-`organized` @ `23d1583`:
+`organized` @ `915b109`:
 
 * `drift` is now `anchored_ratio` — the model's own affine fitted on the
   **innermost bin alone**, then `median(gt/pred)` per bin. Exactly 1.000 on all
@@ -81,13 +81,9 @@ Two of your readings need revisiting once the new numbers land:
   Radius answers "where in the picture"; theta answers "which ray". Report both,
   compare `rect` against `fisheye` only on theta.
 
-77 CPU tests green. No network has run against the new column.
+78 CPU tests green. No network has run against the new column or the new axis.
 
 ## The command
-
-Identical to #13 except the commit. Same split, so the digest should come back
-**`2ab412af0ccc`** — if it does not, say so before anything else, because then
-the two runs are not comparable and something moved under us.
 
 ```bash
 git -C <repo> pull --ff-only origin organized
@@ -128,6 +124,11 @@ already on the box.
 4. Whether any bin reports `drift` as `—`, which would mean an anchor band
    failed the spread guard on real data. I do not expect it (0.71–0.88 measured),
    and it would be worth knowing if it happens.
+5. **The radius-binned tables**, and whether the AbsRel rise looks the same
+   against radius as against theta. It should not look identical — the two axes
+   are non-linearly related, and the rectified panel stretches very differently.
+6. Whether 100 frames moves anything against the 25-frame run beyond noise. If
+   the curves are unchanged, that is the sample-size answer and worth stating.
 
 ## Done when
 
