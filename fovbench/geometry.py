@@ -69,21 +69,21 @@ from finetune.eval.metrics import align_depth, depth_metrics  # noqa: E402
 THETA_EDGES: Tuple[float, ...] = (0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 55.0)
 
 #: Metric names carried through the whole pipeline — ``depth_metrics`` output
-#: plus this module's alignment-free ``raw_scale_ratio``, its ``anchored_ratio``,
-#: and the bin's own GT depth. Named once so the driver's frame-averaging and
-#: the report's CSV cannot drift apart.
+#: plus this module's alignment-free ``raw_scale_ratio`` and the bin's own GT
+#: depth. Named once so the driver's frame-averaging and the report's CSV cannot
+#: drift apart.
 #:
-#: ``gt_median`` is not a score: it is what the bin was *looking at*. Every
-#: relative metric here grows with depth, so a rise in AbsRel toward the rim is
-#: only a statement about field position once the bins are known to be at
-#: comparable depths — and in an egocentric indoor frame they are not
-#: automatically. Carrying it per bin is what lets that be checked rather than
-#: assumed; it is the same confound that made the withdrawn ``raw_scale_ratio``
-#: drift read a radial trend out of a flat model.
+#: ``gt_median``/``gt_std`` are not scores: they are what the bin was *looking
+#: at*, and they are measured on the real GT of the frames actually scored.
+#: Every relative metric here grows with depth, so a rise in AbsRel toward the
+#: rim is a statement about field position only once the bins are known to sit
+#: at comparable depths. Carrying the depth per bin is what lets that be checked
+#: against the data rather than argued about.
 METRIC_KEYS: Tuple[str, ...] = ("AbsRel", "SqRel", "RMSE", "RMSElog", "log10",
                                 "delta1", "delta2", "delta3",
                                 "scale_ratio", "raw_scale_ratio",
-                                "anchored_ratio", "gt_median", "gt_spread",
+                                "anchored_ratio",
+                                "gt_median", "gt_std", "gt_spread",
                                 "AbsRel_ds", "delta1_ds", "ds_strata")
 
 #: Depth strata for the standardised columns — quantiles of each frame's own
@@ -126,12 +126,16 @@ PROFILE_THETA_EDGES: Tuple[float, ...] = tuple(float(x) for x in range(0, 56))
 PROFILE_RADIUS_EDGES: Tuple[float, ...] = tuple(
     round(0.025 * i, 4) for i in range(59))
 
-#: ``finetune/data/rectify.py`` renders the pinhole at ``0.55 * max(H, W)``.
-RECTIFIER_FOCAL_FRAC = 0.55
-
 #: Minimum GT interquartile-range-over-median for a band to anchor an affine
 #: fit. Real ADT bands measure 0.71-0.88; a single flat wall measures 0.00.
+#:
+#: The ADT-FOV report no longer has a ``drift`` column and does not use this;
+#: ``datasets_egosynth`` does, for its own anchored pooling, and imports the
+#: constant rather than restating it so the two cannot diverge.
 MIN_ANCHOR_SPREAD = 0.05
+
+#: ``finetune/data/rectify.py`` renders the pinhole at ``0.55 * max(H, W)``.
+RECTIFIER_FOCAL_FRAC = 0.55
 
 _RAY_CACHE: dict = {}
 
@@ -568,14 +572,10 @@ def radial_profile(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
     aligned = align_depth(pred_z, gt_z, mask, mode=align_mode)
     overall = depth_metrics(aligned, gt_z, in_range, min_depth, max_depth)
 
-    anchored = anchored_ratios(pred_z, gt_z, in_range, theta_deg, edges,
-                               align_mode)
-
     bins = []
     for i, (lo, hi) in enumerate(zip(edges[:-1], edges[1:])):
         m = in_range & (theta_deg >= lo) & (theta_deg < hi)
         met = depth_metrics(aligned, gt_z, m, min_depth, max_depth)
-        met["anchored_ratio"] = anchored[i]
         # depth_metrics returns an all-NaN dict for an empty bin; a count must
         # stay a count, so the report can say "no pixels" rather than "no value".
         n = met.get("n_valid", 0)
@@ -681,7 +681,8 @@ def fine_profile(aligned: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
           & (coord >= lo) & (coord < hi))
     empty = {"edges": [float(e) for e in edges],
              "n": [0] * nb, "sum_absrel": [0.0] * nb,
-             "sum_delta1": [0.0] * nb, "sum_gt": [0.0] * nb}
+             "sum_delta1": [0.0] * nb, "sum_gt": [0.0] * nb,
+             "sum_gt2": [0.0] * nb}
     if not ok.any():
         return empty
     p = np.clip(aligned[ok].astype(np.float64), 1e-6, None)
@@ -697,7 +698,8 @@ def fine_profile(aligned: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
             "sum_absrel": np.bincount(idx, weights=np.abs(p - g) / g,
                                       minlength=nb).tolist(),
             "sum_delta1": np.bincount(idx, weights=d1, minlength=nb).tolist(),
-            "sum_gt": np.bincount(idx, weights=g, minlength=nb).tolist()}
+            "sum_gt": np.bincount(idx, weights=g, minlength=nb).tolist(),
+            "sum_gt2": np.bincount(idx, weights=g * g, minlength=nb).tolist()}
 
 
 def pool_profiles(profiles: Sequence[dict]) -> dict:
@@ -708,7 +710,8 @@ def pool_profiles(profiles: Sequence[dict]) -> dict:
     edges = live[0]["edges"]
     nb = len(edges) - 1
     n = np.zeros(nb, np.int64)
-    acc = {k: np.zeros(nb) for k in ("sum_absrel", "sum_delta1", "sum_gt")}
+    acc = {k: np.zeros(nb) for k in ("sum_absrel", "sum_delta1", "sum_gt",
+                                     "sum_gt2")}
     for p in live:
         if p["edges"] != edges:
             raise ValueError("pool_profiles: profiles have different edges; "
@@ -723,6 +726,9 @@ def pool_profiles(profiles: Sequence[dict]) -> dict:
                 "AbsRel": (acc["sum_absrel"] / div).tolist(),
                 "delta1": (acc["sum_delta1"] / div).tolist(),
                 "gt_mean": (acc["sum_gt"] / div).tolist(),
+                "gt_std": np.sqrt(np.maximum(
+                    acc["sum_gt2"] / div - (acc["sum_gt"] / div) ** 2,
+                    0.0)).tolist(),
                 "n_frames": len(live)}
 
 
@@ -799,14 +805,22 @@ def standardise_by_depth(aligned: np.ndarray, gt_z: np.ndarray,
 
 
 def _gt_stats(gt_z: np.ndarray, mask: np.ndarray) -> dict:
-    """The bin's own GT depth: median, and IQR as a fraction of it."""
+    """The bin's own GT depth: median, standard deviation, and IQR/median.
+
+    ``gt_std`` is the plain spread in metres, so a depth curve can be drawn with
+    a band rather than as a bare line: a bin whose depth ranges over metres and
+    one that is a flat wall tell very different stories about the same median.
+    """
+    nan = float("nan")
+    empty = {"gt_median": nan, "gt_std": nan, "gt_spread": nan}
     if not mask.any():
-        return {"gt_median": float("nan"), "gt_spread": float("nan")}
+        return dict(empty)
     g = gt_z[mask].astype(np.float64)
     g = g[np.isfinite(g) & (g > 0)]
     if g.size < 4:
-        return {"gt_median": float("nan"), "gt_spread": float("nan")}
+        return dict(empty)
     return {"gt_median": float(np.median(g)),
+            "gt_std": float(np.std(g)),
             "gt_spread": _relative_spread(gt_z, mask)}
 
 
@@ -814,8 +828,14 @@ def anchored_ratios(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
                     theta_deg: np.ndarray, edges: Sequence[float],
                     align_mode: str, min_anchor_px: int = 64) -> List[float]:
     """Per-bin ``median(gt/pred)`` after fitting the model's own global affine
-    **on the innermost populated bin alone**. This is the benchmark's distortion
-    measure; the report's ``drift`` column is its first-over-last ratio.
+    **on the innermost populated bin alone**.
+
+    **The ADT-FOV report does not use this.** That experiment reports AbsRel and
+    delta1 against position in the field and nothing else, and the ``drift``
+    column this fed was removed. It stays because ``datasets_egosynth`` mirrors
+    it for its pooled path and cross-checks that path against ``bin_by``'s
+    output, so the number must keep existing in the JSON even though no ADT
+    table prints it.
 
     Why the anchor, rather than fitting on the whole frame or not at all — the
     two obvious choices, both of which are wrong in opposite directions:

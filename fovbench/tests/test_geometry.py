@@ -582,9 +582,9 @@ def test_pooling_is_pixel_weighted_not_frame_weighted():
     hundred times the pixels of the other in the same bin: the pooled value must
     follow the big frame, which a mean of per-frame means would not."""
     big = {"edges": [0.0, 1.0], "n": [1000], "sum_absrel": [100.0],
-           "sum_delta1": [1000.0], "sum_gt": [2000.0]}
+           "sum_delta1": [1000.0], "sum_gt": [2000.0], "sum_gt2": [4000.0]}
     small = {"edges": [0.0, 1.0], "n": [10], "sum_absrel": [5.0],
-             "sum_delta1": [0.0], "sum_gt": [20.0]}
+             "sum_delta1": [0.0], "sum_gt": [20.0], "sum_gt2": [40.0]}
     pooled = G.pool_profiles([big, small])
     assert pooled["AbsRel"][0] == pytest.approx(105.0 / 1010.0)   # not (0.1+0.5)/2
     assert pooled["n"] == [1010]
@@ -609,7 +609,7 @@ def test_profiles_are_absent_unless_asked_for():
 
 def test_pooling_refuses_to_add_profiles_of_different_axes():
     a = {"edges": [0.0, 1.0], "n": [4], "sum_absrel": [1.0],
-         "sum_delta1": [4.0], "sum_gt": [8.0]}
+         "sum_delta1": [4.0], "sum_gt": [8.0], "sum_gt2": [16.0]}
     b = dict(a, edges=[0.0, 2.0])
     with pytest.raises(ValueError):
         G.pool_profiles([a, b])

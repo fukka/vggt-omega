@@ -1,50 +1,39 @@
 # Copyright (c) 2026.
 """Tables and figures for the ADT-FOV test.
 
-Two summary numbers carry the result, and they answer different questions:
+The experiment reports one thing: **how each baseline's depth accuracy varies
+with where in the field of view the content sits.** That is two metrics —
+``AbsRel`` and ``delta1`` — against two readings of "where":
 
-``pen``   *eccentricity penalty* — AbsRel in the outermost populated bin divided
-          by AbsRel in the innermost. How much worse is the periphery than the
-          centre, in the metric a user reads.
+  ``theta``   the incidence angle of the ray off the optical axis. The physical
+              direction, and the only axis on which the rectified and raw arms
+              mean the same thing.
+  ``radius``  distance from the optical centre in the image plane, in half
+              widths. Where in the *picture*. Each view measures it in its own
+              image plane, so the same radius is a different direction in each.
 
-``drift`` *radial scale drift* — ``anchored_ratio`` (median gt/pred after the
-          model's own global affine is fitted **on the innermost bin alone**) in
-          the innermost bin divided by the outermost. Above 1.0 the model
-          over-predicts depth toward the rim relative to the centre; below 1.0 it
-          under-predicts. ``radial`` protocol only — see ``summarise``.
-
-Report both, because they can disagree and the disagreement is not noise. The
-per-bin AbsRel is a *residual after a global fit*, and a least-squares affine is
-free to choose the radius at which it is right — so a cleanly monotone radial
-error comes out U-shaped, worst at both ends, and ``pen`` (an end-to-end ratio)
-can read close to 1.0 while the model is in fact bending badly.
-
-Measured, on the analytic stand-in given a known ``+0.6 theta^2`` bias: the
-radial AbsRel curve comes out a bowl — ``0.175 0.153 0.112 0.047 0.081 0.172`` on
-one small run — so ``pen`` reads 0.98, "the rim is as good as the centre", for a
-model wrong by 50% at the rim. ``drift`` on the same input recovers the injected
-bias; ``tests/test_end_to_end.py`` asserts exactly that, against a value derived
-independently from the bin geometry, and needs no data to reproduce. ``pen`` says
-how the periphery feels to a downstream user after they fit a scale; ``drift``
-says what the model actually did.
-
-Absolute AbsRel is comparable only **within an alignment protocol**. Three of
-the four models here share one (VGGT-1B, VGGT-Omega and DA3 are all scored under
-the same depth-space affine) and can be read against each other directly;
-Depth-Anything V2 is scored under a disparity-space affine, because that is the
-protocol it was built for, and no column reconciles the two. ``pen`` *is*
-cross-comparable throughout, being a within-model ratio, so the alignment
-protocol cancels. ``drift`` is a within-model ratio as well and so is comparable
-to other ``drift``s — but it is fitted differently from every other column, so it
-never belongs in the same sentence as a ``pen``.
-
-Beside the binned tables the radial runs also carry **continuous profiles** —
-the same two coordinates at 1 deg and 0.025 half-widths — off the same frozen
-alignment fit. They answer the shape question the bins cannot: where a rise
-starts, whether it is a ramp or a knee, whether the models turn over together.
-They are pooled over frames rather than averaged per frame, so they are a
-different estimator from the tables and must not be quoted as one; see
+Both are read at two resolutions off one frozen alignment fit: six coarse bins
+for the tables, and a continuous profile (1 deg, 0.025 half-widths) for the
+curves. The profiles are pooled over frames and the tables are averaged per
+frame, so they are different estimators of the same thing — see
 ``geometry.fine_profile``.
+
+``pen`` summarises a curve as AbsRel(outermost bin) / AbsRel(innermost). It is a
+within-model ratio, so it is comparable across models even though absolute
+AbsRel is comparable only within an alignment protocol: VGGT-1B, VGGT-Omega and
+DA3 share a depth-space affine and can be read against each other directly,
+while Depth-Anything V2 is scored in disparity space because that is the
+protocol it was built for.
+
+``pen`` is not on its own a statement about field position. Every metric here is
+relative and so grows with depth, so a bin that is nearer scores worse for that
+reason alone. The per-bin GT depth is therefore reported beside every curve —
+measured on the same frames, never modelled — and ``pen_ds`` re-scores each bin
+at the frame's own depth mix to reduce the confound (``standardise_by_depth``;
+a reduction, not a removal).
+
+Three figures come out, and only three: ``AbsRel``, ``delta1``, ``gt_depth``.
+Each carries every model, both views, both streams and both axes.
 """
 from __future__ import annotations
 
@@ -116,7 +105,7 @@ def _fully_imaged(cells: Sequence[dict]) -> List[dict]:
 
 
 def summarise(run: dict) -> dict:
-    """``pen``/``drift`` plus the span they were measured over.
+    """``pen``/``pen_ds`` plus the span they were measured over.
 
     Returns NaNs rather than guessing when fewer than two bins are populated —
     which is the normal state of the rectified arm's outer bins, and must read
@@ -132,9 +121,9 @@ def summarise(run: dict) -> dict:
         clipped = len(cells) - len(clean)
         cells = clean
     if len(cells) < 2:
-        return dict(pen=float("nan"), pen_ds=float("nan"), drift=float("nan"),
-                    lo=float("nan"), hi=float("nan"), n_cells=len(cells),
-                    clipped=clipped)
+        return dict(pen=float("nan"), pen_ds=float("nan"),
+                    drift=float("nan"), lo=float("nan"), hi=float("nan"),
+                    n_cells=len(cells), clipped=clipped)
     a, b = cells[0], cells[-1]
     key = "bin_lo" if "bin_lo" in a else ("theta_lo" if "theta_lo" in a else "tilt")
     pen = (b["AbsRel"] / a["AbsRel"]) if a["AbsRel"] > 1e-9 else float("nan")
@@ -149,16 +138,17 @@ def summarise(run: dict) -> dict:
             and a["AbsRel_ds"] > 1e-9 \
             and min(a.get("ds_frac", 1.0), b.get("ds_frac", 1.0)) >= MIN_DS_FRAC:
         pen_ds = b["AbsRel_ds"] / a["AbsRel_ds"]
+    # `drift` is no longer part of the ADT-FOV experiment and no ADT table
+    # prints it: `bin_by` stopped emitting `anchored_ratio`, so it is NaN there
+    # by construction rather than by a flag anyone could flip back. It survives
+    # here only for `datasets_egosynth`, whose pooled path sets `anchored_ratio`
+    # itself and reads this. Radial only — every window is a separate forward
+    # pass of an up-to-scale model, so a window-to-window ratio would compare
+    # two arbitrary constants.
     drift = float("nan")
-    # `drift` exists only for the radial protocol. Its bins come from ONE forward
-    # pass, so the model's arbitrary global scale is shared and cancels in a
-    # bin-to-bin ratio. Every window is a SEPARATE forward pass, and every model
-    # here is up to scale, so a window-to-window ratio compares two arbitrary
-    # constants: measured on the first real run, the same models' per-window raw
-    # ratios sit at 2.87-3.14 with no anchoring possible between them. Reporting
-    # a number there would be reporting the models' self-scaling as distortion.
     if run["protocol"] == "radial" \
-            and _finite(a.get("anchored_ratio")) and _finite(b.get("anchored_ratio")) \
+            and _finite(a.get("anchored_ratio")) \
+            and _finite(b.get("anchored_ratio")) \
             and abs(b["anchored_ratio"]) > 1e-9:
         drift = a["anchored_ratio"] / b["anchored_ratio"]
     return dict(pen=pen, pen_ds=pen_ds, drift=drift,
@@ -224,7 +214,7 @@ def _table(runs: List[dict], protocol: str, view: str, metric: str,
             ("deg off-axis" if protocol == "radial"
              else "window aim (deg off-axis)"))
     head = (f"{'model':14s}{'stream':10s}" + "".join(f"{c:>8s}" for c in cols)
-            + f"{'pen':>8s}{'pen_ds':>8s}{'drift*':>8s}")
+            + f"{'pen':>8s}{'pen_ds':>8s}")
     lines = [f"  {protocol.upper()} · {view} · {metric}"
              + (" · by radius" if axis == "radius" else "")
              + f"   ({unit})", "  " + "-" * len(head),
@@ -235,7 +225,7 @@ def _table(runs: List[dict], protocol: str, view: str, metric: str,
         row = f"{r['model']:14s}{r['stream']:10s}"
         for c in cells:
             row += _fmt(c.get(metric), 3, 8) if c.get("n_frames", 0) else f"{'—':>8s}"
-        row += _fmt(s["pen"], 2, 8) + _fmt(s["pen_ds"], 2, 8) + _fmt(s["drift"], 3, 8)
+        row += _fmt(s["pen"], 2, 8) + _fmt(s["pen_ds"], 2, 8)
         lines.append("  " + row)
     return lines + [""]
 
@@ -418,22 +408,10 @@ def render_report(payload: dict) -> str:
         "           the frames: what it would score at the other bins' depths is simply",
         "           not in this data. Averaging only the frames that did work would be",
         "           averaging the frames with the widest depth range — see ds_frac.",
-        "  drift* = OUTSIDE THE PROTOCOL, and the only column that is. anchored_ratio",
-        "           fits the model's own affine on the INNERMOST BIN ALONE, then takes",
-        "           median(gt/pred) per bin; drift* is innermost / outermost, > 1 =",
-        "           over-predicts depth toward the rim. It is kept because it separates",
-        "           'the model bends depth with radius' from 'the model is just noisier",
-        "           at the rim', which no whole-frame-fitted column can do — a global",
-        "           affine spends itself on the radial trend and reads 0.965 for a real",
-        "           +0.6*theta^2 bias. Read it as a diagnostic, not as a headline, and",
-        "           never mix it with the columns above when quoting a protocol.",
-        "           Radial only: window cells are separate forward passes of up-to-scale",
-        "           models, so a window-to-window ratio compares two arbitrary constants.",
         "  Absolute AbsRel is comparable only WITHIN an alignment protocol — see the",
         "  MODELS block: models sharing an `align=` may be read against each other,",
         "  one scored differently may not. pen is comparable across all of them,",
-        "  being a within-model ratio. drift* is a within-model ratio too, but of a",
-        "  differently-fitted quantity — compare it only against other drift*.",
+        "  being a within-model ratio.",
         "",
     ]
     for protocol in ("radial", "window"):
@@ -486,7 +464,7 @@ def write_csv(payload: dict, path: str) -> str:
                     "protocol", "stream", "view", "axis", "cell",
                     "theta_lo", "theta_hi",
                     "tilt", "n_frames", "n_px_mean"] + list(_CSV_METRICS)
-                   + ["pen", "pen_ds", "drift"])
+                   + ["pen", "pen_ds"])
         for r in payload["runs"]:
             axis = "theta" if _cells_of(r, "theta") else "radius"
             s = summarise(dict(r, _axis=axis))
@@ -503,37 +481,68 @@ def write_csv(payload: dict, path: str) -> str:
                            + [f"{c[k]:.6f}" if _finite(c.get(k)) else ""
                               for k in _CSV_METRICS]
                            + [f"{s['pen']:.4f}" if _finite(s["pen"]) else "",
-                              f"{s['pen_ds']:.4f}" if _finite(s["pen_ds"]) else "",
-                              f"{s['drift']:.4f}" if _finite(s["drift"]) else ""])
+                              f"{s['pen_ds']:.4f}" if _finite(s["pen_ds"]) else ""])
     return path
 
 
 # --------------------------------------------------------------------------- #
-# Figures
+# Figures — three, and only three
 # --------------------------------------------------------------------------- #
 
 _STREAM_ORDER = {"synthetic": 0, "real": 1}
 _VIEW_ORDER = {"fisheye": 0, "rect": 1}
-_AXIS_NOTE = {
-    "radius": ("each view measures radius in its OWN image plane: the same x is a "
-               "different direction left vs right. Compare views on theta."),
-    "window": "",
-    "theta": ("theta is the ray direction, so left and right are like-for-like. "
-              "Ringed = bin held up by a corner sliver."),
-}
 
-_WINDOW_NOTE = ("the window's FOV is held fixed and only its aim moves. "
-                "Ringed = the lens clips that aim, so it is not a like-for-like "
-                "point and does not set pen.")
+#: The four panels every figure carries, left to right: both views on the ray
+#: axis, then both views on the image-plane axis. Reading across a row is the
+#: whole experiment for one stream.
+_PANELS = (("fisheye", "theta"), ("rect", "theta"),
+           ("fisheye", "radius"), ("rect", "radius"))
+
+_AXIS_LABEL = {"theta": "incidence angle (deg)",
+               "radius": "distance from optical centre (half-widths)"}
+
+#: Rendered per metric: the key in a bin/profile, the axis label, and whether
+#: lower is better (used only for the caption).
+_FIGURES = (
+    ("AbsRel", "AbsRel   (lower is better)"),
+    ("delta1", r"$\delta_1$   (higher is better)"),
+)
+
+
+def _profile_of(run: dict, axis: str) -> Optional[dict]:
+    p = (run.get("profiles") or {}).get(axis)
+    return p if p and p.get("n") else None
+
+
+def _bin_points(run: dict, axis: str, key: str):
+    """Coarse-bin centres and values, with the unreliable ones flagged."""
+    cells = _cells_of(run, axis)
+    xs, ys, weak = [], [], []
+    for c in cells:
+        if not _finite(c.get(key)) or not c.get("n_frames", 0):
+            continue
+        xs.append(0.5 * (_lo(c) + _hi(c)))
+        ys.append(c[key])
+        weak.append(c.get("n_px_mean", 1e9) < THIN_BIN_PX)
+    return xs, ys, weak
 
 
 def write_figures(payload: dict, out_dir: str) -> List[str]:
-    """Per-bin curves against eccentricity, one panel per view x stream.
+    """Three pictures: AbsRel, delta1, and the GT depth they were measured on.
 
-    A panel carries one curve per model and nothing else: eight curves in a
-    shared panel could not be read, and the stream is the one axis where the
-    levels genuinely differ (the sensor sets the level), so it gets its own row
-    rather than a line style. Skipped without matplotlib.
+    Each is one page carrying every model, both views, both streams and both
+    axes — because the experiment's question ("how does accuracy vary with
+    position in the field") is not answered by any one of those slices alone,
+    and splitting it across a dozen files invites quoting one panel as the
+    result.
+
+    The line is the **continuous profile** where a run has one; the markers are
+    the **coarse bins**. Showing both is deliberate: the curve has the shape and
+    the bins are what the tables quote, and where they disagree the reader
+    should see it rather than be told. Bins held up by corner slivers are drawn
+    hollow, and a run with no profile falls back to the bins alone.
+
+    Skipped entirely without matplotlib.
     """
     try:
         import matplotlib
@@ -542,186 +551,149 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
     except ImportError:
         return []
 
-    os.makedirs(out_dir, exist_ok=True)
-    # What counts as "too thin to be a measurement" is a count of samples, and
-    # the two datasets count different things: ADT bins hold pixels of a dense
-    # map (thousands), ego-synth bins hold pooled SLAM points (hundreds). One
-    # constant cannot serve both, so the run states its own.
-    thin_px = float(payload.get("config", {}).get("thin_bin_px", THIN_BIN_PX))
-    written = []
-    axes_spec = [("radial", "theta", "incidence angle from the optical axis (deg)"),
-                 ("radial", "radius",
-                  "distance from the optical centre (half-widths; 1.0 = edge midpoint)"),
-                 ("window", "theta", "window aim (deg off-axis)")]
-    for protocol, axis, xlab in axes_spec:
-        # raw_scale_ratio, NOT scale_ratio: the latter is measured on the
-        # aligned map and inherits the same bowl the alignment puts into
-        # AbsRel, so plotting it would show the distorted column under the
-        # figure that exists to show the undistorted one.
-        for metric, ylab in (
-                ("AbsRel", "AbsRel  (lower is better)"),
-                ("delta1", r"$\delta_1$  (higher is better)"),
-                ("AbsRel_ds", "AbsRel, depth-standardised  (lower is better)"),
-                ("delta1_ds", r"$\delta_1$, depth-standardised"),
-                ("raw_scale_ratio", "median(gt/pred), unaligned")):
-            sel = [r for r in payload["runs"] if r["protocol"] == protocol]
-            if axis == "radius":
-                sel = [r for r in sel if "radius_bins" in r]
-            if not sel:
-                continue
-            views = sorted({r["view"] for r in sel},
-                           key=lambda v: _VIEW_ORDER.get(v, 9))
-            streams = sorted({r["stream"] for r in sel},
-                             key=lambda s: _STREAM_ORDER.get(s, 9))
-            fig, grid = plt.subplots(len(streams), len(views),
-                                     figsize=(5.4 * len(views), 3.6 * len(streams)),
-                                     squeeze=False, sharey=True, sharex="col")
-            models = sorted({r["model"] for r in sel})
-            cmap = {m: plt.get_cmap("tab10")(i % 10) for i, m in enumerate(models)}
-            for row, stream in enumerate(streams):
-                for col, view in enumerate(views):
-                    ax = grid[row][col]
-                    for r in sorted(sel, key=lambda r: r["model"]):
-                        if r["view"] != view or r["stream"] != stream:
-                            continue
-                        _, cells = _axis(r, axis)
-                        xs = [(0.5 * (_lo(c) + _hi(c))
-                               if protocol == "radial" else c["tilt"]) for c in cells]
-                        ys = [c.get(metric, float("nan")) for c in cells]
-                        pts = [(x, y) for x, y in zip(xs, ys)
-                               if _finite(y) and _finite(x)]
-                        if len(pts) < 2:
-                            continue
-                        ax.plot([p[0] for p in pts], [p[1] for p in pts],
-                                "-", marker="o", ms=4, lw=1.6,
-                                color=cmap[r["model"]], label=r["model"])
-                        # Ring the cells that are not clean measurements: a bin
-                        # held up by a few corner pixels, and a window aim the
-                        # lens clips. Both are still plotted — they happened —
-                        # but neither may be read as a like-for-like point.
-                        thin = [(x, y) for (x, y), c in zip(zip(xs, ys), cells)
-                                if _finite(y)
-                                and (c.get("n_px_mean", 1e9) < thin_px
-                                     or c.get("in_cone_frac", 1.0)
-                                     < MIN_CLEAN_CONE_FRAC)]
-                        if thin:
-                            ax.plot([t[0] for t in thin], [t[1] for t in thin], "o",
-                                    ms=11, mfc="none", mec=cmap[r["model"]], mew=1.2)
-                    ax.set_title(f"{view}  ·  {stream}", fontsize=10)
-                    ax.grid(alpha=0.3)
-                    if metric == "raw_scale_ratio":
-                        ax.axhline(1.0, color="0.5", lw=0.8, zorder=0)
-                    if row == len(streams) - 1:
-                        ax.set_xlabel(xlab, fontsize=9)
-                grid[row][0].set_ylabel(ylab, fontsize=9)
-            # A run from before this metric existed draws no curves at all.
-            # An empty PNG in the output directory reads as "measured, and
-            # nothing there"; no PNG reads as "not measured". Say the latter.
-            if not any(ax.lines for r in grid for ax in r):
-                plt.close(fig)
-                continue
-            handles, labels = grid[0][0].get_legend_handles_labels()
-            if handles:
-                fig.legend(handles, labels, loc="lower center", ncol=len(models),
-                           fontsize=8, frameon=False)
-            note = (_WINDOW_NOTE if protocol != "radial"
-                    else _AXIS_NOTE.get(axis, ""))
-            fig.suptitle(f"ADT-FOV · {metric} vs {axis} · {protocol} protocol · "
-                         f"split {payload['digest']}\n{note}", fontsize=10)
-            fig.tight_layout(rect=(0, 0.06, 1, 0.93))
-            name = f"{protocol}_{metric}" + ("_radius" if axis == "radius" else "")
-            path = os.path.join(out_dir, f"{name}.png")
-            fig.savefig(path, dpi=150)
-            plt.close(fig)
-            written.append(path)
-    return written
-
-
-_PROFILE_LABEL = {
-    "theta": "incidence angle from the optical axis (deg)",
-    "radius": "distance from the optical centre (half-widths)",
-}
-
-
-def write_profile_figures(payload: dict, out_dir: str) -> List[str]:
-    """The continuous curves: error against the coordinate itself, not against
-    a bin index. One panel per view x stream, one line per model, plus the
-    bin's own GT depth underneath — because a rise that tracks the depth curve
-    is a depth result until the standardised columns say otherwise.
-    """
-    try:
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-    except ImportError:
-        return []
-    sel = [r for r in payload["runs"] if r.get("profiles")]
-    if not sel:
+    rad = [r for r in payload["runs"] if r["protocol"] == "radial"]
+    if not rad:
         return []
     os.makedirs(out_dir, exist_ok=True)
-    written = []
-    axes_present = sorted({a for r in sel for a in r["profiles"]})
-    views = sorted({r["view"] for r in sel}, key=lambda v: _VIEW_ORDER.get(v, 9))
-    streams = sorted({r["stream"] for r in sel},
+    streams = sorted({r["stream"] for r in rad},
                      key=lambda s: _STREAM_ORDER.get(s, 9))
-    models = sorted({r["model"] for r in sel})
-    for axis in axes_present:
-        for metric, ylab in (("AbsRel", "AbsRel  (lower is better)"),
-                             ("delta1", r"$\delta_1$  (higher is better)")):
-            fig, grid = plt.subplots(len(streams), len(views),
-                                     figsize=(5.4 * len(views), 3.7 * len(streams)),
-                                     squeeze=False, sharey=True, sharex="col")
-            cmap = {m: plt.get_cmap("tab10")(i % 10) for i, m in enumerate(models)}
-            drawn = False
-            for row, stream in enumerate(streams):
-                for col, view in enumerate(views):
-                    ax = grid[row][col]
-                    depth_ax = None
-                    for r in sorted(sel, key=lambda r: r["model"]):
-                        p = r["profiles"].get(axis)
-                        if r["view"] != view or r["stream"] != stream or not p:
-                            continue
-                        x = np.asarray(p["centre"], float)
-                        y = np.asarray(p[metric], float)
-                        n = np.asarray(p["n"], float)
-                        # A fine bin with almost nothing in it is a spike, not a
-                        # measurement; drop it rather than draw it.
+    models = sorted({r["model"] for r in rad})
+    written = []
+
+    for key, ylab in _FIGURES:
+        fig, grid = plt.subplots(len(streams), len(_PANELS),
+                                 figsize=(4.6 * len(_PANELS), 3.6 * len(streams)),
+                                 squeeze=False, sharey=True)
+        cmap = {m: plt.get_cmap("tab10")(i % 10) for i, m in enumerate(models)}
+        for row, stream in enumerate(streams):
+            for col, (view, axis) in enumerate(_PANELS):
+                ax = grid[row][col]
+                for r in sorted(rad, key=lambda r: r["model"]):
+                    if r["view"] != view or r["stream"] != stream:
+                        continue
+                    colour = cmap[r["model"]]
+                    prof = _profile_of(r, axis)
+                    if prof:
+                        x = np.asarray(prof["centre"], float)
+                        y = np.asarray(prof.get(key, []), float)
+                        n = np.asarray(prof["n"], float)
                         keep = np.isfinite(y) & (n >= PROFILE_MIN_PX)
-                        if keep.sum() < 2:
-                            continue
-                        drawn = True
-                        ax.plot(x[keep], y[keep], "-", lw=1.7,
-                                color=cmap[r["model"]], label=r["model"])
-                        if depth_ax is None:
-                            depth_ax = ax.twinx()
-                            depth_ax.plot(x[keep], np.asarray(p["gt_mean"],
-                                                              float)[keep],
-                                          ":", lw=1.4, color="0.5")
-                            depth_ax.set_ylabel("mean GT depth, m (dotted)",
-                                                color="0.5", fontsize=8)
-                            depth_ax.tick_params(colors="0.5", labelsize=7)
-                    ax.set_title(f"{view}  ·  {stream}", fontsize=10)
-                    ax.grid(alpha=0.3)
-                    if row == len(streams) - 1:
-                        ax.set_xlabel(_PROFILE_LABEL.get(axis, axis), fontsize=9)
-                grid[row][0].set_ylabel(ylab, fontsize=9)
-            if not drawn:
-                plt.close(fig)
-                continue
-            handles, labels = grid[0][0].get_legend_handles_labels()
-            if handles:
-                fig.legend(handles, labels, loc="lower center", ncol=len(models),
-                           fontsize=8, frameon=False)
-            fig.suptitle(
-                f"ADT-FOV · {metric} vs {axis}, CONTINUOUS · split "
-                f"{payload['digest']}\npooled over frames (pixel-weighted), so "
-                f"it is not the coarse table at finer resolution", fontsize=10)
-            fig.tight_layout(rect=(0, 0.06, 1, 0.92))
-            path = os.path.join(out_dir, f"profile_{metric}_{axis}.png")
-            fig.savefig(path, dpi=150)
-            plt.close(fig)
-            written.append(path)
+                        if keep.sum() >= 2:
+                            ax.plot(x[keep], y[keep], "-", lw=1.7, color=colour,
+                                    label=r["model"], zorder=3)
+                    bx, by, weak = _bin_points(r, axis, key)
+                    if bx:
+                        # Without a profile the bins ARE the curve, so join
+                        # every one of them — including the unreliable ones,
+                        # which are then ringed on top rather than orphaned off
+                        # the end of a line that stops short of them.
+                        ax.plot(bx, by, marker="o", ms=5, color=colour,
+                                ls="none" if prof else "--", lw=1.2, zorder=4,
+                                label=None if prof else r["model"])
+                        if any(weak):
+                            ax.plot([v for v, w in zip(bx, weak) if w],
+                                    [v for v, w in zip(by, weak) if w],
+                                    marker="o", mfc="none", mec=colour, mew=1.3,
+                                    ls="none", ms=9, zorder=5)
+                ax.set_title(f"{view} · {axis}", fontsize=10)
+                ax.grid(alpha=0.3)
+                if row == len(streams) - 1:
+                    ax.set_xlabel(_AXIS_LABEL[axis], fontsize=8.5)
+            grid[row][0].set_ylabel(f"{stream}\n{ylab}", fontsize=9)
+        handles, labels = grid[0][0].get_legend_handles_labels()
+        if handles:
+            fig.legend(handles, labels, loc="lower center", ncol=len(models),
+                       fontsize=9, frameon=False)
+        fig.suptitle(
+            f"ADT-FOV · {key} vs position in the field · split "
+            f"{payload['digest']} · {payload['n_frames']} frames\n"
+            "line = continuous profile, dots = the six binned values, hollow = "
+            "bin held up by corner slivers.  theta is comparable across views; "
+            "radius is not.", fontsize=10)
+        fig.tight_layout(rect=(0, 0.07, 1, 0.90))
+        path = os.path.join(out_dir, f"{key}.png")
+        fig.savefig(path, dpi=150)
+        plt.close(fig)
+        written.append(path)
+
+    written += _write_depth_figure(payload, rad, out_dir, streams, plt)
     return written
+
+
+def _write_depth_figure(payload, rad, out_dir, streams, plt) -> List[str]:
+    """The third picture: the GT depth every curve above was divided by.
+
+    Not a score and not a model — the measured depth of the same frames, with a
+    +/- 1 sigma band, because a bin whose depth ranges over metres and one that
+    is a flat wall tell very different stories about the same median. It is here
+    because AbsRel and delta1 are *relative*: a bin that is nearer scores worse
+    for that reason alone, so a rise in the first two figures is a statement
+    about field position only insofar as this one is flat.
+
+    GT is shared by every model and both streams, so one curve per view is the
+    whole story; the panels are per view x axis.
+    """
+    seen, picks = set(), []
+    for r in sorted(rad, key=lambda r: (r["view"], r["input_size"])):
+        if r["view"] in seen:
+            continue
+        seen.add(r["view"])
+        picks.append(r)
+    if not picks:
+        return []
+    panels = [(r, axis) for axis in ("theta", "radius") for r in picks]
+    fig, grid = plt.subplots(1, len(panels), figsize=(4.6 * len(panels), 3.9),
+                             squeeze=False, sharey=True)
+    any_drawn = False
+    for ax, (r, axis) in zip(grid[0], panels):
+        prof = _profile_of(r, axis)
+        drew = False
+        if prof and "gt_std" in prof:
+            x = np.asarray(prof["centre"], float)
+            m = np.asarray(prof["gt_mean"], float)
+            sd = np.asarray(prof["gt_std"], float)
+            n = np.asarray(prof["n"], float)
+            k = np.isfinite(m) & (n >= PROFILE_MIN_PX)
+            if k.sum() >= 2:
+                ax.fill_between(x[k], (m - sd)[k], (m + sd)[k], alpha=0.22,
+                                color="#1f77b4", lw=0)
+                ax.plot(x[k], m[k], "-", lw=2.0, color="#1f77b4",
+                        label="pooled mean $\\pm$ 1 s.d.")
+                drew = any_drawn = True
+        bx, by, _ = _bin_points(r, axis, "gt_median")
+        if bx:
+            any_drawn = True
+            ax.plot(bx, by, "o--" if not drew else "o", ms=5, lw=1.2,
+                    color="#c1272d", label="binned median")
+            sx, sy, _ = _bin_points(r, axis, "gt_std")
+            if sy and drew is False:
+                ax.errorbar(bx, by, yerr=sy, fmt="none", ecolor="#c1272d",
+                            elinewidth=1.0, capsize=3)
+        ax.set_title(f"{r['view']} · {axis}", fontsize=10)
+        ax.set_xlabel(_AXIS_LABEL[axis], fontsize=8.5)
+        ax.grid(alpha=0.3)
+        ax.set_ylim(bottom=0)
+    # A run from before gt_median existed has no depth to show. No picture at
+    # all reads as "not measured"; an empty one reads as "measured, and there
+    # was nothing there".
+    if not any_drawn:
+        plt.close(fig)
+        return []
+    grid[0][0].set_ylabel("ground-truth depth (m)", fontsize=9)
+    h, l = grid[0][0].get_legend_handles_labels()
+    if h:
+        fig.legend(h, l, loc="lower center", ncol=2, fontsize=9, frameon=False)
+    fig.suptitle(
+        f"ADT-FOV · the GT depth those curves were divided by · split "
+        f"{payload['digest']} · {payload['n_frames']} frames\n"
+        "measured on the scored frames, identical for every model and both "
+        "streams. AbsRel and $\\delta_1$ are relative, so a bin that is nearer "
+        "scores worse for that reason alone.", fontsize=10)
+    fig.tight_layout(rect=(0, 0.10, 1, 0.88))
+    path = os.path.join(out_dir, "gt_depth.png")
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return [path]
 
 
 def write_all(payload: dict, out_dir: str) -> Dict[str, object]:
@@ -733,6 +705,4 @@ def write_all(payload: dict, out_dir: str) -> Dict[str, object]:
         fh.write(text)
     return {"report": txt,
             "csv": write_csv(payload, os.path.join(out_dir, "results.csv")),
-            "figures": (write_figures(payload, os.path.join(out_dir, "figures"))
-                        + write_profile_figures(payload,
-                                                os.path.join(out_dir, "figures")))}
+            "figures": write_figures(payload, os.path.join(out_dir, "figures"))}

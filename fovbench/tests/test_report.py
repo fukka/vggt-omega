@@ -13,13 +13,14 @@ from fovbench import report as R  # noqa: E402
 EDGES = [(0, 10), (10, 20), (20, 30), (30, 40), (40, 50), (50, 55)]
 
 
-def _bin(lo, hi, absrel, scale_ratio=1.0, n_frames=4, n_px=5000.0):
+def _bin(lo, hi, absrel, scale_ratio=1.0, n_frames=4, n_px=5000.0, **extra):
     return dict(theta_lo=lo, theta_hi=hi, AbsRel=absrel, delta1=1 - absrel,
                 scale_ratio=scale_ratio, raw_scale_ratio=scale_ratio,
                 anchored_ratio=scale_ratio,
                 n_frames=n_frames, n_px_mean=n_px,
                 SqRel=absrel, RMSE=absrel, RMSElog=absrel, log10=absrel,
-                delta2=1.0, delta3=1.0, n_valid_total=int(n_px * n_frames))
+                delta2=1.0, delta3=1.0, n_valid_total=int(n_px * n_frames),
+                **extra)
 
 
 def _run(model="vggt_1b", stream="synthetic", view="fisheye", bins=None, **kw):
@@ -48,15 +49,6 @@ def test_penalty_is_outer_over_inner_absrel():
     s = R.summarise(_run())
     assert s["pen"] == pytest.approx((0.05 + 0.03 * 5) / 0.05)
     assert s["lo"] == 0 and s["hi"] == 50
-
-
-def test_drift_reads_over_prediction_toward_the_rim_as_greater_than_one():
-    """anchored_ratio = median(gt/pred) after the model's affine is fitted on the
-    innermost bin. Falling with eccentricity means pred is growing relative to
-    GT, i.e. the model pushes the periphery away."""
-    s = R.summarise(_run())
-    assert s["drift"] > 1.0
-    assert s["drift"] == pytest.approx(1.0 / (1.0 - 0.05 * 5))
 
 
 def test_a_flat_model_scores_penalty_one():
@@ -99,10 +91,10 @@ def test_window_runs_are_summarised_on_tilt():
     assert math.isnan(s["drift"])
 
 
-def test_report_text_names_the_split_and_both_headline_columns():
+def test_report_text_names_the_split_and_its_headline_column():
     txt = R.render_report(_payload([_run()]))
     assert "abc123def456" in txt
-    assert "pen" in txt and "drift" in txt
+    assert "pen" in txt
     # Cross-model comparability is scoped to the alignment protocol, and the
     # reader is pointed at the column that says which is which — a blanket
     # "not comparable" would also forbid the comparisons that ARE valid.
@@ -145,18 +137,6 @@ def test_write_all_emits_every_artifact(tmp_path):
         assert os.path.isfile(f)
 
 
-def test_figures_plot_the_unaligned_column_not_the_aligned_one(tmp_path):
-    """Regression: the figure that exists to show the alignment-free read-out
-    must not plot ``scale_ratio``, which is measured on the ALIGNED map and
-    carries the same bowl as AbsRel. Only the filename made the two look alike."""
-    figs = R.write_figures(_payload([_run(), _run(stream="real")]), str(tmp_path))
-    if not figs:
-        pytest.skip("matplotlib not installed")
-    names = {os.path.basename(f) for f in figs}
-    assert "radial_raw_scale_ratio.png" in names
-    assert not any("radial_scale_ratio.png" == n for n in names)
-
-
 def test_coverage_table_keeps_a_row_per_render_size():
     """Views go to each model at its own token grid, so per-bin pixel counts are
     NOT shared across models. Collapsing them would print one model's coverage
@@ -181,34 +161,6 @@ def test_report_shouts_when_a_requested_model_did_not_run():
     head = txt.split("RADIAL")[0]
     assert "NOT RUN: vggt_omega" in head and "NOT RUN: da3_large" in head
     assert "2 of 4" in head
-
-
-def test_figures_are_emitted_for_both_binning_axes(tmp_path):
-    """Distance from the optical centre is the axis that was asked for; the
-    incidence angle is the one on which the two views mean the same thing. Both
-    are produced, from the same single alignment fit."""
-    r = _run()
-    r["radius_bins"] = [dict(b, bin_lo=lo, bin_hi=hi) for b, (lo, hi) in
-                        zip(r["bins"], [(0, .2), (.2, .4), (.4, .6),
-                                        (.6, .8), (.8, 1.), (1., 1.45)])]
-    figs = R.write_figures(_payload([r]), str(tmp_path))
-    if not figs:
-        pytest.skip("matplotlib not installed")
-    names = {os.path.basename(f) for f in figs}
-    assert "radial_AbsRel.png" in names
-    assert "radial_AbsRel_radius.png" in names
-    assert "radial_delta1_radius.png" in names
-
-
-def test_report_marks_drift_as_outside_the_protocol():
-    """The protocol is one whole-frame fit per frame, with binning applied
-    afterwards by masking. `drift` is the single column that departs from it —
-    it anchors on the innermost bin — and the report has to say so where the
-    number is read, not in a docstring."""
-    txt = R.render_report(_payload([_run()]))
-    assert "drift*" in txt
-    assert "OUTSIDE THE PROTOCOL" in txt
-    assert "fitted ONCE per frame" in txt
 
 
 def _ds_bins(inner_ds, outer_ds, inner_frac=1.0, outer_frac=1.0):
@@ -281,3 +233,42 @@ def test_radial_bins_are_never_dropped_for_cone_fraction():
     s = R.summarise(r)
     assert s["clipped"] == 0
     assert math.isfinite(s["pen"])
+
+
+def test_exactly_three_figures_are_written_and_they_are_the_stated_three(tmp_path):
+    """The experiment reports AbsRel and delta1 against position in the field,
+    and the GT depth they were divided by. Three pictures, no more: a dozen
+    files invites quoting one panel as the result."""
+    out = str(tmp_path / "figs")
+    written = R.write_figures(_payload([_run(view=v, stream=s)
+                                        for v in ("fisheye", "rect")
+                                        for s in ("synthetic", "real")]), out)
+    names = {os.path.basename(p) for p in written}
+    assert names == {"AbsRel.png", "delta1.png"}      # no depth in this fixture
+
+
+def test_no_table_or_legend_mentions_drift_any_more():
+    """`drift` was dropped from this experiment. The number survives in the
+    JSON only because `datasets_egosynth` cross-checks against it; nothing the
+    reader of an ADT report sees may mention it."""
+    txt = R.render_report(_payload([_run()]))
+    assert "drift" not in txt.lower()
+
+
+def test_the_depth_figure_is_drawn_from_bins_alone_without_profiles(tmp_path):
+    """A run from before the continuous profiles existed still has per-bin
+    gt_median, and the depth picture is the one the reader needs to interpret
+    the other two."""
+    bins = [_bin(lo, hi, 0.05, gt_median=3.0 - 0.2 * i)
+            for i, (lo, hi) in enumerate(EDGES)]
+    written = R.write_figures(_payload([_run(bins=bins)]), str(tmp_path / "f"))
+    assert any(os.path.basename(p) == "gt_depth.png" for p in written)
+
+
+def test_no_depth_figure_when_the_run_never_measured_depth(tmp_path):
+    """The picture exists to show the MEASURED depth. A run that predates
+    gt_median has none, and an empty page would read as "measured, and there was
+    nothing there"."""
+    written = R.write_figures(_payload([_run()]), str(tmp_path / "f"))
+    names = {os.path.basename(p) for p in written}
+    assert names == {"AbsRel.png", "delta1.png"}
