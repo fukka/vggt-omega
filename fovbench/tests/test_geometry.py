@@ -398,6 +398,97 @@ def test_gt_median_exposes_the_depth_confound_in_absrel():
                for a, d in zip(absrel, depth))
 
 
+def _depth_falls_outward(const_err=0.10, n=160, seed=0):
+    """A scene whose radial AbsRel penalty is ENTIRELY depth: a flat absolute
+    error, and a depth that falls with eccentricity. The depth spread is
+    multiplicative and identical everywhere, so the bins overlap in depth and
+    the question "what would this bin score at the frame's depth mix" has an
+    answer. ``mask`` stops at 55 deg so the frame and the bins cover the same
+    directions, as the fisheye cone does in the real pipeline."""
+    rng = np.random.default_rng(seed)
+    c = (n - 1) / 2
+    ys, xs = np.mgrid[0:n, 0:n]
+    theta = (np.hypot(xs - c, ys - c) / c * 55.0).astype(np.float32)
+    gt = ((4.0 - 0.025 * theta)
+          * rng.uniform(0.4, 2.5, theta.shape)).astype(np.float32)
+    return (gt + const_err).astype(np.float32), gt, theta < 55.0, theta
+
+
+def _pen(bins, key):
+    v = [b[key] for b in bins]
+    return v[-1] / v[0]
+
+
+def test_depth_standardising_removes_most_of_a_purely_depth_penalty():
+    """The whole point. A model with a flat 10 cm error and no radial behaviour
+    whatever scores a rising AbsRel curve because the scene gets nearer toward
+    the rim. Standardising to the frame's own depth mix must take most of that
+    away — most, not all: see ``test_more_strata_correct_harder...``."""
+    pred, gt, mask, theta = _depth_falls_outward()
+    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)})
+    bins = [b for b in out["theta"] if b["n_bin"] > 512]
+    assert all(b["ds_strata"] == G.DEPTH_STRATA for b in bins)
+    raw, ds = _pen(bins, "AbsRel"), _pen(bins, "AbsRel_ds")
+    assert raw > 1.35                                  # the fake rim penalty
+    assert (ds - 1.0) < 0.35 * (raw - 1.0)             # mostly gone
+    assert ds > 1.0                                    # and honestly, not all
+
+
+def test_more_strata_correct_harder_until_the_bins_stop_overlapping():
+    """Pins the number in ``DEPTH_STRATA``'s docstring, and the failure mode.
+    Finer strata match the depth distributions more closely, so more of the fake
+    penalty comes out — until a bin misses a stratum entirely, at which point
+    the honest answer is nan rather than a better-looking number."""
+    pred, gt, mask, theta = _depth_falls_outward(n=320)
+    left = {}
+    for s in (1, 2, 4, 16):
+        out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)},
+                       depth_strata=s)
+        bins = [b for b in out["theta"] if b["n_bin"] > 512]
+        raw, ds = _pen(bins, "AbsRel"), _pen(bins, "AbsRel_ds")
+        left[s] = float("nan") if math.isnan(ds) else (ds - 1.0) / (raw - 1.0)
+    assert left[1] == pytest.approx(1.0, abs=0.05)     # one stratum corrects nothing
+    assert left[2] < left[1]
+    assert left[4] < left[2]
+    assert math.isnan(left[16])                        # overlap ran out, said so
+
+
+def test_depth_standardising_keeps_a_real_radial_error():
+    """The other half: it must not flatten everything. Same scene, but now the
+    model really does bend depth with eccentricity — that must survive."""
+    pred, gt, mask, theta = _depth_falls_outward(const_err=0.0)
+    pred = (pred * (1.0 + 0.6 * np.radians(theta) ** 2)).astype(np.float32)
+    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)})
+    bins = [b for b in out["theta"] if b["n_bin"] > 512]
+    ds = [b["AbsRel_ds"] for b in bins]
+    assert all(math.isfinite(v) for v in ds)
+    assert ds[-1] > 3.0 * ds[0]
+
+
+def test_a_bin_that_misses_a_depth_stratum_is_not_standardised():
+    """No overlap, no standardisation. If the rim never sees far depth, what it
+    would score at the centre's depth is not in the data, and the honest output
+    is nan — not an average over whichever strata happened to be populated."""
+    ys, xs = np.mgrid[0:96, 0:96]
+    theta = (np.hypot(xs - 47.5, ys - 47.5) / 47.5 * 55.0).astype(np.float32)
+    gt = np.where(theta < 25.0, 8.0, 2.0).astype(np.float32)   # disjoint depths
+    pred = (gt + 0.10).astype(np.float32)
+    mask = np.ones_like(gt, bool)
+    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)})
+    bins = [b for b in out["theta"] if b["n_bin"] > 512]
+    assert all(math.isnan(b["AbsRel_ds"]) for b in bins)
+    assert all(b["ds_strata"] < G.DEPTH_STRATA for b in bins)
+    assert all(math.isfinite(b["AbsRel"]) for b in bins)   # the plain one still reads
+
+
+def test_standardising_is_off_when_asked_for_no_strata():
+    pred, gt, mask, theta = _depth_falls_outward()
+    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)},
+                   depth_strata=0)
+    assert all(math.isnan(b["AbsRel_ds"]) for b in out["theta"])
+    assert all(math.isfinite(b["AbsRel"]) for b in out["theta"] if b["n_bin"] > 512)
+
+
 def test_radial_profile_bins_partition_the_valid_pixels():
     pred, gt, mask, theta = _profile_inputs()
     out = G.radial_profile(pred, gt, mask, theta, G.THETA_EDGES, "none")

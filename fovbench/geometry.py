@@ -83,7 +83,26 @@ THETA_EDGES: Tuple[float, ...] = (0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 55.0)
 METRIC_KEYS: Tuple[str, ...] = ("AbsRel", "SqRel", "RMSE", "RMSElog", "log10",
                                 "delta1", "delta2", "delta3",
                                 "scale_ratio", "raw_scale_ratio",
-                                "anchored_ratio", "gt_median", "gt_spread")
+                                "anchored_ratio", "gt_median", "gt_spread",
+                                "AbsRel_ds", "delta1_ds", "ds_strata")
+
+#: Depth strata for the standardised columns — quantiles of each frame's own
+#: valid GT. Four is not a guess: on a scene built so that its whole radial
+#: penalty is depth (a flat 10 cm error, depth falling with eccentricity), the
+#: share of that fake penalty still standing after standardising runs
+#:
+#:     strata   1      2      4      8+
+#:     left   100%    44%    25%    undefined — a bin misses a stratum
+#:
+#: so more strata do correct harder, right up to the point where the bins stop
+#: overlapping in depth and nothing can be said at all. Four is the last value
+#: that standardises every bin on that scene, and it still leaves ~25% standing:
+#: the column is a large reduction of the confound, NOT its elimination.
+#: Pinned by ``tests/test_geometry.py::test_more_strata_correct_harder_until_the_bins_stop_overlapping``.
+DEPTH_STRATA: int = 4
+
+#: A (bin x depth stratum) cell below this many pixels is not a measurement.
+MIN_STRATUM_PX: int = 64
 
 #: Distance-from-the-optical-centre bin edges, in units of the frame's HALF
 #: WIDTH: 1.0 is the middle of a frame edge, and a corner sits at sqrt(2).
@@ -561,7 +580,8 @@ def radial_profile(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
 
 def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
            align_mode: str, axes: dict,
-           min_depth: float = 0.01, max_depth: float = 100.0) -> dict:
+           min_depth: float = 0.01, max_depth: float = 100.0,
+           depth_strata: int = DEPTH_STRATA) -> dict:
     """Score one prediction on several binning axes under **one** alignment fit.
 
     ``axes`` maps a name to ``(coordinate_map, edges)`` — e.g. incidence angle
@@ -574,6 +594,9 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
     Fitting per bin instead would hand an up-to-scale model a separate scale at
     every radius, which flattens exactly the effect the benchmark exists to find
     (``tests/test_geometry.py::test_per_bin_alignment_would_erase_the_effect``).
+
+    ``depth_strata`` adds the depth-standardised columns beside the plain ones;
+    0 turns them off. See ``standardise_by_depth``.
     """
     aligned = align_depth(pred_z, gt_z, mask, mode=align_mode)
     out = {"align": align_mode, "n_frame_valid": int(mask.sum()),
@@ -583,6 +606,8 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
     for name, (coord, edges) in axes.items():
         edges = [float(e) for e in edges]
         anchored = anchored_ratios(pred_z, gt_z, mask, coord, edges, align_mode)
+        std = standardise_by_depth(aligned, gt_z, mask, coord, edges,
+                                   depth_strata, min_depth, max_depth)
         bins = []
         for i, (lo, hi) in enumerate(zip(edges[:-1], edges[1:])):
             m = mask & (coord >= lo) & (coord < hi)
@@ -595,9 +620,82 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
             # What the bin was looking at, so "the rim is worse" can be told
             # apart from "the rim is nearer". Model-independent by construction.
             met.update(_gt_stats(gt_z, m))
+            met.update(std[i])
             met["bin_lo"], met["bin_hi"] = lo, hi
             bins.append(met)
         out[name] = bins
+    return out
+
+
+def standardise_by_depth(aligned: np.ndarray, gt_z: np.ndarray,
+                         mask: np.ndarray, coord: np.ndarray,
+                         edges: Sequence[float], n_strata: int = DEPTH_STRATA,
+                         min_depth: float = 0.01, max_depth: float = 100.0,
+                         min_cell_px: int = MIN_STRATUM_PX) -> List[dict]:
+    """What each bin would score **if it saw the whole frame's depth mix**.
+
+    Reporting ``gt_median`` beside AbsRel says the confound is there. This
+    removes it, by the oldest trick for the job — direct standardisation. Cut
+    the frame's valid GT at its own depth quantiles, score every
+    (bin x stratum) cell separately, and average a bin's cells with the weight
+    each stratum has in the frame rather than the weight it has in that bin.
+    Quantile cuts make those weights uniform, so the standardised value is the
+    plain mean over strata. Any difference between a bin's raw and standardised
+    score is what its depth distribution was contributing.
+
+    **It reduces the confound, it does not remove it.** Within a stratum the
+    bins' depths still differ, and the residual scales with how coarse the
+    strata are — measured at ~25% of a purely-depth penalty left standing at
+    four strata (see ``DEPTH_STRATA``). So a standardised curve that is still
+    rising is evidence of a real effect; a standardised curve that goes flat has
+    only been shown to be *mostly* depth. Quote both columns, never this one
+    alone.
+
+    It cannot conjure overlap that is not there. If a bin misses a stratum — the
+    rim of an egocentric frame may hold no far pixels at all — then *what the rim
+    would score at the centre's depth* is not in this data, and the cell is
+    ``nan`` with ``ds_strata`` recording how many strata it did populate. That is
+    the honest answer; dropping the missing stratum and averaging the rest would
+    reintroduce exactly the bias being removed.
+
+    Returns one dict per bin, keyed ``AbsRel_ds``, ``delta1_ds``, ``ds_strata``.
+    """
+    empty = {"AbsRel_ds": float("nan"), "delta1_ds": float("nan"),
+             "ds_strata": 0}
+    n_bins = len(edges) - 1
+    if n_strata < 1:
+        return [dict(empty) for _ in range(n_bins)]
+    g = gt_z[mask]
+    g = g[np.isfinite(g) & (g > min_depth) & (g < max_depth)]
+    if g.size < min_cell_px * n_strata:
+        return [dict(empty) for _ in range(n_bins)]
+    cuts = np.quantile(g.astype(np.float64), np.linspace(0.0, 1.0, n_strata + 1))
+    # A frame that is one flat wall has collapsed quantiles: there is no depth
+    # axis to standardise along, so say so rather than emit strata that are not
+    # distinct. Only the interior cuts matter; the ends are opened out.
+    if np.unique(cuts[1:-1]).size < n_strata - 1:
+        return [dict(empty) for _ in range(n_bins)]
+    cuts[0], cuts[-1] = -np.inf, np.inf
+    strata = [(mask & (gt_z >= lo) & (gt_z < hi))
+              for lo, hi in zip(cuts[:-1], cuts[1:])]
+    out = []
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        b = mask & (coord >= lo) & (coord < hi)
+        cells, used = [], 0
+        for s in strata:
+            m = b & s
+            if int(m.sum()) < min_cell_px:
+                cells.append(None)
+                continue
+            used += 1
+            cells.append(depth_metrics(aligned, gt_z, m, min_depth, max_depth))
+        if used < n_strata:
+            out.append({"AbsRel_ds": float("nan"), "delta1_ds": float("nan"),
+                        "ds_strata": used})
+            continue
+        out.append({"AbsRel_ds": float(np.mean([c["AbsRel"] for c in cells])),
+                    "delta1_ds": float(np.mean([c["delta1"] for c in cells])),
+                    "ds_strata": used})
     return out
 
 

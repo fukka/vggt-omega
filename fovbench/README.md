@@ -73,9 +73,11 @@ The `results` branch carries JSON and logs, never images
 python -c "import json;from fovbench import report;report.write_figures(json.load(open('results.json')),'figs')"
 ```
 
-That writes AbsRel, δ₁ and the unaligned scale ratio against **both** axes
-(incidence angle and distance from the optical centre) for the radial protocol,
-and against window aim for the window protocol — one panel per view × stream.
+That writes AbsRel, δ₁, their depth-standardised versions and the unaligned scale
+ratio against **both** axes (incidence angle and distance from the optical
+centre) for the radial protocol, and against window aim for the window protocol —
+one panel per view × stream. A metric a run predates simply gets no file, rather
+than an empty one.
 
 ## The scoring protocol
 
@@ -150,6 +152,27 @@ This is the same confound that made the withdrawn `raw_scale_ratio` drift read a
 radial trend out of a flat model, so it is now carried in the tables rather than
 argued about. `report.txt` prints it as the BIN DEPTH table.
 
+**`pen_ds`** — `pen` again, after that confound is taken out rather than merely
+noted. Each bin is re-scored on **the frame's own depth mix**: cut the valid GT
+at its quartiles, score every (bin × depth stratum) cell, and average a bin's
+cells with the weight each stratum has in the frame rather than in the bin
+(`geometry.standardise_by_depth` — direct standardisation). Per-bin columns are
+`AbsRel_ds` and `delta1_ds`.
+
+Two things about it must travel with the number:
+
+* **It reduces the confound, it does not remove it.** Within a stratum the bins'
+  depths still differ. Measured on a scene whose whole radial penalty is depth,
+  the share still standing is 100% at one stratum, 44% at two, **25% at four**,
+  and undefined beyond — the bins stop overlapping in depth. Four is the last
+  value that standardises every bin. So `pen_ds` clearly above 1.0 is a real
+  effect; `pen_ds` near 1.0 means *mostly depth*, not *nothing there*.
+* **`—` is an answer, not a gap.** A bin that misses a depth stratum is not
+  standardised at all, rather than averaged over whichever strata it did
+  populate — that would put back exactly the bias being removed. If the rim
+  never sees far depth, what it would score at the centre's depth is not in this
+  data, and no arithmetic supplies it.
+
 ## What it found
 
 Run `fovbench-v2-ef2d50b`, split `fcc6c600f83b` — 200 frames of one sequence
@@ -200,11 +223,17 @@ nothing else from the 25-frame one. This also means one sequence at 200 frames i
 the floor, not the target — the estimator was wrong at any n, *and* the sample
 was thin.
 
-**Open, and not answered by this run:** `gt_median` did not exist when it ran, so
-DAv2's rect `pen` of 0.73 — a *worse* centre than rim, on both streams — is still
-unattributed. It is the shape a constant-error model makes when the centre is the
-farthest content, and DAv2 is the one model scored in disparity space, where
-error grows fastest with depth. One GT-only pass settles it.
+**Open, and not answered by this run — every `pen` above is a raw `pen`.**
+Neither `gt_median` nor `pen_ds` existed when it ran, so none of these numbers
+have had the depth confound taken out of them. The live case is DAv2's rect `pen`
+of 0.73, a *worse* centre than rim on both streams: that is the shape a
+constant-error model makes when the centre is the farthest content, and DAv2 is
+the one model scored in disparity space, where error grows fastest with depth.
+But the caveat is general, not DAv2's alone — if bin depth falls steeply with
+eccentricity here, some of the 1.79–1.97 fisheye `pen` is depth too. Ticket
+`010` / issue #15 re-scores the same split with the standardised columns; until
+it lands, read every `pen` on this page as an upper bound on the field-position
+effect.
 
 ## Two things that would quietly invalidate this, and how they are held
 
@@ -242,7 +271,7 @@ between the streams is *sensor reality plus registration*, not blur alone.
 | `models.py` | the four models behind one call + the analytic stand-in |
 | `run.py` | the driver (CLI) |
 | `report.py` | tables, CSV, figures, `pen`/`drift` |
-| `tests/` | 82 CPU tests: no weights, no data, ~8 s |
+| `tests/` | 87 CPU tests: no weights, no data, ~8 s |
 
 Model loading, availability and downloads live in
 [`finetune/eval/baselines/model_zoo.py`](../finetune/eval/baselines/model_zoo.py);

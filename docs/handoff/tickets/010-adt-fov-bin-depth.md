@@ -6,9 +6,15 @@
 
 ## Goal
 
-One GT-only pass over the #14 split, to record the **median GT depth of every
-bin**. No network, no weights, minutes not hours. It answers the question your
-own hand-back raised and nothing else in the run can.
+Re-score the #14 split so the depth confound is **removed**, not just recorded.
+
+> **This ticket grew after you were handed it, and got more expensive — read
+> this even if you already read the first version.** It was a GT-only pass,
+> minutes on CPU, that would only have *reported* each bin's depth. Since then
+> the correction itself is implemented (`standardise_by_depth`), and applying it
+> needs the models' predictions, which are not saved. So this is a **full
+> re-run, ~4 h, same shape as #14** — and it returns the GT-only answers as a
+> by-product, so nothing is lost by folding them together.
 
 ## Why
 
@@ -40,71 +46,115 @@ Two things sharpen it since you handed back:
 
 ## What changed in the code
 
-`organized` @ `3fb4673`:
+`organized` @ HEAD. **Nothing about the existing scoring changed** —
+`fovbench-v2-ef2d50b`'s numbers stand exactly as they are; these are new columns
+beside them.
+
+*Recording the confound:*
 
 * `geometry.bin_by` emits **`gt_median`** and **`gt_spread`** (IQR/median) per
-  bin, on both axes, alongside the metrics. Model-independent by construction.
+  bin, on both axes. Model-independent by construction.
 * `report.py` prints a **BIN DEPTH** table under COVERAGE — one row per
   view × render size, since the GT is shared across models and streams.
-* `METRIC_KEYS` carries both, so the driver's frame-averaging and the CSV pick
-  them up with no further change.
-* Figures are one panel per view × stream instead of eight curves in one panel.
-* 82 CPU tests green, including `bin_by`'s first direct tests: one pins the
-  shared-fit rule, one shows a model with a flat 10 cm error scoring a rising
-  AbsRel curve purely because the scene gets nearer toward the rim.
 
-Nothing about the scoring changed. `fovbench-v2-ef2d50b`'s numbers stand exactly
-as they are; this only adds a column beside them.
+*Removing it:*
+
+* **`standardise_by_depth`** — direct standardisation, the oldest trick for the
+  job. Cut the frame's valid GT at its own quartiles, score every
+  (bin × stratum) cell, and average a bin's cells with the weight each stratum
+  has in **the frame** rather than in that bin. Quartile cuts make those weights
+  uniform, so it is the plain mean over strata. Lands as **`AbsRel_ds`**,
+  **`delta1_ds`**, **`ds_strata`** per bin, and **`pen_ds`** next to `pen` in
+  every table.
+* **It is a reduction, not a removal, and the code says so.** On a scene whose
+  entire radial penalty is depth, the share still standing afterwards is 100% at
+  1 stratum, 44% at 2, **25% at 4**, and undefined beyond — because the bins stop
+  overlapping in depth. Four is the last value that standardises every bin.
+  **So `pen_ds` clearly above 1.0 is a real effect; `pen_ds` near 1.0 means
+  "mostly depth", not "nothing there".**
+* A bin that misses a depth stratum gets **`—`**, never a partial average over
+  whichever strata happened to be populated — that would reintroduce the very
+  bias being removed. If the rim never sees far depth, what it would score at
+  the centre's depth is not in this data, and no arithmetic can supply it.
+* Figures: one panel per view × stream instead of eight curves in one, plus
+  standardised versions of the AbsRel and δ₁ charts on both axes.
+* 87 CPU tests green. `bin_by` had no direct test at all despite being the
+  driver's entry point; it now has several, including one that pins the
+  shared-fit rule and one that pins the strata table above.
+
+Cost: **+164 ms per frame per (view, stream) cell**, measured at 518px — about
+**4%** on top of #14's 3 h 53 m. Everything else is unchanged.
 
 ## The command
 
 ```bash
 git -C <repo> pull --ff-only origin organized
 python -m fovbench.run --adt-root "$ADT" --n-frames 200 \
-  --models analytic --protocols radial --device cpu \
-  --out eval_out/fovbench_bindepth 2>&1 | tee eval_out/fovbench_bindepth.log
+  --models vggt_1b,vggt_omega,dav2_large,da3_large \
+  --out eval_out/fovbench_v3 2>&1 | tee eval_out/fovbench_v3.log
 ```
 
-**The split must come out `fcc6c600f83b`** — same `--n-frames 200`, same
-sequence, so the same frames. If it does not, stop and say so: the bin depths
-would then describe different frames from the ones #14 scored, and could not be
-read against them.
+Same models, same 200 frames, same box, same env as #14 — **the point is that
+only the scoring columns are new**, so every old number must reproduce and any
+that does not is a bug worth stopping for.
 
-`--models analytic` reads the real ADT GT and injects a known radial bias into a
-*prediction* that nobody here cares about; the GT statistics are what we want and
-they are untouched by it. `--device cpu` is deliberate — no GPU needed, so this
-can run alongside anything else on the box.
+**The split must come out `fcc6c600f83b`.** If it does not, stop and say so: the
+new columns would then describe different frames from the ones #14 scored and
+could not be read against them.
+
+Smoke first, as you did last time — `--models vggt_1b --protocols radial
+--n-frames 3` — and check `AbsRel_ds` is populated rather than `—` on real data
+before committing four hours. If real ADT bins turn out **not** to overlap in
+depth, the standardised column is `—` everywhere, and that is itself the answer:
+report it and do not run the full grid.
 
 ## What to report
 
-1. **The BIN DEPTH table**, both views, θ axis and radius axis.
-2. **Does bin depth fall with eccentricity, and by how much?** Give the
-   innermost/outermost ratio per view.
+0. **That #14's numbers reproduced.** Same split, same frames, same models — the
+   plain `AbsRel`/`delta1`/`pen`/`drift*` columns should come back bit-similar.
+   Say so, and if anything moved, that first.
+1. **`pen` against `pen_ds`, for all sixteen radial cells.** This is the headline
+   the run exists for. Read against the rule above: clearly above 1.0 after
+   standardising = a real field-position effect; near 1.0 = the raw `pen` was
+   mostly depth. The v2 headline to test is fisheye synthetic `pen` **1.97 / 1.83
+   / 1.79** (da3 / omega / vggt_1b) — how much of that survives?
+2. **The BIN DEPTH table**, both views, θ axis and radius axis, and whether bin
+   depth falls with eccentricity — give the innermost/outermost ratio per view.
 3. **The DAv2 question, answered:** put the rect θ-bin depths beside DAv2's rect
    AbsRel row from `fovbench-v2-ef2d50b` (0.122, 0.093, 0.087, 0.090, 0.089,
-   0.089 real). If the centre bin is the farthest by roughly the factor its
-   AbsRel is worse, the 0.73 `pen` is depth, not field position. If it is not,
-   DAv2 has a real centre pathology and that is a finding about disparity models.
-   Say which, with the arithmetic shown.
-4. **Whether the rect and fisheye arms see different depths at the same θ.** They
+   0.089 real), then give its `pen_ds`. If the centre bin is the farthest by
+   roughly the factor its AbsRel is worse, the 0.73 `pen` is depth, not field
+   position, and `pen_ds` should come back near 1.0 or above. If `pen_ds` is
+   still 0.73, DAv2 has a real centre pathology and that is a finding about
+   disparity models. Say which, with the arithmetic shown.
+4. **How many bins could be standardised at all** — the `ds_strata` column, and
+   any `—`. A `—` is not a failure, it is the finding that those bins do not
+   overlap in depth, which would mean the confound can only ever be *reported*
+   on this data. Say plainly which case we are in.
+5. **Whether the rect and fisheye arms see different depths at the same θ.** They
    should not by much — same rays — and a large gap would mean the rectified
    resample is dropping content non-uniformly, which would matter to every
    rect-vs-fisheye comparison in #14.
-5. `gt_spread` per bin, since it is free here: it is the anchor-conditioning
+6. `gt_spread` per bin, since it is free here: it is the anchor-conditioning
    number the `drift*` guard uses, and #14 asserted 0.71–0.88 from a 3-frame
    smoke. Confirm or correct that at 200.
 
-Do **not** re-run any model. If item 3 comes out ambiguous, say so and stop —
-the fix would be a stratified re-score, which is CPU work and a separate ticket.
+Do not tune anything toward any of these outcomes; all of them are publishable
+and the `—` case is the most interesting of the three.
 
 ## Done when
 
 - [ ] split digest confirmed `fcc6c600f83b`
+- [ ] #14's plain columns confirmed reproduced
+- [ ] `pen` vs `pen_ds` table pasted for all sixteen radial cells
 - [ ] BIN DEPTH tables pasted, both axes
-- [ ] the five items above answered
+- [ ] the seven items above answered
 - [ ] pushed to `results` under a new run id; hand back to `cpu`
 
 ## Needs CPU-Claude afterwards?
 
-yes — if bin depth explains DAv2's rect `pen`, the README's "what it found"
-section needs the caveat applied to every `pen` in it, not just DAv2's.
+yes, and substantially. If `pen_ds` comes back far below `pen`, the README's
+"what it found" section is overstated everywhere it says the periphery is worse,
+not just for DAv2, and the headline becomes a smaller and more careful claim. If
+`pen_ds` holds up, the result gets stronger than it currently is and can be
+stated without the depth caveat.

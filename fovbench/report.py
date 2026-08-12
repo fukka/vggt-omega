@@ -78,11 +78,18 @@ def summarise(run: dict) -> dict:
     """
     cells = _populated(_cells_of(run, run.get("_axis", "theta")))
     if len(cells) < 2:
-        return dict(pen=float("nan"), drift=float("nan"),
+        return dict(pen=float("nan"), pen_ds=float("nan"), drift=float("nan"),
                     lo=float("nan"), hi=float("nan"), n_cells=len(cells))
     a, b = cells[0], cells[-1]
     key = "bin_lo" if "bin_lo" in a else ("theta_lo" if "theta_lo" in a else "tilt")
     pen = (b["AbsRel"] / a["AbsRel"]) if a["AbsRel"] > 1e-9 else float("nan")
+    # The same ratio after standardising both ends to the frame's depth mix.
+    # nan whenever either end could not be standardised — a bin that missed a
+    # depth stratum has no answer, and must not borrow the raw one.
+    pen_ds = float("nan")
+    if _finite(a.get("AbsRel_ds")) and _finite(b.get("AbsRel_ds")) \
+            and a["AbsRel_ds"] > 1e-9:
+        pen_ds = b["AbsRel_ds"] / a["AbsRel_ds"]
     drift = float("nan")
     # `drift` exists only for the radial protocol. Its bins come from ONE forward
     # pass, so the model's arbitrary global scale is shared and cancels in a
@@ -95,7 +102,8 @@ def summarise(run: dict) -> dict:
             and _finite(a.get("anchored_ratio")) and _finite(b.get("anchored_ratio")) \
             and abs(b["anchored_ratio"]) > 1e-9:
         drift = a["anchored_ratio"] / b["anchored_ratio"]
-    return dict(pen=pen, drift=drift, lo=a[key], hi=b[key], n_cells=len(cells))
+    return dict(pen=pen, pen_ds=pen_ds, drift=drift,
+                lo=a[key], hi=b[key], n_cells=len(cells))
 
 
 # --------------------------------------------------------------------------- #
@@ -140,7 +148,7 @@ def _table(runs: List[dict], protocol: str, view: str, metric: str) -> List[str]
     cols, _ = _axis(sel[0])
     unit = "deg off-axis" if protocol == "radial" else "window aim (deg off-axis)"
     head = (f"{'model':14s}{'stream':10s}" + "".join(f"{c:>8s}" for c in cols)
-            + f"{'pen':>8s}{'drift*':>8s}")
+            + f"{'pen':>8s}{'pen_ds':>8s}{'drift*':>8s}")
     lines = [f"  {protocol.upper()} · {view} · {metric}   ({unit})", "  " + "-" * len(head),
              "  " + head, "  " + "-" * len(head)]
     for r in sorted(sel, key=lambda r: (r["model"], r["stream"])):
@@ -149,7 +157,7 @@ def _table(runs: List[dict], protocol: str, view: str, metric: str) -> List[str]
         row = f"{r['model']:14s}{r['stream']:10s}"
         for c in cells:
             row += _fmt(c.get(metric), 3, 8) if c.get("n_frames", 0) else f"{'—':>8s}"
-        row += _fmt(s["pen"], 2, 8) + _fmt(s["drift"], 3, 8)
+        row += _fmt(s["pen"], 2, 8) + _fmt(s["pen_ds"], 2, 8) + _fmt(s["drift"], 3, 8)
         lines.append("  " + row)
     return lines + [""]
 
@@ -248,6 +256,16 @@ def render_report(payload: dict) -> str:
         "",
         "  pen    = AbsRel(outermost bin) / AbsRel(innermost)  — how much worse the",
         "           periphery is, in the metric a downstream user reads.",
+        "  pen_ds = the same ratio after DEPTH STANDARDISATION: each bin re-scored on",
+        "           the frame's own depth mix (quartile strata, direct standardisation)",
+        "           so it is not rewarded or punished for how far away its content is.",
+        "           AbsRel grows with depth and an egocentric frame's depth falls with",
+        "           eccentricity, so pen carries some depth in it and pen_ds carries",
+        "           less. It is a REDUCTION, not a removal — ~25% of a purely-depth",
+        "           penalty still stands at four strata — so pen_ds well above 1.0 is",
+        "           real, and pen_ds near 1.0 means 'mostly depth', not 'nothing here'.",
+        "           `—` means a bin missed a depth stratum entirely: what it would",
+        "           score at the other bins' depths is simply not in this data.",
         "  drift* = OUTSIDE THE PROTOCOL, and the only column that is. anchored_ratio",
         "           fits the model's own affine on the INNERMOST BIN ALONE, then takes",
         "           median(gt/pred) per bin; drift* is innermost / outermost, > 1 =",
@@ -355,9 +373,12 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
         # aligned map and inherits the same bowl the alignment puts into
         # AbsRel, so plotting it would show the distorted column under the
         # figure that exists to show the undistorted one.
-        for metric, ylab in (("AbsRel", "AbsRel  (lower is better)"),
-                             ("delta1", r"$\delta_1$  (higher is better)"),
-                             ("raw_scale_ratio", "median(gt/pred), unaligned")):
+        for metric, ylab in (
+                ("AbsRel", "AbsRel  (lower is better)"),
+                ("delta1", r"$\delta_1$  (higher is better)"),
+                ("AbsRel_ds", "AbsRel, depth-standardised  (lower is better)"),
+                ("delta1_ds", r"$\delta_1$, depth-standardised"),
+                ("raw_scale_ratio", "median(gt/pred), unaligned")):
             sel = [r for r in payload["runs"] if r["protocol"] == protocol]
             if axis == "radius":
                 sel = [r for r in sel if "radius_bins" in r]
@@ -405,6 +426,12 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                     if row == len(streams) - 1:
                         ax.set_xlabel(xlab, fontsize=9)
                 grid[row][0].set_ylabel(ylab, fontsize=9)
+            # A run from before this metric existed draws no curves at all.
+            # An empty PNG in the output directory reads as "measured, and
+            # nothing there"; no PNG reads as "not measured". Say the latter.
+            if not any(ax.lines for r in grid for ax in r):
+                plt.close(fig)
+                continue
             handles, labels = grid[0][0].get_legend_handles_labels()
             if handles:
                 fig.legend(handles, labels, loc="lower center", ncol=len(models),
