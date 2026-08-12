@@ -1,0 +1,53 @@
+{
+  "run_id": "fovbench-v3-24b38e1",
+  "ticket": "docs/handoff/tickets/010-adt-fov-bin-depth.md (rewritten version at 24b38e1)",
+  "issue": "https://github.com/fukka/vggt-omega/issues/15",
+  "commit": "24b38e1",
+  "protocol": "adt-fov-v1",
+  "date_utc": "2026-08-12",
+  "command": "python -m fovbench.run --adt-root $ADT --n-frames 200 --protocols radial --models vggt_1b,vggt_omega,dav2_large,da3_large --out eval_out/fovbench_v3",
+  "n_frames": 200,
+  "protocols": ["radial"],
+  "window_protocol_not_run": "deliberate, per ticket: the window arm of fovbench-v2-ef2d50b stands and is not superseded. Every new column (gt_median, gt_std, profiles, AbsRel_ds) is produced inside geometry.bin_by, which only the radial path calls.",
+  "split_digest": "fcc6c600f83b",
+  "split_digest_expected": "fcc6c600f83b",
+  "split_digest_matched": true,
+  "sequences": ["Apartment_release_clean_seq131_M1292"],
+  "reproduction_check": {
+    "against": "results/fovbench-v2-ef2d50b/results.json",
+    "cells_compared": 16,
+    "values_compared": 1984,
+    "axes": ["theta bins", "radius bins", "overall"],
+    "metrics": ["AbsRel", "delta1", "RMSE", "SqRel", "log10", "delta2", "delta3", "scale_ratio", "raw_scale_ratio", "anchored_ratio"],
+    "worst_relative_difference": 0.0,
+    "pixel_counts_differing": 0,
+    "verdict": "bit-identical; the v2 radial arm reproduces exactly"
+  },
+  "hardware": "lambda_63, 1x NVIDIA RTX 6000 Ada Generation, driver 570.207, CUDA_VISIBLE_DEVICES=0",
+  "env": "conda env raytun3r, python 3.11.15, matplotlib 3.11.1; unchanged from #14, nothing installed",
+  "wall_clock": {
+    "total_s": 887,
+    "total_human": "14 m 47 s",
+    "vggt_1b_s": 315,
+    "vggt_omega_s": 190,
+    "dav2_large_s": 190,
+    "da3_large_s": 178,
+    "note": "against 3 h 53 m for the same models with the window sweep included in fovbench-v2-ef2d50b"
+  },
+  "models_skipped": [],
+  "skip_unavailable_used": false,
+  "errors": 0,
+  "pen_ds": {
+    "reported": "none — all 16 radial cells print pen_ds as an em-dash",
+    "reason": "pen_ds anchors on the innermost bin, and that bin has ds_frac 0.17 on theta (0.20-0.30 on radius): it misses at least one depth quartile stratum in ~83% of frames, far below the half-the-frames threshold. Not a code fault and not model-dependent - the innermost bin is the smallest (4.8k-7.9k px) and the narrowest in depth (gt_spread 0.42 against 0.95 at the rim).",
+    "per_bin_ds_frac_theta": [0.17, 0.61, 0.91, 1.0, 1.0, 0.99],
+    "per_bin_ds_frac_radius_fisheye": [0.30, 0.77, 0.99, 1.0, 1.0, 0.0],
+    "per_bin_ds_frac_radius_rect": [0.20, 0.72, 0.93, 1.0, 1.0, 1.0],
+    "per_bin_AbsRel_ds_still_present": "yes, in results.json for every bin; only the ratio is suppressed"
+  },
+  "notes": [
+    "BIN DEPTH is the item the ticket asked for by name. Measured median GT planar z falls monotonically from the innermost bin, not flat-then-collapsing as the modelled empty room in the issue comment predicted: fisheye 3.00 2.87 2.65 2.31 1.96 1.70 m, rect 3.02 2.87 2.65 2.30 1.99 1.94 m.",
+    "The fisheye radius bin 1.00-1.45 is empty by geometry (image circle inscribed in the frame), so its ds_frac is 0.0 and every metric there is an em-dash.",
+    "drift* / anchored_ratio is still in results.json but is outside this experiment's scope and is not in any table or figure."
+  ]
+}
