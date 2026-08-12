@@ -155,15 +155,64 @@ def _accumulate(store: Dict[str, list], key: str, value) -> None:
         store.setdefault(key, []).append(value)
 
 
+#: Metrics that are a plain mean over pixels, so pooling them across frames is
+#: exactly a weighted mean with the pixel count as the weight.
+_PIXEL_MEAN = ("AbsRel", "SqRel", "log10", "delta1", "delta2", "delta3")
+
+#: Metrics that are a mean over pixels *under a square root*. Pool the squares,
+#: then take the root once.
+_PIXEL_RMS = ("RMSE", "RMSElog")
+
+#: Medians. A weighted mean of per-frame medians is NOT the pooled median, and
+#: no summary can recover the pooled one, so these stay a frame mean and are
+#: labelled as such wherever they are read. ``gt_median`` has a pooled twin in
+#: the continuous profile (``gt_mean``), which is what the depth figure draws.
+_FRAME_MEDIAN = ("scale_ratio", "raw_scale_ratio", "anchored_ratio",
+                 "gt_median", "gt_std", "gt_spread")
+
+
 def _mean_metrics(rows: List[dict], keys) -> dict:
-    """Frame-mean of a metric list, skipping NaN — mirrors aggregate_metrics."""
+    """Pool a metric list across frames, **weighted by each frame's pixels**.
+
+    Not a mean of per-frame means. Every metric here is an average over the
+    pixels of one frame, so the quantity a reader wants across 200 frames is the
+    average over all their pixels together — which is the weighted mean, with
+    ``n_valid`` as the weight. An unweighted mean instead gives a frame that
+    contributed a handful of pixels to a bin the same vote as one that filled
+    it, and it makes the binned tables disagree with the continuous profiles,
+    which are pooled (``geometry.fine_profile``). Measured on run
+    ``fovbench-v3-24b38e1``, the two agreed to -0.0% on the three depth heads
+    and differed by +20% in exactly one cell — DAv2's rectified 0-10 deg bin,
+    where its disparity-space fit pushes some pixels out of the metric's depth
+    range and the surviving count varies frame to frame. That disagreement is
+    what this removes.
+
+    NaN frames are skipped, as before: a metric that failed on one frame should
+    not poison the rest.
+    """
     out = {}
     for k in keys:
-        vals = [r[k] for r in rows
-                if k in r and isinstance(r[k], (int, float)) and np.isfinite(r[k])]
-        out[k] = float(np.mean(vals)) if vals else float("nan")
+        vals, wts = [], []
+        for r in rows:
+            v = r.get(k)
+            if not isinstance(v, (int, float)) or not np.isfinite(v):
+                continue
+            vals.append(float(v))
+            wts.append(float(r.get("n_valid", 0)))
+        if not vals:
+            out[k] = float("nan")
+            continue
+        v = np.asarray(vals)
+        w = np.asarray(wts)
+        if k in _FRAME_MEDIAN or w.sum() <= 0:
+            out[k] = float(v.mean())
+        elif k in _PIXEL_RMS:
+            out[k] = float(np.sqrt(np.average(v ** 2, weights=w)))
+        else:
+            out[k] = float(np.average(v, weights=w))
     out["n_frames"] = len(rows)
     out["n_valid_total"] = int(sum(r.get("n_bin", r.get("n_valid", 0)) for r in rows))
+    out["n_px_total"] = int(sum(r.get("n_valid", 0) for r in rows))
     return out
 
 
@@ -173,15 +222,7 @@ def _reduce_axis(runs: List[dict], key: str, edges) -> list:
     for i, (lo, hi) in enumerate(zip(edges[:-1], edges[1:])):
         rows = [r[key][i] for r in runs if r[key][i]["n_valid"] > 0]
         b = _mean_metrics(rows, G.METRIC_KEYS)
-        # _mean_metrics skips NaN, which is right for a metric that failed on
-        # one frame and wrong for AbsRel_ds: a bin that can only be
-        # standardised in some frames would report the mean over exactly the
-        # frames whose depth range happened to be wide enough, and read like a
-        # full measurement. Carry the denominator so it cannot.
         b.update(bin_lo=lo, bin_hi=hi,
-                 ds_frac=(float(np.mean([1.0 if np.isfinite(
-                     r.get("AbsRel_ds", float("nan"))) else 0.0 for r in rows]))
-                     if rows else 0.0),
                  n_px_mean=float(np.mean([r[key][i]["n_bin"] for r in runs]))
                  if runs else 0.0)
         out.append(b)
@@ -385,17 +426,12 @@ def _egosynth_cells(bins: List[dict], n_pool: int) -> List[dict]:
     prints as ``—``: an empty bin is **missing**, not zero, and must never be
     filled in (a frame can populate no bin at all within 30 deg of the axis).
 
-    ``ds_frac`` is 1.0 or 0.0 by construction, never in between. It exists in
-    the ADT path because standardisation runs per frame and a bin can be
-    standardisable in only some of them; here it runs once over the whole pool,
-    so the bin either standardised over every frame behind it or not at all.
     """
     cells = []
     for b in bins:
         c = dict(b)
         c["n_frames"] = n_pool if b["n_bin"] > 0 else 0
         c["n_px_mean"] = float(b["n_bin"])
-        c["ds_frac"] = 1.0 if np.isfinite(b.get("AbsRel_ds", np.nan)) else 0.0
         cells.append(c)
     return cells
 

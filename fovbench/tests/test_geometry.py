@@ -419,76 +419,6 @@ def _pen(bins, key):
     return v[-1] / v[0]
 
 
-def test_depth_standardising_removes_most_of_a_purely_depth_penalty():
-    """The whole point. A model with a flat 10 cm error and no radial behaviour
-    whatever scores a rising AbsRel curve because the scene gets nearer toward
-    the rim. Standardising to the frame's own depth mix must take most of that
-    away — most, not all: see ``test_more_strata_correct_harder...``."""
-    pred, gt, mask, theta = _depth_falls_outward()
-    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)})
-    bins = [b for b in out["theta"] if b["n_bin"] > 512]
-    assert all(b["ds_strata"] == G.DEPTH_STRATA for b in bins)
-    raw, ds = _pen(bins, "AbsRel"), _pen(bins, "AbsRel_ds")
-    assert raw > 1.35                                  # the fake rim penalty
-    assert (ds - 1.0) < 0.35 * (raw - 1.0)             # mostly gone
-    assert ds > 1.0                                    # and honestly, not all
-
-
-def test_more_strata_correct_harder_until_the_bins_stop_overlapping():
-    """Pins the number in ``DEPTH_STRATA``'s docstring, and the failure mode.
-    Finer strata match the depth distributions more closely, so more of the fake
-    penalty comes out — until a bin misses a stratum entirely, at which point
-    the honest answer is nan rather than a better-looking number."""
-    pred, gt, mask, theta = _depth_falls_outward(n=320)
-    left = {}
-    for s in (1, 2, 4, 16):
-        out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)},
-                       depth_strata=s)
-        bins = [b for b in out["theta"] if b["n_bin"] > 512]
-        raw, ds = _pen(bins, "AbsRel"), _pen(bins, "AbsRel_ds")
-        left[s] = float("nan") if math.isnan(ds) else (ds - 1.0) / (raw - 1.0)
-    assert left[1] == pytest.approx(1.0, abs=0.05)     # one stratum corrects nothing
-    assert left[2] < left[1]
-    assert left[4] < left[2]
-    assert math.isnan(left[16])                        # overlap ran out, said so
-
-
-def test_depth_standardising_keeps_a_real_radial_error():
-    """The other half: it must not flatten everything. Same scene, but now the
-    model really does bend depth with eccentricity — that must survive."""
-    pred, gt, mask, theta = _depth_falls_outward(const_err=0.0)
-    pred = (pred * (1.0 + 0.6 * np.radians(theta) ** 2)).astype(np.float32)
-    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)})
-    bins = [b for b in out["theta"] if b["n_bin"] > 512]
-    ds = [b["AbsRel_ds"] for b in bins]
-    assert all(math.isfinite(v) for v in ds)
-    assert ds[-1] > 3.0 * ds[0]
-
-
-def test_a_bin_that_misses_a_depth_stratum_is_not_standardised():
-    """No overlap, no standardisation. If the rim never sees far depth, what it
-    would score at the centre's depth is not in the data, and the honest output
-    is nan — not an average over whichever strata happened to be populated."""
-    ys, xs = np.mgrid[0:96, 0:96]
-    theta = (np.hypot(xs - 47.5, ys - 47.5) / 47.5 * 55.0).astype(np.float32)
-    gt = np.where(theta < 25.0, 8.0, 2.0).astype(np.float32)   # disjoint depths
-    pred = (gt + 0.10).astype(np.float32)
-    mask = np.ones_like(gt, bool)
-    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)})
-    bins = [b for b in out["theta"] if b["n_bin"] > 512]
-    assert all(math.isnan(b["AbsRel_ds"]) for b in bins)
-    assert all(b["ds_strata"] < G.DEPTH_STRATA for b in bins)
-    assert all(math.isfinite(b["AbsRel"]) for b in bins)   # the plain one still reads
-
-
-def test_standardising_is_off_when_asked_for_no_strata():
-    pred, gt, mask, theta = _depth_falls_outward()
-    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)},
-                   depth_strata=0)
-    assert all(math.isnan(b["AbsRel_ds"]) for b in out["theta"])
-    assert all(math.isfinite(b["AbsRel"]) for b in out["theta"] if b["n_bin"] > 512)
-
-
 def test_radial_profile_bins_partition_the_valid_pixels():
     pred, gt, mask, theta = _profile_inputs()
     out = G.radial_profile(pred, gt, mask, theta, G.THETA_EDGES, "none")
@@ -690,12 +620,13 @@ def test_the_room_alone_produces_the_penalty_the_run_reported():
     1.97. **Every one of those sits inside the envelope the geometry alone
     spans.** So "error nearly doubles toward the rim" is not yet a field-position
     result; it is consistent with an empty room and a model with no radial
-    behaviour at all. The depth-standardised columns are what separate the two
-    (ticket 010 / issue #15) and nothing in the current results does.
+    behaviour at all. Only the measured per-bin depth, reported beside the
+    curves, lets a reader weigh the two.
 
     AbsRel is invariant to the convention — numerator and denominator both carry
     the same 1/cos(theta), pinned below — so this is not an argument for scoring
-    range instead. It is an argument for standardising by depth.
+    range instead: the confound is in how deep each bin's content is, which is
+    why that depth is measured and reported rather than corrected away.
     """
     theta, rng, z = _empty_room()
     inner, outer = (theta < 5), (theta >= 50) & (theta < 55)
@@ -714,7 +645,7 @@ def test_the_room_alone_produces_the_penalty_the_run_reported():
 def test_absrel_does_not_care_which_depth_convention_it_is_scored_in():
     """Numerator and denominator both scale by 1/cos(theta), so it cancels
     exactly. Worth pinning: it is the reason the fix for the confound is
-    standardisation and not a change of convention."""
+    reporting the per-bin depth and not a change of convention."""
     theta, rng, z = _empty_room()
     cos = z / rng
     m = (theta >= 40) & (theta < 55)

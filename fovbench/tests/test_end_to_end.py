@@ -153,3 +153,71 @@ def test_run_refuses_to_silently_drop_an_unavailable_model(tmp_path):
     with pytest.raises(SystemExit) as e:
         RUN.run(a)
     assert "vggt_omega" in str(e.value) and "--skip-unavailable" in str(e.value)
+
+
+# --------------------------------------------------------------------------- #
+# The binned table and the continuous curve are one estimator at two resolutions
+# --------------------------------------------------------------------------- #
+
+def test_cross_frame_pooling_is_weighted_by_each_frame_s_pixels():
+    """Two frames, one contributing a hundred times the pixels of the other and
+    scoring very differently. The pooled answer must follow the big frame; an
+    unweighted mean of per-frame means would split the difference and would put
+    the binned dots somewhere the continuous curve never goes."""
+    rows = [dict(AbsRel=0.10, n_valid=10000, n_bin=10000),
+            dict(AbsRel=0.50, n_valid=100, n_bin=100)]
+    out = RUN._mean_metrics(rows, ("AbsRel",))
+    assert out["AbsRel"] == pytest.approx((0.10 * 10000 + 0.50 * 100) / 10100)
+    assert out["AbsRel"] != pytest.approx(0.30)          # not the naive mean
+
+
+def test_rms_metrics_are_pooled_in_squares():
+    """RMSE is a mean under a root, so the weights go on the squares. Averaging
+    the roots would be a different number and a smaller one."""
+    rows = [dict(RMSE=0.2, n_valid=3, n_bin=3), dict(RMSE=0.6, n_valid=1, n_bin=1)]
+    out = RUN._mean_metrics(rows, ("RMSE",))
+    assert out["RMSE"] == pytest.approx(math.sqrt((3 * 0.04 + 1 * 0.36) / 4))
+
+
+def test_medians_stay_a_frame_mean_and_say_so():
+    """A weighted mean of per-frame medians is not the pooled median, and no
+    summary can recover the pooled one — so these keys are deliberately left as
+    a frame mean rather than given a weighting that would look pooled and not
+    be. The depth figure draws the profile's pooled `gt_mean` instead."""
+    rows = [dict(gt_median=2.0, n_valid=10000, n_bin=10000),
+            dict(gt_median=6.0, n_valid=100, n_bin=100)]
+    out = RUN._mean_metrics(rows, ("gt_median",))
+    assert out["gt_median"] == pytest.approx(4.0)        # unweighted, on purpose
+    assert "gt_median" in RUN._FRAME_MEDIAN
+
+
+def test_a_binned_value_equals_the_profile_re_aggregated_over_the_same_span():
+    """The claim the figures rest on: dots and line are the same estimator.
+    The fine edges nest exactly inside the coarse ones (1 deg into 10 deg), so
+    re-adding the profile's pixels over a coarse bin's span must reproduce that
+    bin, on a run where both were computed from the same frames."""
+    rng = np.random.default_rng(0)
+    n = 128
+    ys, xs = np.mgrid[0:n, 0:n]
+    c = (n - 1) / 2
+    theta = (np.hypot(xs - c, ys - c) / c * 55.0).astype(np.float32)
+    gt = (3.0 + 0.01 * xs).astype(np.float32)
+    frames = []
+    for k in range(3):
+        pred = (gt * (1.0 + 0.4 * np.radians(theta) ** 2)
+                * (1 + rng.normal(0, 0.01, gt.shape))).astype(np.float32)
+        mask = (theta < 55.0) & (rng.random(gt.shape) > 0.1 * k)   # differing counts
+        frames.append(G.bin_by(pred, gt, mask, "none",
+                               {"theta": (theta, G.THETA_EDGES)},
+                               profile_edges={"theta": G.PROFILE_THETA_EDGES}))
+    binned = RUN._reduce_axis([{"bins": f["theta"]} for f in frames], "bins",
+                              G.THETA_EDGES)
+    pooled = G.pool_profiles([f["profiles"]["theta"] for f in frames])
+    ctr = np.asarray(pooled["centre"]); pn = np.asarray(pooled["n"], float)
+    pa = np.asarray(pooled["AbsRel"], float)
+    for b, (lo, hi) in zip(binned, zip(G.THETA_EDGES[:-1], G.THETA_EDGES[1:])):
+        sel = (ctr >= lo) & (ctr < hi) & np.isfinite(pa)
+        if not sel.any() or not np.isfinite(b["AbsRel"]):
+            continue
+        span = float((pa[sel] * pn[sel]).sum() / pn[sel].sum())
+        assert b["AbsRel"] == pytest.approx(span, rel=1e-9)

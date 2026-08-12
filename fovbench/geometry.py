@@ -83,26 +83,7 @@ METRIC_KEYS: Tuple[str, ...] = ("AbsRel", "SqRel", "RMSE", "RMSElog", "log10",
                                 "delta1", "delta2", "delta3",
                                 "scale_ratio", "raw_scale_ratio",
                                 "anchored_ratio",
-                                "gt_median", "gt_std", "gt_spread",
-                                "AbsRel_ds", "delta1_ds", "ds_strata")
-
-#: Depth strata for the standardised columns — quantiles of each frame's own
-#: valid GT. Four is not a guess: on a scene built so that its whole radial
-#: penalty is depth (a flat 10 cm error, depth falling with eccentricity), the
-#: share of that fake penalty still standing after standardising runs
-#:
-#:     strata   1      2      4      8+
-#:     left   100%    44%    25%    undefined — a bin misses a stratum
-#:
-#: so more strata do correct harder, right up to the point where the bins stop
-#: overlapping in depth and nothing can be said at all. Four is the last value
-#: that standardises every bin on that scene, and it still leaves ~25% standing:
-#: the column is a large reduction of the confound, NOT its elimination.
-#: Pinned by ``tests/test_geometry.py::test_more_strata_correct_harder_until_the_bins_stop_overlapping``.
-DEPTH_STRATA: int = 4
-
-#: A (bin x depth stratum) cell below this many pixels is not a measurement.
-MIN_STRATUM_PX: int = 64
+                                "gt_median", "gt_std", "gt_spread")
 
 #: Distance-from-the-optical-centre bin edges, in units of the frame's HALF
 #: WIDTH: 1.0 is the middle of a frame edge, and a corner sits at sqrt(2).
@@ -125,6 +106,16 @@ RADIUS_EDGES: Tuple[float, ...] = (0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.45)
 PROFILE_THETA_EDGES: Tuple[float, ...] = tuple(float(x) for x in range(0, 56))
 PROFILE_RADIUS_EDGES: Tuple[float, ...] = tuple(
     round(0.025 * i, 4) for i in range(59))
+
+#: Depth strata for ``standardise_by_depth``, which the ADT-FOV experiment does
+#: not use; ``datasets_egosynth`` does. Four is the last value that standardises
+#: every bin on a scene whose whole radial penalty is depth — the share of that
+#: penalty still standing runs 100% at 1 stratum, 44% at 2, 25% at 4, and beyond
+#: that the bins stop overlapping in depth and nothing can be said at all.
+DEPTH_STRATA: int = 4
+
+#: A (bin x depth stratum) cell below this many pixels is not a measurement.
+MIN_STRATUM_PX: int = 64
 
 #: Minimum GT interquartile-range-over-median for a band to anchor an affine
 #: fit. Real ADT bands measure 0.71-0.88; a single flat wall measures 0.00.
@@ -595,7 +586,6 @@ def radial_profile(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
 def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
            align_mode: str, axes: dict,
            min_depth: float = 0.01, max_depth: float = 100.0,
-           depth_strata: int = DEPTH_STRATA,
            profile_edges: Optional[dict] = None) -> dict:
     """Score one prediction on several binning axes under **one** alignment fit.
 
@@ -610,9 +600,6 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
     every radius, which flattens exactly the effect the benchmark exists to find
     (``tests/test_geometry.py::test_per_bin_alignment_would_erase_the_effect``).
 
-    ``depth_strata`` adds the depth-standardised columns beside the plain ones;
-    0 turns them off. See ``standardise_by_depth``.
-
     ``profile_edges`` maps an axis name to a *fine* set of edges, and adds a
     continuous profile of that axis under ``profiles`` — off the same frozen
     prediction as everything else, so the curve and the table are two readings
@@ -626,8 +613,6 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
     for name, (coord, edges) in axes.items():
         edges = [float(e) for e in edges]
         anchored = anchored_ratios(pred_z, gt_z, mask, coord, edges, align_mode)
-        std = standardise_by_depth(aligned, gt_z, mask, coord, edges,
-                                   depth_strata, min_depth, max_depth)
         bins = []
         for i, (lo, hi) in enumerate(zip(edges[:-1], edges[1:])):
             m = mask & (coord >= lo) & (coord < hi)
@@ -640,7 +625,6 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
             # What the bin was looking at, so "the rim is worse" can be told
             # apart from "the rim is nearer". Model-independent by construction.
             met.update(_gt_stats(gt_z, m))
-            met.update(std[i])
             met["bin_lo"], met["bin_hi"] = lo, hi
             bins.append(met)
         out[name] = bins
@@ -739,8 +723,13 @@ def standardise_by_depth(aligned: np.ndarray, gt_z: np.ndarray,
                          min_cell_px: int = MIN_STRATUM_PX) -> List[dict]:
     """What each bin would score **if it saw the whole frame's depth mix**.
 
-    Reporting ``gt_median`` beside AbsRel says the confound is there. This
-    removes it, by the oldest trick for the job — direct standardisation. Cut
+    **The ADT-FOV experiment does not use this.** It reports AbsRel and delta1
+    against position in the field, with the measured per-bin GT depth beside
+    them, and leaves the reader to weigh the confound rather than correcting for
+    it. The function stays because ``datasets_egosynth`` calls it directly for
+    its own pooled path.
+
+    Direct standardisation, the oldest trick for the job. Cut
     the frame's valid GT at its own depth quantiles, score every
     (bin x stratum) cell separately, and average a bin's cells with the weight
     each stratum has in the frame rather than the weight it has in that bin.

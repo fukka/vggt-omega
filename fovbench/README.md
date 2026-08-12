@@ -75,9 +75,12 @@ python -c "import json;from fovbench import report;report.write_figures(json.loa
 
 That writes exactly three pictures — `AbsRel.png`, `delta1.png`, `gt_depth.png` —
 each carrying every model, both views, both streams and **both axes**. The line
-is the continuous profile, the dots are the six binned values, and a bin held up
-by corner slivers is ringed. A run that never measured depth gets no depth page,
-rather than an empty one.
+is the continuous 1° profile and the dots are the six binned values; **both are
+pooled over frames and weighted by pixels**, so they are one estimator at two
+resolutions and any gap between them is the bin width. `gt_depth.png` adds a
+second row: the pixel count behind every part of the curve, as a density so the
+bars and the profile are the same quantity. A run that never measured depth gets
+no depth page, rather than an empty one.
 
 ## The scoring protocol
 
@@ -88,7 +91,7 @@ two readings of one measurement (`geometry.bin_by`). Fitting per bin would hand
 an up-to-scale model a separate scale at every radius and flatten exactly the
 effect being looked for.
 
-Every column obeys this — `AbsRel`, `delta1`, `RMSE`, `pen` and `pen_ds` alike.
+Every column obeys this — `AbsRel`, `delta1`, `RMSE` and `pen` alike.
 
 ## Reading the output
 
@@ -114,29 +117,14 @@ This is the same confound that made the withdrawn `raw_scale_ratio` drift read a
 radial trend out of a flat model, so it is now carried in the tables rather than
 argued about. `report.txt` prints it as the BIN DEPTH table.
 
-**`pen_ds`** — `pen` again, after that confound is taken out rather than merely
-noted. Each bin is re-scored on **the frame's own depth mix**: cut the valid GT
-at its quartiles, score every (bin × depth stratum) cell, and average a bin's
-cells with the weight each stratum has in the frame rather than in the bin
-(`geometry.standardise_by_depth` — direct standardisation). Per-bin columns are
-`AbsRel_ds` and `delta1_ds`.
-
-Two things about it must travel with the number:
-
-* **It reduces the confound, it does not remove it.** Within a stratum the bins'
-  depths still differ. Measured on a scene whose whole radial penalty is depth,
-  the share still standing is 100% at one stratum, 44% at two, **25% at four**,
-  and undefined beyond — the bins stop overlapping in depth. Four is the last
-  value that standardises every bin. So `pen_ds` clearly above 1.0 is a real
-  effect; `pen_ds` near 1.0 means *mostly depth*, not *nothing there*.
-* **`—` is an answer, not a gap.** A bin that misses a depth stratum is not
-  standardised at all, rather than averaged over whichever strata it did
-  populate — that would put back exactly the bias being removed. If the rim
-  never sees far depth, what it would score at the centre's depth is not in this
-  data, and no arithmetic supplies it. The same applies across frames: `ds_frac`
-  records the share of frames in which a bin *could* be standardised, and
-  `pen_ds` is refused below half, because the frames that survive are the ones
-  whose depth range happened to be wide enough — a selected subset, not a sample.
+**Nothing corrects for it.** An earlier version carried a `pen_ds` column that
+re-scored each bin at the frame's own depth mix. It came out `—` in all sixteen
+cells of the 200-frame run: the innermost bin is both the smallest (4.8k px
+against 36k at the rim) and the *narrowest in depth* (`gt_spread` 0.42 against
+0.95), because a 10° cone on the far wall is close to a single depth, so it
+misses a depth quartile in 83% of frames. A correction that fails exactly where
+every comparison starts is worse than none, so the column is gone and the
+measured depth is reported instead. Weigh it yourself.
 
 ## What it found
 
@@ -173,21 +161,14 @@ so a model with a constant absolute error and *no radial behaviour at all* would
 score ~1.77 here. Raw `pen` is therefore close to uninformative about field
 position on its own.
 
-**2. Taking the depth out, a real effect survives — but only on the raw lens with
-clean pixels.** `pen_ds` over the full range is `—` for every cell (see item 7),
-so this is the 10–20° → rim ratio of `AbsRel_ds`, against the ~1.17 (fisheye) /
-1.11 (rect) that a *purely* depth-driven penalty would still read after four-strata
-standardising:
-
-| | fisheye synthetic | fisheye real | rect (both streams) |
-|---|---|---|---|
-| standardised ratio | **1.47 – 1.72** | 1.05 – 1.24 | 0.79 – 1.16 |
-| pure-depth would read | 1.17 | 1.17 | 1.11 |
-| verdict | **survives** | at or below | at or below |
-
-So: on `videos_synthetic` through the raw fisheye there is a field-position
-effect that the depth confound does not account for. On real sensor pixels it is
-at or under the residual. After rectifying it is gone on every cell.
+**2. Whether any of that is field position is not settled here, on purpose.**
+This benchmark reports the two curves and the depth they were divided by, and
+stops. It does not attempt a correction: an earlier version re-scored each bin
+at the frame's own depth mix, and the run showed that the innermost bin cannot
+be re-scored at all — it is both the smallest and the narrowest in depth, so it
+misses a depth quartile in 83% of frames. A correction that fails exactly where
+the comparison starts is worse than none, so the column was removed and the
+measured depth is reported instead.
 
 **3. Rectifying helps, and costs field.** At the honest 40–50° bin, VGGT-1B
 synthetic scores 0.074 rect against 0.102 fisheye; across the three depth heads
@@ -235,18 +216,6 @@ uniformly. So: read the fisheye synthetic shape claims from either run; read
 nothing else from the 25-frame one. This also means one sequence at 200 frames is
 the floor, not the target — the estimator was wrong at any n, *and* the sample
 was thin.
-
-**7. The confound could not be fully corrected, and that is itself a result.**
-`pen_ds` is `—` in all sixteen cells. It anchors on the innermost bin, and that
-bin's `ds_frac` is **0.17** on θ: it misses at least one depth quartile in 83% of
-frames. The cause is structural rather than a guard misfiring — the 0–10° bin is
-both the smallest (4.8k–7.9k px against 36k–68k at the rim) and the *narrowest in
-depth* (`gt_spread` 0.42 against 0.95 at 50–55°), because a 10° cone on the far
-wall is close to a single depth. The rectified 50–55° bin fails for the same
-reason at the other end (`ds_frac` 0.17, 2,940 px of corner), which is why the
-rect figures in item 2 are read to 40–50° and not to 55°. So the centre of this
-sequence cannot be re-scored at the rim's depth mix at all: item 2's ratios start
-at 10–20°, and the innermost 10° is reported, never corrected.
 
 **Still open.** One sequence — 200 frames of `Apartment_release_clean_seq131_M1292`,
 so nothing here is an across-scene claim. At ~15 min per sequence radial-only
@@ -296,7 +265,7 @@ between the streams is *sensor reality plus registration*, not blur alone.
 | `geometry.py` | window rendering, GT convention warp, θ maps, radial binning |
 | `models.py` | the four models behind one call + the analytic stand-in |
 | `run.py` | the driver (CLI) |
-| `report.py` | tables, CSV, the three figures, `pen`/`pen_ds` |
+| `report.py` | tables, CSV, the three figures, `pen` |
 | `tests/` | 123 CPU tests: no weights, no data, ~9 s (needs Python 3.8+) |
 
 Model loading, availability and downloads live in

@@ -163,33 +163,6 @@ def test_report_shouts_when_a_requested_model_did_not_run():
     assert "2 of 4" in head
 
 
-def _ds_bins(inner_ds, outer_ds, inner_frac=1.0, outer_frac=1.0):
-    bins = [_bin(lo, hi, 0.05 + 0.03 * i) for i, (lo, hi) in enumerate(EDGES)]
-    bins[0].update(AbsRel_ds=inner_ds, ds_frac=inner_frac, ds_strata=4)
-    bins[-1].update(AbsRel_ds=outer_ds, ds_frac=outer_frac, ds_strata=4)
-    return bins
-
-
-def test_pen_ds_is_the_penalty_after_standardising_both_ends():
-    s = R.summarise(_run(bins=_ds_bins(0.10, 0.13)))
-    assert s["pen_ds"] == pytest.approx(1.3)
-    assert s["pen"] != pytest.approx(s["pen_ds"])   # and not just a copy of pen
-
-
-def test_pen_ds_is_refused_when_most_frames_could_not_be_standardised():
-    """The frames in which a bin CAN be standardised are the ones whose depth
-    range happened to be wide enough — a selected subset, not a sample. Averaging
-    them and printing it beside `pen` would read as a full measurement."""
-    s = R.summarise(_run(bins=_ds_bins(0.10, 0.13, outer_frac=0.2)))
-    assert math.isnan(s["pen_ds"])
-    assert math.isfinite(s["pen"])                  # the raw column still reads
-
-
-def test_pen_ds_is_absent_for_runs_that_predate_it():
-    s = R.summarise(_run())
-    assert math.isnan(s["pen_ds"])
-    assert math.isfinite(s["pen"])
-
 
 def _win_cell(tilt, absrel, in_cone=1.0, n_frames=4, n_px=5000.0):
     c = _bin(0, 0, absrel, n_frames=n_frames, n_px=n_px)
