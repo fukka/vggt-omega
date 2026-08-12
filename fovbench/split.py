@@ -58,16 +58,35 @@ PROTOCOL = "adt-fov-v1"
 
 @dataclass
 class Frame:
-    """One scored frame: a GT depth map and the same instant in both streams."""
+    """One scored frame: a GT depth map and the same instant in both streams.
+
+    ``context`` is the *unscored* company it keeps. A multi-view model can be
+    handed several frames in one forward pass; only this frame is scored, and
+    the others exist so cross-view attention has something to attend to. The
+    list is in temporal order and includes this frame at ``target_index``, so a
+    1-frame run is the same code path with a list of one.
+
+    Context deliberately does **not** enter :attr:`Split.digest`. The digest
+    exists to say "these runs scored the same pixels", and a 1-frame and a
+    10-frame run do score the same pixels — that is the whole point of the
+    comparison. Folding context in would give them different digests and make
+    the harness refuse the only comparison worth making.
+    """
 
     seq: str
     frame_id: str
     depth: str
     rgb: Dict[str, str]          # stream label -> image path
+    context: Dict[str, List[str]] = field(default_factory=dict)
+    target_index: int = 0
 
     @property
     def key(self) -> str:
         return f"{self.seq}/{self.frame_id}"
+
+    def stack(self, stream: str) -> List[str]:
+        """RGB paths to hand the model, in order. Falls back to this frame."""
+        return self.context.get(stream) or [self.rgb[stream]]
 
 
 @dataclass
@@ -76,6 +95,8 @@ class Split:
     frames: List[Frame]
     streams: Dict[str, str] = field(default_factory=lambda: dict(STREAMS))
     protocol: str = PROTOCOL
+    context_frames: int = 1
+    context_stride: int = 1
 
     @property
     def digest(self) -> str:
@@ -97,8 +118,13 @@ class Split:
         return {"protocol": self.protocol, "root": self.root,
                 "streams": self.streams, "digest": self.digest,
                 "n_frames": len(self.frames),
+                "context_frames": self.context_frames,
+                "context_stride": self.context_stride,
                 "frames": [{"seq": f.seq, "frame_id": f.frame_id,
-                            "depth": f.depth, "rgb": f.rgb} for f in self.frames]}
+                            "depth": f.depth, "rgb": f.rgb,
+                            "context": f.context,
+                            "target_index": f.target_index}
+                           for f in self.frames]}
 
     def save(self, path: str) -> str:
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
@@ -112,8 +138,13 @@ class Split:
             d = json.load(fh)
         sp = cls(root=d["root"],
                  frames=[Frame(seq=f["seq"], frame_id=f["frame_id"],
-                               depth=f["depth"], rgb=f["rgb"]) for f in d["frames"]],
-                 streams=d["streams"], protocol=d["protocol"])
+                               depth=f["depth"], rgb=f["rgb"],
+                               context=f.get("context", {}),
+                               target_index=int(f.get("target_index", 0)))
+                         for f in d["frames"]],
+                 streams=d["streams"], protocol=d["protocol"],
+                 context_frames=int(d.get("context_frames", 1)),
+                 context_stride=int(d.get("context_stride", 1)))
         if sp.digest != d["digest"]:
             raise ValueError(
                 f"{path}: digest {d['digest']} does not match the frame list "
@@ -136,8 +167,36 @@ def _evenly_spaced(items: List, n: int) -> List:
     return [items[i] for i in idx]
 
 
+def _context_window(n_pool: int, i: int, n: int, stride: int) -> tuple:
+    """Indices of the ``n`` context frames around pool position ``i``.
+
+    The window **precedes** the target, ``i - (n-1)*stride ... i``, which is what
+    a live camera would have: the frames before the one being asked about. If it
+    would run off the start of the sequence it is shifted forward as a block
+    rather than clamped, because clamping would feed the model the same frame
+    several times and a repeated frame is not evidence.
+
+    Returns ``(indices, target_index)`` — the target is last except where the
+    shift moved it, and the caller must use the returned index rather than -1.
+    """
+    if n <= 1 or n_pool <= 1:
+        return ([i], 0)
+    span = (n - 1) * stride
+    start = i - span
+    if start < 0:                      # shift the block forward, do not repeat
+        start = 0
+    idx = [start + k * stride for k in range(n)]
+    if idx[-1] >= n_pool:              # ... and back off the end the same way
+        idx = [max(0, n_pool - 1 - (n - 1 - k) * stride) for k in range(n)]
+    idx = sorted(set(idx))
+    if i not in idx:                   # the shift can walk past the target
+        idx = sorted(set(idx[:-1] + [i]))
+    return (idx, idx.index(i))
+
+
 def build_split(adt_root: str, n_frames: int = 25,
                 streams: Dict[str, str] = None,
+                context_frames: int = 1, context_stride: int = 1,
                 verbose: bool = True) -> Split:
     """Assemble the ADT-FOV test split under ``adt_root``.
 
@@ -170,22 +229,38 @@ def build_split(adt_root: str, n_frames: int = 25,
                                 _pair_frames(os.path.join(seq, sub),
                                              os.path.join(seq, "depth_npy"))[0]}
         chosen = _evenly_spaced(pairs, n_frames)
+        pos = {p[2]: k for k, p in enumerate(pairs)}      # frame id -> pool index
         for _rgb0, depth_path, fid in chosen:
             rgb = {label: by_stream[label][fid] for label in streams
                    if fid in by_stream[label]}
             if len(rgb) != len(streams):      # belt and braces; step 2 excludes these
                 continue
-            frames.append(Frame(seq=name, frame_id=fid, depth=depth_path, rgb=rgb))
+            idx, tgt = _context_window(len(pairs), pos[fid],
+                                       context_frames, context_stride)
+            ctx = {}
+            for label in streams:
+                paths = [by_stream[label].get(pairs[k][2]) for k in idx]
+                if any(p is None for p in paths):        # a gap in that stream
+                    paths, tgt_l = [rgb[label]], 0
+                else:
+                    tgt_l = tgt
+                ctx[label] = paths
+            frames.append(Frame(seq=name, frame_id=fid, depth=depth_path,
+                                rgb=rgb, context=ctx, target_index=tgt))
         if verbose:
             print(f"  [fovbench] {name}: {len(chosen)} of {len(pairs)} common frames")
 
     if not frames:
         raise SystemExit(f"[fovbench] no frame under {adt_root!r} is present in "
                          f"depth_npy and all of {subdirs}")
-    sp = Split(root=os.path.abspath(adt_root), frames=frames, streams=streams)
+    sp = Split(root=os.path.abspath(adt_root), frames=frames, streams=streams,
+               context_frames=context_frames, context_stride=context_stride)
     if verbose:
+        ctx = (f", context {context_frames}x@stride {context_stride}"
+               if context_frames > 1 else "")
         print(f"  [fovbench] ADT-FOV split {sp.digest}: {len(frames)} frames "
-              f"across {len(sp.sequences)} sequence(s), streams={list(streams)}")
+              f"across {len(sp.sequences)} sequence(s), "
+              f"streams={list(streams)}{ctx}")
     return sp
 
 

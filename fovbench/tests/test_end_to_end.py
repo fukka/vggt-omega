@@ -221,3 +221,40 @@ def test_a_binned_value_equals_the_profile_re_aggregated_over_the_same_span():
             continue
         span = float((pa[sel] * pn[sel]).sum() / pn[sel].sum())
         assert b["AbsRel"] == pytest.approx(span, rel=1e-9)
+
+
+def test_a_context_run_scores_exactly_the_pixels_a_single_frame_run_does():
+    """The comparison 1 vs 5 vs 10 is only meaningful if the measured pixels do
+    not move. Only the target is scored; the context changes what the model may
+    look at and nothing else. Driven through the stand-in, which accepts a stack
+    and reads GT, so any difference here would be the harness and not a model.
+    """
+    cam = G.aria_cam(176, 176)
+    rays, cone = G.fisheye_rays(cam)
+    gt = (2.0 + 0.5 * rays[..., 0]).astype(np.float32) * cone
+    ys, xs = np.mgrid[0:cam.H, 0:cam.W]
+    rgb = np.stack([((xs * 3 + ys * 7) % 256).astype(np.uint8)] * 3, -1)
+    view = G.full_frame_view(rgb, gt, cone, cam, 64, "fisheye")
+    model = M.load_model(M.ANALYTIC, None, radial_bias=0.0)
+    assert model.supports_context
+
+    one = RUN._score_radial(model, view, G.THETA_EDGES, G.RADIUS_EDGES, 100.0)
+    stack = [view.rgb] * 5
+    many = RUN._score_radial(model, view, G.THETA_EDGES, G.RADIUS_EDGES, 100.0,
+                             context=stack, target=4)
+    for a, b in zip(one["bins"], many["bins"]):
+        assert a["n_bin"] == b["n_bin"]
+        assert a["n_valid"] == b["n_valid"]
+
+
+def test_a_monocular_model_refuses_a_context_rather_than_ignoring_it():
+    """A run that asked for ten frames and silently got one would read as
+    'context does not help', which is the opposite of measuring nothing."""
+    assert "dav2_large" not in M.CONTEXT_CAPABLE
+    m = M.Model(key="dav2_large", family="x", size="L", align_mode="none",
+                input_size=518, supports_context=False,
+                _predict=lambda *a: np.ones((4, 4), np.float32))
+    with pytest.raises(SystemExit):
+        m.predict_stack([np.zeros((4, 4, 3), np.uint8)] * 3, target=2)
+    # ... but a stack of one is just the ordinary call, not an error.
+    assert m.predict_stack([np.zeros((4, 4, 3), np.uint8)], target=0).shape == (4, 4)

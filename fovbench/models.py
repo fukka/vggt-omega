@@ -48,6 +48,13 @@ DEFAULT_MODELS: Tuple[str, ...] = ("vggt_1b", "vggt_omega", "dav2_large", "da3_l
 #: The stand-in that needs nothing installed.
 ANALYTIC = "analytic"
 
+#: Models that can be handed several frames in one forward pass. The three
+#: multi-view backbones plus the stand-in; Depth-Anything V2 is monocular and
+#: is deliberately absent, so asking for a context with it is refused up front
+#: rather than silently scoring the target alone.
+CONTEXT_CAPABLE: Tuple[str, ...] = ("vggt_1b", "vggt_omega", "da3_large",
+                                    ANALYTIC)
+
 #: Input side length, by model key. Everything in the DINOv2/DINOv3 depth family
 #: here is patch-14 and ships at 518; VGGT-Omega is patch-16 and ships at 512.
 #: Keys only — an earlier version also fell back to ``spec.kind``, which happened
@@ -71,7 +78,9 @@ class Model:
     align_mode: str
     input_size: int
     params_m: float = float("nan")
+    supports_context: bool = False
     _predict: Optional[Callable] = field(default=None, repr=False)
+    _predict_stack: Optional[Callable] = field(default=None, repr=False)
 
     def predict(self, rgb_u8: np.ndarray,
                 gt_z: Optional[np.ndarray] = None,
@@ -84,6 +93,24 @@ class Model:
         keeps the driver free of a per-model special case.
         """
         return self._predict(rgb_u8, gt_z, theta_deg)
+
+    def predict_stack(self, rgb_u8_list, target: int,
+                      gt_z: Optional[np.ndarray] = None,
+                      theta_deg: Optional[np.ndarray] = None) -> np.ndarray:
+        """Depth for ONE frame of a stack the model saw in a single pass.
+
+        ``target`` indexes the frame that is scored; the rest are context. A
+        model without a multi-frame path raises rather than silently scoring the
+        target alone — a run that asked for 10 frames and quietly got 1 would
+        read as "context does not help", which is the opposite of nothing.
+        """
+        if len(rgb_u8_list) == 1:
+            return self.predict(rgb_u8_list[0], gt_z, theta_deg)
+        if self._predict_stack is None:
+            raise SystemExit(
+                f"[fovbench] {self.key} has no multi-frame path: it is monocular. "
+                f"Run it with --context-frames 1, or drop it from a context run.")
+        return self._predict_stack(rgb_u8_list, target)
 
 
 # --------------------------------------------------------------------------- #
@@ -130,11 +157,15 @@ def load_model(key: str, device, **kw) -> Model:
     here is actionable without reading the code.
     """
     if key == ANALYTIC:
+        fn = _analytic_predict(kw.get("radial_bias", 0.0), kw.get("seed", 0))
         return Model(key=key, family="analytic", size="—",
                      align_mode=kw.get("align_mode", "scale_shift"),
                      input_size=native_size(key), params_m=0.0,
-                     _predict=_analytic_predict(kw.get("radial_bias", 0.0),
-                                                kw.get("seed", 0)))
+                     supports_context=True, _predict=fn,
+                     # The stand-in reads GT, so context cannot change its
+                     # answer; it accepts a stack only so the driver's
+                     # multi-frame path can be exercised without weights.
+                     _predict_stack=lambda imgs, tgt: fn(imgs[tgt], None, None))
 
     spec = zoo.get_specs([key])[0]
     state, detail = zoo.status(spec)
@@ -150,9 +181,17 @@ def load_model(key: str, device, **kw) -> Model:
         rgb01 = np.clip(rgb_u8.astype(np.float32) / 255.0, 0.0, 1.0)
         return np.asarray(adapter.predict_frame(rgb01, cam, "view"), np.float32)
 
+    def predict_stack(rgb_u8_list, target):
+        imgs = [np.clip(r.astype(np.float32) / 255.0, 0.0, 1.0)
+                for r in rgb_u8_list]
+        return np.asarray(adapter.predict_frames(imgs, target), np.float32)
+
+    ctx = bool(getattr(adapter, "supports_context", False))
     return Model(key=key, family=spec.family, size=spec.size,
                  align_mode=spec.align_native[0], input_size=native_size(key),
-                 params_m=adapter.num_params() / 1e6, _predict=predict)
+                 params_m=adapter.num_params() / 1e6, supports_context=ctx,
+                 _predict=predict,
+                 _predict_stack=predict_stack if ctx else None)
 
 
 def available(keys) -> Tuple[list, list]:

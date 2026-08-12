@@ -421,8 +421,19 @@ class Adapter:
         raise NotImplementedError
 
     # -- prediction --------------------------------------------------------- #
+    #: Whether the model can be handed several frames in one forward pass and
+    #: use them jointly. False everywhere except the multi-view backbones.
+    supports_context = False
+
     def predict_frame(self, rgb01: np.ndarray, cam: AriaFisheye, frame: str) -> np.ndarray:
         raise NotImplementedError
+
+    def predict_frames(self, rgb01_list, target: int = -1) -> np.ndarray:
+        """Multi-frame path. Monocular adapters have none, and say so rather
+        than quietly scoring the target alone — a run that asked for 10 frames
+        and silently got 1 would look like "context does not help"."""
+        raise NotImplementedError(
+            f"{self.spec.key} is monocular: it cannot take a multi-frame context")
 
     def predict_erp(self, rgb01: np.ndarray, cam: AriaFisheye) -> dict:
         raise NotImplementedError(f"{self.spec.key} has no ERP-native path")
@@ -503,19 +514,40 @@ class BackboneAdapter(Adapter):
         self.torch_modules = [self.backbone]
         return self
 
+    #: These three take ``(S, 3, H, W)`` natively and return ``(S, H, W)``, so a
+    #: multi-frame pass is a stack rather than a loop. Everything else in the zoo
+    #: is monocular and says so here.
+    supports_context = True
+
     def predict_frame(self, rgb01: np.ndarray, cam, frame: str) -> np.ndarray:
+        return self.predict_frames([rgb01], target=0)
+
+    def predict_frames(self, rgb01_list, target: int = -1) -> np.ndarray:
+        """Depth for ONE frame of a stack the model saw jointly.
+
+        ``rgb01_list`` is the whole context in temporal order and ``target`` is
+        the index within it whose depth is returned. Only that frame is scored;
+        the rest exist so cross-view attention has something to attend to. That
+        is what keeps a 1-frame and a 10-frame run comparable — the measured
+        pixels are identical and only the evidence available to the model moves.
+
+        The stack goes through in one forward pass, which is the point: looping
+        would give each frame its own pass and measure nothing new.
+        """
         import torch
         import torch.nn.functional as F
 
-        H, W = rgb01.shape[:2]
-        x = torch.from_numpy(
-            np.ascontiguousarray(np.clip(rgb01, 0, 1).transpose(2, 0, 1))
-        )[None].float().to(self.device)
+        if not rgb01_list:
+            raise ValueError("predict_frames: empty context")
+        H, W = rgb01_list[0].shape[:2]
+        arr = np.stack([np.ascontiguousarray(
+            np.clip(r, 0, 1).transpose(2, 0, 1)) for r in rgb01_list])
+        x = torch.from_numpy(arr).float().to(self.device)      # (S, 3, H, W)
         h, w = patch_align(H, W, self.backbone.patch_size)
         if (h, w) != (H, W):
             x = F.interpolate(x, (h, w), mode="bilinear", align_corners=False)
         with torch.no_grad():
-            depth = self.backbone(x).depth[0]            # (h, w) planar z
+            depth = self.backbone(x).depth[target]             # (h, w) planar z
         if depth.shape != (H, W):
             depth = F.interpolate(depth[None, None].float(), (H, W),
                                   mode="bilinear", align_corners=False)[0, 0]

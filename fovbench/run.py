@@ -77,22 +77,27 @@ MIN_IN_CONE_FRAC = 0.5
 
 def _load_frame(frame, stream: str, depth_scale: float, depth_max_m: float,
                 rotation_k: int = 3):
-    """One ADT frame: upright fisheye RGB, planar-z GT in metres, validity.
+    """One ADT frame: upright fisheye RGB, planar-z GT in metres, validity, and
+    the *context stack* the model will actually be handed.
 
     Mirrors ``datasets.adt.ADTFisheyeFrames.__getitem__`` — the same 270-deg-CCW
     rotation and the same mm->m scaling — but reads the paths the manifest
     froze, so both streams are guaranteed to be the same instant.
     """
-    with Image.open(frame.rgb[stream]) as im:
-        rgb = np.array(im.convert("RGB"), dtype=np.uint8)
+    def _read(path):
+        with Image.open(path) as im:
+            a = np.array(im.convert("RGB"), dtype=np.uint8)
+        return np.rot90(a, k=rotation_k).copy() if rotation_k else a
+
+    stack = [_read(p) for p in frame.stack(stream)]
+    rgb = stack[frame.target_index]
     d = np.load(frame.depth).astype(np.float32)
     if d.ndim == 3:
         d = d.squeeze(-1)
     d = np.where(np.isfinite(d), d, 0.0) * depth_scale
     if rotation_k:
-        rgb = np.rot90(rgb, k=rotation_k).copy()
         d = np.rot90(d, k=rotation_k).copy()
-    return rgb, d, (d > 0) & (d <= depth_max_m)
+    return rgb, d, (d > 0) & (d <= depth_max_m), stack
 
 
 # --------------------------------------------------------------------------- #
@@ -100,7 +105,7 @@ def _load_frame(frame, stream: str, depth_scale: float, depth_max_m: float,
 # --------------------------------------------------------------------------- #
 
 def _score_radial(model, view: "G.FrameView", edges, radius_edges,
-                  max_depth) -> Optional[dict]:
+                  max_depth, context=None, target=0) -> Optional[dict]:
     """Whole frame, ONE alignment fit, metrics per bin on two axes.
 
     The two axes — incidence angle and distance from the optical centre — are
@@ -110,7 +115,11 @@ def _score_radial(model, view: "G.FrameView", edges, radius_edges,
     """
     if view.valid.sum() < 256:
         return None
-    pred = model.predict(view.rgb, gt_z=view.gt_z, theta_deg=view.theta)
+    if context and len(context) > 1:
+        pred = model.predict_stack(context, target, gt_z=view.gt_z,
+                                   theta_deg=view.theta)
+    else:
+        pred = model.predict(view.rgb, gt_z=view.gt_z, theta_deg=view.theta)
     prof = G.bin_by(pred, view.gt_z, view.valid, model.align_mode,
                     {"theta": (view.theta, edges),
                      "radius": (view.radius, radius_edges)},
@@ -304,9 +313,26 @@ def run(a: argparse.Namespace) -> dict:
     # The split requires exactly the streams that will be scored. Asking for one
     # stream must not exclude sequences for lacking the other — but the digest
     # then differs, so a one-stream run is never silently compared to a two.
+    if a.context_frames > 1:
+        cant = [k for k in ready if k not in M.CONTEXT_CAPABLE]
+        if cant:
+            raise SystemExit(
+                f"[fovbench] --context-frames {a.context_frames} but "
+                f"{', '.join(cant)} is monocular and cannot use a context. "
+                f"Drop it from --models, or use --context-frames 1. A run that "
+                f"silently scored the target alone would read as 'context does "
+                f"not help'.")
+        if "window" in protocols:
+            raise SystemExit(
+                "[fovbench] --context-frames applies to the radial protocol "
+                "only: a window is a crop, and handing a model ten crops of "
+                "ten different instants is not the experiment. Use "
+                "--protocols radial.")
     split = (Split.load(a.manifest) if a.manifest
              else build_split(a.adt_root, n_frames=a.n_frames,
-                              streams={s: STREAMS[s] for s in streams}))
+                              streams={s: STREAMS[s] for s in streams},
+                              context_frames=a.context_frames,
+                              context_stride=a.context_stride))
     split.save(os.path.join(a.out, "manifest.json"))
     missing = [s for s in streams if s not in split.streams]
     if missing:
@@ -334,15 +360,25 @@ def run(a: argparse.Namespace) -> dict:
         acc: Dict[str, list] = {}
         for i, frame in enumerate(split.frames):
             for stream in streams:
-                rgb, gt, gt_valid = _load_frame(frame, stream, a.depth_scale,
-                                                a.depth_max_m)
+                rgb, gt, gt_valid, stack = _load_frame(
+                    frame, stream, a.depth_scale, a.depth_max_m)
                 cam = G.aria_cam(*rgb.shape[:2])
                 for kind in views:
                     if "radial" in protocols:
                         fv = G.full_frame_view(rgb, gt, gt_valid, cam, n, kind)
+                        # Context frames go through the SAME view construction;
+                        # the target's own view is reused rather than rendered
+                        # twice, so a 1-frame run costs exactly what it did.
+                        ctx = None
+                        if len(stack) > 1:
+                            ctx = [fv.rgb if k == frame.target_index
+                                   else G.view_rgb(im, cam, n, kind)
+                                   for k, im in enumerate(stack)]
                         _accumulate(acc, f"radial|{stream}|{kind}",
                                     _score_radial(model, fv, edges, radius_edges,
-                                                  a.metric_max_depth))
+                                                  a.metric_max_depth,
+                                                  context=ctx,
+                                                  target=frame.target_index))
                     if "window" in protocols:
                         for tilt in tilts:
                             for az in (azimuths if tilt > 0 else (0.0,)):
@@ -378,6 +414,8 @@ def run(a: argparse.Namespace) -> dict:
         requested_models=keys,
         skipped_models=[dict(model=k, state=s, detail=d) for k, s, d in skipped],
         config=dict(streams=streams, views=views, protocols=protocols,
+                    context_frames=a.context_frames,
+                    context_stride=a.context_stride,
                     theta_edges=list(edges), radius_edges=list(radius_edges),
                     tilts=list(tilts),
                     azimuths=list(azimuths), window_fov=a.window_fov,
@@ -649,6 +687,14 @@ def build_parser() -> argparse.ArgumentParser:
                    help="frames PER SEQUENCE, spread evenly (not a prefix)")
     p.add_argument("--models", default=",".join(M.DEFAULT_MODELS),
                    help=f"comma keys, or '{M.ANALYTIC}' for a weight-free run")
+    p.add_argument("--context-frames", type=int, default=1,
+                   help="frames handed to the model in ONE forward pass. Only "
+                        "the split's own frame is scored; the rest are context "
+                        "for cross-view attention. Multi-view models only")
+    p.add_argument("--context-stride", type=int, default=1,
+                   help="spacing of the context frames, in source frames. 1 is "
+                        "truly consecutive (ADT is 30 Hz, so 10 frames span "
+                        "0.30 s); a larger stride buys parallax")
     p.add_argument("--streams", default="synthetic,real")
     p.add_argument("--views", default="rect,fisheye",
                    help="rect = rectified perspective, fisheye = raw pixels")

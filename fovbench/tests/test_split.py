@@ -118,3 +118,61 @@ def test_split_refuses_an_empty_root(tmp_path):
 def test_split_records_the_streams_it_requires(adt):
     m = S.build_split(adt, n_frames=4)
     assert m.streams == {"synthetic": "videos_synthetic", "real": "videos_rgb"}
+
+
+# --------------------------------------------------------------------------- #
+# Multi-frame context
+# --------------------------------------------------------------------------- #
+
+from fovbench.split import _context_window  # noqa: E402
+
+
+def test_a_context_window_precedes_the_target_and_ends_on_it():
+    """What a live camera would have: the frames before the one being asked
+    about, at the requested spacing, with the target last."""
+    idx, tgt = _context_window(100, 50, 5, 1)
+    assert idx == [46, 47, 48, 49, 50]
+    assert idx[tgt] == 50
+    idx, tgt = _context_window(100, 50, 5, 10)
+    assert idx == [10, 20, 30, 40, 50]
+    assert idx[tgt] == 50
+
+
+def test_one_frame_of_context_is_just_the_target():
+    assert _context_window(100, 7, 1, 1) == ([7], 0)
+
+
+def test_a_window_at_the_start_shifts_rather_than_repeating_a_frame():
+    """Clamping would hand the model the same frame several times, and a
+    repeated frame is not evidence — it would make a 5-frame run look like a
+    1-frame run wearing a costume."""
+    idx, tgt = _context_window(100, 2, 5, 1)
+    assert len(set(idx)) == len(idx) == 5
+    assert idx[tgt] == 2
+
+
+def test_the_target_is_always_inside_its_own_context():
+    for n_pool in (5, 20, 100):
+        for i in range(n_pool):
+            for n, stride in ((1, 1), (5, 1), (10, 1), (5, 10), (10, 10)):
+                idx, tgt = _context_window(n_pool, i, n, stride)
+                assert idx[tgt] == i, (n_pool, i, n, stride, idx, tgt)
+                assert len(set(idx)) == len(idx)
+                assert all(0 <= k < n_pool for k in idx)
+
+
+def test_context_does_not_change_the_digest():
+    """The digest says "these runs scored the same pixels", and a 1-frame and a
+    10-frame run do — that is the whole comparison. Folding context in would
+    give them different digests and make the harness refuse it."""
+    from fovbench.split import Frame, Split
+    a = Split(root="/x", frames=[Frame(seq="s", frame_id="7", depth="d",
+                                       rgb={"synthetic": "a.jpg"})])
+    b = Split(root="/x", frames=[Frame(seq="s", frame_id="7", depth="d",
+                                       rgb={"synthetic": "a.jpg"},
+                                       context={"synthetic": ["p.jpg", "a.jpg"]},
+                                       target_index=1)],
+              context_frames=2)
+    assert a.digest == b.digest
+    assert b.frames[0].stack("synthetic") == ["p.jpg", "a.jpg"]
+    assert a.frames[0].stack("synthetic") == ["a.jpg"]

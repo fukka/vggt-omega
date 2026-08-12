@@ -469,6 +469,28 @@ def render_window(rgb: np.ndarray, gt_z: np.ndarray, gt_valid: np.ndarray,
                   src_px_per_out_px=float(density))
 
 
+def view_rgb(rgb: np.ndarray, cam: FisheyeCam, out_size: int,
+             kind: str) -> np.ndarray:
+    """The RGB half of :func:`full_frame_view`, for frames that are not scored.
+
+    A multi-frame pass hands the model context frames that have no ground truth
+    and are never measured — but they must arrive in exactly the *same view* as
+    the target, or cross-view attention is being asked to match a rectified
+    frame against a raw one. This shares the target's code path for the pixels
+    and skips the GT work, which on the rectified arm is a second full remap.
+    """
+    if kind == "fisheye":
+        return _to_u8(cv2.resize(rgb.astype(np.float32), (out_size, out_size),
+                                 interpolation=cv2.INTER_AREA))
+    if kind == "rect":
+        from finetune.data.rectify import FisheyeRectifier
+        rec = FisheyeRectifier("aria-214-1")
+        out = rec(rgb.astype(np.float32) / 255.0) * 255.0
+        return _to_u8(cv2.resize(out, (out_size, out_size),
+                                 interpolation=cv2.INTER_AREA))
+    raise ValueError(f"unknown frame kind {kind!r} (choose 'rect' or 'fisheye')")
+
+
 def full_frame_view(rgb: np.ndarray, gt_z: np.ndarray, gt_valid: np.ndarray,
                     cam: FisheyeCam, out_size: int, kind: str) -> FrameView:
     """The whole frame in one construction, GT kept in camera-axis planar z.
