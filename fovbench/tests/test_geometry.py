@@ -613,3 +613,113 @@ def test_pooling_refuses_to_add_profiles_of_different_axes():
     b = dict(a, edges=[0.0, 2.0])
     with pytest.raises(ValueError):
         G.pool_profiles([a, b])
+
+
+# --------------------------------------------------------------------------- #
+# What an EMPTY ROOM alone produces — the depth confound, sized
+# --------------------------------------------------------------------------- #
+
+def _empty_room(L=5.0, W=4.0, H=2.6, h=1.5, pitch_deg=0.0, out=259):
+    """Ray-box intersection for a camera inside an empty rectangular room,
+    through the real Aria fisheye ray field.
+
+    No renderer, no data, no model: closed-form geometry, so the numbers below
+    are a property of the room and the lens and of nothing else. Camera frame is
+    +x right, +y down, +z along the optical axis; the camera sits at plan centre
+    at height ``h`` and may be pitched nose-down.
+
+    Returns ``(theta_deg, euclidean_range, planar_z)`` over the imaged cone.
+    """
+    cam = G.scaled_cam(aria_cam(1408, 1408), out)
+    rays, cone = G.fisheye_rays(cam)
+    d = rays[cone]
+    theta = np.degrees(np.arccos(np.clip(d[:, 2], -1.0, 1.0)))
+    p = math.radians(pitch_deg)
+    rot = np.array([[1, 0, 0],
+                    [0, math.cos(p), -math.sin(p)],
+                    [0, math.sin(p), math.cos(p)]])
+    w = d @ rot.T
+    lo = np.array([-W / 2.0, -(H - h), -L / 2.0])
+    hi = np.array([W / 2.0, h, L / 2.0])
+    with np.errstate(divide="ignore", invalid="ignore"):
+        t = np.minimum(np.maximum(lo / w, hi / w), 1e9).min(axis=1)
+    return theta, t, t * d[:, 2]
+
+
+def _band(theta, v, lo, hi):
+    m = (theta >= lo) & (theta < hi)
+    return float(np.median(v[m])) if m.sum() > 50 else float("nan")
+
+
+def test_an_empty_room_leaves_euclidean_range_almost_flat():
+    """The intuition that says depth should NOT fall toward the rim is correct
+    about *range*: an enclosing room is roughly equidistant, and range even
+    rises in the middle of the field, where the diagonal to the facing wall is
+    longer than the perpendicular."""
+    theta, rng, _ = _empty_room()
+    centre = _band(theta, rng, 0, 5)
+    rim = _band(theta, rng, 50, 55)
+    assert 0.85 < rim / centre < 1.05
+    assert _band(theta, rng, 30, 35) > centre        # it rises before it falls
+
+
+def test_but_planar_z_falls_by_a_factor_of_two_on_the_same_room():
+    """ADT GT is planar z about the optical axis, and that is a different
+    quantity. Out to ~35 deg the field is still on the facing wall, which is
+    fronto-parallel, so z is *exactly* constant. Past that the field leaves the
+    wall and catches floor, ceiling and side walls — surfaces the optical axis
+    is parallel to, where z goes as the perpendicular distance over tan(theta) —
+    and z collapses. Nothing about "the periphery contains clutter" is needed.
+    """
+    theta, _, z = _empty_room()
+    centre = _band(theta, z, 0, 5)
+    assert _band(theta, z, 30, 35) == pytest.approx(centre, rel=1e-3)
+    assert _band(theta, z, 50, 55) / centre < 0.65
+
+
+def test_the_room_alone_produces_the_penalty_the_run_reported():
+    """The reason this matters, and the sharpest statement of the confound.
+
+    A model with a CONSTANT absolute error and NO radial behaviour whatever,
+    scored on this empty room, already produces `pen` 1.18 to 1.94 — the two
+    ends being an error fixed in euclidean range and one fixed in planar z, the
+    bracketing cases for a real model. Sweeping plausible apartment rooms (3x3
+    to 10x8 m, camera 1.2-1.5 m, pitch 0-20 deg) widens that to **0.81 - 2.95**.
+
+    The 200-frame run reported fisheye synthetic `pen` of 1.18, 1.79, 1.83 and
+    1.97. **Every one of those sits inside the envelope the geometry alone
+    spans.** So "error nearly doubles toward the rim" is not yet a field-position
+    result; it is consistent with an empty room and a model with no radial
+    behaviour at all. The depth-standardised columns are what separate the two
+    (ticket 010 / issue #15) and nothing in the current results does.
+
+    AbsRel is invariant to the convention — numerator and denominator both carry
+    the same 1/cos(theta), pinned below — so this is not an argument for scoring
+    range instead. It is an argument for standardising by depth.
+    """
+    theta, rng, z = _empty_room()
+    inner, outer = (theta < 5), (theta >= 50) & (theta < 55)
+    pens = []
+    for gt, pred in ((z, z + 0.10), (rng, rng + 0.10)):
+        a, b = [float(np.mean(np.abs(pred[m] - gt[m]) / gt[m]))
+                for m in (inner, outer)]
+        pens.append(b / a)
+    assert 1.10 < min(pens) < 1.30            # error fixed in range
+    assert 1.85 < max(pens) < 2.05            # error fixed in planar z
+    # the run's own vggt_1b and vggt_omega land inside this one room's envelope
+    assert min(pens) < 1.79 < max(pens)
+    assert min(pens) < 1.83 < max(pens)
+
+
+def test_absrel_does_not_care_which_depth_convention_it_is_scored_in():
+    """Numerator and denominator both scale by 1/cos(theta), so it cancels
+    exactly. Worth pinning: it is the reason the fix for the confound is
+    standardisation and not a change of convention."""
+    theta, rng, z = _empty_room()
+    cos = z / rng
+    m = (theta >= 40) & (theta < 55)
+    for gt_z, pred_z in ((z, z + 0.10), (z, z * 1.05)):
+        as_z = np.mean(np.abs(pred_z[m] - gt_z[m]) / gt_z[m])
+        as_r = np.mean(np.abs(pred_z[m] / cos[m] - gt_z[m] / cos[m])
+                       / (gt_z[m] / cos[m]))
+        assert as_z == pytest.approx(as_r, rel=1e-9)

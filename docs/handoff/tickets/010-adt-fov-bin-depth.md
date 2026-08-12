@@ -33,6 +33,23 @@ content — and DAv2 is the one model of the four scored under a disparity-space
 affine, where error grows fastest with depth. Right now that is a story, not a
 measurement.
 
+**And it is bigger than DAv2 — this now threatens the headline.** An empty
+rectangular room, scored through the real Aria ray field with a model that has a
+constant absolute error and **no radial behaviour whatever**, already produces
+`pen` **1.18–1.94** (5 × 4 × 2.6 m, camera 1.5 m; the ends are an error fixed in
+range and one fixed in planar z). Across plausible apartment rooms the envelope
+is **0.81–2.95**. Your reported fisheye synthetic `pen` — 1.18, 1.79, 1.83,
+1.97 — is **entirely inside it**. Closed-form, no data, in
+`tests/test_geometry.py::test_the_room_alone_produces_the_penalty_the_run_reported`.
+
+The mechanism is geometric, not clutter: ADT GT is planar z about the optical
+axis, so out to ~35° the field is still on the fronto-parallel wall it faces and
+z is exactly constant; past that it catches floor, ceiling and side walls —
+surfaces the axis is parallel to, where z goes as perpendicular distance over
+`tan θ` — and z falls to ×0.57 while euclidean **range over the same room stays
+flat** (×0.94). AbsRel is invariant to the convention, so scoring range instead
+fixes nothing; standardising by depth is the fix, which is this ticket.
+
 Two things sharpen it since you handed back:
 
 * The bin depth is **model-independent** — it is the GT — so one pass serves all
@@ -104,7 +121,7 @@ beside them.
   one still climbs (1.14–1.67, median 1.35) — a sharper "rectifying helps" than
   the radial arm can give, and it was buried. A new WINDOW GEOMETRY table prints
   `in_cone_frac` and `src_px_per_out_px` per aim.
-* 119 CPU tests green (Python 3.8+). `bin_by` had no direct test at all despite being the
+* 123 CPU tests green (Python 3.8+). `bin_by` had no direct test at all despite being the
   driver's entry point; it now has several, including one that pins the
   shared-fit rule and one that pins the strata table above.
 

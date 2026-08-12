@@ -823,7 +823,14 @@ def anchored_ratios(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
     * **No fit** (``raw_scale_ratio``): every one of these models has an additive
       degree of freedom, and an offset makes ``gt/pred`` vary with the *scene
       depth* of each bin. On a scene whose depth falls with eccentricity — which
-      an egocentric indoor frame is — a model with **no radial error at all**
+      an enclosed egocentric frame is, for a reason that is geometric rather
+      than about clutter: past ~35 deg the field leaves the wall it faces and
+      starts catching floor, ceiling and side walls, surfaces the optical axis
+      is *parallel* to, where planar z goes as the perpendicular distance over
+      ``tan(theta)`` and collapses (``tests/test_geometry.py::
+      test_but_planar_z_falls_by_a_factor_of_two_on_the_same_room`` measures
+      x0.57 across an empty 5x4x2.6 m room, while euclidean range over the same
+      room stays flat) — a model with **no radial error at all**
       reports 0.648 or 1.253 depending on the offset's sign, and an
       affine-invariant disparity model reports 1.143. Those are the size of the
       effect being looked for, so the measure has no specificity.

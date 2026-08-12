@@ -186,12 +186,36 @@ Run `fovbench-v2-ef2d50b`, split `fcc6c600f83b` — 200 frames of one sequence
 views, ~4 h on one RTX 6000 Ada. Numbers in
 [`results/fovbench-v2-ef2d50b/`](../results) on the `results` branch.
 
+> **Read the whole section against this.** Every `pen` below is an *upper bound*
+> on the field-position effect, and the bound may be the entire effect. An empty
+> rectangular room, scored through the real Aria ray field with a model that has
+> a **constant absolute error and no radial behaviour whatever**, already
+> produces `pen` **1.18–1.94** (5 × 4 × 2.6 m, camera at 1.5 m; the two ends are
+> an error fixed in euclidean range and one fixed in planar z). Sweeping
+> plausible apartment rooms widens that to **0.81–2.95**. Every value this run
+> reported lies inside it.
+>
+> The mechanism is not clutter in the periphery. ADT GT is **planar z about the
+> optical axis**, and out to ~35° the field is still on the wall it faces, which
+> is fronto-parallel, so z is *exactly* constant. Past that the field leaves the
+> wall and catches floor, ceiling and side walls — surfaces the axis is
+> *parallel* to, where z goes as perpendicular distance over `tan θ` — and z
+> collapses to ×0.57 while **euclidean range over the same room stays flat**
+> (×0.94, and it *rises* out to 35°). All four numbers are in
+> `tests/test_geometry.py`, closed-form, no data.
+>
+> AbsRel is invariant to which convention it is scored in — numerator and
+> denominator both carry the same `1/cos θ` — so the fix is not to score range
+> instead. The fix is `pen_ds`, and no run has produced it yet.
+
 **1. The periphery is noisier, not systematically farther.** On the raw fisheye,
 AbsRel roughly doubles from the centre to the 50–55° rim — `pen` 1.97 (DA3
 synthetic), 1.83 (VGGT-Omega), 1.79 (VGGT-1B) — while `drift*` over the same
-cells stays at 1.02–1.09. The rim error is variance, not a radial scale bend.
-An earlier estimator put that bend at 14–19%; it was measuring each bin's scene
-depth and is withdrawn.
+cells stays at 1.02–1.09. So whatever the rim costs, it is **not** a radial
+*scale* bend: the models are not systematically placing the periphery farther
+away. Whether the rise is a field-position effect at all is the open question
+above. An earlier estimator put the bend at 14–19%; it was measuring each bin's
+scene depth and is withdrawn.
 
 **2. There *is* a small bend, and it is the lens.** Every one of the eight
 model×stream pairs has a higher fisheye `drift*` than its own rect `drift*`, by
@@ -303,7 +327,7 @@ between the streams is *sensor reality plus registration*, not blur alone.
 | `models.py` | the four models behind one call + the analytic stand-in |
 | `run.py` | the driver (CLI) |
 | `report.py` | tables, CSV, figures, `pen`/`drift` |
-| `tests/` | 113 CPU tests: no weights, no data, ~11 s (needs Python 3.8+) |
+| `tests/` | 123 CPU tests: no weights, no data, ~9 s (needs Python 3.8+) |
 
 Model loading, availability and downloads live in
 [`finetune/eval/baselines/model_zoo.py`](../finetune/eval/baselines/model_zoo.py);
