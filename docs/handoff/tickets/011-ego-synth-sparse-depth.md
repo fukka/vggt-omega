@@ -2,10 +2,11 @@
 
 **Owner:** cpu
 **Files I may touch:** `fovbench/datasets_egosynth.py` (new), `fovbench/split.py`,
-`fovbench/run.py`, `fovbench/tests/test_egosynth.py` (new). Nothing under
-`raytun3r/`, nothing under `finetune/`.
+`fovbench/run.py`, `fovbench/report.py`, `fovbench/tests/test_egosynth.py` (new).
+Nothing under `raytun3r/`, nothing under `finetune/`.
 **Blocked by:** none. The data is already on lambda_63 — 1 611 takes, 24 931
-clips, 380 GiB at `/data/f.zhang2/ego-synth-5b/`, verified complete.
+clips, 380 GiB at `/data/f.zhang2/ego-synth-5b/`, verified complete. Builds on
+#10, which landed (`554a9c1`).
 
 ## Goal
 
@@ -62,6 +63,11 @@ Three facts drive the design:
 5. Let bins be empty. A single frame can carry as few as ~1 300 points and can
    populate no bin at all within 30° of the axis, so per-frame binning is not
    safe — aggregate over frames first, and report a missing bin as missing.
+6. Carry `gt_median` over from #10. It matters *more* here than on ADT: these
+   takes range from indoor egocentric with a ~1.2 m median depth to Oxford
+   outdoors at ~5.3 m with a 23 m p99, so the depth confound that column exists
+   to expose is larger and varies by dataset. Report it per dataset, not just
+   pooled — pooling four scene scales into one bin is exactly the confound.
 
 ## Done when
 
