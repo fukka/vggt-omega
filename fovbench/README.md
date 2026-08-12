@@ -201,6 +201,23 @@ synthetic scores 0.074 rect against 0.102 fisheye; across the three depth heads
 the rect `pen` is 1.00–1.25 against 1.79–1.97 on the raw lens. The price is in
 the COVERAGE table: an ~85° pinhole has nothing past 42.3° except in its corners.
 
+**3b. The window sweep says it more sharply, once its own clipped aim is set
+aside.** A 40° *square* window has a 27.2° half-diagonal, so from an aim of 30°
+its corners leave the 54.83° Aria cone, and the 40° aim is only **84% imaged** —
+that cell differs from the on-axis one in dead area as well as in aim, which is
+the very confound the fixed-FOV design exists to avoid, and it is now excluded
+from `pen` and flagged `t40!`. Over the fully-imaged aims, 0°→30°:
+
+| | `pen`, 8 model × stream cells | median |
+|---|---|---|
+| **rect** window | 0.90 – 1.21 | **1.04** |
+| **fisheye** window | 1.14 – 1.67 | **1.35** |
+
+A rectified window scores the same wherever it is aimed; a raw one does not.
+That is a cleaner statement of "rectifying helps" than the radial arm can make,
+because here the two views see the same directions by construction. Including
+the clipped aim inflates the rect numbers to 1.12–2.10 and hides it.
+
 **4. The sensor sets the level, the lens sets the slope.** `real` sits well above
 `synthetic` at every bin (VGGT-1B fisheye 0.110 vs 0.068 on axis) while the two
 curves have nearly the same shape.
@@ -254,6 +271,15 @@ wedge, not the cost of width. Here the window FOV is **held fixed** and only the
 aim moves; `in_cone_frac` is reported per window and anything under 50% is
 dropped rather than scored.
 
+Holding the FOV fixed is necessary and was not sufficient. A 40° *square* window
+still reaches 27.2° along its diagonal, so an aim of 40° puts its corners well
+outside the 54.83° cone and the window measures **0.842** imaged — a 16% black
+wedge that moves with the swept variable, exactly the shape of the confound above,
+just an order smaller. The 50% floor let it through. `pen` now spans
+**fully-imaged aims only** (`MIN_CLEAN_CONE_FRAC`), clipped aims are flagged
+`t40!` in the tables and ringed in the figures, and `in_cone_frac` is printed per
+aim in the WINDOW GEOMETRY table rather than living only in `results.json`.
+
 ## What this does not claim
 
 Nothing here corrects for distortion and no model is given the lens. These are
@@ -274,7 +300,7 @@ between the streams is *sensor reality plus registration*, not blur alone.
 | `models.py` | the four models behind one call + the analytic stand-in |
 | `run.py` | the driver (CLI) |
 | `report.py` | tables, CSV, figures, `pen`/`drift` |
-| `tests/` | 90 CPU tests: no weights, no data, ~8 s |
+| `tests/` | 113 CPU tests: no weights, no data, ~11 s (needs Python 3.8+) |
 
 Model loading, availability and downloads live in
 [`finetune/eval/baselines/model_zoo.py`](../finetune/eval/baselines/model_zoo.py);

@@ -57,6 +57,12 @@ MIN_BIN_PX = 64.0
 #: small for an honest geometric reason and IS a measurement.
 THIN_BIN_PX = 3500.0
 
+#: A window cell imaged less completely than this does not set ``pen``. The
+#: sweep's whole design is that only the aim moves; a cell with its corners
+#: outside the lens differs from the on-axis cell in dead area too, and 40 deg
+#: of aim on a 40 deg square window measures 0.84 on this lens.
+MIN_CLEAN_CONE_FRAC = 0.98
+
 #: A bin standardisable in fewer than this share of frames gets no ``pen_ds``.
 #: The frames that survive are the ones whose depth range happened to be wide
 #: enough — a selected subset, not a sample — and a mean over them would read
@@ -75,6 +81,25 @@ def _populated(bins: Sequence[dict]) -> List[dict]:
             and _finite(b.get("AbsRel"))]
 
 
+def _fully_imaged(cells: Sequence[dict]) -> List[dict]:
+    """Window cells the lens images completely.
+
+    The window sweep holds the FOV fixed and moves only the aim, so that width
+    and eccentricity cannot move together — that confound made an earlier sweep
+    in this repo unreadable. But a fixed 40 deg *square* window has a 27.2 deg
+    half-diagonal, so from an aim of 30 deg its corners already leave the Aria
+    cone (54.83 deg) and at 40 deg it is 84% imaged: the remaining 16% is black
+    wedge. `pen` across that step would again be comparing two windows that
+    differ in dead area as well as in aim.
+
+    So the ratio spans fully-imaged cells only. Clipped cells are still scored
+    and still printed — they are the honest cost of aiming a fixed window that
+    far off-axis — but they are marked, and they do not set `pen`.
+    """
+    return [c for c in cells
+            if c.get("in_cone_frac", 1.0) >= MIN_CLEAN_CONE_FRAC]
+
+
 def summarise(run: dict) -> dict:
     """``pen``/``drift`` plus the span they were measured over.
 
@@ -83,9 +108,18 @@ def summarise(run: dict) -> dict:
     as "not measurable here" rather than as a good score.
     """
     cells = _populated(_cells_of(run, run.get("_axis", "theta")))
+    # A window sweep compares aims, so every cell in the ratio must differ ONLY
+    # in aim. Cells the lens clips are dropped from the ratio (not from the
+    # tables) — see ``_fully_imaged``.
+    clipped = 0
+    if run["protocol"] != "radial":
+        clean = _fully_imaged(cells)
+        clipped = len(cells) - len(clean)
+        cells = clean
     if len(cells) < 2:
         return dict(pen=float("nan"), pen_ds=float("nan"), drift=float("nan"),
-                    lo=float("nan"), hi=float("nan"), n_cells=len(cells))
+                    lo=float("nan"), hi=float("nan"), n_cells=len(cells),
+                    clipped=clipped)
     a, b = cells[0], cells[-1]
     key = "bin_lo" if "bin_lo" in a else ("theta_lo" if "theta_lo" in a else "tilt")
     pen = (b["AbsRel"] / a["AbsRel"]) if a["AbsRel"] > 1e-9 else float("nan")
@@ -113,7 +147,7 @@ def summarise(run: dict) -> dict:
             and abs(b["anchored_ratio"]) > 1e-9:
         drift = a["anchored_ratio"] / b["anchored_ratio"]
     return dict(pen=pen, pen_ds=pen_ds, drift=drift,
-                lo=a[key], hi=b[key], n_cells=len(cells))
+                lo=a[key], hi=b[key], n_cells=len(cells), clipped=clipped)
 
 
 # --------------------------------------------------------------------------- #
@@ -146,7 +180,10 @@ def _cells_of(run: dict, axis: str = "theta") -> List[dict]:
 def _axis(run: dict, axis: str = "theta") -> Tuple[List[str], List[dict]]:
     cells = _cells_of(run, axis)
     if run["protocol"] != "radial":
-        return ([f"t{int(c['tilt'])}" for c in cells], cells)
+        # A clipped aim is flagged in the column head, where the number is read.
+        return ([f"t{int(c['tilt'])}"
+                 + ("!" if c.get("in_cone_frac", 1.0) < MIN_CLEAN_CONE_FRAC else "")
+                 for c in cells], cells)
     if axis == "radius":
         return ([f"{_lo(b):.1f}-{_hi(b):.1f}" for b in cells], cells)
     return ([f"{int(_lo(b))}-{int(_hi(b))}" for b in cells], cells)
@@ -225,6 +262,45 @@ def _coverage_note(runs: List[dict]) -> List[str]:
         "  in its corners (52.6 deg at most). Empty outer bins there are geometry,",
         "  not model failure — and are themselves the cost of rectifying.",
         ""] + _bin_depth_note(rad)
+
+
+def _window_geometry_note(runs: List[dict]) -> List[str]:
+    """What each window aim actually got: how much of it the lens images, and
+    how many raw pixels sit behind one of its pixels.
+
+    Both are pure geometry — identical for every model at a given render size —
+    and both are confounds that move with the swept variable, so they belong
+    beside the numbers rather than in the JSON only. ``in_cone`` below 1.0 is
+    black wedge inside the window; ``src_px`` below 1.0 means the window is
+    upsampled, i.e. the on-axis aims are the *soft* ones, not the rim.
+    """
+    win = [r for r in runs if r["protocol"] != "radial" and r.get("cells")]
+    if not win:
+        return []
+    cols, _ = _axis(win[0])
+    lines = ["  WINDOW GEOMETRY · what each aim was actually handed",
+             "  " + "-" * 78,
+             "  " + f"{'view':10s}{'px':>5s}{'':>9s}"
+             + "".join(f"{c:>8s}" for c in cols)]
+    seen = set()
+    for r in sorted(win, key=lambda r: (r["view"], r["input_size"])):
+        tag = (r["view"], r["input_size"])
+        if tag in seen:
+            continue
+        seen.add(tag)
+        for lab, key, nd in (("in_cone", "in_cone_frac", 3),
+                             ("src_px", "src_px_per_out_px", 2)):
+            row = f"{r['view']:10s}{r['input_size']:>5d}{lab:>9s}"
+            for c in r["cells"]:
+                row += _fmt(c.get(key), nd, 8)
+            lines.append("  " + row)
+    return lines + [
+        "  A `!` on a column means that aim is NOT fully imaged, and it is left out",
+        "  of `pen`: a 40 deg square window has a 27.2 deg half-diagonal, so from an",
+        "  aim of 30 deg its corners leave the 54.83 deg Aria cone. Those cells are",
+        "  still scored — they are the real cost of aiming that far off-axis — but a",
+        "  ratio across them would compare two windows differing in dead area as",
+        "  well as in aim, which is the confound this sweep exists to avoid.", ""]
 
 
 def _bin_depth_note(rad: List[dict]) -> List[str]:
@@ -359,6 +435,7 @@ def render_report(payload: dict) -> str:
                 for metric in ("AbsRel", "delta1"):
                     out += _table(runs, protocol, view, metric, axis="radius")
     out += _coverage_note(runs)
+    out += _window_geometry_note(runs)
 
     models = sorted({r["model"] for r in runs})
     out += ["  MODELS", "  " + "-" * 60]
@@ -424,9 +501,14 @@ _VIEW_ORDER = {"fisheye": 0, "rect": 1}
 _AXIS_NOTE = {
     "radius": ("each view measures radius in its OWN image plane: the same x is a "
                "different direction left vs right. Compare views on theta."),
+    "window": "",
     "theta": ("theta is the ray direction, so left and right are like-for-like. "
               "Ringed = bin held up by a corner sliver."),
 }
+
+_WINDOW_NOTE = ("the window's FOV is held fixed and only its aim moves. "
+                "Ringed = the lens clips that aim, so it is not a like-for-like "
+                "point and does not set pen.")
 
 
 def write_figures(payload: dict, out_dir: str) -> List[str]:
@@ -497,12 +579,15 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                         ax.plot([p[0] for p in pts], [p[1] for p in pts],
                                 "-", marker="o", ms=4, lw=1.6,
                                 color=cmap[r["model"]], label=r["model"])
-                        # A bin held up by a few corner pixels is not a
-                        # measurement; ring it so the rectified rim cannot be
-                        # read as one.
+                        # Ring the cells that are not clean measurements: a bin
+                        # held up by a few corner pixels, and a window aim the
+                        # lens clips. Both are still plotted — they happened —
+                        # but neither may be read as a like-for-like point.
                         thin = [(x, y) for (x, y), c in zip(zip(xs, ys), cells)
                                 if _finite(y)
-                                and c.get("n_px_mean", 1e9) < thin_px]
+                                and (c.get("n_px_mean", 1e9) < thin_px
+                                     or c.get("in_cone_frac", 1.0)
+                                     < MIN_CLEAN_CONE_FRAC)]
                         if thin:
                             ax.plot([t[0] for t in thin], [t[1] for t in thin], "o",
                                     ms=11, mfc="none", mec=cmap[r["model"]], mew=1.2)
@@ -523,9 +608,10 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
             if handles:
                 fig.legend(handles, labels, loc="lower center", ncol=len(models),
                            fontsize=8, frameon=False)
+            note = (_WINDOW_NOTE if protocol != "radial"
+                    else _AXIS_NOTE.get(axis, ""))
             fig.suptitle(f"ADT-FOV · {metric} vs {axis} · {protocol} protocol · "
-                         f"split {payload['digest']}\n"
-                         f"{_AXIS_NOTE.get(axis, '')}", fontsize=10)
+                         f"split {payload['digest']}\n{note}", fontsize=10)
             fig.tight_layout(rect=(0, 0.06, 1, 0.93))
             name = f"{protocol}_{metric}" + ("_radius" if axis == "radius" else "")
             path = os.path.join(out_dir, f"{name}.png")

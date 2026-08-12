@@ -233,3 +233,47 @@ def test_pen_ds_is_absent_for_runs_that_predate_it():
     s = R.summarise(_run())
     assert math.isnan(s["pen_ds"])
     assert math.isfinite(s["pen"])
+
+
+def _win_cell(tilt, absrel, in_cone=1.0, n_frames=4, n_px=5000.0):
+    c = _bin(0, 0, absrel, n_frames=n_frames, n_px=n_px)
+    c.update(tilt=tilt, in_cone_frac=in_cone, src_px_per_out_px=0.8 + 0.01 * tilt)
+    return c
+
+
+def _win_run(cells, **kw):
+    r = _run(**kw)
+    r.update(protocol="window", cells=cells)
+    r.pop("bins", None)
+    return r
+
+
+def test_window_pen_skips_an_aim_the_lens_clips():
+    """The sweep holds the FOV fixed so that only the aim moves. A 40 deg square
+    window has a 27.2 deg half-diagonal, so far-off-axis aims lose their corners
+    off the lens and differ from the on-axis cell in DEAD AREA as well as aim.
+    A ratio across that step is the confound the sweep exists to avoid."""
+    cells = [_win_cell(0, 0.05), _win_cell(20, 0.06),
+             _win_cell(30, 0.06), _win_cell(40, 0.12, in_cone=0.84)]
+    s = R.summarise(_win_run(cells))
+    assert s["pen"] == pytest.approx(0.06 / 0.05)     # t0 -> t30, not t0 -> t40
+    assert s["clipped"] == 1
+
+
+def test_a_clipped_aim_is_still_printed_and_flagged():
+    cells = [_win_cell(0, 0.05), _win_cell(40, 0.12, in_cone=0.84)]
+    txt = R.render_report(_payload([_win_run(cells)]))
+    assert "t40!" in txt                # flagged where the number is read
+    assert "0.120" in txt               # and not hidden
+    assert "WINDOW GEOMETRY" in txt
+    assert "in_cone" in txt
+
+
+def test_radial_bins_are_never_dropped_for_cone_fraction():
+    """The gate is a window-sweep concept: a radial bin is a region of ONE frame
+    the model saw whole, so there is no per-bin dead area to equalise."""
+    r = _run()
+    r["in_cone_frac"] = 0.5
+    s = R.summarise(r)
+    assert s["clipped"] == 0
+    assert math.isfinite(s["pen"])
