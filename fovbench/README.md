@@ -171,7 +171,10 @@ Two things about it must travel with the number:
   standardised at all, rather than averaged over whichever strata it did
   populate — that would put back exactly the bias being removed. If the rim
   never sees far depth, what it would score at the centre's depth is not in this
-  data, and no arithmetic supplies it.
+  data, and no arithmetic supplies it. The same applies across frames: `ds_frac`
+  records the share of frames in which a bin *could* be standardised, and
+  `pen_ds` is refused below half, because the frames that survive are the ones
+  whose depth range happened to be wide enough — a selected subset, not a sample.
 
 ## What it found
 
@@ -271,7 +274,7 @@ between the streams is *sensor reality plus registration*, not blur alone.
 | `models.py` | the four models behind one call + the analytic stand-in |
 | `run.py` | the driver (CLI) |
 | `report.py` | tables, CSV, figures, `pen`/`drift` |
-| `tests/` | 87 CPU tests: no weights, no data, ~8 s |
+| `tests/` | 90 CPU tests: no weights, no data, ~8 s |
 
 Model loading, availability and downloads live in
 [`finetune/eval/baselines/model_zoo.py`](../finetune/eval/baselines/model_zoo.py);

@@ -158,7 +158,15 @@ def _reduce_axis(runs: List[dict], key: str, edges) -> list:
     for i, (lo, hi) in enumerate(zip(edges[:-1], edges[1:])):
         rows = [r[key][i] for r in runs if r[key][i]["n_valid"] > 0]
         b = _mean_metrics(rows, G.METRIC_KEYS)
+        # _mean_metrics skips NaN, which is right for a metric that failed on
+        # one frame and wrong for AbsRel_ds: a bin that can only be
+        # standardised in some frames would report the mean over exactly the
+        # frames whose depth range happened to be wide enough, and read like a
+        # full measurement. Carry the denominator so it cannot.
         b.update(bin_lo=lo, bin_hi=hi,
+                 ds_frac=(float(np.mean([1.0 if np.isfinite(
+                     r.get("AbsRel_ds", float("nan"))) else 0.0 for r in rows]))
+                     if rows else 0.0),
                  n_px_mean=float(np.mean([r[key][i]["n_bin"] for r in runs]))
                  if runs else 0.0)
         out.append(b)

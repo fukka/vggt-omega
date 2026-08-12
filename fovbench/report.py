@@ -57,6 +57,12 @@ MIN_BIN_PX = 64.0
 #: small for an honest geometric reason and IS a measurement.
 THIN_BIN_PX = 3500.0
 
+#: A bin standardisable in fewer than this share of frames gets no ``pen_ds``.
+#: The frames that survive are the ones whose depth range happened to be wide
+#: enough — a selected subset, not a sample — and a mean over them would read
+#: like a full measurement. Half is a floor, not a blessing: check ``ds_frac``.
+MIN_DS_FRAC = 0.5
+
 
 def _finite(x) -> bool:
     return isinstance(x, (int, float)) and np.isfinite(x)
@@ -86,9 +92,13 @@ def summarise(run: dict) -> dict:
     # The same ratio after standardising both ends to the frame's depth mix.
     # nan whenever either end could not be standardised — a bin that missed a
     # depth stratum has no answer, and must not borrow the raw one.
+    # ... and nan too when either end was standardisable in only a minority of
+    # frames: the surviving frames are the ones whose depth range happened to be
+    # wide enough, which is not a random subset of the run.
     pen_ds = float("nan")
     if _finite(a.get("AbsRel_ds")) and _finite(b.get("AbsRel_ds")) \
-            and a["AbsRel_ds"] > 1e-9:
+            and a["AbsRel_ds"] > 1e-9 \
+            and min(a.get("ds_frac", 1.0), b.get("ds_frac", 1.0)) >= MIN_DS_FRAC:
         pen_ds = b["AbsRel_ds"] / a["AbsRel_ds"]
     drift = float("nan")
     # `drift` exists only for the radial protocol. Its bins come from ONE forward
@@ -264,8 +274,10 @@ def render_report(payload: dict) -> str:
         "           less. It is a REDUCTION, not a removal — ~25% of a purely-depth",
         "           penalty still stands at four strata — so pen_ds well above 1.0 is",
         "           real, and pen_ds near 1.0 means 'mostly depth', not 'nothing here'.",
-        "           `—` means a bin missed a depth stratum entirely: what it would",
-        "           score at the other bins' depths is simply not in this data.",
+        "           `—` means a bin missed a depth stratum entirely, in at least half",
+        "           the frames: what it would score at the other bins' depths is simply",
+        "           not in this data. Averaging only the frames that did work would be",
+        "           averaging the frames with the widest depth range — see ds_frac.",
         "  drift* = OUTSIDE THE PROTOCOL, and the only column that is. anchored_ratio",
         "           fits the model's own affine on the INNERMOST BIN ALONE, then takes",
         "           median(gt/pred) per bin; drift* is innermost / outermost, > 1 =",
