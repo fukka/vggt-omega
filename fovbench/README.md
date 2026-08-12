@@ -135,11 +135,14 @@ that is wrong by 50% at the rim. Measured on the analytic stand-in with a known
 independently derived value, with no data needed. `pen` says how it feels;
 `drift` says what the model did.
 
-Absolute AbsRel is **not** comparable across models — DAv2 is scored under a
-disparity-space affine and the depth heads under a depth-space one, because those
-are the protocols they were built for. `pen` is a within-model ratio, so the
-alignment protocol cancels and it *is* comparable. So is `drift*`, but of a
-differently-fitted quantity: compare a `drift*` only against another `drift*`.
+Absolute AbsRel is comparable **only among models that share an alignment
+protocol**, and here three of the four do: VGGT-1B, VGGT-Omega and DA3 are all
+scored under the same depth-space affine, so their levels can be read against
+each other directly. **DAv2 cannot** — it is scored under a disparity-space
+affine, because that is the protocol it was built for, and no column reconciles
+the two. `pen` is a within-model ratio, so the alignment protocol cancels and it
+is comparable across all four. So is `drift*`, but of a differently-fitted
+quantity: compare a `drift*` only against another `drift*`.
 
 **`gt_median`** — per bin, and not a score: the median GT depth of what that bin
 was looking at. Every metric here is relative and grows with depth, so "the rim

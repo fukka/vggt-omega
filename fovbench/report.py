@@ -414,10 +414,11 @@ def render_report(payload: dict) -> str:
         "           never mix it with the columns above when quoting a protocol.",
         "           Radial only: window cells are separate forward passes of up-to-scale",
         "           models, so a window-to-window ratio compares two arbitrary constants.",
-        "  Absolute AbsRel is NOT comparable across models (each keeps its own",
-        "  alignment protocol); pen is, being a within-model ratio. drift* is a",
-        "  within-model ratio too, but of a differently-fitted quantity — compare",
-        "  it model to model only against other drift*, never against pen.",
+        "  Absolute AbsRel is comparable only WITHIN an alignment protocol — see the",
+        "  MODELS block: models sharing an `align=` may be read against each other,",
+        "  one scored differently may not. pen is comparable across all of them,",
+        "  being a within-model ratio. drift* is a within-model ratio too, but of a",
+        "  differently-fitted quantity — compare it only against other drift*.",
         "",
     ]
     for protocol in ("radial", "window"):
