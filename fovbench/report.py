@@ -131,9 +131,16 @@ def _hi(c: dict) -> float:
 
 
 def _cells_of(run: dict, axis: str = "theta") -> List[dict]:
+    """The run's cells on one axis, or ``[]`` if it has none.
+
+    A run can genuinely lack an axis. ego-synth's raw-fisheye arm ships no
+    camera model, so an incidence angle is not computable for it at all and it
+    is binned by radius only — an empty list here, and a skipped row in the
+    theta tables, rather than a fabricated column.
+    """
     if run["protocol"] != "radial":
-        return run["cells"]
-    return run["radius_bins"] if axis == "radius" else run["bins"]
+        return run.get("cells", [])
+    return run.get("radius_bins", []) if axis == "radius" else run.get("bins", [])
 
 
 def _axis(run: dict, axis: str = "theta") -> Tuple[List[str], List[dict]]:
@@ -151,19 +158,28 @@ def _fmt(x, nd=3, width=7) -> str:
     return f"{x:>{width}.{nd}f}"
 
 
-def _table(runs: List[dict], protocol: str, view: str, metric: str) -> List[str]:
-    sel = [r for r in runs if r["protocol"] == protocol and r["view"] == view]
+def _table(runs: List[dict], protocol: str, view: str, metric: str,
+           axis: str = "theta") -> List[str]:
+    # Runs with no cells on this axis are dropped before the header is built,
+    # not after: the column labels come from the first surviving run, and an
+    # axis-less run would otherwise hand the table an empty column list.
+    sel = [r for r in runs if r["protocol"] == protocol and r["view"] == view
+           and _cells_of(r, axis)]
     if not sel:
         return []
-    cols, _ = _axis(sel[0])
-    unit = "deg off-axis" if protocol == "radial" else "window aim (deg off-axis)"
+    cols, _ = _axis(sel[0], axis)
+    unit = ("half-widths from the optical centre" if axis == "radius" else
+            ("deg off-axis" if protocol == "radial"
+             else "window aim (deg off-axis)"))
     head = (f"{'model':14s}{'stream':10s}" + "".join(f"{c:>8s}" for c in cols)
             + f"{'pen':>8s}{'pen_ds':>8s}{'drift*':>8s}")
-    lines = [f"  {protocol.upper()} · {view} · {metric}   ({unit})", "  " + "-" * len(head),
+    lines = [f"  {protocol.upper()} · {view} · {metric}"
+             + (" · by radius" if axis == "radius" else "")
+             + f"   ({unit})", "  " + "-" * len(head),
              "  " + head, "  " + "-" * len(head)]
     for r in sorted(sel, key=lambda r: (r["model"], r["stream"])):
-        _, cells = _axis(r)
-        s = summarise(r)
+        _, cells = _axis(r, axis)
+        s = summarise(dict(r, _axis=axis))
         row = f"{r['model']:14s}{r['stream']:10s}"
         for c in cells:
             row += _fmt(c.get(metric), 3, 8) if c.get("n_frames", 0) else f"{'—':>8s}"
@@ -177,9 +193,17 @@ def _coverage_note(runs: List[dict]) -> List[str]:
     rad = [r for r in runs if r["protocol"] == "radial"]
     if not rad:
         return []
-    lines = ["  COVERAGE · mean valid pixels per incidence bin (radial protocol)",
+    # Prefer the incidence-angle axis; fall back to radius for a run that has no
+    # theta at all (ego-synth's raw fisheye ships no camera model). Mixing the
+    # two in one table would put `tan theta` and `theta` in the same column.
+    axis = "theta" if any(_cells_of(r, "theta") for r in rad) else "radius"
+    rad = [r for r in rad if _cells_of(r, axis)]
+    if not rad:
+        return []
+    label = "incidence bin" if axis == "theta" else "radius bin"
+    lines = [f"  COVERAGE · mean valid samples per {label} (radial protocol)",
              "  " + "-" * 82]
-    cols, _ = _axis(rad[0])
+    cols, _ = _axis(rad[0], axis)
     lines.append("  " + f"{'view':10s}{'stream':10s}{'px':>6s}"
                  + "".join(f"{c:>9s}" for c in cols))
     # Rows depend on (view, stream) AND the render size — views go to each model
@@ -193,7 +217,7 @@ def _coverage_note(runs: List[dict]) -> List[str]:
             continue
         seen.add(tag)
         row = f"{r['view']:10s}{r['stream']:10s}{r['input_size']:>6d}"
-        for b in r["bins"]:
+        for b in _cells_of(r, axis):
             row += f"{int(b.get('n_px_mean', 0)):>9d}"
         lines.append("  " + row)
     return lines + [
@@ -209,26 +233,36 @@ def _bin_depth_note(rad: List[dict]) -> List[str]:
     Every metric in this report is relative, and a relative error grows with
     depth. So "the rim is worse" is a statement about field position only if
     the bins are at comparable depths; in an egocentric indoor frame they need
-    not be. This table is model-independent (it is the GT), so one row per
-    view x render size says everything.
+    not be. This table is model-independent (it is the GT), so it collapses on
+    the GT itself: one row per distinct depth profile, labelled with the streams
+    that share it. On ADT both streams read one depth map and collapse to a
+    single row, as before. On ego-synth the ``stream`` column is the *dataset*,
+    and their scene scales differ by an order of magnitude — ~1.2 m median
+    indoors against ~5.3 m at Oxford with a 23 m p99 — so they do not collapse,
+    and must not: pooling four scene scales into one row is exactly the confound
+    this table exists to expose.
     """
-    have = [r for r in rad if any("gt_median" in b for b in r.get("bins", ()))]
+    axis = "theta" if any(_cells_of(r, "theta") for r in rad) else "radius"
+    have = [r for r in rad if any("gt_median" in b for b in _cells_of(r, axis))]
     if not have:
         return []
-    cols, _ = _axis(have[0])
-    lines = ["  BIN DEPTH · median GT depth per incidence bin (m) — a confound, not a score",
+    cols, _ = _axis(have[0], axis)
+    label = "incidence bin" if axis == "theta" else "radius bin"
+    lines = [f"  BIN DEPTH · median GT depth per {label} (m) — a confound, not a score",
              "  " + "-" * 82,
-             "  " + f"{'view':10s}{'px':>6s}" + "".join(f"{c:>9s}" for c in cols)]
-    seen = set()
-    for r in sorted(have, key=lambda r: (r["view"], r["input_size"])):
-        tag = (r["view"], r["input_size"])
-        if tag in seen:
-            continue
-        seen.add(tag)
-        row = f"{r['view']:10s}{r['input_size']:>6d}"
-        for b in r["bins"]:
-            v = b.get("gt_median", float("nan"))
-            row += (f"{v:>9.2f}" if _finite(v) else f"{'—':>9s}")
+             "  " + f"{'view':10s}{'stream':16s}{'px':>6s}"
+             + "".join(f"{c:>9s}" for c in cols)]
+    seen: Dict[tuple, List[str]] = {}
+    for r in sorted(have, key=lambda r: (r["view"], r["input_size"], r["stream"])):
+        prof = tuple(round(b["gt_median"], 3) if _finite(b.get("gt_median"))
+                     else None for b in _cells_of(r, axis))
+        tag = (r["view"], r["input_size"], prof)
+        if r["stream"] not in seen.setdefault(tag, []):
+            seen[tag].append(r["stream"])
+    for (view, px, prof), streams in seen.items():
+        row = f"{view:10s}{'+'.join(streams)[:15]:16s}{px:>6d}"
+        for v in prof:
+            row += (f"{v:>9.2f}" if v is not None else f"{'—':>9s}")
         lines.append("  " + row)
     return lines + [
         "  Read the AbsRel tables against this row: a bin that is both farther and",
@@ -238,15 +272,30 @@ def _bin_depth_note(rad: List[dict]) -> List[str]:
 def render_report(payload: dict) -> str:
     runs = payload["runs"]
     cfg = payload["config"]
+    seqs = payload["sequences"]
     out = [
         "=" * 88,
-        f"  ADT-FOV test · {payload['protocol']} · split {payload['digest']}",
+        f"  {'ego-synth' if payload['protocol'].startswith('egosynth') else 'ADT'}"
+        f"-FOV test · {payload['protocol']} · split {payload['digest']}",
         "=" * 88,
-        f"  {payload['n_frames']} frames over {len(payload['sequences'])} sequence(s): "
-        f"{', '.join(payload['sequences'])}",
+        f"  {payload['n_frames']} frames over {len(seqs)} sequence(s): "
+        + (", ".join(seqs) if len(seqs) <= 6
+           else f"{', '.join(seqs[:5])}, … (+{len(seqs) - 5} more)"),
         f"  streams {cfg['streams']} · views {cfg['views']} · protocols {cfg['protocols']}",
-        f"  window FOV {cfg['window_fov']} deg held fixed; aims {cfg['tilts']} deg "
-        f"x azimuths {cfg['azimuths']}",
+    ]
+    # The window protocol re-renders an angular window out of the raw fisheye,
+    # which needs a fisheye camera model. ego-synth ships none, so its runs are
+    # radial-only and have no window line to print.
+    if "window" in cfg.get("protocols", ()):
+        out.append(f"  window FOV {cfg['window_fov']} deg held fixed; aims "
+                   f"{cfg['tilts']} deg x azimuths {cfg['azimuths']}")
+    if "sigma_max" in cfg:
+        out += [f"  GT is a sparse SLAM point list, cut at "
+                f"{cfg['sigma_column']} < {cfg['sigma_max']} — the release ships "
+                f"UNFILTERED, so this cut is part of every number below",
+                f"  {cfg.get('takes_per_dataset', 0) or 'all'} take(s) per dataset; "
+                f"prediction read at the points by: {', '.join(cfg.get('gather', ())) or 'n/a'}"]
+    out += [
         f"  GT valid <= {cfg['depth_max_m']} m; predictions beyond "
         f"{cfg['metric_max_depth']} m excluded from the metrics",
         "",
@@ -299,6 +348,16 @@ def render_report(payload: dict) -> str:
         for view in ("rect", "fisheye"):
             for metric in ("AbsRel", "delta1"):
                 out += _table(runs, protocol, view, metric)
+            # An arm with no incidence-angle axis at all would otherwise print
+            # nothing: ego-synth's raw fisheye ships no camera model, so theta
+            # is not computable for it and radius is the only axis it has. Give
+            # it its own table, labelled by radius — never silently in the theta
+            # tables, where the same number would mean a different direction.
+            if protocol == "radial" and not any(
+                    _cells_of(r, "theta") for r in runs
+                    if r["protocol"] == protocol and r["view"] == view):
+                for metric in ("AbsRel", "delta1"):
+                    out += _table(runs, protocol, view, metric, axis="radius")
     out += _coverage_note(runs)
 
     models = sorted({r["model"] for r in runs})
@@ -319,28 +378,39 @@ _CSV_METRICS = G.METRIC_KEYS
 
 
 def write_csv(payload: dict, path: str) -> str:
-    """One flat row per (model, stream, view, protocol, cell)."""
+    """One flat row per (model, stream, view, protocol, cell).
+
+    The ``axis`` column names what ``theta_lo``/``theta_hi`` measure on that
+    row. It is incidence angle wherever incidence angle exists, and radius on a
+    run that has no theta at all — ego-synth's raw fisheye, which ships no
+    camera model. Without the column those two would be the same pair of
+    numbers meaning different things, which is the confusion
+    `fovbench/README.md` spends a paragraph warning about.
+    """
     with open(path, "w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["digest", "model", "family", "size", "params_m", "align",
-                    "protocol", "stream", "view", "cell", "theta_lo", "theta_hi",
+                    "protocol", "stream", "view", "axis", "cell",
+                    "theta_lo", "theta_hi",
                     "tilt", "n_frames", "n_px_mean"] + list(_CSV_METRICS)
-                   + ["pen", "drift"])
+                   + ["pen", "pen_ds", "drift"])
         for r in payload["runs"]:
-            s = summarise(r)
-            _, cells = _axis(r)
+            axis = "theta" if _cells_of(r, "theta") else "radius"
+            s = summarise(dict(r, _axis=axis))
+            _, cells = _axis(r, axis)
             for c in cells:
                 label = (f"{_lo(c):g}-{_hi(c):g}"
                          if r["protocol"] == "radial" else f"tilt{int(c['tilt'])}")
                 w.writerow([payload["digest"], r["model"], r["family"], r["size"],
                             f"{r['params_m']:.2f}", r["align"], r["protocol"],
-                            r["stream"], r["view"], label,
+                            r["stream"], r["view"], axis, label,
                             _lo(c), _hi(c),
                             c.get("tilt", ""), c.get("n_frames", 0),
                             f"{c.get('n_px_mean', 0):.0f}"]
                            + [f"{c[k]:.6f}" if _finite(c.get(k)) else ""
                               for k in _CSV_METRICS]
                            + [f"{s['pen']:.4f}" if _finite(s["pen"]) else "",
+                              f"{s['pen_ds']:.4f}" if _finite(s["pen_ds"]) else "",
                               f"{s['drift']:.4f}" if _finite(s["drift"]) else ""])
     return path
 
@@ -375,6 +445,11 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
         return []
 
     os.makedirs(out_dir, exist_ok=True)
+    # What counts as "too thin to be a measurement" is a count of samples, and
+    # the two datasets count different things: ADT bins hold pixels of a dense
+    # map (thousands), ego-synth bins hold pooled SLAM points (hundreds). One
+    # constant cannot serve both, so the run states its own.
+    thin_px = float(payload.get("config", {}).get("thin_bin_px", THIN_BIN_PX))
     written = []
     axes_spec = [("radial", "theta", "incidence angle from the optical axis (deg)"),
                  ("radial", "radius",
@@ -427,7 +502,7 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                         # read as one.
                         thin = [(x, y) for (x, y), c in zip(zip(xs, ys), cells)
                                 if _finite(y)
-                                and c.get("n_px_mean", 1e9) < THIN_BIN_PX]
+                                and c.get("n_px_mean", 1e9) < thin_px]
                         if thin:
                             ax.plot([t[0] for t in thin], [t[1] for t in thin], "o",
                                     ms=11, mfc="none", mec=cmap[r["model"]], mew=1.2)

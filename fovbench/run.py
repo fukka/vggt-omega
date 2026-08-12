@@ -54,10 +54,12 @@ from PIL import Image
 
 from fovbench import _REPO  # noqa: F401  (import registers sys.path)
 
+from fovbench import datasets_egosynth as EG  # noqa: E402
 from fovbench import geometry as G          # noqa: E402
 from fovbench import models as M            # noqa: E402
 from fovbench import report as R            # noqa: E402
-from fovbench.split import PROTOCOL, STREAMS, Split, build_split  # noqa: E402
+from fovbench.split import (EGOSYNTH_PROTOCOL, PROTOCOL, STREAMS,  # noqa: E402
+                            Split, build_egosynth_split, build_split)
 
 from finetune.eval.metrics import align_depth, depth_metrics  # noqa: E402
 
@@ -135,6 +137,17 @@ def _score_window(model, win: "G.Window", max_depth) -> Optional[dict]:
     return met
 
 
+def _edges(spec: str, default) -> tuple:
+    """Bin edges from the CLI, or the dataset's own default when unset.
+
+    The two datasets image different cones and so cannot share one default: the
+    Aria fisheye's usable cone stops at 54.83 deg, while ego-synth's rectified
+    110 deg pinhole reaches 55 deg at the middle of an edge and 63.65 deg into a
+    corner. An explicit ``--theta-edges`` still overrides both.
+    """
+    return tuple(float(x) for x in spec.split(",")) if spec else tuple(default)
+
+
 def _accumulate(store: Dict[str, list], key: str, value) -> None:
     if value is not None:
         store.setdefault(key, []).append(value)
@@ -208,8 +221,8 @@ def run(a: argparse.Namespace) -> dict:
     views = [v.strip() for v in a.views.split(",") if v.strip()]
     protocols = [p.strip() for p in a.protocols.split(",") if p.strip()]
     keys = [k.strip() for k in a.models.split(",") if k.strip()]
-    edges = tuple(float(x) for x in a.theta_edges.split(","))
-    radius_edges = tuple(float(x) for x in a.radius_edges.split(","))
+    edges = _edges(a.theta_edges, G.THETA_EDGES)
+    radius_edges = _edges(a.radius_edges, G.RADIUS_EDGES)
     tilts = tuple(float(x) for x in a.tilts.split(","))
     azimuths = tuple(float(x) for x in a.azimuths.split(","))
 
@@ -326,11 +339,261 @@ def run(a: argparse.Namespace) -> dict:
     return payload
 
 
+# --------------------------------------------------------------------------- #
+# ego-synth 5B driver
+# --------------------------------------------------------------------------- #
+
+def _egosynth_clips(split: Split) -> List[tuple]:
+    """Group the split into ``(seq, clip, npz, rgb_paths, frame_indices)``.
+
+    One entry per clip, so each mp4 is opened and decoded exactly once. Frames
+    of a clip are near-duplicates at 20 fps and the split already strides across
+    them; what this grouping buys is decode cost, not sampling.
+    """
+    order: List[tuple] = []
+    seen: Dict[tuple, int] = {}
+    for f in split.frames:
+        clip, idx = f.frame_id.rsplit(":", 1)
+        tag = (f.seq, clip)
+        if tag not in seen:
+            seen[tag] = len(order)
+            order.append((f.seq, clip, f.depth, dict(f.rgb), []))
+        order[seen[tag]][4].append(int(idx))
+    return [(s, c, d, r, sorted(set(i))) for s, c, d, r, i in order]
+
+
+def _egosynth_cells(bins: List[dict], n_pool: int) -> List[dict]:
+    """Pooled bins in the shape the report reads.
+
+    ``n_frames``/``n_px_mean`` are what ``report._populated`` gates on. In the
+    ADT path they are "frames that had this bin" and "mean pixels per frame";
+    here the pool is binned once, so they are the frames behind the pool and the
+    bin's total point count. A bin with no points reports ``n_frames = 0`` and
+    prints as ``—``: an empty bin is **missing**, not zero, and must never be
+    filled in (a frame can populate no bin at all within 30 deg of the axis).
+
+    ``ds_frac`` is 1.0 or 0.0 by construction, never in between. It exists in
+    the ADT path because standardisation runs per frame and a bin can be
+    standardisable in only some of them; here it runs once over the whole pool,
+    so the bin either standardised over every frame behind it or not at all.
+    """
+    cells = []
+    for b in bins:
+        c = dict(b)
+        c["n_frames"] = n_pool if b["n_bin"] > 0 else 0
+        c["n_px_mean"] = float(b["n_bin"])
+        c["ds_frac"] = 1.0 if np.isfinite(b.get("AbsRel_ds", np.nan)) else 0.0
+        cells.append(c)
+    return cells
+
+
+def run_egosynth(a: argparse.Namespace) -> dict:
+    """Score the models against ego-synth 5B's sparse SLAM depth.
+
+    Same question and same protocol as the ADT path — the scale and shift are
+    fitted once per frame over every valid point and then frozen, and binning is
+    a masking step afterwards — over a point-list ground truth instead of a
+    dense map. The structural differences, and why each is forced, are in
+    :mod:`fovbench.datasets_egosynth`.
+
+    Only the ``radial`` protocol exists here. The ``window`` protocol re-renders
+    an angular window out of the raw fisheye, which needs a fisheye camera
+    model; this release ships none.
+    """
+    os.makedirs(a.out, exist_ok=True)
+    views = [v.strip() for v in a.views.split(",") if v.strip()]
+    bad = [v for v in views if v not in EG.VIEW_TO_VARIANT]
+    if bad:
+        raise SystemExit(f"[fovbench] unknown view(s) {bad}; "
+                         f"choose from {list(EG.VIEW_TO_VARIANT)}")
+    datasets = [d.strip() for d in a.datasets.split(",") if d.strip()]
+    keys = [k.strip() for k in a.models.split(",") if k.strip()]
+    edges = _edges(a.theta_edges, EG.THETA_EDGES)
+    radius_edges = _edges(a.radius_edges, G.RADIUS_EDGES)
+
+    ready, skipped = M.available(keys)
+    for key, state, detail in skipped:
+        print(f"[fovbench] {key}: {state} — {detail}")
+    if skipped and not a.skip_unavailable:
+        raise SystemExit(
+            f"[fovbench] {len(skipped)} of {len(keys)} requested models cannot "
+            f"run ({', '.join(k for k, _, _ in skipped)}). Fix them with the "
+            f"instructions above, or pass --skip-unavailable to run the rest "
+            f"anyway (the report and results.json will record what was left out).")
+    if not ready:
+        raise SystemExit("[fovbench] no model is runnable; see the lines above. "
+                         "Use --models analytic for a weight-free harness run.")
+
+    split = (Split.load(a.manifest) if a.manifest
+             else build_egosynth_split(a.egosynth_root, datasets=datasets,
+                                       n_frames=a.n_frames,
+                                       takes_per_dataset=a.egosynth_takes,
+                                       views=views))
+    if split.protocol != EGOSYNTH_PROTOCOL:
+        raise SystemExit(f"[fovbench] --manifest {a.manifest} was written by "
+                         f"{split.protocol!r}, not {EGOSYNTH_PROTOCOL!r}; an ADT "
+                         f"manifest cannot be scored against ego-synth.")
+    split.save(os.path.join(a.out, "manifest.json"))
+    missing = [v for v in views if v not in split.streams]
+    if missing:
+        raise SystemExit(f"[fovbench] --manifest {a.manifest} has no {missing} "
+                         f"view (it has {list(split.streams)})")
+
+    device = None
+    if ready != [M.ANALYTIC]:
+        import torch
+        device = torch.device(a.device)
+        if device.type != "cuda":
+            print("[fovbench] WARNING: running real weights on CPU — this is "
+                  "minutes per frame. Use --device cuda on the GPU box.")
+
+    clips = _egosynth_clips(split)
+    runs: List[dict] = []
+    gathers: set = set()
+    for key in ready:
+        print(f"\n[fovbench] ══ {key} ══")
+        t0 = time.time()
+        model = M.load_model(key, device, checkpoint=a.omega_checkpoint,
+                             radial_bias=a.analytic_bias)
+        n = model.input_size if a.egosynth_input_size <= 0 else a.egosynth_input_size
+        print(f"[fovbench]   {model.family} {model.size} | {model.params_m:.0f}M "
+              f"params | align={model.align_mode} | frames fed at {n}px")
+
+        pools: Dict[tuple, EG.PointPool] = {}
+        cone: Dict[tuple, List[float]] = {}
+        thin = 0
+        for ci, (seq, clip, npz, rgb_paths, idxs) in enumerate(clips):
+            dataset = seq.split("/")[0]
+            rect, mask = EG.context_for(npz)
+            for view in views:
+                # theta is computable on the rectified pinhole and on nothing
+                # else in this release — see EG.ThetaUnavailable.
+                axes = ("radius", "theta") if view == "rect" else ("radius",)
+                frames = EG.decode_frames(rgb_paths[view], idxs)
+                pool = pools.setdefault((dataset, view),
+                                        EG.PointPool(model.align_mode))
+                for i in idxs:
+                    pts = EG.read_points(
+                        npz, view, i, rect, sigma_max=a.egosynth_sigma_max,
+                        valid_mask=mask if view == "rect" else None)
+                    if len(pts) < EG.MIN_FRAME_POINTS:
+                        thin += 1
+                        continue
+                    rgb = EG.resize_for_model(frames[i], n)
+                    raw = model.predict(rgb, gt_z=pts.d, theta_deg=pts.theta)
+                    pred = EG.prediction_at_points(raw, pts)
+                    gathers.add("index" if np.ndim(raw) == 2
+                                and np.shape(raw) == (EG.RES, EG.RES)
+                                else ("per-point" if np.ndim(raw) == 1
+                                      else "bilinear"))
+                    if not pool.add_frame(pred, pts, axes,
+                                          max_depth=a.metric_max_depth):
+                        thin += 1
+                cone.setdefault((dataset, view), []).append(
+                    float(mask.mean()) if (view == "rect" and mask is not None)
+                    else float("nan"))
+            if (ci + 1) % max(1, a.log_every) == 0:
+                print(f"[fovbench]   clip {ci + 1}/{len(clips)} "
+                      f"({time.time() - t0:.0f}s)")
+
+        for (dataset, view), pool in sorted(pools.items()):
+            axes = {"radius": radius_edges}
+            if view == "rect":
+                axes["theta"] = edges
+            prof = pool.profile(axes, max_depth=a.metric_max_depth)
+            if prof is None:
+                print(f"[fovbench]   {dataset}/{view}: no frame survived; skipped")
+                continue
+            body = {"overall": prof["overall"],
+                    "radius_bins": _egosynth_cells(prof["radius"],
+                                                   prof["n_pool_frames"]),
+                    "n_pool_frames": prof["n_pool_frames"],
+                    "anchor_bin": prof.get("theta_anchor_bin",
+                                           prof.get("radius_anchor_bin", -1)),
+                    "anchor_frames": prof.get("theta_anchor_frames",
+                                              prof.get("radius_anchor_frames", 0)),
+                    # The imaged fraction is the rectified render's valid mask.
+                    # The raw fisheye arm has no such number — this release
+                    # ships no fisheye camera model — so every entry is NaN and
+                    # nanmean would warn on an empty slice rather than answer.
+                    "in_cone_frac": float(np.mean(seen_cone))
+                    if (seen_cone := [c for c in cone.get((dataset, view), ())
+                                      if np.isfinite(c)]) else float("nan")}
+            if "theta" in prof:
+                body["bins"] = _egosynth_cells(prof["theta"],
+                                               prof["n_pool_frames"])
+            runs.append(dict(model=key, family=model.family, size=model.size,
+                             params_m=model.params_m, align=model.align_mode,
+                             input_size=n, protocol="radial", stream=dataset,
+                             view=view, **body))
+        if thin:
+            print(f"[fovbench]   {thin} frame-views under "
+                  f"{EG.MIN_FRAME_POINTS} points were not scored")
+        del model
+        if device is not None and device.type == "cuda":
+            import torch
+            torch.cuda.empty_cache()
+        print(f"[fovbench]   done in {time.time() - t0:.0f}s")
+
+    payload = dict(
+        protocol=EGOSYNTH_PROTOCOL, digest=split.digest,
+        egosynth_root=split.root, n_frames=len(split.frames),
+        sequences=split.sequences, requested_models=keys,
+        skipped_models=[dict(model=k, state=s, detail=d) for k, s, d in skipped],
+        config=dict(streams=datasets, views=views, protocols=["radial"],
+                    datasets=datasets, theta_edges=list(edges),
+                    radius_edges=list(radius_edges),
+                    takes_per_dataset=a.egosynth_takes,
+                    # The GT ships unfiltered on purpose, so the cut is part of
+                    # the result and is written next to it, never left implicit.
+                    sigma_max=a.egosynth_sigma_max,
+                    sigma_column="inv_dist_std (1/m, scale-invariant)",
+                    min_frame_points=EG.MIN_FRAME_POINTS,
+                    gather=sorted(gathers),
+                    # A bin's samples here are pooled SLAM points, not pixels of
+                    # a dense map, so the figures' "too thin to read" ring needs
+                    # its own floor — hundreds, not thousands.
+                    thin_bin_px=1000.0,
+                    depth_max_m=a.depth_max_m,
+                    metric_max_depth=a.metric_max_depth,
+                    analytic_bias=a.analytic_bias),
+        runs=runs)
+    with open(os.path.join(a.out, "results.json"), "w") as fh:
+        json.dump(payload, fh, indent=2)
+    R.write_all(payload, a.out)
+    print(f"\n[fovbench] wrote {a.out}/results.json (+ csv, report.txt, figures/)")
+    return payload
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--adt-root", default=os.environ.get("ADT", ""),
                    help="ADT export root (sequences with depth_npy + both RGB streams)")
+    p.add_argument("--egosynth-root", default="",
+                   help="ego-synth 5B root (aea/ nymeria/ egoexo4d/ oxford/ with "
+                        "sparse_depth). Mutually exclusive with --adt-root; the "
+                        "GT is a sparse SLAM point list, so only the radial "
+                        "protocol runs. See docs/data/ego-synth-5b-sparse-depth.md")
+    p.add_argument("--datasets", default=",".join(EG.DATASETS),
+                   help="ego-synth datasets to score, as separate report rows: "
+                        "scene scale differs by an order of magnitude across "
+                        "them and every metric here is relative, so pooling "
+                        "them into one row is the confound gt_median exists "
+                        "to expose")
+    p.add_argument("--egosynth-takes", type=int, default=8,
+                   help="takes PER DATASET (0 = all). The release is 1 611 "
+                        "takes / 24 931 clips; the cap is recorded in the "
+                        "manifest, the report header and the split digest")
+    p.add_argument("--egosynth-sigma-max", type=float,
+                   default=EG.DEFAULT_SIGMA_MAX,
+                   help="drop points whose MPS inv_dist_std (1/m) is at or above "
+                        "this. The GT ships UNFILTERED by design; this cut is "
+                        "written into results.json with every number it produced")
+    p.add_argument("--egosynth-input-size", type=int, default=0,
+                   help="feed frames at this size (0 = the model's own token "
+                        "grid, matching the ADT path; 896 = the GT's own grid, "
+                        "which makes the gather a literal pred[v, u])")
     p.add_argument("--manifest", default=None,
                    help="reuse a frozen split instead of rebuilding it")
     p.add_argument("--n-frames", type=int, default=25,
@@ -341,11 +604,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--views", default="rect,fisheye",
                    help="rect = rectified perspective, fisheye = raw pixels")
     p.add_argument("--protocols", default="radial,window")
-    p.add_argument("--theta-edges", default="0,10,20,30,40,50,55",
-                   help="incidence-angle bin edges (deg); top edge = usable cone")
-    p.add_argument("--radius-edges", default="0,0.2,0.4,0.6,0.8,1.0,1.45",
+    p.add_argument("--theta-edges", default="",
+                   help="incidence-angle bin edges (deg); default is the "
+                        "dataset's own cone — ADT 0,10,20,30,40,50,55 (the Aria "
+                        "cone stops at 54.83) and ego-synth "
+                        "0,10,20,30,40,50,58 (its valid mask admits no ray past "
+                        "57.0; the render's corners are never imaged)")
+    p.add_argument("--radius-edges", default="",
                    help="distance-from-optical-centre bin edges, in half-widths "
-                        "(1.0 = middle of a frame edge, sqrt(2) = a corner)")
+                        "(1.0 = middle of a frame edge, sqrt(2) = a corner); "
+                        "default 0,0.2,0.4,0.6,0.8,1.0,1.45")
     p.add_argument("--tilts", default=",".join(str(t) for t in DEFAULT_TILTS),
                    help="window eccentricities (deg)")
     p.add_argument("--azimuths", default=",".join(str(t) for t in DEFAULT_AZIMUTHS),
@@ -377,8 +645,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     a = build_parser().parse_args()
+    if a.egosynth_root and a.adt_root:
+        raise SystemExit("[fovbench] pass --adt-root or --egosynth-root, not "
+                         "both: they are different ground truths (a dense map "
+                         "vs a sparse point list) and their digests are not "
+                         "comparable.")
+    if a.egosynth_root:
+        run_egosynth(a)
+        return
     if not a.adt_root and not a.manifest:
-        raise SystemExit("[fovbench] pass --adt-root (or $ADT), or --manifest")
+        raise SystemExit("[fovbench] pass --adt-root (or $ADT), "
+                         "--egosynth-root, or --manifest")
     run(a)
 
 
