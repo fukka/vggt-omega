@@ -27,27 +27,35 @@ means mapping its depth back onto the raw fisheye points, which is *fisheye pixe
 -> ray -> pinhole pixel*, and both directions of this model are on that path. The
 ``raw`` baseline needs no camera model at all and does not import this.
 
-Two conventions this must get right, and only one of them is settled
---------------------------------------------------------------------
-**Resolution — settled.** The stored params are at the sensor's own resolution
-(``f~1218``, ``c~(1462, 1444)`` can only be a 2880 sensor), while ego-synth's
-frames are 896. :meth:`Fisheye624.rescale` does that, on the pixel-centre
-convention ``c' = (c + 0.5) * s - 0.5``, the same one this repo uses everywhere
-a calibration crosses a resize.
+Nothing about how this calibration maps onto ego-synth's frames is settled
+--------------------------------------------------------------------------
+This module loads and applies the model correctly — the FISHEYE624 maths is the
+reference implementation's when ``projectaria_tools`` is present, and the round
+trip closes exactly. What is **not** established is the convention relating the
+calibration's frame to the 896 frame ego-synth ships. ``verify_camera.py``
+measures it, and as of writing it fails:
 
-**Orientation — NOT settled.** Aria stores frames rotated; ego-synth writes them
-upright, and carries ``input_orientation`` as a *per-dataset* argument, so the
-rotation is not shared across the four. Measured against the staged sample's own
-rect<->fisheye correspondences, ``aea`` wants 90 deg CCW and ``nymeria`` wants 0,
-each the only rotation putting any correspondence inside 2 px. But that
-measurement is contaminated — the correspondences were paired on exact float16
-depth, so two different points sharing a depth get paired — and the best rotation
-still leaves p05 ~1.4 px rather than sub-pixel.
+    best case ~4 px median reprojection, ~5 % of points within 1 px
+    against a ~0.5-2 % chance rate and a sub-pixel bar
 
-So :data:`DATASET_ROTATION` records what was measured, marks it unverified, and
-:func:`verify_orientation` is the acceptance test that must pass before any
-``rect_derect`` number is quoted. Until it does, treat this module as loaded but
-unproven.
+Ruled out, each measured rather than reasoned about:
+
+* all four 90 deg rotations, and a continuous roll swept at 2 deg (no peak);
+* the resolution — the implied sensor size was swept from 1000 to 4200 px and
+  the best (~2820-2840) still leaves 1.4-1.9 px median and 10-21 % within 1 px;
+* the device-to-camera extrinsic, a real ~38.7 deg tilt that turned out not to
+  be the explanation;
+* this module's own projection, now checked against the reference.
+
+Still open, in the order worth trying: a **crop** before the resize (only the
+scale was swept, not the centre — a joint search over scale and principal point
+is the obvious next move), a rectification axis that is tilted rather than
+merely rolled, or an online calibration describing a different stream than the
+one ego-synth read.
+
+So :data:`DATASET_ROTATION` is a placeholder, :data:`VERIFIED_ROTATION` is empty,
+and :func:`require_verified` refuses to hand out a camera. The ``raw`` baseline
+needs none of this and is unaffected.
 """
 from __future__ import annotations
 
@@ -93,6 +101,34 @@ VERIFIED_ROTATION: Tuple[str, ...] = ()
 #: float16 quantisation of the stored ``u``/``v``, so anything at or under it is
 #: at the noise floor of what the ground truth can even express.
 ORIENTATION_TOL_PX = 0.5
+
+
+_REF_CACHE: Dict[tuple, object] = {}
+
+
+def _reference_projection(params: Tuple[float, ...]):
+    """``projectaria_tools``' own FISHEYE624 projection, if the package is here.
+
+    Optional on purpose. The package is the reference implementation of this
+    model and is preferred wherever a sub-pixel answer matters, but requiring it
+    would make the whole SLAM evaluation — including the ``raw`` baseline, which
+    needs no camera at all — depend on an Aria SDK.
+    """
+    if params in _REF_CACHE:
+        return _REF_CACHE[params]
+    try:
+        from projectaria_tools.core import calibration as _pcal
+        obj = _pcal.CameraProjection(_pcal.CameraModelType.FISHEYE624,
+                                     np.asarray(params, float))
+    except Exception:                       # noqa: BLE001 — absent or too old
+        obj = None
+    _REF_CACHE[params] = obj
+    return obj
+
+
+def reference_available() -> bool:
+    """Whether the reference FISHEYE624 implementation can be used."""
+    return _reference_projection((1.0,) * N_PARAMS) is not None
 
 
 class CalibrationUnavailable(RuntimeError):
@@ -206,9 +242,29 @@ class Fisheye624:
     def project(self, xyz: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """3D points in the camera frame ``(N, 3)`` -> pixels ``(u, v)``.
 
+        Uses ``projectaria_tools``' own FISHEYE624 projection when that package
+        is importable, and the implementation below otherwise. The two are not
+        identical: measured against the reference on a 2880 sensor, this one
+        drifts up to 1.4 px at the rim (0.44 px once scaled to 896). That is
+        under the tolerance for most uses and *over* the sub-pixel bar
+        :func:`verify_orientation` works to, so the reference is preferred
+        wherever it exists and ``test_camera.py`` pins the fallback against it.
+
         Points behind the camera are not meaningful for a fisheye of this FOV
         and come back as NaN rather than as a plausible pixel.
         """
+        xyz = np.asarray(xyz, float)
+        ref = _reference_projection(self.params)
+        if ref is not None:
+            out = np.full((xyz.shape[0], 2), np.nan)
+            for i, p in enumerate(xyz):
+                if p[2] > 0:
+                    out[i] = ref.project(p)
+            return out[:, 0], out[:, 1]
+        return self._pure_project(xyz)
+
+    def _pure_project(self, xyz: np.ndarray):
+        """The numpy FISHEYE624 forward model, used when the reference is absent."""
         xyz = np.asarray(xyz, float)
         x, y, z = xyz[:, 0], xyz[:, 1], xyz[:, 2]
         with np.errstate(divide="ignore", invalid="ignore"):
@@ -245,6 +301,15 @@ class Fisheye624:
         """
         u = np.asarray(u, float)
         v = np.asarray(v, float)
+        ref = _reference_projection(self.params)
+        if ref is not None:
+            # Both directions must come from the same implementation or the
+            # round trip does not close: with the reference forward model and
+            # the fallback inverse, it opens to 0.95 px on this lens.
+            out = np.empty((u.size, 3))
+            for i, (uu, vv) in enumerate(zip(u.ravel(), v.ravel())):
+                out[i] = ref.unproject(np.array([uu, vv], float))
+            return out / np.linalg.norm(out, axis=-1, keepdims=True)
         xd = (u - self.cx) / self.f
         yd = (v - self.cy) / self.f
         xr, yr = xd.copy(), yd.copy()

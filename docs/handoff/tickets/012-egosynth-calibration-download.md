@@ -3,14 +3,28 @@
 **Owner:** gpu
 **Files I may touch:** nothing in the repo — this ticket only downloads data.
 The fetcher it runs, `tools/fetch_egosynth_calibration.py`, is already landed.
-**Blocked by:** none for aea/nymeria/oxford. Ego-Exo4D needs a licence request
-that takes ~48 h to approve — **start that first, on day one**, then do the rest
-while it clears.
+**Blocked by:** none.
+
+> **Ego-Exo4D is PAUSED** by the owner's decision. Do not open the licence
+> request. Three datasets — `aea`, `nymeria`, `oxford` — are in scope; the
+> evaluation runs on those and `egoexo4d` is simply absent from it until told
+> otherwise. Everything below is written for the three.
 
 ## Goal
 
-Every take ego-synth 5B was built from has its Aria RGB camera model on disk at
+Every `aea`, `nymeria` and `oxford` take ego-synth 5B was built from has its Aria
+RGB camera model on disk at
 `/data/f.zhang2/ego-synth-5b-calib/<ds>/<take>/camera_rgb.json`.
+
+## Read this before starting
+
+The calibration this ticket downloads has **not yet been shown to describe
+ego-synth's frames**. `slambench/verify_camera.py` measures that and currently
+fails at ~4 px median reprojection against a sub-pixel bar — see ticket 013 for
+what has been ruled out. Downloading is still the right next step, because the
+open question needs many takes to settle rather than the two staged locally, but
+**do not treat these files as usable until `verify_camera` passes**. The `raw`
+baseline needs none of them and is unaffected.
 
 ## Why this is needed
 
@@ -62,13 +76,6 @@ online calibration does not move over a recording.
 
 ## Steps
 
-### 0. Start the Ego-Exo4D licence request FIRST — it gates everything else
-
-Request at <https://ego4d.dev/request/ego-exo4d> using **f.zhang2@samsung.com**.
-Approval takes ~48 h and then emails AWS credentials that **expire in 14 days**,
-so do not request it early and let it lapse — request it the day this ticket
-starts, and download within the fortnight.
-
 ### 1. Get the two URL JSONs onto the box
 
 They are on the Mac at `~/Downloads/`:
@@ -108,67 +115,82 @@ If it reports takes missing from the JSON, re-export it from the
 [Nymeria explorer](https://explorer.projectaria.com/nymeria) with those
 sequences selected and the `recording_head` group ticked.
 
-### 4. Ego-Exo4D — once the credentials arrive
+### 4. Oxford Day-and-Night — no gating, but no cheap path either
 
-```bash
-egoexo -o /data/f.zhang2/egoexo4d-traj --parts take_trajectory --views ego
-```
+This one needs a decision before any bytes move, because **the ranged-zip trick
+does not apply**. Measured against the HuggingFace API:
 
-Then fold `takes/<take>/trajectory/online_calibration.jsonl` into the same
-layout. The fetcher's `reduce_rgb` is the function to reuse — it takes the file
-contents as bytes and returns the `camera_rgb.json` body — but the egoexo CLI
-delivers plain files rather than a remote zip, so this step is a short script,
-not a rerun of the fetcher. 1 090 of the 2 380 take dirs have depth; only those
-matter.
+    aria/<loc>/mps/multi/day_23.tar.gz          18.7 GB
+    aria/<loc>/mps/multi/day_night_44.tar.gz    24.3 GB
+    aria/<loc>/mps/multi/night_21.tar.gz         5.6 GB
+    aria/<loc>/vrs/blur/<uuid>.vrs         1.7-2.5 GB each, 44 files = 108.7 GB
 
-### 5. Oxford Day-and-Night — no gating, straight from HuggingFace
+...and that is **one** of five locations (`bodleian-library`, `hb-allen-centre`,
+`keble-college`, `observatory-quarter`, `oxford-robotics-institute`).
 
-```bash
-pip install -U "huggingface_hub[cli]"
-hf download active-vision-lab/oxford-day-and-night --repo-type dataset \
-  --include "aria/*/mps/*" --local-dir /data/f.zhang2/oxford-day-and-night
-```
+A `.tar.gz` is a gzip *stream*: unlike a zip it has no central directory to seek
+to, so a member cannot be range-read. Two options, cheapest experiment first:
 
-Five locations: `bodleian-library`, `hb-allen-centre`, `keble-college`,
-`observatory-quarter`, `oxford-robotics-institute`. The README says `mps/` holds
-multi-session MPS with "per image camera parameters"; **the exact filenames are
-unconfirmed** — the HuggingFace tree view does not expand to file level. Look
-first, then map onto the same layout. If `mps/` turns out not to carry the
-intrinsics, the `vrs/` folder does (anonymised VRS, released 2026-02-23), read
-with `projectaria_tools`' `get_device_calibration()`.
+1. **Stream the smallest archive and abort early.** `night_21.tar.gz` is 5.6 GB;
+   tar stores members sequentially, so `curl … | tar -xO --wildcards
+   '*online_calibration*'` gets the file without ever writing the archive, and
+   can be killed once it appears. Whether that is cheap depends entirely on
+   where in the tar the member sits — try it on one location and measure.
+2. **Per-recording VRS.** `vrs/blur/<uuid>.vrs` carries the factory device
+   calibration, read with `projectaria_tools`' `get_device_calibration()`. That
+   is a *different* calibration from the MPS online one used for aea/nymeria —
+   factory rather than re-estimated — which is a difference worth recording in
+   the results if this route is taken.
+
+`mps/multi/<group>.txt` lists the VRS uuids in each multi-SLAM group, and is
+under 2 KB, so it is free to fetch first and tells you which recordings a group
+covers.
+
+**Unresolved:** whether Oxford's multi-session MPS even contains a per-recording
+`online_calibration`. The README says "per image camera parameters"; nobody has
+looked inside. Option 1's experiment answers that too.
 
 ## Done when
 
-- [ ] `/data/f.zhang2/ego-synth-5b-calib/{aea,nymeria,egoexo4d,oxford}/<take>/camera_rgb.json`
+- [ ] `/data/f.zhang2/ego-synth-5b-calib/{aea,nymeria,oxford}/<take>/camera_rgb.json`
       exists for every take that dataset contributes to ego-synth
 - [ ] each file's `model` reads `FisheyeRadTanThinPrism` and `params` has 15 entries
-- [ ] the take counts match the release: aea 143, nymeria 254, egoexo4d 1 090,
-      oxford 124
-- [ ] issue commented with the counts and total bytes
+- [ ] the take counts match the release: aea 143, nymeria 254, oxford 124
+      (`egoexo4d` is paused and out of scope)
+- [ ] issue commented with the counts, total bytes, and which Oxford route worked
 
-## What is already verified, and what is not
+## What is verified, and what is not
 
-**Verified on this Mac against the staged sample**, one take of each of aea and
-nymeria: the fetcher runs end to end, the ranged zip read works against the live
-CDN, and both takes reduce to a 15-param `FisheyeRadTanThinPrism` with a serial
-number.
+**Verified on this Mac against the live CDN and the staged sample**, one take
+each of aea and nymeria: the fetcher runs end to end, the ranged zip read works,
+and both takes reduce to a 15-param `FisheyeRadTanThinPrism` with a serial
+number and a `T_Device_Camera`.
 
-**Not settled: the resolution and orientation convention.** The params are at
-the sensor's native resolution — `f~1218`, `c~(1462, 1444)` can only be a 2880
-sensor — while ego-synth's frames are 896 and its `meta.source_width` is 1408.
-Scaling 2880 → 896 and trying all four 90° rotations against the sample's own
-rect↔fisheye correspondences picks **a different rotation per dataset**:
-`aea` 90° CCW, `nymeria` 0°, each the only one with any correspondence inside
-2 px. That is consistent with ego-synth's per-dataset scripts carrying
-`input_orientation` as a separate argument.
+**The calibration has NOT been shown to describe ego-synth's frames.**
+`slambench/verify_camera.py` exists now and measures exactly this, by projecting
+the release's own rectified points through the fetched model and comparing the
+resulting pixel cloud against the actual fisheye cloud. It reports
 
-But the best rotation still leaves p05 ≈ 1.4 px rather than sub-pixel, and the
-correspondence set used to measure it is **contaminated**: pairs were matched on
-exact float16 depth, and two different points sharing a depth get paired. The
-~90 % of pairs that are far are most likely false pairs, not model error — some
-pairs land at 0.20-0.50 px, which a wrong model could not produce. Settling this
-needs an uncontaminated matcher and is the **first step of the ticket that
-consumes this data**, not of this one. Do not treat the convention as decided.
+    best case ~4 px median, ~5 % of points within 1 px
+
+against a 0.5-2 % chance rate and a sub-pixel bar — i.e. better than random and
+nowhere near right. Ruled out, each measured rather than argued:
+
+* all four 90° rotations, and a continuous roll swept at 2° (no peak anywhere);
+* the resolution — implied sensor size swept 1000-4200 px; the best (~2820-2840)
+  still leaves 1.4-1.9 px median and only 10-21 % within 1 px;
+* the device-to-camera extrinsic, a real ~38.7° tilt that is not the answer;
+* the projection implementation, now the reference `projectaria_tools` one.
+
+Still open: a **crop** before the resize (only scale was swept, not the principal
+point — a joint search over both is the obvious next move), a rectification axis
+tilted rather than merely rolled, or an online calibration describing a different
+stream than the one ego-synth read.
+
+This is why the download is still worth doing — settling it wants many takes,
+not the two staged here — and equally why **nothing downstream may use these
+files until `verify_camera` passes**. `camera.require_verified` enforces that in
+code.
 
 ## Needs a GPU run afterwards?
 

@@ -191,7 +191,7 @@ def reduce_rgb(blob: bytes) -> dict:
     be tested — see the ticket.
     """
     import numpy as np
-    rows, serials, n_seen, n_cal = [], set(), 0, 0
+    rows, serials, n_seen, n_cal, extrinsics = [], set(), 0, 0, None
     for line in io.BytesIO(blob):
         if not line.strip():
             continue
@@ -214,6 +214,13 @@ def reduce_rgb(blob: bytes) -> dict:
             if c.get("SerialNumber"):
                 serials.add(c["SerialNumber"])
             model = p.get("Name")
+            # Aria's RGB camera is tilted in the device frame -- the rotation
+            # here is ~39 deg -- so anything that rectifies into the device or a
+            # gravity-aligned frame lands at a different image axis than the
+            # camera's own. Carried because the intrinsics alone cannot tell you
+            # which frame a derived stream was rendered in.
+            if extrinsics is None and c.get("T_Device_Camera"):
+                extrinsics = c["T_Device_Camera"]
     if not rows:
         raise RuntimeError(f"no calibrated {RGB_LABEL!r} record found")
     a = np.asarray(rows, float)
@@ -224,6 +231,7 @@ def reduce_rgb(blob: bytes) -> dict:
         "model": model,
         "params": med.tolist(),
         "params_iqr": iqr.tolist(),
+        "T_Device_Camera": extrinsics,
         "n_records": n_seen,
         "n_calibrated": n_cal,
         "serial_numbers": sorted(serials),

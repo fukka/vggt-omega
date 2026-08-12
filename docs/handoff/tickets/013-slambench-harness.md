@@ -76,50 +76,57 @@ GPU; 6 of them drive the real staged sample end to end.
   on all four datasets, through decode, sigma filter, gather, alignment and
   report. The harness adds nothing of its own.
 
-**Not done.**
+* `verify_camera.py`, the acceptance test for the calibration, and it **runs**.
+  It replaced the contaminated float16-depth pairing with a point-*cloud*
+  comparison: rectified points → rays → predicted fisheye pixels, then
+  nearest-neighbour distance to the actual fisheye cloud. No pairing is
+  attempted, so no pairing can be wrong. Discrimination is wide — chance of a
+  random point landing within 1 px is 0.5-2 % against the ~100 % a correct model
+  must give.
 
-* `rect_derect` has never run against a real camera model, because none is
-  downloaded yet (#17).
-* The **sensor-to-upright rotation is unverified** for every dataset.
-  `camera.VERIFIED_ROTATION` is empty and `require_verified` refuses to hand out
-  a camera, so `rect_derect` currently stops rather than producing a number. A
-  quarter-turn error does not make a score worse — it scores a different part of
-  the image — which is why this is a hard stop and not a warning.
+**Not done, and one of these is now a finding rather than a gap.**
+
+* **The calibration does not describe ego-synth's frames.** `verify_camera`'s
+  verdict on both staged takes is `UNVERIFIED`: ~4 px median, ~5 % within 1 px.
+  Ruled out, each measured — all four 90° rotations; a continuous roll swept at
+  2°; the resolution (implied sensor size swept 1000-4200 px, best ~2820-2840
+  still 1.4-1.9 px median); the ~38.7° device-to-camera extrinsic; and this
+  package's own projection, now the reference `projectaria_tools` one.
+  Still open: a **crop** before the resize, a rectification axis tilted rather
+  than rolled, or an online calibration for a different stream.
+* `rect_derect` therefore still cannot produce a number, and
+  `camera.require_verified` stops it rather than letting it.
+* `egoexo4d` is **paused** by the owner's decision; scope is aea, nymeria,
+  oxford.
 * No weights have run here. **No number from a real network is claimed.**
 
 ## Steps remaining
 
-1. Land #17 so per-take `camera_rgb.json` exists.
-2. Write `slambench/verify_camera.py`: the acceptance test for the orientation.
-   Correspondences must **not** be matched on exact float16 depth — that was
-   tried, and two different points sharing a depth get paired, leaving ~90 % of
-   pairs false and p05 at 1.4 px when some true pairs land at 0.20–0.50 px. Match
-   through the model itself and iterate, or use the frames where depth is
-   unambiguous. Sub-pixel median is the bar (`camera.ORIENTATION_TOL_PX`).
-3. Add the passing datasets to `camera.VERIFIED_ROTATION` **by hand** — a
+1. **Run the `raw` baseline on the box.** It needs no calibration and is
+   finished — this is the fastest route to the evaluation's first real numbers
+   and does not wait on anything below.
+2. Land #17 (three datasets; Oxford needs a route decision — its MPS is a
+   18-24 GB `.tar.gz` that cannot be range-read).
+3. Settle the convention. The next move is a **joint search over scale and
+   principal point** — only the scale has been swept, and a crop before the
+   resize would move the centre too. Validate on held-out takes, not on the
+   takes the search used.
+4. Add the passing datasets to `camera.VERIFIED_ROTATION` **by hand** — a
    measurement that promotes itself is not a check.
-4. Then the GPU run.
+5. Then `rect_derect`, and the full run.
 
 ## Done when
 
-- [x] `python -m pytest slambench/tests -q` passes
+- [x] `python -m pytest slambench/tests -q` passes (46 tests)
 - [x] `slambench` imports nothing from `fovbench`, enforced by a test
 - [x] `--models oracle` reads AbsRel 0 end to end on the staged sample
-- [ ] `rect_derect` runs against a verified camera on at least one dataset
-- [ ] the GPU run below is in `results/`
+- [x] `verify_camera.py` exists and returns a decisive verdict
+- [ ] the `raw` run below is in `results/`
+- [ ] the convention is settled and `rect_derect` runs against a verified camera
 
-## The GPU run, once the above lands
+## The GPU run — the `raw` arm is ready now
 
-```bash
-python -m slambench.run \
-  --egosynth-root /data/f.zhang2/ego-synth-5b \
-  --calib-root    /data/f.zhang2/ego-synth-5b-calib \
-  --models vggt_1b,vggt_omega,dav2_large,da3_small,da3_large \
-  --baselines raw,rect_derect \
-  --out eval_out/slambench_main 2>&1 | tee eval_out/slambench_main.log
-```
-
-Smoke it first, exactly as #13 did — one dataset, no weights, no camera:
+Smoke it first, no weights, no camera, one dataset:
 
 ```bash
 python -m slambench.run --egosynth-root /data/f.zhang2/ego-synth-5b \
@@ -127,6 +134,21 @@ python -m slambench.run --egosynth-root /data/f.zhang2/ego-synth-5b \
   --device cpu --out eval_out/slambench_smoke
 ```
 
+Then the real thing. **`raw` only** — `rect_derect` will refuse until the
+calibration is verified, and that refusal is deliberate:
+
+```bash
+python -m slambench.run \
+  --egosynth-root /data/f.zhang2/ego-synth-5b \
+  --datasets aea,nymeria,oxford \
+  --models vggt_1b,vggt_omega,dav2_large,da3_small,da3_large \
+  --baselines raw \
+  --out eval_out/slambench_raw 2>&1 | tee eval_out/slambench_raw.log
+```
+
 `--takes` defaults to 8 per dataset; the release is 1 611 takes, and the cap
 enters the split digest so a capped run can never be compared with a fuller one
 by accident.
+
+Adding `--baselines raw,rect_derect --calib-root …` is the run to make **after**
+step 3 above, not before.

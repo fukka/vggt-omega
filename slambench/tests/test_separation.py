@@ -68,7 +68,16 @@ def test_the_shared_infrastructure_is_the_only_cross_package_dependency():
     intended arrangement, and pinning it here means a new cross-package import
     has to be argued for rather than merely added.
     """
-    allowed_prefixes = ("finetune.", "slambench", "numpy", "cv2", "torch")
+    # Each of these is allowed for a stated reason, so that a new one has to be
+    # argued for rather than merely added:
+    #   finetune.*          repository-wide eval code, older than both experiments
+    #   projectaria_tools   the REFERENCE implementation of Aria's FISHEYE624
+    #                       model; optional, and preferred over the fallback in
+    #                       camera.py wherever a sub-pixel answer matters
+    #   scipy               nearest-neighbour search, for the point-cloud
+    #                       statistic verify_camera.py is built on
+    allowed_prefixes = ("finetune.", "slambench", "numpy", "cv2", "torch",
+                        "projectaria_tools", "scipy")
     stdlib_ok = {"os", "sys", "json", "math", "glob", "ast", "csv", "io",
                  "time", "struct", "zlib", "argparse", "hashlib", "dataclasses",
                  "typing", "collections", "subprocess", "pytest", "__future__"}

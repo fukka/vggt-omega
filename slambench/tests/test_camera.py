@@ -138,3 +138,37 @@ def test_an_unverified_orientation_is_refused_not_warned():
         "since been verified, point it at a dataset that has not been")
     with pytest.raises(C.OrientationUnverified):
         C.require_verified(c)
+
+
+def test_the_fallback_projection_tracks_the_reference_implementation():
+    """``projectaria_tools`` owns FISHEYE624; the implementation in this module
+    is a fallback for machines without it. Measured drift is up to 1.4 px at a
+    2880 sensor (0.44 px at 896) — under most tolerances and over the sub-pixel
+    bar verify_camera works to, which is why the reference is preferred when
+    present. This pins the gap rather than leaving it unmeasured."""
+    if not C.reference_available():
+        pytest.skip("projectaria_tools not installed")
+    from projectaria_tools.core import calibration as pcal
+    ref = pcal.CameraProjection(pcal.CameraModelType.FISHEYE624,
+                                np.array(PARAMS, float))
+    c = cam()
+    u, v = _pixels(c, n=14, margin=0.28)
+    d = c.unproject(u, v)
+    mine = np.stack(C.Fisheye624._pure_project(c, d), axis=1)
+    got = np.array([ref.project(p) for p in d])
+    err = np.hypot(mine[:, 0] - got[:, 0], mine[:, 1] - got[:, 1])
+    assert np.nanmax(err) < 2.0, f"fallback drifts {np.nanmax(err):.2f} px"
+
+
+def test_project_uses_the_reference_when_it_is_available():
+    if not C.reference_available():
+        pytest.skip("projectaria_tools not installed")
+    from projectaria_tools.core import calibration as pcal
+    ref = pcal.CameraProjection(pcal.CameraModelType.FISHEYE624,
+                                np.array(PARAMS, float))
+    c = cam()
+    u, v = _pixels(c, n=10, margin=0.25)
+    d = c.unproject(u, v)
+    pu, pv = c.project(d)
+    got = np.array([ref.project(p) for p in d])
+    assert np.nanmax(np.hypot(pu - got[:, 0], pv - got[:, 1])) < 1e-9
