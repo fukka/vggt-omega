@@ -28,13 +28,23 @@ independently from the bin geometry, and needs no data to reproduce. ``pen`` say
 how the periphery feels to a downstream user after they fit a scale; ``drift``
 says what the model actually did.
 
-Absolute AbsRel is **not** comparable across models here: Depth-Anything V2 is
-scored under a disparity-space affine and the depth heads under a depth-space
-one, because those are the protocols the models were built for. ``pen`` *is*
-cross-comparable, being a within-model ratio, so the alignment protocol cancels.
-``drift`` is a within-model ratio as well and so is comparable to other
-``drift``s — but it is fitted differently from every other column, so it never
-belongs in the same sentence as a ``pen``.
+Absolute AbsRel is comparable only **within an alignment protocol**. Three of
+the four models here share one (VGGT-1B, VGGT-Omega and DA3 are all scored under
+the same depth-space affine) and can be read against each other directly;
+Depth-Anything V2 is scored under a disparity-space affine, because that is the
+protocol it was built for, and no column reconciles the two. ``pen`` *is*
+cross-comparable throughout, being a within-model ratio, so the alignment
+protocol cancels. ``drift`` is a within-model ratio as well and so is comparable
+to other ``drift``s — but it is fitted differently from every other column, so it
+never belongs in the same sentence as a ``pen``.
+
+Beside the binned tables the radial runs also carry **continuous profiles** —
+the same two coordinates at 1 deg and 0.025 half-widths — off the same frozen
+alignment fit. They answer the shape question the bins cannot: where a rise
+starts, whether it is a ramp or a knee, whether the models turn over together.
+They are pooled over frames rather than averaged per frame, so they are a
+different estimator from the tables and must not be quoted as one; see
+``geometry.fine_profile``.
 """
 from __future__ import annotations
 
@@ -62,6 +72,11 @@ THIN_BIN_PX = 3500.0
 #: outside the lens differs from the on-axis cell in dead area too, and 40 deg
 #: of aim on a 40 deg square window measures 0.84 on this lens.
 MIN_CLEAN_CONE_FRAC = 0.98
+
+#: A fine profile bin below this many pooled pixels is a spike, not a curve
+#: point, and is not drawn. Small, because the profiles are pooled over every
+#: frame: at 200 frames even a 1 deg bin on the axis carries thousands.
+PROFILE_MIN_PX = 200
 
 #: A bin standardisable in fewer than this share of frames gets no ``pen_ds``.
 #: The frames that survive are the ones whose depth range happened to be wide
@@ -622,6 +637,93 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
     return written
 
 
+_PROFILE_LABEL = {
+    "theta": "incidence angle from the optical axis (deg)",
+    "radius": "distance from the optical centre (half-widths)",
+}
+
+
+def write_profile_figures(payload: dict, out_dir: str) -> List[str]:
+    """The continuous curves: error against the coordinate itself, not against
+    a bin index. One panel per view x stream, one line per model, plus the
+    bin's own GT depth underneath — because a rise that tracks the depth curve
+    is a depth result until the standardised columns say otherwise.
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return []
+    sel = [r for r in payload["runs"] if r.get("profiles")]
+    if not sel:
+        return []
+    os.makedirs(out_dir, exist_ok=True)
+    written = []
+    axes_present = sorted({a for r in sel for a in r["profiles"]})
+    views = sorted({r["view"] for r in sel}, key=lambda v: _VIEW_ORDER.get(v, 9))
+    streams = sorted({r["stream"] for r in sel},
+                     key=lambda s: _STREAM_ORDER.get(s, 9))
+    models = sorted({r["model"] for r in sel})
+    for axis in axes_present:
+        for metric, ylab in (("AbsRel", "AbsRel  (lower is better)"),
+                             ("delta1", r"$\delta_1$  (higher is better)")):
+            fig, grid = plt.subplots(len(streams), len(views),
+                                     figsize=(5.4 * len(views), 3.7 * len(streams)),
+                                     squeeze=False, sharey=True, sharex="col")
+            cmap = {m: plt.get_cmap("tab10")(i % 10) for i, m in enumerate(models)}
+            drawn = False
+            for row, stream in enumerate(streams):
+                for col, view in enumerate(views):
+                    ax = grid[row][col]
+                    depth_ax = None
+                    for r in sorted(sel, key=lambda r: r["model"]):
+                        p = r["profiles"].get(axis)
+                        if r["view"] != view or r["stream"] != stream or not p:
+                            continue
+                        x = np.asarray(p["centre"], float)
+                        y = np.asarray(p[metric], float)
+                        n = np.asarray(p["n"], float)
+                        # A fine bin with almost nothing in it is a spike, not a
+                        # measurement; drop it rather than draw it.
+                        keep = np.isfinite(y) & (n >= PROFILE_MIN_PX)
+                        if keep.sum() < 2:
+                            continue
+                        drawn = True
+                        ax.plot(x[keep], y[keep], "-", lw=1.7,
+                                color=cmap[r["model"]], label=r["model"])
+                        if depth_ax is None:
+                            depth_ax = ax.twinx()
+                            depth_ax.plot(x[keep], np.asarray(p["gt_mean"],
+                                                              float)[keep],
+                                          ":", lw=1.4, color="0.5")
+                            depth_ax.set_ylabel("mean GT depth, m (dotted)",
+                                                color="0.5", fontsize=8)
+                            depth_ax.tick_params(colors="0.5", labelsize=7)
+                    ax.set_title(f"{view}  ·  {stream}", fontsize=10)
+                    ax.grid(alpha=0.3)
+                    if row == len(streams) - 1:
+                        ax.set_xlabel(_PROFILE_LABEL.get(axis, axis), fontsize=9)
+                grid[row][0].set_ylabel(ylab, fontsize=9)
+            if not drawn:
+                plt.close(fig)
+                continue
+            handles, labels = grid[0][0].get_legend_handles_labels()
+            if handles:
+                fig.legend(handles, labels, loc="lower center", ncol=len(models),
+                           fontsize=8, frameon=False)
+            fig.suptitle(
+                f"ADT-FOV · {metric} vs {axis}, CONTINUOUS · split "
+                f"{payload['digest']}\npooled over frames (pixel-weighted), so "
+                f"it is not the coarse table at finer resolution", fontsize=10)
+            fig.tight_layout(rect=(0, 0.06, 1, 0.92))
+            path = os.path.join(out_dir, f"profile_{metric}_{axis}.png")
+            fig.savefig(path, dpi=150)
+            plt.close(fig)
+            written.append(path)
+    return written
+
+
 def write_all(payload: dict, out_dir: str) -> Dict[str, object]:
     os.makedirs(out_dir, exist_ok=True)
     text = render_report(payload)
@@ -631,4 +733,6 @@ def write_all(payload: dict, out_dir: str) -> Dict[str, object]:
         fh.write(text)
     return {"report": txt,
             "csv": write_csv(payload, os.path.join(out_dir, "results.csv")),
-            "figures": write_figures(payload, os.path.join(out_dir, "figures"))}
+            "figures": (write_figures(payload, os.path.join(out_dir, "figures"))
+                        + write_profile_figures(payload,
+                                                os.path.join(out_dir, "figures")))}

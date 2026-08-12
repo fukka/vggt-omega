@@ -78,12 +78,40 @@ beside them.
   the centre's depth is not in this data, and no arithmetic can supply it.
 * Figures: one panel per view × stream instead of eight curves in one, plus
   standardised versions of the AbsRel and δ₁ charts on both axes.
-* 87 CPU tests green. `bin_by` had no direct test at all despite being the
+
+*Two more things, added after the first version of this ticket:*
+
+* **CONTINUOUS profiles on both coordinates**, at **1°** of incidence angle and
+  **0.025** half-widths of radius — beside the six-bin tables, not replacing
+  them, and off the same frozen alignment fit. Six bins can tell you the rim is
+  worse; they cannot tell you *where* it starts, whether it is a ramp or a knee,
+  or whether the four models turn over in the same place. They can also invent
+  a shape, since the edges are arbitrary. `geometry.fine_profile` accumulates
+  sums per frame with one `bincount` and `pool_profiles` divides once at the
+  end. Lands as `profiles.theta` / `profiles.radius` per radial run, and as
+  `figures/profile_{AbsRel,delta1}_{theta,radius}.png`.
+  **These are pooled over frames (pixel-weighted); the coarse tables are
+  averaged per frame.** That is deliberate — a fine bin holds a handful of
+  pixels in one frame and thousands in another — but it means the two are
+  different estimators and must not be quoted as one number at two resolutions.
+* **The window `pen` no longer spans a clipped aim.** A 40° *square* window has
+  a 27.2° half-diagonal, so aiming it 40° off-axis puts its corners outside the
+  54.83° cone: your own run measured `in_cone_frac` **0.842** there and 1.000
+  everywhere else, and `pen` was therefore comparing two windows that differ in
+  dead area as well as in aim. Clipped cells are still scored and printed, now
+  flagged `t40!` and ringed, but excluded from the ratio. Over the clean aims
+  the rectified window is **flat** (`pen` 0.90–1.21, median 1.04) while the raw
+  one still climbs (1.14–1.67, median 1.35) — a sharper "rectifying helps" than
+  the radial arm can give, and it was buried. A new WINDOW GEOMETRY table prints
+  `in_cone_frac` and `src_px_per_out_px` per aim.
+* 119 CPU tests green (Python 3.8+). `bin_by` had no direct test at all despite being the
   driver's entry point; it now has several, including one that pins the
   shared-fit rule and one that pins the strata table above.
 
-Cost: **+164 ms per frame per (view, stream) cell**, measured at 518px — about
-**4%** on top of #14's 3 h 53 m. Everything else is unchanged.
+Cost: **+164 ms** per frame per (view, stream) cell for the standardised
+columns and **+54 ms** for both profiles, measured at 518px — together about
+**5%** on top of #14's 3 h 53 m, and ~100 KB more `results.json`. Everything
+else is unchanged.
 
 ## The command
 
@@ -139,6 +167,18 @@ report it and do not run the full grid.
    number the `drift*` guard uses, and #14 asserted 0.71–0.88 from a 3-frame
    smoke. Confirm or correct that at 200.
 
+7. **The continuous profiles.** Paste the four `profile_*.png`, and answer in
+   words what they show that the six bins do not: **at what angle (and what
+   radius) does each model's error actually start to rise**, is it a ramp or a
+   knee, and do the four models turn over in the same place? Also say where each
+   curve's *minimum* sits — that is where the single global affine chose to be
+   right, and it is a property of the fit rather than of the lens.
+8. **Whether the profile and the table agree** where they should. Re-aggregate
+   the fine bins inside one coarse bin and compare; they will not match exactly,
+   because the profile is pixel-weighted and the table is frame-weighted, and a
+   *large* gap would mean the frames differ a lot in how much of each bin they
+   fill — worth knowing either way.
+
 Do not tune anything toward any of these outcomes; all of them are publishable
 and the `—` case is the most interesting of the three.
 
@@ -148,7 +188,8 @@ and the `—` case is the most interesting of the three.
 - [ ] #14's plain columns confirmed reproduced
 - [ ] `pen` vs `pen_ds` table pasted for all sixteen radial cells
 - [ ] BIN DEPTH tables pasted, both axes
-- [ ] the seven items above answered
+- [ ] the nine items above answered
+- [ ] the four profile_*.png pasted
 - [ ] pushed to `results` under a new run id; hand back to `cpu`
 
 ## Needs CPU-Claude afterwards?

@@ -114,7 +114,9 @@ def _score_radial(model, view: "G.FrameView", edges, radius_edges,
     prof = G.bin_by(pred, view.gt_z, view.valid, model.align_mode,
                     {"theta": (view.theta, edges),
                      "radius": (view.radius, radius_edges)},
-                    max_depth=max_depth)
+                    max_depth=max_depth,
+                    profile_edges={"theta": G.PROFILE_THETA_EDGES,
+                                   "radius": G.PROFILE_RADIUS_EDGES})
     prof["bins"], prof["radius_bins"] = prof.pop("theta"), prof.pop("radius")
     prof["in_cone_frac"] = view.in_cone_frac
     return prof
@@ -187,10 +189,21 @@ def _reduce_axis(runs: List[dict], key: str, edges) -> list:
 
 
 def _reduce_radial(runs: List[dict], edges, radius_edges) -> dict:
-    """Average per-bin metrics across frames, on both axes."""
+    """Average per-bin metrics across frames, on both axes.
+
+    The coarse bins are averaged per frame and then across frames; the fine
+    profiles are **pooled** (summed, then divided once). A fine bin can hold a
+    handful of pixels in one frame and thousands in another, so a mean of
+    per-frame means would let a frame that barely reached the rim outvote one
+    that filled it. See ``geometry.fine_profile``.
+    """
+    axes = sorted({k for r in runs for k in r.get("profiles", {})})
+    profiles = {ax: G.pool_profiles([r.get("profiles", {}).get(ax) for r in runs])
+                for ax in axes}
     return {"overall": _mean_metrics([r["overall"] for r in runs], G.METRIC_KEYS),
             "bins": _reduce_axis(runs, "bins", edges),
             "radius_bins": _reduce_axis(runs, "radius_bins", radius_edges),
+            "profiles": {k: v for k, v in profiles.items() if v},
             "in_cone_frac": float(np.mean([r["in_cone_frac"] for r in runs]))
             if runs else float("nan")}
 

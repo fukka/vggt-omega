@@ -529,3 +529,87 @@ def test_a_window_aimed_off_axis_is_sampled_at_least_as_densely_as_the_centre(ki
                          kind).src_px_per_out_px for t in (0.0, 40.0)]
     assert d[1] >= d[0]
     assert all(x > 0 for x in d)
+
+
+# --------------------------------------------------------------------------- #
+# Continuous profiles
+# --------------------------------------------------------------------------- #
+
+def test_a_pooled_profile_reproduces_a_coarse_bin_on_one_frame():
+    """The curve and the table must be the same measurement read at two
+    resolutions. On a single frame the two estimators coincide (there is
+    nothing to weight differently), so re-aggregating the fine bins that fall
+    inside a coarse bin has to return that coarse bin's AbsRel exactly."""
+    pred, gt, mask, theta = _profile_inputs(
+        bias=lambda t: 1.0 + 0.6 * (np.radians(t) ** 2))
+    fine = tuple(float(x) for x in range(0, 56))
+    out = G.bin_by(pred, gt, mask, "scale_shift", {"theta": (theta, G.THETA_EDGES)},
+                   profile_edges={"theta": fine})
+    prof = out["profiles"]["theta"]
+    for b, (lo, hi) in zip(out["theta"], zip(G.THETA_EDGES[:-1], G.THETA_EDGES[1:])):
+        if b["n_valid"] < 64:
+            continue
+        sel = [i for i, e in enumerate(fine[:-1]) if lo <= e < hi]
+        n = sum(prof["n"][i] for i in sel)
+        s = sum(prof["sum_absrel"][i] for i in sel)
+        assert n == b["n_valid"]
+        assert s / n == pytest.approx(b["AbsRel"], rel=1e-9)
+
+
+def test_the_profile_resolves_a_knee_the_coarse_bins_cannot():
+    """Why the fine axis exists. A model that is exact out to 30 deg and then
+    bends reads, on six bins, as a gentle ramp starting somewhere in 20-30; the
+    profile puts the corner in the right 1 deg bin."""
+    ys, xs = np.mgrid[0:256, 0:256]
+    theta = (np.hypot(xs - 127.5, ys - 127.5) / 127.5 * 55.0).astype(np.float32)
+    gt = (2.0 + 0.01 * xs).astype(np.float32)
+    pred = (gt * (1.0 + 0.02 * np.clip(theta - 30.0, 0, None))).astype(np.float32)
+    mask = theta < 55.0
+    fine = tuple(float(x) for x in range(0, 56))
+    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)},
+                   profile_edges={"theta": fine})
+    pooled = G.pool_profiles([out["profiles"]["theta"]])
+    a = np.asarray(pooled["AbsRel"], float)
+    n = np.asarray(pooled["n"])
+    flat = a[(n > 64) & (np.arange(55) < 28)]
+    assert np.nanmax(flat) < 1e-6                    # exact below the knee
+    rise = np.where((n > 64) & (a > 1e-4))[0]
+    assert 29 <= rise[0] <= 32                       # and the knee is located
+
+
+def test_pooling_is_pixel_weighted_not_frame_weighted():
+    """The documented difference from the coarse tables. Two frames, one with a
+    hundred times the pixels of the other in the same bin: the pooled value must
+    follow the big frame, which a mean of per-frame means would not."""
+    big = {"edges": [0.0, 1.0], "n": [1000], "sum_absrel": [100.0],
+           "sum_delta1": [1000.0], "sum_gt": [2000.0]}
+    small = {"edges": [0.0, 1.0], "n": [10], "sum_absrel": [5.0],
+             "sum_delta1": [0.0], "sum_gt": [20.0]}
+    pooled = G.pool_profiles([big, small])
+    assert pooled["AbsRel"][0] == pytest.approx(105.0 / 1010.0)   # not (0.1+0.5)/2
+    assert pooled["n"] == [1010]
+    assert pooled["n_frames"] == 2
+
+
+def test_an_empty_profile_bin_is_nan_not_zero():
+    pred, gt, mask, theta = _profile_inputs()
+    fine = (0.0, 1.0, 2.0, 3.0)
+    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)},
+                   profile_edges={"theta": fine})
+    pooled = G.pool_profiles([out["profiles"]["theta"]])
+    for n, a in zip(pooled["n"], pooled["AbsRel"]):
+        assert (n == 0) == math.isnan(a)
+
+
+def test_profiles_are_absent_unless_asked_for():
+    pred, gt, mask, theta = _profile_inputs()
+    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)})
+    assert "profiles" not in out
+
+
+def test_pooling_refuses_to_add_profiles_of_different_axes():
+    a = {"edges": [0.0, 1.0], "n": [4], "sum_absrel": [1.0],
+         "sum_delta1": [4.0], "sum_gt": [8.0]}
+    b = dict(a, edges=[0.0, 2.0])
+    with pytest.raises(ValueError):
+        G.pool_profiles([a, b])

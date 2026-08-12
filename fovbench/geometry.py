@@ -112,6 +112,20 @@ MIN_STRATUM_PX: int = 64
 #: planes, so a given radius is a different direction in each.
 RADIUS_EDGES: Tuple[float, ...] = (0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.45)
 
+#: Fine edges for the CONTINUOUS profiles — the same two coordinates read at
+#: the resolution of the effect rather than of a table. 1 deg of incidence
+#: angle and 0.025 half-widths, which on a 518 px frame is ~6 px of radius, so
+#: a curve drawn on these is limited by the data and not by the bin width.
+#:
+#: These are not a finer version of the tables and must not be read as one. The
+#: coarse bins are averaged **per frame and then across frames**, so every frame
+#: counts equally; a fine bin can hold a handful of pixels in one frame and
+#: thousands in another, so the profiles are **pooled over all frames** and are
+#: therefore pixel-weighted. The two agree only when the pixel counts do.
+PROFILE_THETA_EDGES: Tuple[float, ...] = tuple(float(x) for x in range(0, 56))
+PROFILE_RADIUS_EDGES: Tuple[float, ...] = tuple(
+    round(0.025 * i, 4) for i in range(59))
+
 #: ``finetune/data/rectify.py`` renders the pinhole at ``0.55 * max(H, W)``.
 RECTIFIER_FOCAL_FRAC = 0.55
 
@@ -581,7 +595,8 @@ def radial_profile(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
 def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
            align_mode: str, axes: dict,
            min_depth: float = 0.01, max_depth: float = 100.0,
-           depth_strata: int = DEPTH_STRATA) -> dict:
+           depth_strata: int = DEPTH_STRATA,
+           profile_edges: Optional[dict] = None) -> dict:
     """Score one prediction on several binning axes under **one** alignment fit.
 
     ``axes`` maps a name to ``(coordinate_map, edges)`` — e.g. incidence angle
@@ -597,6 +612,11 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
 
     ``depth_strata`` adds the depth-standardised columns beside the plain ones;
     0 turns them off. See ``standardise_by_depth``.
+
+    ``profile_edges`` maps an axis name to a *fine* set of edges, and adds a
+    continuous profile of that axis under ``profiles`` — off the same frozen
+    prediction as everything else, so the curve and the table are two readings
+    of one measurement and cannot disagree about the alignment.
     """
     aligned = align_depth(pred_z, gt_z, mask, mode=align_mode)
     out = {"align": align_mode, "n_frame_valid": int(mask.sum()),
@@ -624,7 +644,86 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
             met["bin_lo"], met["bin_hi"] = lo, hi
             bins.append(met)
         out[name] = bins
+        if profile_edges and name in profile_edges:
+            out.setdefault("profiles", {})[name] = fine_profile(
+                aligned, gt_z, mask, coord, profile_edges[name],
+                min_depth, max_depth)
     return out
+
+
+def fine_profile(aligned: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
+                 coord: np.ndarray, edges: Sequence[float],
+                 min_depth: float = 0.01, max_depth: float = 100.0) -> dict:
+    """Error as a *continuous* function of one coordinate, as SUMS not means.
+
+    The tables answer "is the rim worse than the centre" with six bins. This
+    answers "what is the shape" — where the rise starts, whether it is linear or
+    a knee, whether the models turn over in the same place — which six bins
+    cannot show and which the bin edges themselves can invent.
+
+    Sums, not means, because the caller pools these across frames. A fine bin
+    holds a few pixels in one frame and thousands in another, so a mean of
+    per-frame means would weight a frame that barely reached the rim as heavily
+    as one that filled it. Adding the sums and dividing once at the end is the
+    pixel-weighted answer, which is the one a continuous curve should give.
+    That is a **different estimator from the coarse tables**, which are averaged
+    per frame; they agree only when the per-frame pixel counts do, and neither
+    is wrong — see ``PROFILE_THETA_EDGES``.
+
+    Returns ``n`` (pixels per bin) plus the summed AbsRel, delta1 hit count and
+    GT depth. The report divides. Everything is one ``bincount`` pass, so the
+    whole profile costs less than a single extra ``depth_metrics`` call.
+    """
+    nb = len(edges) - 1
+    lo, hi = float(edges[0]), float(edges[-1])
+    ok = (mask & np.isfinite(gt_z) & (gt_z > min_depth) & (gt_z < max_depth)
+          & np.isfinite(aligned) & (aligned > 0) & (aligned <= max_depth)
+          & (coord >= lo) & (coord < hi))
+    empty = {"edges": [float(e) for e in edges],
+             "n": [0] * nb, "sum_absrel": [0.0] * nb,
+             "sum_delta1": [0.0] * nb, "sum_gt": [0.0] * nb}
+    if not ok.any():
+        return empty
+    p = np.clip(aligned[ok].astype(np.float64), 1e-6, None)
+    g = np.clip(gt_z[ok].astype(np.float64), 1e-6, None)
+    # searchsorted against the real edges, so unequal edge spacing stays honest
+    # (np.digitize on a uniform grid would be faster and would silently lie if
+    # a caller ever passed non-uniform edges).
+    idx = np.searchsorted(np.asarray(edges, np.float64), coord[ok], side="right") - 1
+    idx = np.clip(idx, 0, nb - 1)
+    d1 = (np.maximum(p / g, g / p) < 1.25).astype(np.float64)
+    return {"edges": [float(e) for e in edges],
+            "n": np.bincount(idx, minlength=nb).astype(int).tolist(),
+            "sum_absrel": np.bincount(idx, weights=np.abs(p - g) / g,
+                                      minlength=nb).tolist(),
+            "sum_delta1": np.bincount(idx, weights=d1, minlength=nb).tolist(),
+            "sum_gt": np.bincount(idx, weights=g, minlength=nb).tolist()}
+
+
+def pool_profiles(profiles: Sequence[dict]) -> dict:
+    """Add per-frame profiles into one, and divide. The pooling step."""
+    live = [p for p in profiles if p and p.get("n")]
+    if not live:
+        return {}
+    edges = live[0]["edges"]
+    nb = len(edges) - 1
+    n = np.zeros(nb, np.int64)
+    acc = {k: np.zeros(nb) for k in ("sum_absrel", "sum_delta1", "sum_gt")}
+    for p in live:
+        if p["edges"] != edges:
+            raise ValueError("pool_profiles: profiles have different edges; "
+                             "they describe different axes and cannot be added")
+        n += np.asarray(p["n"], np.int64)
+        for k in acc:
+            acc[k] += np.asarray(p[k], np.float64)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        div = np.where(n > 0, n, np.nan)
+        return {"edges": edges, "n": n.tolist(),
+                "centre": [0.5 * (a + b) for a, b in zip(edges[:-1], edges[1:])],
+                "AbsRel": (acc["sum_absrel"] / div).tolist(),
+                "delta1": (acc["sum_delta1"] / div).tolist(),
+                "gt_mean": (acc["sum_gt"] / div).tolist(),
+                "n_frames": len(live)}
 
 
 def standardise_by_depth(aligned: np.ndarray, gt_z: np.ndarray,
