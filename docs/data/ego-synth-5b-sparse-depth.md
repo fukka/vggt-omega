@@ -15,27 +15,38 @@ the gotchas below.
 
 | | path |
 |---|---|
-| source of truth | space-container `/group-volume/ttaa/egolabel/ego-synth/data_<ds>_5b/` |
-| storage service | `file://groups/SR-TORAIC-IVU/ttaa/egolabel/ego-synth` (`space storage download file …`) |
+| storage service | `file://groups/SR-TORAIC-IVU/ttaa/egolabel/ego-synth` — `space storage download file …`, needs `space login --region n6` |
 | lambda_63 | `/data/f.zhang2/ego-synth-5b/<ds>/<take>/` |
+| a 260 MB sample | phone `R3CW80MF07P:/sdcard/data/ego-synth-5b-sample`, and lambda_63 `/data/f.zhang2/ego-synth-5b-sample` |
+| the pod | `space-container:/group-volume/ttaa/egolabel/ego-synth/` — same bytes, but the pod is recreated with a new IP every few days, so prefer the storage service |
 
 `<ds>` ∈ `aea`, `nymeria`, `egoexo4d`, `oxford`. There is a `data_combined_5b`
 that symlinks all of them — ignore it. `data_hot3d_5b` exists but has **no**
 sparse depth at all (0 bytes), so it is not part of this.
 
-Sizes, `sparse_depth` only, measured 2026-08-11:
+Measured on lambda_63 after the copy, 2026-08-11 — every take verified against
+the clip count its own summary recorded, no short streams, no missing metadata:
 
-| dataset | takes with depth | clips | `sparse_depth` |
+| dataset | takes with depth | clips | on disk |
 |---|---|---|---|
-| `aea` | 143 | 9 278 | 23 GiB |
-| `nymeria` | 254 | 8 113 | 57 GiB |
-| `egoexo4d` | ~1 090 of 2 380 take dirs | 9 277 | 122 GiB |
-| `oxford` | 124 | 10 475 | 18 GiB |
-| | | **37 143** | **220 GiB** |
+| `aea` | 143 | 4 058 | 67.9 GiB |
+| `nymeria` | 254 | 8 113 | 111.8 GiB |
+| `egoexo4d` | 1 090 of 2 380 take dirs | 9 277 | 125.1 GiB |
+| `oxford` | 124 | 3 483 | 75.5 GiB |
+| | **1 611** | **24 931** | **380.4 GiB** |
 
-Adding the `rectified/` and `fisheye/` mp4s roughly triples that (~4 MB per clip
-each). `latents/` and `text_embeds/` are Wan-only, ~840 MB per take, and are not
-copied.
+That is the three streams an evaluation needs — `sparse_depth/`, `rectified/`,
+`fisheye/` — plus per-take metadata, at ~15.6 MiB per clip. `latents/` and
+`text_embeds/` are Wan-only, ~840 MB per take, and are deliberately not copied;
+note that `latents/` contains subdirectories literally named `rectified/` and
+`fisheye/`, so any re-copy must filter on the file extension, not the directory
+name.
+
+**If you re-derive these counts, union the summaries first.** The producer wrote
+`_sparse_depth_summary*.json` in several *overlapping* shard layouts (3-way,
+8-way and 12-way over the same takes), so concatenating the files double-counts:
+naive summation gives 37 143 clips against a true 24 931. The take list actually
+used is at `/data/f.zhang2/ego-synth-5b/_sum/<ds>/_clips.tsv`.
 
 ## A take
 
@@ -72,7 +83,7 @@ with `<v>` ∈ `fisheye`, `rectified`. One row is *one SLAM point seen in one
 frame*. Typical file: ~600 k rows per variant, ~6 MB.
 
 * `d` is **metric camera-frame Z in metres** — planar z, not range. Same
-  convention the repo already audited for ScanNet++ (`3f15a92`, `3f8ded5`).
+  convention the repo already audited for ScanNet++ (`3f8ded5`, `14577df`).
 * Points are **occlusion-aware**: only points the SLAM system actually observed,
   taken from the nearest observation keyframe within 60 ms.
 * Capped at 10 000 points per frame by a hybrid sampler (half by 32×32 image-tile
@@ -92,9 +103,18 @@ These are the ones that cost a run if missed.
    in the 896 frame.
 
 2. **`u`,`v` are float16, so pixel coordinates are quantised.** Above 512 the
-   step is 0.5 px; between 256 and 512 it is 0.25 px. Round when you index, and
-   do not expect sub-quarter-pixel agreement with anything you reproject
-   yourself.
+   step is 0.5 px; between 256 and 512 it is 0.25 px. Two consequences, both
+   measured on the sample rather than reasoned about:
+
+   * **`np.rint` overflows the array.** `u` reaches exactly 895.5, and `rint`
+     rounds half to even, so `rint(895.5) == 896` — one past the end of an 896²
+     map. Clip: `np.clip(np.rint(u), 0, 895)`.
+   * **Scattering into a dense map silently drops ~20 % of the points.** On the
+     `aea` frame checked, 5 292 points land on 4 150 distinct pixels; the
+     quantisation puts several points on one pixel and the last write wins.
+     Prefer *gathering* the prediction at the point list over *scattering* the
+     GT into a map — the metrics are per-point anyway, and gathering neither
+     loses points nor picks an arbitrary winner among colliding ones.
 
 3. **`d` is float16 too** — ~0.05 % relative, so ≈5 mm at 10 m and ≈6 cm at the
    120 m cap. Cast to float32 before any metric. Fine for AbsRel/δ1; do not quote
@@ -131,9 +151,18 @@ These are the ones that cost a run if missed.
    if you assume 24. Irrelevant for per-frame depth, relevant for anything
    temporal.
 
-9. **`egoexo4d` is less than half populated** — about 1 090 of 2 380 take
-   directories have a non-empty `sparse_depth/`. Filter on that, not on the
-   directory listing.
+9. **`egoexo4d` is less than half populated** — 1 090 of 2 380 take directories
+   have depth. Filter on the summaries, not on the directory listing.
+
+10. **Coverage per frame is uneven, and unevenly distributed in θ.** Across the
+    sample, frame 0 carries between 1 252 and 5 292 points. Worse for this
+    repo's purposes, it is not uniform over the field: on the `nymeria` frame
+    checked, every point sits between θ = 30.2° and 63.6° — *nothing* within 30°
+    of the optical axis, so an innermost bin would be empty and any
+    innermost-anchored quantity undefined. `fovbench`'s `drift*` column anchors
+    its affine on a ~10° central band and already refuses a band without depth
+    spread; here the band can be empty outright. Aggregate over frames before
+    binning, and let bins be missing rather than filling them.
 
 ## Poses
 
@@ -160,9 +189,19 @@ m = (fr == 0) & (sig < 0.01)                   # frame 0, well-triangulated
 u, v_, d = uvd[m].T
 ```
 
-Scoring a prediction is then a gather, not a resize: the model's depth map is
-896² and `u`,`v` index straight into it.
+Scoring a prediction is a gather, not a resize: the model's depth map is 896²
+and `u`,`v` index straight into it. Clip the rounded index — see gotcha 2.
 
 ```python
-pred_at_gt = pred[np.rint(v_).astype(int), np.rint(u).astype(int)]
+ui = np.clip(np.rint(u),  0, 895).astype(int)
+vi = np.clip(np.rint(v_), 0, 895).astype(int)
+pred_at_gt = pred[vi, ui]
 ```
+
+A runnable version of all of the above, over one take of each dataset, is
+`read_sample.py` beside the sample.
+
+Observed across the sample, as a sanity range: ~1 300–5 300 points per frame,
+depth 0.10 m to 114 m, median 1.2–5.3 m depending on whether the take is indoors.
+The `rectified` point set runs ~2 % larger than the `fisheye` one and the two are
+not row-aligned.
