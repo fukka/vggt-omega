@@ -103,7 +103,11 @@ def test_report_text_names_the_split_and_both_headline_columns():
     txt = R.render_report(_payload([_run()]))
     assert "abc123def456" in txt
     assert "pen" in txt and "drift" in txt
-    assert "NOT comparable across models" in txt
+    # Cross-model comparability is scoped to the alignment protocol, and the
+    # reader is pointed at the column that says which is which — a blanket
+    # "not comparable" would also forbid the comparisons that ARE valid.
+    assert "comparable only WITHIN an alignment protocol" in txt
+    assert "align=" in txt
 
 
 def test_report_text_states_the_rectified_coverage_limit():
