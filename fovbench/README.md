@@ -65,6 +65,18 @@ Check availability before committing to a run:
 python -m finetune.eval.baselines.benchmark_adt --list
 ```
 
+The `results` branch carries JSON and logs, never images
+([`POLICY.md`](../docs/handoff/POLICY.md)), so redraw the figures from any run's
+`results.json` — no data, no GPU, no re-scoring:
+
+```bash
+python -c "import json;from fovbench import report;report.write_figures(json.load(open('results.json')),'figs')"
+```
+
+That writes AbsRel, δ₁ and the unaligned scale ratio against **both** axes
+(incidence angle and distance from the optical centre) for the radial protocol,
+and against window aim for the window protocol — one panel per view × stream.
+
 ## The scoring protocol
 
 **The scale (and shift) is fitted once per frame, over every valid pixel, and
