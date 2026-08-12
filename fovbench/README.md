@@ -73,11 +73,11 @@ The `results` branch carries JSON and logs, never images
 python -c "import json;from fovbench import report;report.write_figures(json.load(open('results.json')),'figs')"
 ```
 
-That writes AbsRel, δ₁, their depth-standardised versions and the unaligned scale
-ratio against **both** axes (incidence angle and distance from the optical
-centre) for the radial protocol, and against window aim for the window protocol —
-one panel per view × stream. A metric a run predates simply gets no file, rather
-than an empty one.
+That writes exactly three pictures — `AbsRel.png`, `delta1.png`, `gt_depth.png` —
+each carrying every model, both views, both streams and **both axes**. The line
+is the continuous profile, the dots are the six binned values, and a bin held up
+by corner slivers is ringed. A run that never measured depth gets no depth page,
+rather than an empty one.
 
 ## The scoring protocol
 
@@ -88,52 +88,12 @@ two readings of one measurement (`geometry.bin_by`). Fitting per bin would hand
 an up-to-scale model a separate scale at every radius and flatten exactly the
 effect being looked for.
 
-`AbsRel`, `delta1`, `RMSE` and `pen` all obey this. **`drift*` does not, and it
-is the only column that does not** — see below.
+Every column obeys this — `AbsRel`, `delta1`, `RMSE`, `pen` and `pen_ds` alike.
 
 ## Reading the output
 
-Two summary columns, and they answer different questions.
-
 **`pen`** — AbsRel in the outermost populated bin ÷ AbsRel in the innermost.
 How much worse the periphery is, in the metric a downstream user reads.
-
-**`drift*`** — **outside the protocol above, deliberately, and marked with the
-asterisk everywhere it appears.** `median(gt/pred)` after the model's own affine
-is fitted **on the innermost bin alone**, innermost ÷ outermost. Above 1.0 the
-model over-predicts depth toward the rim. **`radial` protocol only**: every
-window is a separate forward pass of an up-to-scale model, so a window-to-window
-ratio compares two arbitrary constants — blank there.
-
-It is kept because it separates *the model bends depth with radius* from *the
-model is just noisier at the rim*, and no whole-frame-fitted column can: a global
-affine spends its scale and shift on the radial trend itself and reads 0.965 for
-a real `+0.6·θ²` bias. Read it as a diagnostic beside the protocol, never as part
-of it, and do not quote it in the same breath as the columns above.
-
-Why anchored, and not the two obvious alternatives. Fitting *nothing* looks
-alignment-free but every model here has an additive degree of freedom, and an
-offset makes `median(gt/pred)` track each bin's *scene depth*: on a scene whose
-depth falls with eccentricity, a model with **no radial error at all** reports
-0.648 or 1.253 depending on the offset's sign, and an affine-invariant disparity
-model reports 1.143 — the size of the effect being looked for. Fitting on the
-*whole frame* spends the scale and shift partly on the radial trend itself:
-correct on the no-distortion cases, but a real `+0.6·θ²` bias then reads 0.965.
-Anchoring on a ~10° central band removes the offset without absorbing the trend:
-exactly 1.000 on all four no-distortion cases, 1.37 against a true 1.49. It
-under-reports by <10% and never invents. The anchor must have depth *spread* to
-determine an affine — real ADT bands measure IQR/median 0.71–0.88; a single flat
-wall measures 0.00 and is refused.
-
-Report both. Per-bin AbsRel is a *residual after one global fit*, and a
-least-squares affine chooses the radius at which it is right — so a cleanly
-monotone radial error comes out **U-shaped**, and `pen` can read ≈1.0 for a model
-that is wrong by 50% at the rim. Measured on the analytic stand-in with a known
-`+0.6·θ²` bias the AbsRel curve comes out a bowl, so `pen` reads ≈1.0 while
-`drift` recovers the bias;
-[`tests/test_end_to_end.py`](tests/test_end_to_end.py) asserts that against an
-independently derived value, with no data needed. `pen` says how it feels;
-`drift` says what the model did.
 
 Absolute AbsRel is comparable **only among models that share an alignment
 protocol**, and here three of the four do: VGGT-1B, VGGT-Omega and DA3 are all
@@ -141,8 +101,7 @@ scored under the same depth-space affine, so their levels can be read against
 each other directly. **DAv2 cannot** — it is scored under a disparity-space
 affine, because that is the protocol it was built for, and no column reconciles
 the two. `pen` is a within-model ratio, so the alignment protocol cancels and it
-is comparable across all four. So is `drift*`, but of a differently-fitted
-quantity: compare a `drift*` only against another `drift*`.
+is comparable across all four.
 
 **`gt_median`** — per bin, and not a score: the median GT depth of what that bin
 was looking at. Every metric here is relative and grows with depth, so "the rim
@@ -186,42 +145,49 @@ Run `fovbench-v2-ef2d50b`, split `fcc6c600f83b` — 200 frames of one sequence
 views, ~4 h on one RTX 6000 Ada. Numbers in
 [`results/fovbench-v2-ef2d50b/`](../results) on the `results` branch.
 
-> **Read the whole section against this.** Every `pen` below is an *upper bound*
-> on the field-position effect, and the bound may be the entire effect. An empty
-> rectangular room, scored through the real Aria ray field with a model that has
-> a **constant absolute error and no radial behaviour whatever**, already
-> produces `pen` **1.18–1.94** (5 × 4 × 2.6 m, camera at 1.5 m; the two ends are
-> an error fixed in euclidean range and one fixed in planar z). Sweeping
-> plausible apartment rooms widens that to **0.81–2.95**. Every value this run
-> reported lies inside it.
+> **The depth confound, measured.** Every metric here is relative, so a bin that
+> is nearer scores worse for that reason alone. Run `fovbench-v3-24b38e1`
+> measured the GT depth of the scored frames, per bin, model-independently:
 >
-> The mechanism is not clutter in the periphery. ADT GT is **planar z about the
-> optical axis**, and out to ~35° the field is still on the wall it faces, which
-> is fronto-parallel, so z is *exactly* constant. Past that the field leaves the
-> wall and catches floor, ceiling and side walls — surfaces the axis is
-> *parallel* to, where z goes as perpendicular distance over `tan θ` — and z
-> collapses to ×0.57 while **euclidean range over the same room stays flat**
-> (×0.94, and it *rises* out to 35°). All four numbers are in
-> `tests/test_geometry.py`, closed-form, no data.
+> | axis · view | 0–10° | 10–20 | 20–30 | 30–40 | 40–50 | 50–55 | outer/inner |
+> |---|---|---|---|---|---|---|---|
+> | θ · fisheye | 3.00 | 2.87 | 2.65 | 2.31 | 1.96 | 1.70 | **0.57×** |
+> | θ · rect | 3.02 | 2.87 | 2.65 | 2.30 | 1.99 | 1.94 | **0.64×** |
 >
-> AbsRel is invariant to which convention it is scored in — numerator and
-> denominator both carry the same `1/cos θ` — so the fix is not to score range
-> instead. The fix is `pen_ds`, and no run has produced it yet.
+> **Depth falls monotonically from the very first bin**, on both views and both
+> axes. An earlier version of this section carried a *modelled* empty room
+> instead, which got the endpoint right (1.70 m) and the shape wrong — it
+> predicted planar z constant out to 35° and then collapsing, whereas seq131 is
+> already down 12% by 20–30°. The measurement replaced it; do not reinstate the
+> model.
+>
+> If a model's error were fixed in metres and it had no radial behaviour at all,
+> that depth trend alone would raise AbsRel **1.77× (fisheye)** and **1.55×
+> (rect)** across 0–55°. So read every raw `pen` below as an upper bound, and
+> see item 7 for what survives when the confound is taken out.
 
-**1. The periphery is noisier, not systematically farther.** On the raw fisheye,
-AbsRel roughly doubles from the centre to the 50–55° rim — `pen` 1.97 (DA3
-synthetic), 1.83 (VGGT-Omega), 1.79 (VGGT-1B) — while `drift*` over the same
-cells stays at 1.02–1.09. So whatever the rim costs, it is **not** a radial
-*scale* bend: the models are not systematically placing the periphery farther
-away. Whether the rise is a field-position effect at all is the open question
-above. An earlier estimator put the bend at 14–19%; it was measuring each bin's
-scene depth and is withdrawn.
+**1. AbsRel roughly doubles toward the rim on the raw lens — and most of that
+is the depth trend above.** `pen` reaches 1.97 (DA3 synthetic), 1.83 (Omega),
+1.79 (VGGT-1B) on fisheye. The measured depth ratio over the same span is 1.77,
+so a model with a constant absolute error and *no radial behaviour at all* would
+score ~1.77 here. Raw `pen` is therefore close to uninformative about field
+position on its own.
 
-**2. There *is* a small bend, and it is the lens.** Every one of the eight
-model×stream pairs has a higher fisheye `drift*` than its own rect `drift*`, by
-3–14 points — 8 for 8, and it survives restricting both views to the same
-0–50° span, so it is not the rectified arm's corner sliver. Order of a few per
-cent, not double digits.
+**2. Taking the depth out, a real effect survives — but only on the raw lens with
+clean pixels.** `pen_ds` over the full range is `—` for every cell (see item 7),
+so this is the 10–20° → rim ratio of `AbsRel_ds`, against the ~1.17 (fisheye) /
+1.11 (rect) that a *purely* depth-driven penalty would still read after four-strata
+standardising:
+
+| | fisheye synthetic | fisheye real | rect (both streams) |
+|---|---|---|---|
+| standardised ratio | **1.47 – 1.72** | 1.05 – 1.24 | 0.79 – 1.16 |
+| pure-depth would read | 1.17 | 1.17 | 1.11 |
+| verdict | **survives** | at or below | at or below |
+
+So: on `videos_synthetic` through the raw fisheye there is a field-position
+effect that the depth confound does not account for. On real sensor pixels it is
+at or under the residual. After rectifying it is gone on every cell.
 
 **3. Rectifying helps, and costs field.** At the honest 40–50° bin, VGGT-1B
 synthetic scores 0.074 rect against 0.102 fisheye; across the three depth heads
@@ -270,17 +236,21 @@ nothing else from the 25-frame one. This also means one sequence at 200 frames i
 the floor, not the target — the estimator was wrong at any n, *and* the sample
 was thin.
 
-**Open, and not answered by this run — every `pen` above is a raw `pen`.**
-Neither `gt_median` nor `pen_ds` existed when it ran, so none of these numbers
-have had the depth confound taken out of them. The live case is DAv2's rect `pen`
-of 0.73, a *worse* centre than rim on both streams: that is the shape a
-constant-error model makes when the centre is the farthest content, and DAv2 is
-the one model scored in disparity space, where error grows fastest with depth.
-But the caveat is general, not DAv2's alone — if bin depth falls steeply with
-eccentricity here, some of the 1.79–1.97 fisheye `pen` is depth too. Ticket
-`010` / issue #15 re-scores the same split with the standardised columns; until
-it lands, read every `pen` on this page as an upper bound on the field-position
-effect.
+**7. The confound could not be fully corrected, and that is itself a result.**
+`pen_ds` is `—` in all sixteen cells. It anchors on the innermost bin, and that
+bin's `ds_frac` is **0.17** on θ: it misses at least one depth quartile in 83% of
+frames. The cause is structural rather than a guard misfiring — the 0–10° bin is
+both the smallest (4.8k–7.9k px against 36k–68k at the rim) and the *narrowest in
+depth* (`gt_spread` 0.42 against 0.95 at 50–55°), because a 10° cone on the far
+wall is close to a single depth. The rectified 50–55° bin fails for the same
+reason at the other end (`ds_frac` 0.17, 2,940 px of corner), which is why the
+rect figures in item 2 are read to 40–50° and not to 55°. So the centre of this
+sequence cannot be re-scored at the rim's depth mix at all: item 2's ratios start
+at 10–20°, and the innermost 10° is reported, never corrected.
+
+**Still open.** One sequence — 200 frames of `Apartment_release_clean_seq131_M1292`,
+so nothing here is an across-scene claim. At ~15 min per sequence radial-only
+that is now a cheap gap to close.
 
 ## Two things that would quietly invalidate this, and how they are held
 
@@ -326,7 +296,7 @@ between the streams is *sensor reality plus registration*, not blur alone.
 | `geometry.py` | window rendering, GT convention warp, θ maps, radial binning |
 | `models.py` | the four models behind one call + the analytic stand-in |
 | `run.py` | the driver (CLI) |
-| `report.py` | tables, CSV, figures, `pen`/`drift` |
+| `report.py` | tables, CSV, the three figures, `pen`/`pen_ds` |
 | `tests/` | 123 CPU tests: no weights, no data, ~9 s (needs Python 3.8+) |
 
 Model loading, availability and downloads live in
