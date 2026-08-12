@@ -30,9 +30,11 @@ says what the model actually did.
 
 Absolute AbsRel is **not** comparable across models here: Depth-Anything V2 is
 scored under a disparity-space affine and the depth heads under a depth-space
-one, because those are the protocols the models were built for. The columns that
-*are* cross-comparable are ``pen`` and ``drift`` — both are within-model ratios,
-so the alignment protocol cancels.
+one, because those are the protocols the models were built for. ``pen`` *is*
+cross-comparable, being a within-model ratio, so the alignment protocol cancels.
+``drift`` is a within-model ratio as well and so is comparable to other
+``drift``s — but it is fitted differently from every other column, so it never
+belongs in the same sentence as a ``pen``.
 """
 from __future__ import annotations
 
@@ -179,7 +181,40 @@ def _coverage_note(runs: List[dict]) -> List[str]:
     return lines + [
         "  A rectified ~85 deg pinhole has no pixels past 42.3 deg off-axis except",
         "  in its corners (52.6 deg at most). Empty outer bins there are geometry,",
-        "  not model failure — and are themselves the cost of rectifying.", ""]
+        "  not model failure — and are themselves the cost of rectifying.",
+        ""] + _bin_depth_note(rad)
+
+
+def _bin_depth_note(rad: List[dict]) -> List[str]:
+    """Median GT depth per bin — the confound, printed so it can be checked.
+
+    Every metric in this report is relative, and a relative error grows with
+    depth. So "the rim is worse" is a statement about field position only if
+    the bins are at comparable depths; in an egocentric indoor frame they need
+    not be. This table is model-independent (it is the GT), so one row per
+    view x render size says everything.
+    """
+    have = [r for r in rad if any("gt_median" in b for b in r.get("bins", ()))]
+    if not have:
+        return []
+    cols, _ = _axis(have[0])
+    lines = ["  BIN DEPTH · median GT depth per incidence bin (m) — a confound, not a score",
+             "  " + "-" * 82,
+             "  " + f"{'view':10s}{'px':>6s}" + "".join(f"{c:>9s}" for c in cols)]
+    seen = set()
+    for r in sorted(have, key=lambda r: (r["view"], r["input_size"])):
+        tag = (r["view"], r["input_size"])
+        if tag in seen:
+            continue
+        seen.add(tag)
+        row = f"{r['view']:10s}{r['input_size']:>6d}"
+        for b in r["bins"]:
+            v = b.get("gt_median", float("nan"))
+            row += (f"{v:>9.2f}" if _finite(v) else f"{'—':>9s}")
+        lines.append("  " + row)
+    return lines + [
+        "  Read the AbsRel tables against this row: a bin that is both farther and",
+        "  worse has not yet been shown to be worse *because of* where it sits.", ""]
 
 
 def render_report(payload: dict) -> str:
@@ -225,7 +260,9 @@ def render_report(payload: dict) -> str:
         "           Radial only: window cells are separate forward passes of up-to-scale",
         "           models, so a window-to-window ratio compares two arbitrary constants.",
         "  Absolute AbsRel is NOT comparable across models (each keeps its own",
-        "  alignment protocol); pen and drift are, being within-model ratios.",
+        "  alignment protocol); pen is, being a within-model ratio. drift* is a",
+        "  within-model ratio too, but of a differently-fitted quantity — compare",
+        "  it model to model only against other drift*, never against pen.",
         "",
     ]
     for protocol in ("radial", "window"):
@@ -282,8 +319,24 @@ def write_csv(payload: dict, path: str) -> str:
 # Figures
 # --------------------------------------------------------------------------- #
 
+_STREAM_ORDER = {"synthetic": 0, "real": 1}
+_VIEW_ORDER = {"fisheye": 0, "rect": 1}
+_AXIS_NOTE = {
+    "radius": ("each view measures radius in its OWN image plane: the same x is a "
+               "different direction left vs right. Compare views on theta."),
+    "theta": ("theta is the ray direction, so left and right are like-for-like. "
+              "Ringed = bin held up by a corner sliver."),
+}
+
+
 def write_figures(payload: dict, out_dir: str) -> List[str]:
-    """AbsRel and scale_ratio against eccentricity. Skipped without matplotlib."""
+    """Per-bin curves against eccentricity, one panel per view x stream.
+
+    A panel carries one curve per model and nothing else: eight curves in a
+    shared panel could not be read, and the stream is the one axis where the
+    levels genuinely differ (the sensor sets the level), so it gets its own row
+    rather than a line style. Skipped without matplotlib.
+    """
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -293,11 +346,11 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
 
     os.makedirs(out_dir, exist_ok=True)
     written = []
-    styles = {"synthetic": "-", "real": "--"}
-    axes = [("radial", "theta", "incidence angle from the optical axis (deg)"),
-            ("radial", "radius", "distance from the optical centre (half-widths)"),
-            ("window", "theta", "window aim (deg off-axis)")]
-    for protocol, axis, xlab in axes:
+    axes_spec = [("radial", "theta", "incidence angle from the optical axis (deg)"),
+                 ("radial", "radius",
+                  "distance from the optical centre (half-widths; 1.0 = edge midpoint)"),
+                 ("window", "theta", "window aim (deg off-axis)")]
+    for protocol, axis, xlab in axes_spec:
         # raw_scale_ratio, NOT scale_ratio: the latter is measured on the
         # aligned map and inherits the same bowl the alignment puts into
         # AbsRel, so plotting it would show the distorted column under the
@@ -310,51 +363,56 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                 sel = [r for r in sel if "radius_bins" in r]
             if not sel:
                 continue
-            views = sorted({r["view"] for r in sel})
-            fig, axes = plt.subplots(1, len(views), figsize=(5.6 * len(views), 4.4),
-                                     squeeze=False, sharey=True)
+            views = sorted({r["view"] for r in sel},
+                           key=lambda v: _VIEW_ORDER.get(v, 9))
+            streams = sorted({r["stream"] for r in sel},
+                             key=lambda s: _STREAM_ORDER.get(s, 9))
+            fig, grid = plt.subplots(len(streams), len(views),
+                                     figsize=(5.4 * len(views), 3.6 * len(streams)),
+                                     squeeze=False, sharey=True, sharex="col")
             models = sorted({r["model"] for r in sel})
             cmap = {m: plt.get_cmap("tab10")(i % 10) for i, m in enumerate(models)}
-            for ax, view in zip(axes[0], views):
-                for r in sorted(sel, key=lambda r: (r["model"], r["stream"])):
-                    if r["view"] != view:
-                        continue
-                    _, cells = _axis(r, axis)
-                    xs = [(0.5 * (_lo(c) + _hi(c))
-                           if protocol == "radial" else c["tilt"]) for c in cells]
-                    ys = [c.get(metric, float("nan")) for c in cells]
-                    pts = [(x, y) for x, y in zip(xs, ys)
-                           if _finite(y) and _finite(x)]
-                    if len(pts) < 2:
-                        continue
-                    ax.plot([p[0] for p in pts], [p[1] for p in pts],
-                            styles.get(r["stream"], ":"), marker="o", ms=4,
-                            color=cmap[r["model"]],
-                            label=f"{r['model']} · {r['stream']}")
-                    # A bin held up by a few corner pixels is not a measurement;
-                    # ring it so the rectified rim cannot be read as one.
-                    thin = [(x, y, c) for (x, y), c in zip(zip(xs, ys), cells)
-                            if _finite(y) and c.get("n_px_mean", 1e9) < THIN_BIN_PX]
-                    if thin:
-                        ax.plot([t[0] for t in thin], [t[1] for t in thin], "o",
-                                ms=11, mfc="none", mec=cmap[r["model"]], mew=1.2)
-                ax.set_title(f"{protocol} · {view}")
-                ax.set_xlabel(xlab)
-                ax.grid(alpha=0.3)
-            axes[0][0].set_ylabel(ylab)
-            if metric == "raw_scale_ratio":
-                for ax in axes[0]:
-                    ax.axhline(1.0, color="0.5", lw=0.8, zorder=0)
-            handles, labels = axes[0][0].get_legend_handles_labels()
+            for row, stream in enumerate(streams):
+                for col, view in enumerate(views):
+                    ax = grid[row][col]
+                    for r in sorted(sel, key=lambda r: r["model"]):
+                        if r["view"] != view or r["stream"] != stream:
+                            continue
+                        _, cells = _axis(r, axis)
+                        xs = [(0.5 * (_lo(c) + _hi(c))
+                               if protocol == "radial" else c["tilt"]) for c in cells]
+                        ys = [c.get(metric, float("nan")) for c in cells]
+                        pts = [(x, y) for x, y in zip(xs, ys)
+                               if _finite(y) and _finite(x)]
+                        if len(pts) < 2:
+                            continue
+                        ax.plot([p[0] for p in pts], [p[1] for p in pts],
+                                "-", marker="o", ms=4, lw=1.6,
+                                color=cmap[r["model"]], label=r["model"])
+                        # A bin held up by a few corner pixels is not a
+                        # measurement; ring it so the rectified rim cannot be
+                        # read as one.
+                        thin = [(x, y) for (x, y), c in zip(zip(xs, ys), cells)
+                                if _finite(y)
+                                and c.get("n_px_mean", 1e9) < THIN_BIN_PX]
+                        if thin:
+                            ax.plot([t[0] for t in thin], [t[1] for t in thin], "o",
+                                    ms=11, mfc="none", mec=cmap[r["model"]], mew=1.2)
+                    ax.set_title(f"{view}  ·  {stream}", fontsize=10)
+                    ax.grid(alpha=0.3)
+                    if metric == "raw_scale_ratio":
+                        ax.axhline(1.0, color="0.5", lw=0.8, zorder=0)
+                    if row == len(streams) - 1:
+                        ax.set_xlabel(xlab, fontsize=9)
+                grid[row][0].set_ylabel(ylab, fontsize=9)
+            handles, labels = grid[0][0].get_legend_handles_labels()
             if handles:
-                fig.legend(handles, labels, loc="lower center", ncol=4, fontsize=7,
-                           frameon=False)
-            sub = ("  ·  radius is measured in each view's OWN image plane, so a "
-                   "given radius is a different direction in the two panels"
-                   if axis == "radius" else "")
-            fig.suptitle(f"ADT-FOV · {metric} vs {axis} · split "
-                         f"{payload['digest']}{sub}", fontsize=10)
-            fig.tight_layout(rect=(0, 0.10, 1, 0.95))
+                fig.legend(handles, labels, loc="lower center", ncol=len(models),
+                           fontsize=8, frameon=False)
+            fig.suptitle(f"ADT-FOV · {metric} vs {axis} · {protocol} protocol · "
+                         f"split {payload['digest']}\n"
+                         f"{_AXIS_NOTE.get(axis, '')}", fontsize=10)
+            fig.tight_layout(rect=(0, 0.06, 1, 0.93))
             name = f"{protocol}_{metric}" + ("_radius" if axis == "radius" else "")
             path = os.path.join(out_dir, f"{name}.png")
             fig.savefig(path, dpi=150)

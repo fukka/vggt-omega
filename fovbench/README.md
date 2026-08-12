@@ -123,8 +123,76 @@ independently derived value, with no data needed. `pen` says how it feels;
 
 Absolute AbsRel is **not** comparable across models — DAv2 is scored under a
 disparity-space affine and the depth heads under a depth-space one, because those
-are the protocols they were built for. `pen` and `drift` are within-model ratios,
-so the alignment protocol cancels and they *are* comparable.
+are the protocols they were built for. `pen` is a within-model ratio, so the
+alignment protocol cancels and it *is* comparable. So is `drift*`, but of a
+differently-fitted quantity: compare a `drift*` only against another `drift*`.
+
+**`gt_median`** — per bin, and not a score: the median GT depth of what that bin
+was looking at. Every metric here is relative and grows with depth, so "the rim
+is worse" is a claim about *field position* only once the bins are known to sit
+at comparable depths — and in an egocentric indoor frame they need not. A model
+with a constant 10 cm error and no radial behaviour whatever scores a rising
+AbsRel curve on a scene that gets nearer toward the rim
+(`tests/test_geometry.py::test_gt_median_exposes_the_depth_confound_in_absrel`).
+This is the same confound that made the withdrawn `raw_scale_ratio` drift read a
+radial trend out of a flat model, so it is now carried in the tables rather than
+argued about. `report.txt` prints it as the BIN DEPTH table.
+
+## What it found
+
+Run `fovbench-v2-ef2d50b`, split `fcc6c600f83b` — 200 frames of one sequence
+(`Apartment_release_clean_seq131_M1292`), all four models, both streams, both
+views, ~4 h on one RTX 6000 Ada. Numbers in
+[`results/fovbench-v2-ef2d50b/`](../results) on the `results` branch.
+
+**1. The periphery is noisier, not systematically farther.** On the raw fisheye,
+AbsRel roughly doubles from the centre to the 50–55° rim — `pen` 1.97 (DA3
+synthetic), 1.83 (VGGT-Omega), 1.79 (VGGT-1B) — while `drift*` over the same
+cells stays at 1.02–1.09. The rim error is variance, not a radial scale bend.
+An earlier estimator put that bend at 14–19%; it was measuring each bin's scene
+depth and is withdrawn.
+
+**2. There *is* a small bend, and it is the lens.** Every one of the eight
+model×stream pairs has a higher fisheye `drift*` than its own rect `drift*`, by
+3–14 points — 8 for 8, and it survives restricting both views to the same
+0–50° span, so it is not the rectified arm's corner sliver. Order of a few per
+cent, not double digits.
+
+**3. Rectifying helps, and costs field.** At the honest 40–50° bin, VGGT-1B
+synthetic scores 0.074 rect against 0.102 fisheye; across the three depth heads
+the rect `pen` is 1.00–1.25 against 1.79–1.97 on the raw lens. The price is in
+the COVERAGE table: an ~85° pinhole has nothing past 42.3° except in its corners.
+
+**4. The sensor sets the level, the lens sets the slope.** `real` sits well above
+`synthetic` at every bin (VGGT-1B fisheye 0.110 vs 0.068 on axis) while the two
+curves have nearly the same shape.
+
+**5. The two axes have mirror-image blind spots, which is why both are kept.**
+The rectified arm covers radius to the corners but its 50–55° θ bin is 2,939 px
+of corner; the fisheye arm reaches 55° with 36,245 px but has *nothing* past
+radius 1.0, the image circle being inscribed in the frame. Fisheye's two axes
+nearly agree (`pen` 1.79 on θ, 1.71 on radius); rect's do not and can change
+direction (1.08 on θ, 0.91 on radius), which is `tan θ` versus `θ`.
+
+**6. 25 frames was not enough, and the run says so plainly.** Against the earlier
+25-frame run every cell moved: levels by 15–47%, and in several cells the *shape*
+changed, not just the height. VGGT-Omega's rect `pen` went 1.45 → 1.00 (a clear
+rim penalty became flat) on a curve whose inner bins barely moved and whose
+outermost — the 2,939 px corner sliver — moved 39%. VGGT-1B real fisheye went
+`pen` 1.75 → 1.30 with the inner bins rising 17% and the outer falling 12%.
+DAv2's anomalous rect *centre* bin does not exist at 25 frames at all: it is 0.058
+there and 0.110 here. What is stable is the fisheye synthetic **shape** for the
+three depth heads (`pen` within 0.07), even though those levels moved 15–19%
+uniformly. So: read the fisheye synthetic shape claims from either run; read
+nothing else from the 25-frame one. This also means one sequence at 200 frames is
+the floor, not the target — the estimator was wrong at any n, *and* the sample
+was thin.
+
+**Open, and not answered by this run:** `gt_median` did not exist when it ran, so
+DAv2's rect `pen` of 0.73 — a *worse* centre than rim, on both streams — is still
+unattributed. It is the shape a constant-error model makes when the centre is the
+farthest content, and DAv2 is the one model scored in disparity space, where
+error grows fastest with depth. One GT-only pass settles it.
 
 ## Two things that would quietly invalidate this, and how they are held
 
@@ -162,7 +230,7 @@ between the streams is *sensor reality plus registration*, not blur alone.
 | `models.py` | the four models behind one call + the analytic stand-in |
 | `run.py` | the driver (CLI) |
 | `report.py` | tables, CSV, figures, `pen`/`drift` |
-| `tests/` | 79 CPU tests: no weights, no data, ~7 s |
+| `tests/` | 82 CPU tests: no weights, no data, ~8 s |
 
 Model loading, availability and downloads live in
 [`finetune/eval/baselines/model_zoo.py`](../finetune/eval/baselines/model_zoo.py);

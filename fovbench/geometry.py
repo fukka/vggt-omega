@@ -69,12 +69,21 @@ from finetune.eval.metrics import align_depth, depth_metrics  # noqa: E402
 THETA_EDGES: Tuple[float, ...] = (0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 55.0)
 
 #: Metric names carried through the whole pipeline — ``depth_metrics`` output
-#: plus this module's alignment-free ``raw_scale_ratio``. Named once so the
-#: driver's frame-averaging and the report's CSV cannot drift apart.
+#: plus this module's alignment-free ``raw_scale_ratio``, its ``anchored_ratio``,
+#: and the bin's own GT depth. Named once so the driver's frame-averaging and
+#: the report's CSV cannot drift apart.
+#:
+#: ``gt_median`` is not a score: it is what the bin was *looking at*. Every
+#: relative metric here grows with depth, so a rise in AbsRel toward the rim is
+#: only a statement about field position once the bins are known to be at
+#: comparable depths — and in an egocentric indoor frame they are not
+#: automatically. Carrying it per bin is what lets that be checked rather than
+#: assumed; it is the same confound that made the withdrawn ``raw_scale_ratio``
+#: drift read a radial trend out of a flat model.
 METRIC_KEYS: Tuple[str, ...] = ("AbsRel", "SqRel", "RMSE", "RMSElog", "log10",
                                 "delta1", "delta2", "delta3",
                                 "scale_ratio", "raw_scale_ratio",
-                                "anchored_ratio")
+                                "anchored_ratio", "gt_median", "gt_spread")
 
 #: Distance-from-the-optical-centre bin edges, in units of the frame's HALF
 #: WIDTH: 1.0 is the middle of a frame edge, and a corner sits at sqrt(2).
@@ -570,6 +579,7 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
     out = {"align": align_mode, "n_frame_valid": int(mask.sum()),
            "overall": depth_metrics(aligned, gt_z, mask, min_depth, max_depth)}
     out["overall"]["raw_scale_ratio"] = raw_scale_ratio(pred_z, gt_z, mask)
+    out["overall"].update(_gt_stats(gt_z, mask))
     for name, (coord, edges) in axes.items():
         edges = [float(e) for e in edges]
         anchored = anchored_ratios(pred_z, gt_z, mask, coord, edges, align_mode)
@@ -582,10 +592,25 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
             met["n_bin"] = int(m.sum())
             met["raw_scale_ratio"] = raw_scale_ratio(pred_z, gt_z, m)
             met["anchored_ratio"] = anchored[i]
+            # What the bin was looking at, so "the rim is worse" can be told
+            # apart from "the rim is nearer". Model-independent by construction.
+            met.update(_gt_stats(gt_z, m))
             met["bin_lo"], met["bin_hi"] = lo, hi
             bins.append(met)
         out[name] = bins
     return out
+
+
+def _gt_stats(gt_z: np.ndarray, mask: np.ndarray) -> dict:
+    """The bin's own GT depth: median, and IQR as a fraction of it."""
+    if not mask.any():
+        return {"gt_median": float("nan"), "gt_spread": float("nan")}
+    g = gt_z[mask].astype(np.float64)
+    g = g[np.isfinite(g) & (g > 0)]
+    if g.size < 4:
+        return {"gt_median": float("nan"), "gt_spread": float("nan")}
+    return {"gt_median": float(np.median(g)),
+            "gt_spread": _relative_spread(gt_z, mask)}
 
 
 def anchored_ratios(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,

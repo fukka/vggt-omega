@@ -340,6 +340,64 @@ def test_per_bin_alignment_would_erase_the_effect():
     assert min(shared_curve) > max(per_bin)
 
 
+def test_bin_by_scores_two_axes_off_one_shared_fit():
+    """The rule the whole benchmark rests on: the scale is fitted once over the
+    whole valid frame and frozen, and an axis is only a set of masks over it.
+    Two axes over the same frame must therefore agree wherever they select the
+    same pixels — here a single-bin radius axis, which selects everything."""
+    pred, gt, mask, theta = _profile_inputs(
+        bias=lambda t: 1.0 + 0.6 * (np.radians(t) ** 2))
+    radius = theta / 55.0            # same coordinate, different units
+    # One bin wide enough to hold the corners too, so it selects every pixel.
+    out = G.bin_by(pred, gt, mask, "scale_shift",
+                   {"theta": (theta, G.THETA_EDGES), "radius": (radius, (0.0, 9.0))})
+    whole = out["radius"][0]
+    assert whole["n_bin"] == int(mask.sum())
+    assert whole["AbsRel"] == pytest.approx(out["overall"]["AbsRel"], rel=1e-9)
+    # The theta axis stops at 55 deg, so it partitions the pixels inside its
+    # own range — off the SAME frozen prediction, never a fit of its own.
+    in_theta = int((mask & (theta < G.THETA_EDGES[-1])).sum())
+    assert sum(b["n_bin"] for b in out["theta"]) == in_theta
+
+
+def test_bin_by_reports_each_bin_s_own_gt_depth():
+    pred, gt, mask, theta = _profile_inputs()
+    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)})
+    for b, (lo, hi) in zip(out["theta"], zip(G.THETA_EDGES[:-1], G.THETA_EDGES[1:])):
+        if b["n_bin"] == 0:
+            continue
+        m = mask & (theta >= lo) & (theta < hi)
+        # float32 GT, medianed in float64 — agreement is to float32, not to bit.
+        assert b["gt_median"] == pytest.approx(float(np.median(gt[m])), rel=1e-6)
+
+
+def test_gt_median_exposes_the_depth_confound_in_absrel():
+    """Why ``gt_median`` is reported at all.
+
+    A model with a *constant absolute* error and no radial behaviour whatever
+    scores a rising AbsRel curve wherever the scene gets nearer with
+    eccentricity — AbsRel is the absolute error over the depth. Reading that
+    rise as "the periphery is worse" would repeat the mistake the withdrawn
+    drift column made. ``gt_median`` is what makes it visible: it falls exactly
+    where AbsRel rises.
+    """
+    ys, xs = np.mgrid[0:64, 0:64]
+    theta = (np.hypot(xs - 31.5, ys - 31.5) / 31.5 * 55.0).astype(np.float32)
+    gt = (5.0 - 0.05 * theta).astype(np.float32)   # nearer toward the rim
+    pred = gt + 0.10                                # 10 cm off everywhere
+    mask = np.ones_like(gt, bool)
+    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)})
+    bins = [b for b in out["theta"] if b["n_bin"] > 32]
+    absrel = [b["AbsRel"] for b in bins]
+    depth = [b["gt_median"] for b in bins]
+    assert absrel[-1] > 1.4 * absrel[0]            # looks like a rim penalty
+    assert depth[-1] < 0.75 * depth[0]             # and is entirely this
+    # AbsRel x depth recovers the one constant error, to within the slack of
+    # comparing a mean of 1/gt against the reciprocal of a median.
+    assert all(a * d == pytest.approx(0.10, rel=0.02)
+               for a, d in zip(absrel, depth))
+
+
 def test_radial_profile_bins_partition_the_valid_pixels():
     pred, gt, mask, theta = _profile_inputs()
     out = G.radial_profile(pred, gt, mask, theta, G.THETA_EDGES, "none")
