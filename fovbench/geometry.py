@@ -252,6 +252,113 @@ def theta_map_pinhole(H: int, W: int,
     return _cached_map(("theta_pinhole", H, W, f, cx, cy), build)
 
 
+#: A ring counts as whole above this fraction of its azimuth being imaged.
+#: Below 1.0 because the outermost imaged pixel of a full ring can miss an
+#: azimuth cell to rounding; the real collapse is not marginal (100% to 71%
+#: in one degree on the rectified view), so the threshold never has to judge.
+FULL_RING_FRAC = 0.995
+
+#: Azimuth cells used to ask "is this direction imaged at this angle".
+_RING_AZ = 720
+
+
+def view_maps(out_size: int, kind: str, src: int = 1408):
+    """``(theta, azimuth, imaged)`` for a view, without any frame behind it.
+
+    The same construction :func:`full_frame_view` uses, minus the pixels — so
+    coverage questions can be answered from a ``results.json`` alone, with no
+    data, no GPU and no re-scoring.
+    """
+    cam = aria_cam(src, src)
+    if kind == "fisheye":
+        small = scaled_cam(cam, out_size)
+        _, cone = fisheye_rays(small)
+        theta, imaged, cx, cy = theta_map_fisheye(small), cone, small.cx, small.cy
+    elif kind == "rect":
+        s = float(out_size) / float(cam.W)
+        cx = (cam.W / 2.0 + 0.5) * s - 0.5
+        cy = (cam.H / 2.0 + 0.5) * s - 0.5
+        theta = theta_map_pinhole(
+            out_size, out_size,
+            focal_px=RECTIFIER_FOCAL_FRAC * max(cam.H, cam.W) * s, cx=cx, cy=cy)
+        imaged = theta <= math.degrees(cam.theta_max())
+    else:
+        raise ValueError(f"unknown frame kind {kind!r} (choose 'rect' or 'fisheye')")
+
+    def build():
+        ys, xs = np.mgrid[0:out_size, 0:out_size]
+        return (np.degrees(np.arctan2(ys - cy, xs - cx)) % 360.0).astype(np.float32)
+    return theta, _cached_map(("azimuth", out_size, cx, cy), build), imaged
+
+
+def reach_by_azimuth(out_size: int, kind: str) -> np.ndarray:
+    """Per azimuth direction, the largest incidence angle the view images.
+
+    Asked along *rays* rather than within rings on purpose. A ring at a small
+    angle is only a few hundred pixels wide, so counting how many azimuth cells
+    it happens to land in measures the sampling, not the coverage — an early
+    version of this did exactly that and reported the fisheye ring "incomplete"
+    at 13 deg, where it is a whole circle. A ray has many pixels at every
+    azimuth, so a maximum along it is exact.
+
+    Flat at the cone limit for the raw fisheye (every direction reaches 54.8
+    deg); on the rectified pinhole it runs from the edge midpoint on the axes to
+    the corner on the diagonals, which is the whole of the story below.
+    """
+    theta, az, imaged = view_maps(out_size, kind)
+    cell = np.clip((az / 360.0 * _RING_AZ).astype(int), 0, _RING_AZ - 1)
+    reach = np.zeros(_RING_AZ, np.float64)
+    np.maximum.at(reach, cell[imaged], theta[imaged])
+    return reach
+
+
+def ring_fraction(out_size: int, kind: str, theta_deg) -> np.ndarray:
+    """Fraction of the 360-degree ring this view images, at each given angle."""
+    reach = reach_by_azimuth(out_size, kind)
+    t = np.atleast_1d(np.asarray(theta_deg, np.float64))
+    return (reach[None, :] >= t[:, None]).mean(axis=1)
+
+
+def ring_coverage(out_size: int, kind: str, edges: Sequence[float]) -> List[dict]:
+    """How much of each incidence-angle **ring** the view actually images.
+
+    The pixel counts already in the report say a bin is thin. They do not say
+    *why*, and the difference matters: a bin on the raw fisheye is a whole
+    360-degree annulus, while the same bin on the rectified pinhole is whatever
+    part of that annulus survived a square crop. Past the inscribed circle the
+    rectified arm stops being a ring at all and becomes four corner wedges — so
+    its outer bins sample a **biased set of directions**, not merely fewer of
+    them, and its curve is cut short at an angle no table currently prints.
+
+    Returns per bin: ``complete_frac`` (fraction of azimuth imaged),
+    ``mean_theta`` (the angle the bin *actually* averages, which is not the bin
+    midpoint once the ring is partial), and ``n_px``.
+
+    Pure geometry — no frame, no GT, no model.
+    """
+    theta, _, imaged = view_maps(out_size, kind)
+    out = []
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        band = (theta >= lo) & (theta < hi) & imaged
+        inside = np.linspace(float(lo), float(hi), 21)[:-1]
+        out.append(dict(bin_lo=float(lo), bin_hi=float(hi),
+                        complete_frac=float(ring_fraction(out_size, kind, inside).mean()),
+                        mean_theta=float(theta[band].mean()) if band.any() else float("nan"),
+                        n_px=int(band.sum())))
+    return out
+
+
+def full_ring_limit(out_size: int, kind: str) -> float:
+    """Largest incidence angle at which this view still images the WHOLE ring.
+
+    Beyond it a theta bin is a set of corner wedges, so two views read past
+    their own limits are not compared on the same directions — which is the
+    confound this whole pair of functions exists to expose. Measured rather than
+    derived, so it carries the off-centre principal point.
+    """
+    return float(reach_by_azimuth(out_size, kind).min())
+
+
 def radius_map(H: int, W: int, cx: Optional[float] = None,
                cy: Optional[float] = None) -> np.ndarray:
     """Per-pixel distance from the optical centre, in HALF-WIDTHS.

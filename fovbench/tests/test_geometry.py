@@ -654,3 +654,50 @@ def test_absrel_does_not_care_which_depth_convention_it_is_scored_in():
         as_r = np.mean(np.abs(pred_z[m] / cos[m] - gt_z[m] / cos[m])
                        / (gt_z[m] / cos[m]))
         assert as_z == pytest.approx(as_r, rel=1e-9)
+
+
+# --------------------------------------------------------------------------- #
+# The rectified arm's theta axis is cut short, and the tables do not say so
+# --------------------------------------------------------------------------- #
+
+def test_the_raw_fisheye_images_whole_rings_and_the_rectified_one_does_not():
+    """The confound behind every rect-vs-fisheye `pen`: a theta bin on the raw
+    lens is a full 360-deg annulus, but on the rectified pinhole it is whatever
+    part of that annulus fell inside a square. Past the inscribed circle the
+    rect arm is four corner wedges — fewer pixels AND a biased set of
+    directions."""
+    fish = G.full_ring_limit(518, "fisheye")
+    rect = G.full_ring_limit(518, "rect")
+    # the fisheye stays whole right out to its cone (the 0.2 deg is the grid)
+    assert fish > 54.5
+    # the rectified view stops being a ring at ~42 deg, well inside the cone
+    assert 41.0 < rect < 43.0
+    # ...and still reaches ~52 deg in the corners, which is what makes the
+    # outer bins look populated rather than absent.
+    assert G.reach_by_azimuth(518, "rect").max() > 51.0
+
+
+def test_the_rect_outer_bins_are_corners_not_rings():
+    cov = {c["bin_lo"]: c for c in G.ring_coverage(518, "rect", G.THETA_EDGES)}
+    assert cov[0.0]["complete_frac"] == pytest.approx(1.0, abs=1e-3)
+    assert cov[30.0]["complete_frac"] == pytest.approx(1.0, abs=1e-3)
+    assert 0.4 < cov[40.0]["complete_frac"] < 0.7      # half a ring
+    assert cov[50.0]["complete_frac"] < 0.05           # four slivers
+    for c in G.ring_coverage(518, "fisheye", G.THETA_EDGES):
+        assert c["complete_frac"] > 0.95
+
+
+def test_the_same_bin_label_means_a_different_angle_in_the_two_views():
+    """`pen` divides the outermost bin by the innermost, and the report compares
+    that ratio across views. The inner bins agree to a fifth of a degree, but
+    the rect 40-50 bin averages ~1.4 deg closer to the axis than the fisheye one
+    and the 50-55 bin ~1.7 deg, because the missing azimuths are the ones that
+    reach furthest. Rect is therefore flattered by the comparison."""
+    f = {c["bin_lo"]: c["mean_theta"]
+         for c in G.ring_coverage(518, "fisheye", G.THETA_EDGES)}
+    r = {c["bin_lo"]: c["mean_theta"]
+         for c in G.ring_coverage(518, "rect", G.THETA_EDGES)}
+    for lo in (0.0, 10.0, 20.0, 30.0):
+        assert abs(f[lo] - r[lo]) < 0.25                  # agree where whole
+    assert f[40.0] - r[40.0] > 1.0                        # rect sits inward
+    assert f[50.0] - r[50.0] > 1.0

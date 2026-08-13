@@ -94,6 +94,15 @@ The `results` branch carries JSON and logs, never images
 python -c "import json;from fovbench import report;report.write_figures(json.load(open('results.json')),'figs')"
 ```
 
+The rect θ panels carry a shaded tail past **42.2°**, which is where that view
+stops imaging a whole ring and becomes four corner wedges. Everything left of it
+is a full 360° annulus in both views and can be compared between them; the
+shaded part is a different set of directions from every point beside it, and the
+raw fisheye has no equivalent because it images whole rings out to its cone.
+`report.txt`'s RING COVERAGE table gives the same thing as numbers — the ring
+fraction per bin and the angle each bin *actually* averages, which is not the bin
+midpoint once the ring is partial.
+
 That writes exactly three pictures — `AbsRel.png`, `delta1.png`, `gt_depth.png` —
 each carrying every model, both views, both streams and **both axes**. The line
 is the continuous 1° profile and the dots are the six binned values; **both are
@@ -207,10 +216,42 @@ misses a depth quartile in 83% of frames. A correction that fails exactly where
 the comparison starts is worse than none, so the column was removed and the
 measured depth is reported instead.
 
-**3. Rectifying helps, and costs field.** At the honest 40–50° bin, VGGT-1B
-synthetic scores 0.074 rect against 0.102 fisheye; across the three depth heads
-the rect `pen` is 1.00–1.25 against 1.79–1.97 on the raw lens. The price is in
-the COVERAGE table: an ~85° pinhole has nothing past 42.3° except in its corners.
+**3. "Rectifying flattens the curve" was mostly the rectified arm being cut
+short — the radial version of the claim does not survive a matched comparison.**
+It read: rect `pen` 1.00–1.25 against 1.79–1.97 on the raw lens, and at the
+40–50° bin VGGT-1B synthetic scoring 0.074 rect against 0.102 fisheye.
+
+The rectified view images a **whole ring only out to 42.2°**. Past that it is
+four corner wedges — 55% of the ring across the 40–50° bin and **3%** across
+50–55° — and it ends at 52.1°, where the raw lens runs to 54.8°. So `pen`, which
+divides the outermost bin by the innermost, was spanning a *shorter and
+differently-aimed* arc on rect than on fisheye. Two consequences, both measured
+(`geometry.ring_coverage`, pure geometry, no data):
+
+* The corners are exactly the directions that reach furthest, so a bin labelled
+  the same in both views is **not the same angle**: rect's 40–50° bin averages
+  **43.8°** against fisheye's 45.2°, and its 50–55° bin **50.7°** against 52.4°.
+  The inner four bins agree to within 0.2°. The level comparison above is
+  therefore flattered by ~1.4° of eccentricity as well.
+* Compared over a span both views image completely, the advantage disappears:
+
+| rect `pen` ÷ fisheye `pen`, 8 model × stream cells | median |
+|---|---|
+| headline span, 50–55° ÷ 0–10° | **0.84** |
+| matched bins, 30–40° ÷ 0–10° (both 100% ring) | **1.02** |
+| continuous profile, 42° ÷ 5° (both 100% ring) | **1.00** |
+
+**Over the field both views actually cover, the raw lens and the rectified one
+degrade at the same rate.** Only VGGT-1B keeps a real advantage from rectifying
+(0.87/0.90 matched, 0.82/0.89 on the profile); VGGT-Omega reverses (1.04/1.15).
+
+This does not overturn 3b, which is the *sharper* form of the same claim and is
+untouched — a window sweep aims both views at the same directions by
+construction, so it has no truncation to hide behind. It overturns the radial
+arm's weaker version of it, which is the one that was easiest to quote.
+
+The figures now shade the rect θ panels past 42.2° and the report prints a RING
+COVERAGE table, so the next reader does not have to know this to avoid it.
 
 **3b. The window sweep says it more sharply, once its own clipped aim is set
 aside.** A 40° *square* window has a 27.2° half-diagonal, so from an aim of 30°
@@ -261,6 +302,10 @@ dissenter there is seq131 itself (0.975). So "the periphery is worse" is not one
 apartment's quirk. But seq131 is the *mild* end of the distribution, so the
 pooled six-sequence run reads harder than anything above: fisheye `pen`
 1.01–2.27, rect 1.08–1.83, against seq131's 1.07–2.10 / 0.92–1.30.
+
+Read the rect column of that comparison against item 3: rect `pen` spans an arc
+that is partly corners, so rect and fisheye `pen` are comparable **within** a
+view across sequences, and not **between** views at these edges.
 
 | cell | seq131 | 6-seq median | max |
 |---|---|---|---|

@@ -243,7 +243,59 @@ def _coverage_note(runs: List[dict]) -> List[str]:
         "  A rectified ~85 deg pinhole has no pixels past 42.3 deg off-axis except",
         "  in its corners (52.6 deg at most). Empty outer bins there are geometry,",
         "  not model failure — and are themselves the cost of rectifying.",
-        ""] + _bin_depth_note(rad)
+        ""] + _ring_coverage_note(rad, axis) + _bin_depth_note(rad)
+
+
+def _ring_coverage_note(rad: List[dict], axis: str) -> List[str]:
+    """How much of each *ring* the view images, and what angle the bin really is.
+
+    The pixel counts above say a bin is thin. They do not say that it is thin in
+    a **direction-biased** way, and that is the difference that matters when a
+    ``pen`` from one view is set beside a ``pen`` from another. On the raw lens
+    every bin is a whole 360-deg annulus. On the rectified pinhole the ring is
+    whole only to ~42 deg; past that it is four corner wedges, so the outer bins
+    are a particular set of azimuths rather than all of them — and because the
+    corners are exactly the directions that reach furthest, the bin's *mean*
+    angle sits inward of the raw lens's for the same label.
+
+    Pure geometry, computed from the render size alone, so this table appears
+    for old ``results.json`` files too.
+    """
+    if axis != "theta":
+        return []
+    seen, rows = set(), []
+    for r in sorted(rad, key=lambda r: (r["view"], r["input_size"])):
+        tag = (r["view"], r["input_size"])
+        if tag in seen or r["view"] not in ("rect", "fisheye"):
+            continue
+        seen.add(tag)
+        cells = _cells_of(r, "theta")
+        edges = [_lo(c) for c in cells] + [_hi(cells[-1])]
+        if len(set(edges)) != len(edges):     # a fixture with no real edges
+            return []
+        try:
+            cov = G.ring_coverage(r["input_size"], r["view"], edges)
+            lim = G.full_ring_limit(r["input_size"], r["view"])
+        except Exception:
+            return []
+        rows.append((r["view"], r["input_size"], lim, cov))
+    if not rows:
+        return []
+    cols, _ = _axis(rad[0], "theta")
+    out = ["  RING COVERAGE · how much of each annulus the view images — geometry only",
+           "  " + "-" * 82,
+           "  " + f"{'view':10s}{'px':>5s}{'whole to':>10s}  "
+           + "".join(f"{c:>9s}" for c in cols)]
+    for view, px, lim, cov in rows:
+        out.append("  " + f"{view:10s}{px:>5d}{lim:>9.1f}°  "
+                   + "".join(f"{c['complete_frac']*100:>8.0f}%" for c in cov))
+        out.append("  " + f"{'  mean θ':10s}{'':>5s}{'':>10s}  "
+                   + "".join(f"{c['mean_theta']:>9.1f}" for c in cov))
+    return out + [
+        "  `whole to` is the last angle at which EVERY azimuth is imaged. Past it a",
+        "  bin is corner wedges, not a ring, so a `pen` spanning it is not the same",
+        "  measurement in both views — compare the two only where both read 100%.",
+        ""]
 
 
 def _window_geometry_note(runs: List[dict]) -> List[str]:
@@ -496,6 +548,40 @@ def _bin_points(run: dict, axis: str, key: str):
     return xs, ys
 
 
+def _shade_partial_ring(ax, rad: List[dict], view: str, axis: str,
+                        annotate: bool) -> None:
+    """Mark where this view's curve stops being a whole ring.
+
+    The rectified panel's tail is not a continuation of its curve — it is four
+    corner wedges, a *different set of directions* from every point to its left.
+    Two readers looked at the rect and fisheye panels side by side and compared
+    their right-hand ends, which is the one comparison the geometry does not
+    support; a curve that visibly changes character where it stops being a ring
+    is the cheapest way to stop that.
+
+    The raw fisheye images whole rings everywhere it images at all, so nothing
+    is drawn on those panels — the absence is the statement.
+    """
+    if axis != "theta" or view not in ("rect", "fisheye"):
+        return
+    sizes = {r["input_size"] for r in rad if r["view"] == view}
+    if not sizes:
+        return
+    try:
+        lim = min(G.full_ring_limit(s, view) for s in sizes)
+        reach = max(float(G.reach_by_azimuth(s, view).max()) for s in sizes)
+    except Exception:
+        return
+    if reach - lim < 1.0:               # whole ring all the way; nothing to say
+        return
+    ax.axvspan(lim, reach, color="0.5", alpha=0.13, lw=0, zorder=0)
+    ax.axvline(lim, color="0.45", lw=0.9, ls=":", zorder=1)
+    if annotate:
+        ax.annotate(f"partial ring\n(corners only)\npast {lim:.0f}°",
+                    xy=((lim + reach) / 2, 0.97), xycoords=("data", "axes fraction"),
+                    ha="center", va="top", fontsize=7, color="0.35")
+
+
 def write_figures(payload: dict, out_dir: str) -> List[str]:
     """Three pictures: AbsRel, delta1, and the GT depth they were measured on.
 
@@ -556,6 +642,7 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                         ax.plot(bx, by, marker="o", ms=5, color=colour,
                                 ls="none" if prof else "--", lw=1.2, zorder=4,
                                 label=None if prof else r["model"])
+                _shade_partial_ring(ax, rad, view, axis, row == 0)
                 ax.set_title(f"{view} · {axis}", fontsize=10)
                 ax.grid(alpha=0.3)
                 if row == len(streams) - 1:
