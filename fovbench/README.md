@@ -147,6 +147,28 @@ number of frames in the stack, dashed is strided rather than consecutive. Every
 payload must carry the same digest and the call refuses otherwise — lines drawn
 from different splits would look exactly like a context effect.
 
+### Panels for a paper or a deck
+
+`write_panels` writes **one file per (metric, view, axis, stream), with no
+titles** — `AbsRel_fisheye_theta_synthetic.png` and so on — because the caption
+belongs wherever the panel is pasted and a title baked into the pixels cannot be
+edited there. It takes the same `{label: payload}` mapping, so single-frame
+baselines and multi-frame ones land on one axes; there colour carries the
+**model** and the dash pattern carries the temporal configuration.
+
+```bash
+python -c "
+import json, collections
+from fovbench import report
+runs = collections.OrderedDict(...)   # as above
+report.write_panels(runs, 'panels',
+                    include=lambda model, n, stride: n == 1 or model == 'vggt_omega')"
+```
+
+`include` is not optional decoration. Every model at every configuration is
+**sixteen curves on one axes**, told apart by four colours and two dashes, which
+is a dump rather than a figure. The selector is how the merge stays a choice.
+
 That writes exactly three pictures — `AbsRel.png`, `delta1.png`, `gt_depth.png` —
 each carrying every model, both views, both streams and **both axes**. The line
 is the continuous 1° profile and the dots are the six binned values; **both are

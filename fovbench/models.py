@@ -54,7 +54,7 @@ ANALYTIC = "analytic"
 #: is deliberately absent, so asking for a context with it is refused up front
 #: rather than silently scoring the target alone.
 CONTEXT_CAPABLE: Tuple[str, ...] = ("vggt_1b", "vggt_omega", "da3_large",
-                                    ANALYTIC)
+                                    "da3_small", ANALYTIC)
 
 #: Input side length, by model key. Everything in the DINOv2/DINOv3 depth family
 #: here is patch-14 and ships at 518; VGGT-Omega is patch-16 and ships at 512.

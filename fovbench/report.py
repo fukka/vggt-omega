@@ -961,6 +961,146 @@ def write_context_figure(payloads: "Dict[str, dict]", out_dir: str,
     return [path]
 
 
+#: Dash pattern per (context_frames, context_stride), for the merged panels.
+#: There, colour has to carry the *model* — that is what a baseline figure
+#: compares — so the temporal configuration gets the line style instead, and it
+#: has to be a pattern rather than a shade: four red curves at different alphas
+#: are one curve with a printing fault.
+_CONTEXT_DASH = {
+    (1, 1):   ((), 2.2),
+    (5, 1):   ((5, 1.6), 1.4),
+    (10, 1):  ((1.5, 1.4), 1.4),
+    (5, 10):  ((7, 1.6, 1.5, 1.6), 1.4),
+    (10, 10): ((2.5, 1.4, 6, 1.4), 1.4),
+}
+
+
+def _series(payloads: "Dict[str, dict]", include=None):
+    """Every (model, configuration) curve to draw, with its style and label.
+
+    One series per model per payload. Colour carries the model and dash carries
+    the temporal context, so a merged figure separates "which network" from
+    "how many frames it was given" without needing the legend to be read twice.
+    """
+    rad = {lab: [r for r in p["runs"] if r["protocol"] == "radial"]
+           for lab, p in payloads.items()}
+    models = sorted({r["model"] for v in rad.values() for r in v})
+    try:
+        import matplotlib.pyplot as plt
+        cmap = {m: plt.get_cmap("tab10")(i % 10) for i, m in enumerate(models)}
+    except ImportError:
+        cmap = {m: None for m in models}
+    out = []
+    for lab, p in payloads.items():
+        cfg = p.get("config", {})
+        n, s = int(cfg.get("context_frames", 1)), int(cfg.get("context_stride", 1))
+        _, _, _, ctx_label = _context_style(p)
+        single = n <= 1
+        dash, lw = _CONTEXT_DASH.get((n, s), ((3, 3), 1.4))
+        for model in sorted({r["model"] for r in rad[lab]}):
+            if include and not include(model, n, s):
+                continue
+            out.append(dict(payload=p, runs=rad[lab], model=model,
+                            colour=cmap[model], dash=dash, lw=lw,
+                            label=model if len(payloads) == 1 else
+                            (model if single else f"{model} · {ctx_label}")))
+    return out
+
+
+def write_panels(payloads, out_dir: str,
+                 keys: Sequence[str] = ("AbsRel", "delta1"),
+                 legend: bool = True, include=None,
+                 prefix: str = "") -> List[str]:
+    """One file per (metric, view, axis, stream). **No titles** — captions live
+    wherever the panel is pasted, and a title baked into the image cannot be
+    edited there.
+
+    ``payloads`` is a single payload or a ``{label: payload}`` mapping; with a
+    mapping every model of every payload is drawn on the same axes, which is how
+    the single-frame baselines and the multi-frame ones end up in one picture.
+    All payloads must share a digest — curves from different frames would look
+    exactly like a difference between models.
+
+    ``include(model, context_frames, context_stride) -> bool`` picks which of
+    those series to draw. Every model at every configuration is sixteen curves
+    on one axes, distinguished by four colours and two dashes, which is not a
+    figure anyone can read; the selector exists so the merge stays a choice
+    rather than a dump.
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return []
+    if not isinstance(payloads, dict) or "runs" in payloads:
+        payloads = {"": payloads}
+    digests = {p["digest"] for p in payloads.values()}
+    if len(digests) != 1:
+        raise SystemExit(
+            f"[fovbench] write_panels needs one split: got {sorted(digests)}. "
+            f"Curves from different frames are not one figure.")
+
+    series = _series(payloads, include)
+    all_rad = [r for s in series for r in s["runs"]]
+    streams = sorted({r["stream"] for r in all_rad},
+                     key=lambda s: _STREAM_ORDER.get(s, 9))
+    os.makedirs(out_dir, exist_ok=True)
+    written = []
+    for key in keys:
+        ylab = dict(_FIGURES).get(key, key)
+        for view, axis in _PANELS:
+            for stream in streams:
+                fig, ax = plt.subplots(figsize=(4.8, 3.7))
+                drew = False
+                for s in series:
+                    run = next((r for r in s["runs"] if r["model"] == s["model"]
+                                and r["view"] == view and r["stream"] == stream),
+                               None)
+                    if not run:
+                        continue
+                    prof = _profile_of(run, axis)
+                    if prof:
+                        x = _plot_x(prof["centre"], view, axis, run["input_size"])
+                        y = np.asarray(prof.get(key, []), float)
+                        n = np.asarray(prof["n"], float)
+                        k = np.isfinite(y) & (n >= PROFILE_MIN_PX)
+                        if k.sum() >= 2:
+                            ln, = ax.plot(x[k], y[k], "-", lw=s["lw"],
+                                          color=s["colour"], label=s["label"])
+                            if s["dash"]:
+                                ln.set_dashes(list(s["dash"]))
+                            drew = True
+                    if not prof:
+                        bx, by = _bin_points(run, axis, key)
+                        if bx:
+                            ln, = ax.plot(
+                                _plot_x(bx, view, axis, run["input_size"]), by,
+                                "o-", ms=4, lw=1.2, color=s["colour"],
+                                label=s["label"])
+                            ln.set_dashes(list(s["dash"]) or [4, 2])
+                            drew = True
+                if not drew:
+                    plt.close(fig)
+                    continue
+                _mark_unimaged(ax, all_rad, view, axis, False)
+                xl = _shared_xlim(all_rad, axis)
+                if xl:
+                    ax.set_xlim(*xl)
+                ax.set_xlabel(_AXIS_LABEL[axis], fontsize=9)
+                ax.set_ylabel(ylab, fontsize=9)
+                ax.grid(alpha=0.3)
+                if legend:
+                    ax.legend(fontsize=6.5, frameon=False, loc="upper left")
+                fig.tight_layout()
+                path = os.path.join(out_dir,
+                                    f"{prefix}{key}_{view}_{axis}_{stream}.png")
+                fig.savefig(path, dpi=200)
+                plt.close(fig)
+                written.append(path)
+    return written
+
+
 def write_all(payload: dict, out_dir: str) -> Dict[str, object]:
     os.makedirs(out_dir, exist_ok=True)
     text = render_report(payload)

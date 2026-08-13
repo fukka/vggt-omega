@@ -306,3 +306,49 @@ def test_context_line_style_comes_from_the_config_not_the_label():
     c5 = R._context_style({"config": {"context_frames": 5, "context_stride": 1}})
     s5 = R._context_style({"config": {"context_frames": 5, "context_stride": 10}})
     assert c5[0] == s5[0] and c5[1] != s5[1]
+
+
+def test_write_panels_emits_one_titleless_file_per_panel(tmp_path):
+    """For pasting into a deck or a paper: the caption lives where the panel is
+    pasted, and a title baked into the pixels cannot be edited there."""
+    pytest.importorskip("matplotlib")
+    import matplotlib
+    matplotlib.use("Agg")
+    runs = [_run(model=m, view=v, stream=s)
+            for m in ("vggt_1b", "da3_large")
+            for v in ("rect", "fisheye") for s in ("synthetic", "real")]
+    for r in runs:
+        for i, c in enumerate(r["bins"]):
+            c["bin_lo"], c["bin_hi"] = float(i * 10), float(i * 10 + 10)
+    out = R.write_panels(_payload(runs), str(tmp_path), keys=("AbsRel",))
+    names = {os.path.basename(p) for p in out}
+    assert "AbsRel_fisheye_theta_synthetic.png" in names
+    assert "AbsRel_rect_theta_real.png" in names
+    assert all(p.endswith(".png") and os.path.getsize(p) > 0 for p in out)
+
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    assert ax.get_title() == ""          # the panels set none either
+    plt.close(fig)
+
+
+def test_write_panels_refuses_two_splits_and_honours_the_selector(tmp_path):
+    pytest.importorskip("matplotlib")
+    a = _payload([_run(model="vggt_1b", view="fisheye")])
+    b = _payload([_run(model="vggt_1b", view="fisheye")])
+    b["config"] = dict(context_frames=10, context_stride=1)
+    mixed = dict(b)
+    mixed["digest"] = "deadbeefcafe"
+    with pytest.raises(SystemExit) as e:
+        R.write_panels({"N=1": a, "10c": mixed}, str(tmp_path))
+    assert "one split" in str(e.value)
+
+    # sixteen curves on one axes is a dump, not a figure; the selector is how
+    # the merge stays a choice
+    both = R._series({"N=1": a, "10c": b})
+    only_single = R._series({"N=1": a, "10c": b},
+                            include=lambda m, n, s: n == 1)
+    assert len(both) == 2 and len(only_single) == 1
+    # colour carries the model and the dash carries the configuration
+    assert both[0]["colour"] == both[1]["colour"]
+    assert both[0]["dash"] != both[1]["dash"]
