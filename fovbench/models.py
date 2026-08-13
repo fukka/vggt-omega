@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import os
 import sys
+import zlib
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Tuple
 
@@ -126,8 +127,20 @@ def _analytic_predict(radial_bias: float, seed: int) -> Callable:
     exercise of the whole scoring path. Without GT it falls back to a smooth
     function of image intensity, so the harness can still be driven end to end
     on views whose GT is absent.
+
+    The jitter is seeded **from the frame's own content**, not from a generator
+    that advances call by call. A shared stream would make this model's output a
+    function of the order frames happened to be scored in — so the same frame
+    would score differently under ``--workers 8`` than under ``--workers 1``,
+    and differently again if a run covered a different number of frames. That is
+    not a property any model should have, least of all the one the tests use as
+    a fixed point.
     """
-    rng = np.random.default_rng(seed)
+    def _jitter(d: np.ndarray) -> np.ndarray:
+        # A cheap stride-sampled checksum: distinct per frame, identical for the
+        # same frame every time, independent of when it is asked for.
+        tag = zlib.crc32(np.ascontiguousarray(d[::16, ::16]).tobytes())
+        return np.random.default_rng([seed, tag]).normal(0, 1e-3, d.shape)
 
     def predict(rgb_u8, gt_z=None, theta_deg=None):
         if gt_z is None:
@@ -140,7 +153,7 @@ def _analytic_predict(radial_bias: float, seed: int) -> Callable:
         # everywhere, as a real one does, and let the mask do the excluding.
         fill = float(np.median(d[d > 0])) if (d > 0).any() else 1.0
         d[d <= 0] = fill
-        return np.clip(d + rng.normal(0, 1e-3, d.shape), 1e-3, None).astype(np.float32)
+        return np.clip(d + _jitter(d), 1e-3, None).astype(np.float32)
 
     return predict
 

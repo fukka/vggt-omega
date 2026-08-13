@@ -14,8 +14,11 @@ CPU-only, no ADT, no weights, under a second.
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import os
+import threading
+import time
 
 import numpy as np
 import pytest
@@ -245,6 +248,105 @@ def test_a_context_run_scores_exactly_the_pixels_a_single_frame_run_does():
     for a, b in zip(one["bins"], many["bins"]):
         assert a["n_bin"] == b["n_bin"]
         assert a["n_valid"] == b["n_valid"]
+
+
+# --------------------------------------------------------------------------- #
+# Threads may change the wall clock and nothing else
+# --------------------------------------------------------------------------- #
+
+def test_ordered_map_yields_in_input_order_however_the_work_finishes():
+    """The rows are pooled by summation and float addition is not associative,
+    so accumulating them in *completion* order would move the last digits of
+    every published number. Jobs here finish in reverse order on purpose."""
+    import time
+
+    def slow(x):
+        time.sleep(0.02 * (5 - x))     # later items finish first
+        return x
+
+    for w in (1, 2, 4, 8):
+        assert list(RUN._ordered_map(slow, range(5), w)) == [0, 1, 2, 3, 4]
+
+
+def test_ordered_map_keeps_only_a_bounded_number_of_frames_in_flight():
+    """An unbounded pool would decode all 300 frames of a split at once. The
+    generator must not run ahead of the consumer without limit."""
+    live = []
+    peak = []
+
+    def job(x):
+        live.append(x)
+        peak.append(len(live))
+        return x
+
+    out = RUN._ordered_map(job, range(50), workers=2, lookahead=4)
+    next(out)                       # consume one, then stop pulling
+    time.sleep(0.05)
+    assert max(peak) <= 6           # lookahead + the workers' own slots
+    list(out)                       # drain, so the pool shuts down cleanly
+
+
+def test_scoring_on_threads_gives_bit_identical_pooled_numbers():
+    """The whole claim behind --workers, end to end: several frames scored and
+    pooled on 4 threads must equal the serial answer to the last bit, not to
+    some tolerance. Anything less and a parallel run is not comparable to the
+    published serial ones."""
+    cam = G.aria_cam(160, 160)
+    rays, cone = G.fisheye_rays(cam)
+    model = M.load_model(M.ANALYTIC, None, radial_bias=0.4)
+    views = []
+    for j in range(6):
+        gt = (2.0 + 0.5 * rays[..., 0] + 0.3 * j).astype(np.float32) * cone
+        ys, xs = np.mgrid[0:cam.H, 0:cam.W]
+        rgb = np.stack([((xs * 3 + ys * 7 + j) % 256).astype(np.uint8)] * 3, -1)
+        views.append(G.full_frame_view(rgb, gt, cone, cam, 64, "fisheye"))
+
+    def job(v):
+        return RUN._score_radial(model, v, G.THETA_EDGES, G.RADIUS_EDGES, 100.0,
+                                 lock=threading.Lock())
+
+    serial = [job(v) for v in views]
+    for w in (2, 4, 8):
+        par = list(RUN._ordered_map(job, views, w))
+        assert (json.dumps(serial, sort_keys=True, default=repr)
+                == json.dumps(par, sort_keys=True, default=repr))
+        # ...and the pooled summary too. Compared through repr because NaN is
+        # a legitimate value here (an empty bin) and never equals itself.
+        assert (repr(sorted(RUN._mean_metrics(serial, G.METRIC_KEYS).items()))
+                == repr(sorted(RUN._mean_metrics(par, G.METRIC_KEYS).items())))
+
+
+def test_the_analytic_model_does_not_depend_on_when_it_is_called():
+    """The stand-in used to draw its jitter from one generator advanced call by
+    call, which made its output a function of scoring order — the same frame
+    scored differently under --workers 8 than under 1, and differently again in
+    a run of a different length. The jitter is seeded from the frame instead."""
+    m = M.load_model(M.ANALYTIC, None, radial_bias=0.0)
+    gt = (2.0 + np.linspace(0, 1, 64 * 64).reshape(64, 64)).astype(np.float32)
+    other = (5.0 * np.ones((64, 64))).astype(np.float32)
+    rgb = np.zeros((64, 64, 3), np.uint8)
+
+    first = m.predict(rgb, gt_z=gt)
+    m.predict(rgb, gt_z=other)                  # advance any hidden stream
+    m.predict(rgb, gt_z=other)
+    assert np.array_equal(first, m.predict(rgb, gt_z=gt))
+    # ...and it is still a *jitter*: two different frames do not share a draw.
+    assert not np.array_equal(first - gt, m.predict(rgb, gt_z=other) - other)
+
+
+def test_the_memoised_maps_are_shared_read_only_not_rebuilt():
+    """theta/radius were rebuilt for every frame of every model. They are now
+    shared between frames and between threads, so they must be identical objects
+    and must refuse mutation — a caller that wrote to one would otherwise
+    corrupt every later frame silently."""
+    a = G.radius_map(64, 64)
+    b = G.radius_map(64, 64)
+    assert a is b and not a.flags.writeable
+    with pytest.raises(ValueError):
+        a[0, 0] = 7.0
+    cam = G.aria_cam(128, 128)
+    assert G.theta_map_fisheye(cam) is G.theta_map_fisheye(cam)
+    assert G.rectifier(64, 64) is G.rectifier(64, 64)
 
 
 def test_a_manifest_refuses_a_context_it_was_not_written_with(tmp_path):

@@ -65,6 +65,27 @@ Check availability before committing to a run:
 python -m finetune.eval.baselines.benchmark_adt --list
 ```
 
+**The harness is CPU-bound, not GPU-bound.** A run of the six-sequence Part A
+sat at 25–30% on one GPU with ~2 of 64 cores busy: the per-frame cost is the
+1408² decode, the fisheye→pinhole remap, and the binning arithmetic, none of
+which is the network. Measured per (frame, stream, view) at 518 px, on a
+12-core Mac with the analytic model:
+
+| stage | ms | |
+|---|---|---|
+| `bin_by` | 162 | 13 `depth_metrics` passes, 2 profiles, 2 anchored fits |
+| `full_frame_view` | 78 | remap + resample (was 107 before the maps were memoised) |
+| `_load_frame` | 41 | PNG decode + the GT `.npy` |
+| forward | — | 4.6 ms analytic; ~120 ms for a real head on the box |
+
+`--workers N` scores frames on N threads — numpy and cv2 release the GIL, so
+they parallelise — with the forward pass serialised behind a lock and the rows
+pooled **in split order**. Order is the whole safety argument: float addition is
+not associative, so pooling in completion order would move the last digits of
+every published number. Measured 2.07× end to end at 8 workers on 12 cores,
+with a bit-identical checksum at every worker count; `--workers 1` is the
+pre-threading path exactly. Default is `min(8, cpu_count)`.
+
 The `results` branch carries JSON and logs, never images
 ([`POLICY.md`](../docs/handoff/POLICY.md)), so redraw the figures from any run's
 `results.json` — no data, no GPU, no re-scoring:
@@ -289,6 +310,13 @@ older than its name and is scored against the wrong depth map. One frame in 2878
 of the candidate set — negligible for any aggregate, but it is a real mispairing
 present in every ADT-FOV number measured before `fovbench-ctx-d351d94`. Re-decode
 the cache with `extract_synthetic.py` (on the `results` branch) to clear it.
+
+**The analytic stand-in used to depend on when it was called.** Its jitter came
+from one generator advanced call by call, so the same frame scored differently
+depending on how many frames preceded it and in what order — invisible while
+everything was serial, and the first thing threading broke. It is now seeded
+from the frame's own content, which also means the harness's fixed point is a
+fixed point.
 
 **`--manifest` used to silence `--context-frames`.** A manifest stores the
 per-frame context list, so `Split.load` restored a 1-frame context while the

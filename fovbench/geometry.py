@@ -48,6 +48,7 @@ from __future__ import annotations
 import math
 import os
 import sys
+import threading
 from dataclasses import dataclass
 from typing import List, Optional, Sequence, Tuple
 
@@ -130,6 +131,44 @@ RECTIFIER_FOCAL_FRAC = 0.55
 
 _RAY_CACHE: dict = {}
 
+#: Per-pixel maps that depend only on the render geometry, never on the frame.
+#: A 300-frame run rebuilt each of these 1200 times per model; they are shared
+#: read-only instead. Entries are marked non-writeable so a caller that mutated
+#: one would raise here rather than silently corrupt every later frame — and so
+#: the worker threads in :mod:`fovbench.run` can share them without a lock.
+_MAP_CACHE: dict = {}
+_MAP_LOCK = threading.Lock()
+
+
+def _cached_map(key: tuple, build) -> np.ndarray:
+    hit = _MAP_CACHE.get(key)
+    if hit is None:
+        hit = build()
+        hit.setflags(write=False)
+        _MAP_CACHE[key] = hit
+    return hit
+
+
+def rectifier(H: int, W: int, preset: str = "aria-214-1"):
+    """The shared :class:`FisheyeRectifier`, with its remap grids already built.
+
+    The grids cost an ``initUndistortRectifyMap`` over the full 1408x1408 frame
+    and depend only on the preset and the size, but the rectifier was
+    constructed *inside* the per-frame view builder, so its own cache was cold
+    every single frame and every frame paid for the grids again.
+
+    One instance per preset, warmed for ``(H, W)`` under a lock before any
+    worker can reach it — ``FisheyeRectifier._get_maps`` is a check-then-set
+    that two threads would otherwise race on (harmlessly, but twice).
+    """
+    from finetune.data.rectify import FisheyeRectifier
+    with _MAP_LOCK:
+        rec = _MAP_CACHE.get(("rectifier", preset))
+        if rec is None:
+            rec = _MAP_CACHE[("rectifier", preset)] = FisheyeRectifier(preset)
+        rec._get_maps(H, W)
+    return rec
+
 
 # --------------------------------------------------------------------------- #
 # Cameras and ray fields
@@ -173,9 +212,14 @@ def fisheye_rays(cam: FisheyeCam) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def theta_map_fisheye(cam: FisheyeCam) -> np.ndarray:
-    """Per-pixel incidence angle (degrees) of a raw fisheye frame."""
-    rays, _ = fisheye_rays(cam)
-    return np.degrees(np.arccos(np.clip(rays[..., 2], -1.0, 1.0))).astype(np.float32)
+    """Per-pixel incidence angle (degrees) of a raw fisheye frame. Read-only."""
+    key = ("theta_fisheye", cam.H, cam.W, cam.fx, cam.fy, cam.cx, cam.cy,
+           cam.k, cam.valid_theta)
+
+    def build():
+        rays, _ = fisheye_rays(cam)
+        return np.degrees(np.arccos(np.clip(rays[..., 2], -1.0, 1.0))).astype(np.float32)
+    return _cached_map(key, build)
 
 
 def theta_map_pinhole(H: int, W: int,
@@ -199,10 +243,13 @@ def theta_map_pinhole(H: int, W: int,
     f = focal_px if focal_px is not None else focal_frac * max(H, W)
     cx = (W / 2.0 - 0.5) if cx is None else cx
     cy = (H / 2.0 - 0.5) if cy is None else cy
-    ys, xs = np.mgrid[0:H, 0:W].astype(np.float64)
-    x = (xs - cx) / f
-    y = (ys - cy) / f
-    return np.degrees(np.arctan(np.sqrt(x * x + y * y))).astype(np.float32)
+
+    def build():
+        ys, xs = np.mgrid[0:H, 0:W].astype(np.float64)
+        x = (xs - cx) / f
+        y = (ys - cy) / f
+        return np.degrees(np.arctan(np.sqrt(x * x + y * y))).astype(np.float32)
+    return _cached_map(("theta_pinhole", H, W, f, cx, cy), build)
 
 
 def radius_map(H: int, W: int, cx: Optional[float] = None,
@@ -222,9 +269,12 @@ def radius_map(H: int, W: int, cx: Optional[float] = None,
     """
     cx = (W / 2.0 - 0.5) if cx is None else cx
     cy = (H / 2.0 - 0.5) if cy is None else cy
-    ys, xs = np.mgrid[0:H, 0:W].astype(np.float64)
-    return (np.sqrt((xs - cx) ** 2 + (ys - cy) ** 2)
-            / (0.5 * W)).astype(np.float32)
+
+    def build():
+        ys, xs = np.mgrid[0:H, 0:W].astype(np.float64)
+        return (np.sqrt((xs - cx) ** 2 + (ys - cy) ** 2)
+                / (0.5 * W)).astype(np.float32)
+    return _cached_map(("radius", H, W, cx, cy), build)
 
 
 def project_dirs(cam: FisheyeCam, dirs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -483,8 +533,7 @@ def view_rgb(rgb: np.ndarray, cam: FisheyeCam, out_size: int,
         return _to_u8(cv2.resize(rgb.astype(np.float32), (out_size, out_size),
                                  interpolation=cv2.INTER_AREA))
     if kind == "rect":
-        from finetune.data.rectify import FisheyeRectifier
-        rec = FisheyeRectifier("aria-214-1")
+        rec = rectifier(*rgb.shape[:2])
         out = rec(rgb.astype(np.float32) / 255.0) * 255.0
         return _to_u8(cv2.resize(out, (out_size, out_size),
                                  interpolation=cv2.INTER_AREA))
@@ -510,8 +559,7 @@ def full_frame_view(rgb: np.ndarray, gt_z: np.ndarray, gt_valid: np.ndarray,
         theta = theta_map_fisheye(small)
         in_cone = cone
     elif kind == "rect":
-        from finetune.data.rectify import FisheyeRectifier
-        rec = FisheyeRectifier("aria-214-1")
+        rec = rectifier(*rgb.shape[:2])
         rgb_r = rec(rgb.astype(np.float32) / 255.0) * 255.0
         gt_r = rec.rectify_depth(gt_z.astype(np.float32))
         gtv_r = rec.rectify_depth(gt_valid.astype(np.float32)) > 0.5

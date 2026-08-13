@@ -43,10 +43,15 @@ degrade on an uncorrected wide-FOV camera, not an attempt to make them better.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import itertools
 import json
 import os
 import sys
+import threading
 import time
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -73,6 +78,49 @@ DEFAULT_WINDOW_FOV = 40.0
 #: A window this far past the imaged cone is mostly black; scoring it measures
 #: the vignette, not the model.
 MIN_IN_CONE_FRAC = 0.5
+
+#: Threads when ``--workers 0``. The per-frame work is decode, rectify, resample
+#: and the binning arithmetic — numpy and cv2, which release the GIL — so
+#: threads genuinely parallelise it, and being threads they share the memoised
+#: ray/theta/radius maps instead of rebuilding them per process. Measured on a
+#: 12-core machine the view stage scales 3.3x and the binning 2.2x before
+#: saturating on memory bandwidth, so a large default mostly buys contention.
+#: The box has 64 cores and often runs several configurations at once; raise it
+#: with ``--workers`` after measuring rather than on principle.
+DEFAULT_WORKERS = 8
+
+#: Frames in flight beyond the one being consumed, per worker. Bounds memory:
+#: an unbounded pool would decode all 300 frames of a split at once.
+LOOKAHEAD_PER_WORKER = 2
+
+_NULL_LOCK = contextlib.nullcontext()
+
+
+def _ordered_map(fn, items, workers: int, lookahead: Optional[int] = None):
+    """``map(fn, items)`` across threads, yielded strictly **in input order**.
+
+    Order is not cosmetic here. The rows are pooled by summation and floating
+    point addition is not associative, so accumulating them in *completion*
+    order would move the last digits of every published number and make a
+    parallel run non-comparable to a serial one. Yielding in input order keeps
+    the arithmetic bit-for-bit identical to ``workers=1`` — which
+    ``tests/test_end_to_end.py`` pins.
+
+    Bounded: at most ``lookahead`` frames are in flight, so peak memory is a
+    handful of decoded frames rather than the whole split.
+    """
+    if workers <= 1:
+        for x in items:
+            yield fn(x)
+        return
+    lookahead = lookahead or LOOKAHEAD_PER_WORKER * workers
+    it = iter(items)
+    with ThreadPoolExecutor(workers) as ex:
+        q = deque(ex.submit(fn, x) for x in itertools.islice(it, lookahead))
+        while q:
+            yield q.popleft().result()
+            for x in itertools.islice(it, 1):
+                q.append(ex.submit(fn, x))
 
 
 def _load_frame(frame, stream: str, depth_scale: float, depth_max_m: float,
@@ -105,21 +153,26 @@ def _load_frame(frame, stream: str, depth_scale: float, depth_max_m: float,
 # --------------------------------------------------------------------------- #
 
 def _score_radial(model, view: "G.FrameView", edges, radius_edges,
-                  max_depth, context=None, target=0) -> Optional[dict]:
+                  max_depth, context=None, target=0, lock=None) -> Optional[dict]:
     """Whole frame, ONE alignment fit, metrics per bin on two axes.
 
     The two axes — incidence angle and distance from the optical centre — are
     two readings of the same frozen prediction, not two measurements: the scale
     (and shift) is fitted once over every valid pixel and then never touched,
     and each axis only applies a different set of masks afterwards.
+
+    ``lock`` serialises the forward pass when frames are scored on several
+    threads: the surrounding work is numpy and cv2, which release the GIL, but
+    one model on one device is not something to call re-entrantly.
     """
     if view.valid.sum() < 256:
         return None
-    if context and len(context) > 1:
-        pred = model.predict_stack(context, target, gt_z=view.gt_z,
-                                   theta_deg=view.theta)
-    else:
-        pred = model.predict(view.rgb, gt_z=view.gt_z, theta_deg=view.theta)
+    with (lock or _NULL_LOCK):
+        if context and len(context) > 1:
+            pred = model.predict_stack(context, target, gt_z=view.gt_z,
+                                       theta_deg=view.theta)
+        else:
+            pred = model.predict(view.rgb, gt_z=view.gt_z, theta_deg=view.theta)
     prof = G.bin_by(pred, view.gt_z, view.valid, model.align_mode,
                     {"theta": (view.theta, edges),
                      "radius": (view.radius, radius_edges)},
@@ -131,11 +184,12 @@ def _score_radial(model, view: "G.FrameView", edges, radius_edges,
     return prof
 
 
-def _score_window(model, win: "G.Window", max_depth) -> Optional[dict]:
+def _score_window(model, win: "G.Window", max_depth, lock=None) -> Optional[dict]:
     """One window scored on its own, as if it were the whole camera."""
     if win.valid.sum() < 256:
         return None
-    pred = model.predict(win.rgb, gt_z=win.gt_z, theta_deg=win.theta)
+    with (lock or _NULL_LOCK):
+        pred = model.predict(win.rgb, gt_z=win.gt_z, theta_deg=win.theta)
     aligned = align_depth(pred, win.gt_z, win.valid, mode=model.align_mode)
     met = depth_metrics(aligned, win.gt_z, win.valid, max_depth=max_depth)
     # Each window is aligned on its own, so a per-window scale is absorbed by
@@ -363,6 +417,13 @@ def run(a: argparse.Namespace) -> dict:
             print("[fovbench] WARNING: running real weights on CPU — this is "
                   "minutes per frame. Use --device cuda on the GPU box.")
 
+    workers = a.workers if a.workers > 0 else min(DEFAULT_WORKERS,
+                                                  os.cpu_count() or 1)
+    fwd_lock = threading.Lock() if workers > 1 else None
+    if workers > 1:
+        print(f"[fovbench] scoring frames on {workers} threads "
+              f"(forward pass serialised; results pooled in split order)")
+
     runs: List[dict] = []
     for key in ready:
         print(f"\n[fovbench] ══ {key} ══")
@@ -373,8 +434,12 @@ def run(a: argparse.Namespace) -> dict:
         print(f"[fovbench]   {model.family} {model.size} | {model.params_m:.0f}M "
               f"params | align={model.align_mode} | views rendered at {n}px")
 
-        acc: Dict[str, list] = {}
-        for i, frame in enumerate(split.frames):
+        # One frame's whole contribution, as an ordered list of (tag, row). The
+        # frames are independent, so this runs on a worker thread; only the
+        # forward pass is serialised, and _ordered_map hands the results back in
+        # split order so the pooling arithmetic cannot notice the threads.
+        def _frame_rows(frame, model=model, n=n):
+            out = []
             for stream in streams:
                 rgb, gt, gt_valid, stack = _load_frame(
                     frame, stream, a.depth_scale, a.depth_max_m)
@@ -390,11 +455,12 @@ def run(a: argparse.Namespace) -> dict:
                             ctx = [fv.rgb if k == frame.target_index
                                    else G.view_rgb(im, cam, n, kind)
                                    for k, im in enumerate(stack)]
-                        _accumulate(acc, f"radial|{stream}|{kind}",
+                        out.append((f"radial|{stream}|{kind}",
                                     _score_radial(model, fv, edges, radius_edges,
                                                   a.metric_max_depth,
                                                   context=ctx,
-                                                  target=frame.target_index))
+                                                  target=frame.target_index,
+                                                  lock=fwd_lock)))
                     if "window" in protocols:
                         for tilt in tilts:
                             for az in (azimuths if tilt > 0 else (0.0,)):
@@ -403,9 +469,16 @@ def run(a: argparse.Namespace) -> dict:
                                                     supersample=a.supersample)
                                 if w.in_cone_frac < MIN_IN_CONE_FRAC:
                                     continue
-                                _accumulate(acc, f"window|{stream}|{kind}",
+                                out.append((f"window|{stream}|{kind}",
                                             _score_window(model, w,
-                                                          a.metric_max_depth))
+                                                          a.metric_max_depth,
+                                                          lock=fwd_lock)))
+            return out
+
+        acc: Dict[str, list] = {}
+        for i, rows in enumerate(_ordered_map(_frame_rows, split.frames, workers)):
+            for tag, row in rows:
+                _accumulate(acc, tag, row)
             if (i + 1) % max(1, a.log_every) == 0:
                 print(f"[fovbench]   frame {i + 1}/{len(split.frames)} "
                       f"({time.time() - t0:.0f}s)")
@@ -438,6 +511,10 @@ def run(a: argparse.Namespace) -> dict:
                     depth_max_m=a.depth_max_m,
                     metric_max_depth=a.metric_max_depth,
                     min_in_cone_frac=MIN_IN_CONE_FRAC,
+                    # Recorded for provenance only: the worker count is pinned
+                    # not to change any number (see _ordered_map), so two runs
+                    # differing only here are still directly comparable.
+                    workers=workers,
                     analytic_bias=a.analytic_bias),
         runs=runs)
     with open(os.path.join(a.out, "results.json"), "w") as fh:
@@ -749,6 +826,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help="run the models that are ready instead of refusing; the "
                         "report and results.json then name what was left out")
     p.add_argument("--device", default="cuda")
+    p.add_argument("--workers", type=int, default=0,
+                   help="threads scoring frames in parallel; 0 picks "
+                        f"min({DEFAULT_WORKERS}, cpu_count). The forward pass "
+                        "is serialised and results are pooled in split order, "
+                        "so this changes the wall clock and nothing else — "
+                        "1 reproduces the pre-threading path exactly.")
     p.add_argument("--log-every", type=int, default=5)
     p.add_argument("--out", default="eval_out/fovbench")
     return p
