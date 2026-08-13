@@ -208,19 +208,38 @@ def nn_distances(pred: np.ndarray, actual: np.ndarray) -> Optional[np.ndarray]:
     CLI reports cannot drift apart. ``None`` when either cloud is too small to
     say anything.
     """
-    try:
-        from scipy.spatial import cKDTree
-    except ImportError as exc:                  # pragma: no cover - env problem
-        raise SystemExit(
-            "[slambench] verify_camera needs scipy for the nearest-neighbour "
-            "search (`pip install scipy`). It is not in this project's core "
-            "dependencies. The evaluation itself does not need it — only this "
-            "acceptance test does.") from exc
     pred = pred[np.isfinite(pred).all(axis=1)]
     if pred.shape[0] < 32 or actual.shape[0] < 32:
         return None
-    dist, _ = cKDTree(actual[:, :2]).query(pred, k=1)
-    return dist
+    xy = np.ascontiguousarray(actual[:, :2], dtype=np.float64)
+    try:
+        from scipy.spatial import cKDTree
+    except ImportError:
+        return _nn_brute(pred, xy)
+    return cKDTree(xy).query(pred, k=1)[0]
+
+
+def _nn_brute(pred: np.ndarray, actual: np.ndarray,
+              chunk: int = 512) -> np.ndarray:
+    """:func:`nn_distances` without scipy — every pair, in blocks.
+
+    scipy is in this project's ``demo`` extra and not its core dependencies, and
+    an acceptance test that cannot run because of a missing optional package is
+    an acceptance test nobody runs. A kd-tree written here would be a second
+    thing to get right; this is the definition of the answer instead, and
+    ``test_verify_camera.py`` pins it against scipy's.
+
+    Two clouds of ~5 000 points cost ~25 M distances a frame, which is about
+    100 ms of numpy — a hundred times slower than the kd-tree and irrelevant at
+    the handful of takes this test looks at.
+    """
+    out = np.empty(pred.shape[0], dtype=np.float64)
+    for i in range(0, pred.shape[0], chunk):
+        blk = pred[i:i + chunk]
+        d2 = ((blk[:, None, 0] - actual[None, :, 0]) ** 2
+              + (blk[:, None, 1] - actual[None, :, 1]) ** 2)
+        out[i:i + chunk] = np.sqrt(d2.min(axis=1))
+    return out
 
 
 def cloud_distance(pred: np.ndarray, actual: np.ndarray) -> RotationResult:

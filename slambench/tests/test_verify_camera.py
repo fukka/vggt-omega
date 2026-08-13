@@ -141,3 +141,34 @@ def test_nn_distances_declines_a_cloud_too_small_to_mean_anything():
     assert V.nn_distances(small[:, :2], small) is None
     # and the wrapper degrades to NaN rather than inventing a number
     assert np.isnan(V.cloud_distance(small[:, :2], small).median_px)
+
+
+def test_the_scipy_free_search_gives_the_same_answer_as_scipy():
+    """``nn_distances`` prefers scipy's kd-tree and falls back to every pair.
+    An acceptance test that cannot run without an optional package is one nobody
+    runs, so the fallback has to be exact rather than approximate."""
+    rng = np.random.default_rng(7)
+    actual = rng.uniform(0, 896, size=(4000, 3))
+    pred = rng.uniform(0, 896, size=(1500, 2))
+
+    brute = V._nn_brute(pred, np.ascontiguousarray(actual[:, :2], np.float64))
+    try:
+        from scipy.spatial import cKDTree
+    except ImportError:                     # pragma: no cover - scipy is present
+        pytest.skip("scipy not installed, nothing to compare against")
+    kd = cKDTree(actual[:, :2]).query(pred, k=1)[0]
+    assert np.abs(brute - kd).max() < 1e-9, (
+        f"the two searches disagree by {np.abs(brute - kd).max():.2e} px")
+
+
+def test_the_scipy_free_search_survives_a_chunk_boundary():
+    """The block loop is where an off-by-one would hide, so drive a size that is
+    not a multiple of the chunk and check every row got written."""
+    rng = np.random.default_rng(19)
+    actual = np.ascontiguousarray(rng.uniform(0, 400, size=(200, 2)))
+    pred = rng.uniform(0, 400, size=(1030, 2))          # 2 x 512 + 6
+    d = V._nn_brute(pred, actual, chunk=512)
+    assert d.shape == (1030,) and np.isfinite(d).all()
+    slow = np.array([np.hypot(actual[:, 0] - p[0], actual[:, 1] - p[1]).min()
+                     for p in pred])
+    assert np.abs(d - slow).max() < 1e-9

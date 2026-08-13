@@ -155,10 +155,12 @@ So `verify_camera` has seen 2 takes of the 1 611 in the release, and 2 of the 3
 in-scope datasets. Everything it *has* seen agrees, decisively. Running it at
 scale is step 3 below and needs #17 first.
 
-One environment note: `verify_camera` needs **scipy**, which is in this
-project's `demo` extra and not its core dependencies. It raises a clear message
-rather than an ImportError traceback. The evaluation itself does not need scipy —
-only this acceptance test does.
+No environment note. `verify_camera` **prefers** scipy's kd-tree and falls back
+to an exact all-pairs search in numpy when it is absent — scipy is in this
+project's `demo` extra rather than its core dependencies, and an acceptance test
+that cannot run because of an optional package is one nobody runs. Verified by
+running it with scipy blocked: the same verdict and the same numbers to the last
+digit, 17 s instead of 2 s.
 
 ## Done when
 
