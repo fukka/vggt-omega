@@ -333,6 +333,22 @@ def run(a: argparse.Namespace) -> dict:
                               streams={s: STREAMS[s] for s in streams},
                               context_frames=a.context_frames,
                               context_stride=a.context_stride))
+    # A manifest carries a *pre-baked* context list per frame, so --manifest wins
+    # over --context-frames and the flags become a silent no-op: the run's own
+    # `config` block still echoes them, and the artefact is indistinguishable
+    # from a real context run except by diffing it against the baseline. That
+    # produced four dead runs on ticket 010. Refuse the disagreement instead.
+    if a.manifest and (a.context_frames != split.context_frames
+                       or a.context_stride != split.context_stride):
+        raise SystemExit(
+            f"[fovbench] --manifest {a.manifest} was written with "
+            f"--context-frames {split.context_frames} --context-stride "
+            f"{split.context_stride}, but you asked for {a.context_frames}/"
+            f"{a.context_stride}. The manifest's own context wins, so the run "
+            f"would score {split.context_frames} frame(s) while reporting "
+            f"{a.context_frames}. Pass the matching flags, or drop --manifest "
+            f"— the digest excludes the context by design, so rebuilding the "
+            f"split from --adt-root gives the same digest with a real context.")
     split.save(os.path.join(a.out, "manifest.json"))
     missing = [s for s in streams if s not in split.streams]
     if missing:

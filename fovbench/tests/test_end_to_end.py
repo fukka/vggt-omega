@@ -247,6 +247,39 @@ def test_a_context_run_scores_exactly_the_pixels_a_single_frame_run_does():
         assert a["n_valid"] == b["n_valid"]
 
 
+def test_a_manifest_refuses_a_context_it_was_not_written_with(tmp_path):
+    """A manifest stores a pre-baked context list per frame, so --manifest wins
+    over --context-frames and the flags become a *silent* no-op — while the run's
+    own `config` block still echoes them. On ticket 010 that produced four runs
+    whose predictions were bit-identical to the 1-frame baseline and which looked
+    exactly like real context runs. Refusing costs a re-run; not refusing costs
+    a conclusion."""
+    from fovbench.split import Frame, Split
+    sp = Split(root=str(tmp_path),
+               frames=[Frame(seq="s", frame_id=f"{i:06d}", depth=f"{i}.npy",
+                             rgb={"synthetic": f"{i}a.png", "real": f"{i}b.png"})
+                       for i in range(3)])
+    assert sp.context_frames == 1          # a plain 1-frame manifest
+    p = str(tmp_path / "manifest.json")
+    sp.save(p)
+
+    a = RUN.build_parser().parse_args(
+        ["--manifest", p, "--models", "analytic", "--protocols", "radial",
+         "--context-frames", "10", "--out", str(tmp_path / "o")])
+    with pytest.raises(SystemExit) as e:
+        RUN.run(a)
+    msg = str(e.value)
+    assert "--manifest" in msg and "10" in msg
+    # and the manifest that *does* match is not refused: it gets past this check
+    # and dies later, on the frame files this fixture never wrote.
+    b = RUN.build_parser().parse_args(
+        ["--manifest", p, "--models", "analytic", "--protocols", "radial",
+         "--out", str(tmp_path / "o2")])
+    with pytest.raises(Exception) as e2:
+        RUN.run(b)
+    assert "0a.png" in str(e2.value)   # reached the frames, not the guard
+
+
 def test_a_monocular_model_refuses_a_context_rather_than_ignoring_it():
     """A run that asked for ten frames and silently got one would read as
     'context does not help', which is the opposite of measuring nothing."""

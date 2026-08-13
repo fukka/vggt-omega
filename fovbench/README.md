@@ -128,10 +128,22 @@ measured depth is reported instead. Weigh it yourself.
 
 ## What it found
 
-Run `fovbench-v2-ef2d50b`, split `fcc6c600f83b` — 200 frames of one sequence
-(`Apartment_release_clean_seq131_M1292`), all four models, both streams, both
-views, ~4 h on one RTX 6000 Ada. Numbers in
-[`results/fovbench-v2-ef2d50b/`](../results) on the `results` branch.
+The headline run is `fovbench-ctx-d351d94`, split `601fcb22767e` — **50 frames
+each of six ADT sequences**, four models, both streams, both views, radial only.
+Its three figures (`AbsRel`, `delta1`, `gt_depth`) are in
+[`results/fovbench-ctx-d351d94/partA_6seq/figures/`](../results) on the `results`
+branch, per-sequence tables in `ANALYSIS.txt`.
+
+> **Items 1–6 below were measured on seq131 alone, and seq131 is the mildest of
+> the six scenes.** It ranks in the two mildest in 13 of 16 (model × view ×
+> stream) cells, median `pen` **0.79×** the six-scene median. Every `pen` quoted
+> from it is therefore a *low* estimate — see item 7 for the range. The
+> direction of all six claims survives; the size does not.
+
+Items 1–6 come from run `fovbench-v2-ef2d50b`, split `fcc6c600f83b` — 200 frames
+of one sequence (`Apartment_release_clean_seq131_M1292`), both protocols
+including the window sweep, ~4 h on one RTX 6000 Ada. Numbers in
+[`results/fovbench-v2-ef2d50b/`](../results).
 
 > **The depth confound, measured.** Every metric here is relative, so a bin that
 > is nearer scores worse for that reason alone. Run `fovbench-v3-24b38e1`
@@ -141,6 +153,10 @@ views, ~4 h on one RTX 6000 Ada. Numbers in
 > |---|---|---|---|---|---|---|---|
 > | θ · fisheye | 3.00 | 2.87 | 2.65 | 2.31 | 1.96 | 1.70 | **0.57×** |
 > | θ · rect | 3.02 | 2.87 | 2.65 | 2.30 | 1.99 | 1.94 | **0.64×** |
+>
+> Six sequences later the confound is unchanged, which is itself the point —
+> it is the lens and the room, not the room alone (`fovbench-ctx-d351d94`,
+> 300 frames): fisheye 2.96 → 1.65 m (**0.56×**), rect 2.96 → 2.02 (**0.68×**).
 >
 > **Depth falls monotonically from the very first bin**, on both views and both
 > axes. An earlier version of this section carried a *modelled* empty room
@@ -217,9 +233,70 @@ nothing else from the 25-frame one. This also means one sequence at 200 frames i
 the floor, not the target — the estimator was wrong at any n, *and* the sample
 was thin.
 
-**Still open.** One sequence — 200 frames of `Apartment_release_clean_seq131_M1292`,
-so nothing here is an across-scene claim. At ~15 min per sequence radial-only
-that is now a cheap gap to close.
+**7. Across six scenes the shape holds and the magnitude was understated.**
+`pen > 1` in **6 of 6** sequences for all three `scale_shift` heads in every
+(view × stream) cell — one exception, VGGT-Omega rect/real at 5 of 6, and the
+dissenter there is seq131 itself (0.975). So "the periphery is worse" is not one
+apartment's quirk. But seq131 is the *mild* end of the distribution, so the
+pooled six-sequence run reads harder than anything above: fisheye `pen`
+1.01–2.27, rect 1.08–1.83, against seq131's 1.07–2.10 / 0.92–1.30.
+
+| cell | seq131 | 6-seq median | max |
+|---|---|---|---|
+| VGGT-Omega rect/synthetic | 1.11 | 1.88 | 2.38 |
+| DA3 rect/synthetic | 1.24 | 2.08 | 2.36 |
+| VGGT-Omega fisheye/real | 1.48 | 2.06 | **2.86** |
+
+**DAv2 is the one model whose *sign* moves with the scene**, and not the way the
+seq131 run suggested. Its sub-1 rect `pen` is not seq131-specific: it goes below
+1 on seq132 in all four cells (0.74–0.91) and on seq131 in two. Part of the
+original 0.73 was also an aggregation artefact — cross-frame pooling is now
+pixel-weighted, which moved 8 of 96 cells on identical data (all eight DAv2,
+largest `0.1101 → 0.0915`, no depth-head cell moved at all) and took the rect
+`pen` to 0.81 / 0.88. Reduced, not removed.
+
+**8. A temporal context does not rescue the periphery — and more of the same
+instant makes things worse.** Handing VGGT-1B / VGGT-Omega / DA3 a stack of 5 or
+10 frames in one forward pass (`--context-frames`, only the target scored, same
+digest `8ca25fd0ebd2` throughout):
+
+* **10 consecutive vs 1** is *worse* in 9 of 12 cells, concentrated on the raw
+  lens: +39% VGGT-1B synthetic fisheye, +33% Omega, +19%/+13% on real.
+* **10 strided (every 10th frame) vs 10 consecutive** wins in 10 of 12, by up to
+  **31%** — DA3 real rect `0.0689 → 0.0478`, which is also 38% better than
+  monocular. Ten consecutive ADT frames span 0.30 s and a couple of centimetres,
+  so the models can use a second *viewpoint* and not a second sample of the same
+  one. Testing only the consecutive arm would have read as "context is useless".
+* `pen` moves by ≤ 0.13 across all five configurations. **Context changes the
+  level, not the shape.**
+
+**Still open.** Six of ADT's 19 extractable sequences. Nothing was missing — the
+`.vrs` files are on disk for all 20 directories; `videos_synthetic/` and
+`depth_npy/` are decoded *caches*, and only seq131 had both. Five more were
+decoded for this run (400 frames each, 13 GB); the other 13 need `depth_npy`
+extracted as well and were left alone.
+Part B ran on seq131 only, on a cost estimate that later proved ~60% high — the
+harness is CPU-bound (25–30% GPU, ~2 of 64 cores), so the full context grid over
+six sequences is affordable and has not been done.
+
+## Two known defects in the data and the harness
+
+**seq131's `videos_synthetic` cache duplicates its last record.** The naming rule
+is `frame_<idx>_<ts>.png` with `idx` the record index in the *real* stream and
+`ts` that record's capture timestamp; on seq131 synthetic record 0 is omitted and
+the last record is written **twice**, so `frame_003190_*` carries pixels 33 ms
+older than its name and is scored against the wrong depth map. One frame in 2878
+of the candidate set — negligible for any aggregate, but it is a real mispairing
+present in every ADT-FOV number measured before `fovbench-ctx-d351d94`. Re-decode
+the cache with `extract_synthetic.py` (on the `results` branch) to clear it.
+
+**`--manifest` used to silence `--context-frames`.** A manifest stores the
+per-frame context list, so `Split.load` restored a 1-frame context while the
+run's own `config` block echoed the flags as given — four context runs came back
+bit-identical to the baseline and looked exactly like real ones. The driver now
+refuses the disagreement. Note the fix is only a refusal: to freeze a split *and*
+vary the context, rebuild it from `--adt-root`, which reproduces the same digest
+because the digest excludes the context by design.
 
 ## Two things that would quietly invalidate this, and how they are held
 
