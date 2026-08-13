@@ -1,9 +1,32 @@
 # Download the Aria camera calibration for the four ego-synth source datasets
 
-**Owner:** gpu
+**Owner:** cpu (the fetch) → gpu (the takes list, and consuming the result)
 **Files I may touch:** nothing in the repo — this ticket only downloads data.
 The fetcher it runs, `tools/fetch_egosynth_calibration.py`, is already landed.
-**Blocked by:** none.
+**Blocked by:** none for AEA. Nymeria needs one file off the box; Oxford needs a
+route decision.
+
+## The route changed — fetch on the CPU machine, not the box
+
+This ticket used to say: move the signed URL JSONs to the box, then fetch there.
+That had the credentials crossing machines to reach the data, and #18 stalled on
+exactly that — the JSONs are on the CPU machine and neither this Mac's siblings
+nor lambda_63 had them.
+
+**It is the wrong direction.** The fetcher reduces 5-80 MB of `online_calibration`
+per take to about **1 KB** on the way in. So run it where the URL JSONs already
+are, and move the *reduction* — a few hundred KB for a whole dataset — to the box
+instead. The credentials never leave the machine they were downloaded onto, and
+the transfer is small enough to go over any channel at hand.
+
+Measured on the CPU machine, over Wi-Fi:
+
+| dataset | per take | 
+|---|---|
+| `aea` | ~0.35 s, 5.3 MB read, 1 KB written |
+| `nymeria` | ~7.5 s, 66-82 MB read, 1 KB written |
+
+so AEA's 143 takes cost about 4 minutes and Nymeria's 254 about 32.
 
 > **Ego-Exo4D is PAUSED** by the owner's decision. Do not open the licence
 > request. Three datasets — `aea`, `nymeria`, `oxford` — are in scope; the
@@ -86,43 +109,69 @@ online calibration does not move over a recording.
 
 ## Steps
 
-### 1. Get the two URL JSONs onto the box
+### 1. The URL JSONs stay put
 
-They are on the Mac at `~/Downloads/`:
+They are on the CPU machine at `~/Downloads/`:
 
     AriaEverydayActivities_download_urls.json     143 sequences
     nymeria_download_urls.json                   1100 sequences
 
 **They are signed, expiring credentials and must never be committed** — this
-repo is public and its history is permanent and mirrored. Move them out of band
-(`scp`), the way `raytun3r/experiments/make_local_sample.py` describes for
-licensed data. Both sets of links **expire 2026-09-11** (decoded from the URLs'
-own `oe` parameter), so this ticket has until then.
+repo is public and its history is permanent and mirrored. They also no longer
+need to be copied anywhere: the fetch happens on the machine that already holds
+them (see the route note above). The links **expire 2026-09-11** (decoded from
+the URLs' own `oe` parameter), so this ticket has until then.
 
-### 2. AEA — all 143 takes
+### 2. AEA — all 143 takes — **DONE**
 
 ego-synth used all 143 AEA sequences and the JSON carries exactly those 143, so
 no filtering is needed.
 
 ```bash
 python tools/fetch_egosynth_calibration.py aea \
-  --urls /data/f.zhang2/urls/AriaEverydayActivities_download_urls.json \
-  --out  /data/f.zhang2/ego-synth-5b-calib
+  --urls ~/Downloads/AriaEverydayActivities_download_urls.json \
+  --out  ~/Desktop/ADT/ego-synth-5b-calib
 ```
+
+Ran on the CPU machine, **143/143 written, 0 failed**, ~4 minutes, 158 KB on
+disk (34 KB tarred). Every file is `FisheyeRadTanThinPrism` with 15 params.
+
+Two things the full set shows that one take could not:
+
+* **7 distinct Aria devices** across the 143 takes, `f` spanning 1213.09–1220.47
+  at the 2880 sensor — 7.4 px there, 2.3 px at the 896 frame. This ticket's claim
+  that a nominal calibration will not do is now measured over a dataset rather
+  than argued from two takes.
+* The fetched set is **consumable end to end**: `verify_camera` run against it
+  on the staged take reproduces the verdict exactly — rot 90°, NN median
+  **0.29 px, 96.9 % within 1 px**, twin 0.31 px, and 4.0–4.1 px for the other
+  three quarter turns.
+
+What is left for this dataset is moving those 34 KB to the box.
 
 ### 3. Nymeria — the 254 takes ego-synth used, of 1100 in the JSON
 
-`--takes` accepts the release's own dataset directory and keeps only those names:
+**This one needs a file off the box first.** `--takes` filters by the release's
+own directory names, and the release is only on lambda_63 — the CPU machine has
+one Nymeria take. Fetching all 1100 blind would be ~2.3 hours and ~80 GB read to
+throw three quarters of it away. So: on the box,
+
+```bash
+ls /data/f.zhang2/ego-synth-5b/nymeria > nymeria_takes.txt
+```
+
+(~10 KB, no licence concern — it is a list of names), then on the CPU machine:
 
 ```bash
 python tools/fetch_egosynth_calibration.py nymeria \
-  --urls  /data/f.zhang2/urls/nymeria_download_urls.json \
-  --out   /data/f.zhang2/ego-synth-5b-calib \
-  --takes /data/f.zhang2/ego-synth-5b/nymeria
+  --urls  ~/Downloads/nymeria_download_urls.json \
+  --out   ~/Desktop/ADT/ego-synth-5b-calib \
+  --takes nymeria_takes.txt
 ```
 
-If it reports takes missing from the JSON, re-export it from the
-[Nymeria explorer](https://explorer.projectaria.com/nymeria) with those
+`--takes` accepts a directory of take dirs *or* a file of names, one per line.
+Budget ~32 minutes. If it reports takes missing from the JSON, re-export it from
+the [Nymeria explorer](https://explorer.projectaria.com/nymeria) with those
 sequences selected and the `recording_head` group ticked.
 
 ### 4. Oxford Day-and-Night — no gating, but no cheap path either
@@ -162,45 +211,35 @@ looked inside. Option 1's experiment answers that too.
 
 ## Done when
 
+- [x] **aea** — 143/143 fetched on the CPU machine, 0 failed, 148 KB
+- [ ] **nymeria** — needs `nymeria_takes.txt` off the box first (step 3)
+- [ ] **oxford** — needs the route decision in step 4
+- [x] each fetched file's `model` reads `FisheyeRadTanThinPrism` and `params` has
+      15 entries — checked across all 143
 - [ ] `/data/f.zhang2/ego-synth-5b-calib/{aea,nymeria,oxford}/<take>/camera_rgb.json`
-      exists for every take that dataset contributes to ego-synth
-- [ ] each file's `model` reads `FisheyeRadTanThinPrism` and `params` has 15 entries
+      on the **box**, for every take that dataset contributes to ego-synth
 - [ ] the take counts match the release: aea 143, nymeria 254, oxford 124
       (`egoexo4d` is paused and out of scope)
 - [ ] issue commented with the counts, total bytes, and which Oxford route worked
 
 ## What is verified, and what is not
 
-**Verified on this Mac against the live CDN and the staged sample**, one take
-each of aea and nymeria: the fetcher runs end to end, the ranged zip read works,
-and both takes reduce to a 15-param `FisheyeRadTanThinPrism` with a serial
-number and a `T_Device_Camera`.
+**The fetch is verified.** Against the live CDN, on the CPU machine: the ranged
+zip read works, and all 143 AEA takes reduce to a 15-param
+`FisheyeRadTanThinPrism` with a serial number and a `T_Device_Camera`.
 
-**The calibration has NOT been shown to describe ego-synth's frames.**
-`slambench/verify_camera.py` exists now and measures exactly this, by projecting
-the release's own rectified points through the fetched model and comparing the
-resulting pixel cloud against the actual fisheye cloud. It reports
+**And the calibration is now verified to describe ego-synth's frames** — which
+this section, before ticket 013's `a0150f9`, said it was not. It reported ~4 px
+median and ~5 % of points within 1 px, and listed a crop-before-the-resize as one
+of three open guesses. **That guess was right**, and it was not the only
+correction: see ticket 013 for the chain and its provenance. `verify_camera` now
+reads **0.29 px median, 96.9 % within 1 px** on the staged takes of `aea` and
+`nymeria`, and both are in `camera.VERIFIED_ROTATION`.
 
-    best case ~4 px median, ~5 % of points within 1 px
-
-against a 0.5-2 % chance rate and a sub-pixel bar — i.e. better than random and
-nowhere near right. Ruled out, each measured rather than argued:
-
-* all four 90° rotations, and a continuous roll swept at 2° (no peak anywhere);
-* the resolution — implied sensor size swept 1000-4200 px; the best (~2820-2840)
-  still leaves 1.4-1.9 px median and only 10-21 % within 1 px;
-* the device-to-camera extrinsic, a real ~38.7° tilt that is not the answer;
-* the projection implementation, now the reference `projectaria_tools` one.
-
-Still open: a **crop** before the resize (only scale was swept, not the principal
-point — a joint search over both is the obvious next move), a rectification axis
-tilted rather than merely rolled, or an online calibration describing a different
-stream than the one ego-synth read.
-
-This is why the download is still worth doing — settling it wants many takes,
-not the two staged here — and equally why **nothing downstream may use these
-files until `verify_camera` passes**. `camera.require_verified` enforces that in
-code.
+What has *not* been settled is scale: that verdict rests on **one take per
+dataset**, and `oxford` has never been measured at all. So the rule still holds,
+and `camera.require_verified` still enforces it in code — but it is now a rule
+about which datasets have been checked, not about whether the files are usable.
 
 ## Needs a GPU run afterwards?
 

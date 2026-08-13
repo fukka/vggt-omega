@@ -3,7 +3,7 @@
 **Owner:** cpu (harness) → gpu (the run)
 **Files I may touch:** `slambench/**` only. **Nothing under `fovbench/`.**
 **Blocked by:** the `rect_derect` baseline needs #17 (ticket 012, the calibration
-download). The `raw` baseline is not blocked and is finished.
+download). The `raw` baseline is not blocked, and **it has run** — see below.
 
 ## This is not the ADT-FOV experiment
 
@@ -118,25 +118,66 @@ GPU; 6 of them drive the real staged sample end to end.
 
 * **`rect_derect` runs**, for the first time, on both datasets, at coverage 0.99.
 
+### The `raw` arm has run — the evaluation's first real numbers
+
+`results/slambench-raw-b1659a0`, results branch `b139bef`, issue #18. Five
+models, three datasets, 8 takes × 25 frames each = 600 frames, split
+`321f55a96bd4`, on `b1659a0`. **0 errors, 0 models skipped.**
+
+| model | aea | nymeria | oxford |
+|---|---|---|---|
+| | AbsRel / δ1 | AbsRel / δ1 | AbsRel / δ1 |
+| vggt_omega | 0.151 / 0.845 | 0.121 / 0.882 | 0.275 / 0.707 |
+| dav2_large | 0.159 / 0.837 | 0.145 / 0.838 | 0.302 / 0.675 |
+| vggt_1b | 0.199 / 0.760 | 0.145 / 0.826 | 0.357 / 0.559 |
+| da3_large | 0.207 / 0.752 | 0.173 / 0.789 | 0.517 / 0.522 |
+| da3_small | 0.240 / 0.687 | 0.206 / 0.720 | 0.740 / 0.425 |
+| **gt_median** | **1.40 m** | **1.57 m** | **15.07 m** |
+
+Two things that table is not. **It is not a ranking**: `dav2_large` aligns in
+disparity space and the other four in depth space, so its column is not on the
+same axis as theirs, and whether the four `scale_shift` models are mutually
+comparable is a protocol question this run does not settle. **And it is not the
+experiment**: the experiment is `raw` against `rect_derect`, and only one arm has
+run, so nothing here says anything about how a fisheye frame should be fed to a
+pinhole-trained model.
+
+`--models oracle` was **re-earned on this exact split** rather than trusted from
+the staged sample, and reads AbsRel 0.000 / δ1 1.000 / RMSE 0.000 on all three
+datasets over the same 600 frames. The harness contributes nothing to the table
+beside it.
+
+**Oxford is a different scene scale, not just a harder one.** Its `gt_median` is
+15.07 m against 1.40 and 1.57 m indoors — ten times, and three times what
+`docs/data/ego-synth-5b-sparse-depth.md` estimated from a single take. Every
+model is worst there. Scale and difficulty are confounded and this run does not
+separate them.
+
+The camera work landed after this run (`a0150f9`, `b9cad32`, `efc709c`) and
+**cannot have changed these numbers**: `run.py` builds a camera only when
+`rect_derect` is among the arms (`run.py:122`), so the `raw` path never loads
+one. The table stands as measured on `b1659a0`.
+
 **Not done.**
 
-* `oxford` has never been measured — no calibration staged locally. It is in
-  scope and is **not** in `VERIFIED_ROTATION`, so `require_verified` stops it.
+* `oxford` has never been measured by `verify_camera` — no calibration staged
+  locally. It is in scope and is **not** in `VERIFIED_ROTATION`, so
+  `require_verified` stops `rect_derect` on it.
 * `egoexo4d` is **paused** by the owner's decision; scope is aea, nymeria,
   oxford.
-* No weights have run here. **No number from a real network is claimed.**
+* **`rect_derect` has never run on real weights**, so the comparison the
+  evaluation exists to make has not been made.
 
 ## Steps remaining
 
-1. **Run the `raw` baseline on the box.** It needs no calibration and does not
-   wait on anything below — the fastest route to the evaluation's first real
-   numbers.
-2. Land #17 (three datasets; Oxford needs a route decision — its MPS is a
-   18-24 GB `.tar.gz` that cannot be range-read).
-3. Re-run `verify_camera` **across takes**, not the one per dataset staged here,
+1. Land #17 (ticket 012). **The route changed**: the fetcher now runs on the CPU
+   machine, where the signed URL JSONs already are, and only the ~1 KB/take
+   reduction crosses to the box. AEA's 143 are fetched. Nymeria needs the release's
+   own take list off the box; Oxford still needs a route decision.
+2. Re-run `verify_camera` **across takes**, not the one per dataset staged here,
    and on `oxford` for the first time. Add `oxford` to `VERIFIED_ROTATION` by
    hand if it passes — a measurement that promotes itself is not a check.
-4. Then the full `raw,rect_derect` run.
+3. Then the full `raw,rect_derect` run, which is the experiment.
 
 ## Is `verify_camera` finished?
 
@@ -153,7 +194,7 @@ GPU; 6 of them drive the real staged sample end to end.
 
 So `verify_camera` has seen 2 takes of the 1 611 in the release, and 2 of the 3
 in-scope datasets. Everything it *has* seen agrees, decisively. Running it at
-scale is step 3 below and needs #17 first.
+scale is step 2 above and needs #17 first.
 
 No environment note. `verify_camera` **prefers** scipy's kd-tree and falls back
 to an exact all-pairs search in numpy when it is absent — scipy is in this
@@ -174,7 +215,7 @@ digit, 17 s instead of 2 s.
 - [x] the convention is settled and `rect_derect` runs against a verified camera
 - [ ] `verify_camera` has passed on more than one take per dataset, and on oxford
 
-## The GPU run — the `raw` arm is ready now
+## The GPU run — the `raw` arm has run; `rect_derect` is what is left
 
 Two things the box needs that this ticket did not say, both found on the run:
 
@@ -194,9 +235,10 @@ python -m slambench.run --egosynth-root /data/f.zhang2/ego-synth-5b \
   --device cpu --out eval_out/slambench_smoke
 ```
 
-Then the real thing. **`raw` only** — not because `rect_derect` is broken (it
-works now), but because it needs #17's calibrations on the box first, and the
-`raw` arm should not wait for them:
+Then the real thing. **This is the command that produced
+`results/slambench-raw-b1659a0`** — kept here so the run can be reproduced, not
+because it still needs doing. `raw` only, because `rect_derect` needs #17's
+calibrations on the box and the `raw` arm should not wait for them:
 
 ```bash
 python -m slambench.run \
