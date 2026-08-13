@@ -1,6 +1,7 @@
 # ADT-FOV: re-run the baseline, then add a temporal context
 
 **Owner:** gpu
+**Status:** **done** — `results/fovbench-v3-24b38e1` and `results/fovbench-ctx-d351d94` (the headline run: 6 sequences, 4 models, plus the seq131 context grid). `pen_ds`/`drift` referenced here no longer exist (#017).
 **Files I may touch:** nothing under `fovbench/` — runs only. Results to `results`.
 **Blocked by:** none. Supersedes the radial arm of `fovbench-v3-24b38e1`; the
 window arm of `fovbench-v2-ef2d50b` still stands and is not re-run.

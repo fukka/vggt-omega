@@ -1,6 +1,7 @@
 # Audit Eq. 7's depth convention against what the VGGT head actually emits
 
 **Owner:** cpu
+**Status:** **not audited** — raytun3r, outside the FOV/SLAM pass of 2026-08-13. Check before picking up.
 **Files I may touch:** `raytun3r/losses.py`, `raytun3r/tests/test_raytun3r.py`
 **Blocked by:** none
 

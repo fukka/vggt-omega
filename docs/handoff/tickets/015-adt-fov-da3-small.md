@@ -1,6 +1,7 @@
 # ADT-FOV: add DA3-Small to the baseline line-up
 
 **Owner:** gpu
+**Status:** **folded into #019** — DA3-Small is now one model of that ticket's line-up rather than a run of its own, so it lands in the same table as the corrected rect arm instead of starting a third comparison.
 **Files I may touch:** nothing under `fovbench/` — runs only. Results to `results`.
 **Blocked by:** #19 (the speedup identity check) should land first, since this
 uses the threaded harness.

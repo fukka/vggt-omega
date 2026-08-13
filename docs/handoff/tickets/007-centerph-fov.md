@@ -1,6 +1,7 @@
 # Identify the paper's Center-PH FOV — the thing now blocking the adapter run
 
 **Owner:** gpu
+**Status:** **open** — raytun3r. No run under `results/`.
 **Files I may touch:** nothing under `raytun3r/` — runs only. Results to `results`.
 **Blocked by:** none. **Blocks:** #4 (ticket 003, the adaptation run).
 

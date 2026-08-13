@@ -1,6 +1,7 @@
 # Reproduce the paper's VGGT vanilla, and thereby validate the whole harness
 
 **Owner:** gpu
+**Status:** **done** — `results/vanilla-repro-3f15a9266d`.
 **Files I may touch:** nothing under `raytun3r/` — runs only. Results to `results`.
 **Blocked by:** none. **Blocks:** #4 (ticket 003) — do that one after this passes.
 

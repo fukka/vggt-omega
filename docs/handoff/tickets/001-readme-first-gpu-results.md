@@ -1,6 +1,7 @@
 # Fold the first real GPU results into raytun3r/README.md
 
 **Owner:** cpu
+**Status:** **not audited** — raytun3r, outside the FOV/SLAM pass of 2026-08-13. Check before picking up.
 **Files I may touch:** `raytun3r/README.md`
 **Blocked by:** none
 

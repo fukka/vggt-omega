@@ -1,6 +1,21 @@
 # Score depth against the ego-synth 5B sparse SLAM GT
 
+> **ARCHIVED 2026-08-13.** Everything this ticket built —
+> `fovbench/datasets_egosynth.py`, `build_egosynth_split`, `run_egosynth` and the
+> `--egosynth-root` arm of the FOV driver — was deleted by #017. It never
+> produced a result, and the same ground truth is now read by `slambench/`,
+> which owns it: `tests/test_experiment_separation.py` makes a second reader in
+> `fovbench/` a test failure rather than a judgement call.
+>
+> The reasoning below is not wrong, it is *relocated*. The point-list handling,
+> the gather-never-scatter rule and the per-frame-fit/pooled-binning argument all
+> live in `slambench/data.py` and `slambench/metrics.py` now. Read #013 for the
+> harness and #020 for what it is being pointed at next.
+>
+> Kept for the argument, not as a task.
+
 **Owner:** cpu
+**Status:** **VOID** — this ticket built `fovbench/datasets_egosynth.py`, which #017 deleted. ego-synth belongs to `slambench/`, and reading it from `fovbench/` is now a test failure. Archived; see #013 and #020.
 **Files I may touch:** `fovbench/datasets_egosynth.py` (new), `fovbench/split.py`,
 `fovbench/run.py`, `fovbench/report.py`, `fovbench/tests/test_egosynth.py` (new).
 Nothing under `raytun3r/`, nothing under `finetune/`.

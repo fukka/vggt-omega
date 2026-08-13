@@ -1,6 +1,7 @@
 # Download the Aria camera calibration for the four ego-synth source datasets
 
 **Owner:** cpu (the fetch) → gpu (the takes list, and consuming the result)
+**Status:** **done** — calibrations fetched for aea and nymeria; oxford and egoexo4d outstanding, which is what gates rect_derect on those two (see #020).
 **Files I may touch:** nothing in the repo — this ticket only downloads data.
 The fetcher it runs, `tools/fetch_egosynth_calibration.py`, is already landed.
 **Blocked by:** none for AEA. Nymeria needs one file off the box; Oxford needs a

@@ -1,6 +1,7 @@
 # Re-run the ADT-FOV test — the drift column was measuring the wrong thing
 
 **Owner:** gpu
+**Status:** **done, and its subject is gone** — `results/fovbench-v2-ef2d50b`, still cited by `fovbench/README.md` items 1-6. The `drift`/`anchored_ratio` columns this ticket existed to fix were deleted in #017, so its *instructions* are no longer runnable; its *numbers* stand. History, not a task.
 **Files I may touch:** nothing under `fovbench/` — runs only. Results to `results`.
 **Blocked by:** none. Supersedes the `drift` column of #13 only.
 

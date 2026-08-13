@@ -1,6 +1,7 @@
 # The SLAM depth evaluation — `slambench/`
 
 **Owner:** cpu (harness) → gpu (the run)
+**Status:** **harness done, raw arm run** — `results/slambench-raw-b1659a0`, digest `321f55a96bd4`: 5 models x {aea, nymeria, oxford}, raw baseline only, no context. Next steps are #020.
 **Files I may touch:** `slambench/**` only. **Nothing under `fovbench/`.**
 **Blocked by:** the `rect_derect` baseline needs #17 (ticket 012, the calibration
 download). The `raw` baseline is not blocked, and **it has run** — see below.

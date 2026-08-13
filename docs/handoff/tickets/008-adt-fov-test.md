@@ -1,6 +1,7 @@
 # Run the ADT-FOV test — four vanilla models vs position in the field of view
 
 **Owner:** gpu
+**Status:** **done** — `results/fovbench-main-22c108d`. Note: the `drift` column it reports was removed from the experiment in #017; read the AbsRel/delta1 tables only.
 **Files I may touch:** nothing under `fovbench/` — runs only. Results to `results`.
 **Blocked by:** none. Independent of #4–#11 (different subproject, different data).
 

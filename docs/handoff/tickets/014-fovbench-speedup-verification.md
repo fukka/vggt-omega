@@ -1,6 +1,7 @@
 # fovbench is 2x faster — prove it did not move a single number
 
 **Owner:** gpu
+**Status:** **folded into #019** — its premise no longer holds: #018's 1-px lens fix means the rect arm can no longer reproduce `fovbench-ctx-d351d94` digit for digit. The thread-identity check survives as a required control in #019, where the *fisheye* arm must come back bit-identical.
 **Files I may touch:** nothing under `fovbench/` — one run and one comparison.
 Result (a short note plus the two `results.json`) to `results`.
 **Blocked by:** none. `organized` @ `d2d2cfc`.

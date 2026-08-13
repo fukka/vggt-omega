@@ -1,6 +1,7 @@
 # Render ScanNet++ DSLR depth from the mesh, to unlock the one span-free target
 
 **Owner:** gpu
+**Status:** **open** — raytun3r. No run under `results/`.
 **Files I may touch:** nothing under `raytun3r/` — a rendering job plus a written
 answer. Output to the dataset tree on netapp; a note to `results`.
 **Blocked by:** none, and independent of #10 — run it whenever there is idle GPU.

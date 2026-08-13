@@ -1,6 +1,7 @@
 # slambench: is ego-synth's `d` planar z, or is it range?
 
 **Owner:** gpu
+**Status:** **open, and now step 1 of #020** — nothing else in the SLAM evaluation means anything until this is settled.
 **Files I may touch:** `tools/fetch_egosynth_mps_points.py` (new),
 `slambench/verify_depth_convention.py` (new). **Not** `slambench/data.py`,
 `baselines.py` or `metrics.py` — if the answer comes back "range" that is a

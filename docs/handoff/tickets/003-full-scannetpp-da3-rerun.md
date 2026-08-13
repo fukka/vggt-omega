@@ -1,6 +1,7 @@
 # Does the adapter close the gap to classical geometry? The actual reproduction
 
 **Owner:** gpu
+**Status:** **open** — raytun3r. Supersedes #9/#10/#12; no run under `results/`.
 **Files I may touch:** nothing under `raytun3r/` — runs only. Results to `results`.
 **Blocked by:** nothing. This supersedes #9, #10 and #12.
 
