@@ -312,12 +312,19 @@ class Fisheye624:
         """3D points in the camera frame ``(N, 3)`` -> pixels ``(u, v)``.
 
         Uses ``projectaria_tools``' own FISHEYE624 projection when that package
-        is importable, and the implementation below otherwise. The two are not
-        identical: measured against the reference on a 2880 sensor, this one
-        drifts up to 1.4 px at the rim (0.44 px once scaled to 896). That is
-        under the tolerance for most uses and *over* the sub-pixel bar
-        ``verify_camera`` works to, so the reference is preferred wherever it
-        exists and ``test_camera.py`` pins the fallback against it.
+        is importable, and the implementation below otherwise. The two now agree
+        to floating point: ``test_camera.py`` pins the fallback against a
+        transcription of the public reference model, at 1e-9 px and out to 62 deg
+        of incidence, on a machine with neither the package nor torch.
+
+        It did not always. The fallback carried OpenCV's tangential convention
+        rather than this model's — a p1/p2 swap, self-consistent between
+        ``project`` and ``unproject``, so the round trip closed and the drift was
+        visible only from outside: 2.9 px at the rim of a 2880 sensor, 0.90 px at
+        ego-synth's 896 frame, against the 0.29 px ``verify_camera`` accepts a
+        camera at. Verification runs on a box *with* the package and
+        ``rect_derect`` may run on one without, so a fallback that merely tracks
+        the reference "closely enough" is not a safe state for this module.
 
         Points behind the camera are not meaningful for a fisheye of this FOV
         and come back as NaN rather than as a plausible pixel.
@@ -432,11 +439,23 @@ class Fisheye624:
 
     def _tangential_prism(self, xr: np.ndarray, yr: np.ndarray
                           ) -> Tuple[np.ndarray, np.ndarray]:
+        """FISHEYE624's tangential + thin-prism terms, in the reference's order.
+
+        Aria's model is **not** OpenCV's tangential convention: ``p1`` carries
+        the ``(r^2 + 2x^2)`` term on *x* and ``p2`` carries it on *y*, where
+        OpenCV has them the other way round. Written OpenCV-style this was a
+        clean p1/p2 swap — self-consistent, so the project/unproject round trip
+        still closed to 1e-9 and every test but the reference comparison passed,
+        while the projection sat up to 2.9 px off at the rim of a 2880 sensor.
+        The authority is ``projectaria_tools``' ``FisheyeRadTanThinPrism``, and
+        ``test_camera.py`` pins this against a transcription of it that needs no
+        optional package.
+        """
         p1, p2 = self.p
         s = self.s
         rr = xr * xr + yr * yr
-        xt = 2 * p1 * xr * yr + p2 * (rr + 2 * xr * xr)
-        yt = p1 * (rr + 2 * yr * yr) + 2 * p2 * xr * yr
+        xt = p1 * (rr + 2 * xr * xr) + 2 * p2 * xr * yr
+        yt = p2 * (rr + 2 * yr * yr) + 2 * p1 * xr * yr
         xp = s[0] * rr + s[1] * rr * rr
         yp = s[2] * rr + s[3] * rr * rr
         return xr + xt + xp, yr + yt + yp

@@ -206,12 +206,79 @@ def test_an_unverified_orientation_is_refused_not_warned():
         C.require_verified(c)
 
 
-def test_the_fallback_projection_tracks_the_reference_implementation():
-    """``projectaria_tools`` owns FISHEYE624; the implementation in this module
-    is a fallback for machines without it. Measured drift is up to 1.4 px at a
-    2880 sensor (0.44 px at 896) — under most tolerances and over the sub-pixel
-    bar verify_camera works to, which is why the reference is preferred when
-    present. This pins the gap rather than leaving it unmeasured."""
+def _reference_project(params, xyz):
+    """FISHEYE624's forward model, transcribed from the public implementation.
+
+    Line for line from ``Fisheye624.project`` in UniK3D
+    (``third_party/UniK3D/unik3d/utils/camera.py``), which is itself Meta's
+    reference ``FisheyeRadTanThinPrism``. Written out rather than imported so
+    the comparison runs on a machine with neither ``projectaria_tools`` nor
+    torch — which is precisely the machine whose ``rect_derect`` runs go through
+    :meth:`Fisheye624._pure_project` rather than the reference.
+    """
+    p = np.asarray(params, float)
+    f, cx, cy = p[0], p[1], p[2]
+    k, (p0, p1), (s0, s1, s2, s3) = p[3:9], p[9:11], p[11:15]
+    xyz = np.asarray(xyz, float)
+    z = np.where(np.abs(xyz[:, 2]) < 1e-9, 1e-9, xyz[:, 2])
+    ab = xyz[:, :2] / z[:, None]
+    r = np.linalg.norm(ab, axis=-1, keepdims=True)
+    th = np.arctan(r)
+    th_k = th + sum(k[i] * th ** (3 + 2 * i) for i in range(6))
+    xr, yr = (th_k * np.where(r < 1e-9, 1.0, ab / np.where(r < 1e-9, 1.0, r))).T
+    xr_sq, yr_sq = xr * xr, yr * yr
+    rd_sq = xr_sq + yr_sq
+    u = xr + (2.0 * xr_sq + rd_sq) * p0 + 2.0 * xr * yr * p1      # tangential
+    v = yr + (2.0 * yr_sq + rd_sq) * p1 + 2.0 * xr * yr * p0
+    u = u + s0 * rd_sq + s1 * rd_sq * rd_sq                       # thin prism
+    v = v + s2 * rd_sq + s3 * rd_sq * rd_sq
+    return f * u + cx, f * v + cy
+
+
+def test_the_fallback_projection_is_the_reference_model_not_opencvs():
+    """FISHEYE624's tangential term is not OpenCV's, and the difference is a
+    p1/p2 swap that no *internal* check can see.
+
+    Written OpenCV-style, ``project`` and ``unproject`` shared the same wrong
+    term, so the round trip still closed to 1e-9 and the rays still came back
+    unit and forward — every test in this file passed. Only a comparison against
+    an outside implementation goes red, and it goes red by 2.9 px at the rim of
+    a 2880 sensor (0.90 px at 896), against the 0.29 px twin residual
+    ``verify_camera`` accepts a camera at.
+
+    The reference is transcribed rather than imported, so this runs on the
+    machines that actually use the fallback.
+    """
+    c = cam()
+    d = _rays_to(62.0)
+    mine = np.stack(C.Fisheye624._pure_project(c, d), axis=1)
+    want = np.stack(_reference_project(PARAMS, d), axis=1)
+    err = np.hypot(mine[:, 0] - want[:, 0], mine[:, 1] - want[:, 1])
+    assert np.nanmax(err) < 1e-9, (
+        f"fallback drifts {np.nanmax(err):.3f} px from the reference model "
+        f"({np.nanmax(err) * 896 / 2880:.3f} px at ego-synth's 896 frame)")
+
+
+def _rays_to(deg, n=120, n_az=36):
+    """Unit rays out to ``deg`` of incidence, swept over azimuth.
+
+    Azimuth is not decoration: the tangential and thin-prism terms are the only
+    anisotropic part of this model, so a radial fan along one azimuth cannot
+    tell p1 from p2.
+    """
+    th = np.radians(np.linspace(0.5, deg, n))
+    az = np.linspace(0.0, 2 * np.pi, n_az, endpoint=False)
+    T, A = np.meshgrid(th, az)
+    return np.stack([np.sin(T) * np.cos(A), np.sin(T) * np.sin(A),
+                     np.cos(T)], axis=-1).reshape(-1, 3)
+
+
+def test_the_fallback_projection_tracks_projectaria_tools_itself():
+    """The same claim against the real package, where it is installed.
+
+    ``projectaria_tools`` is the authority; the test above is what enforces it
+    on an interpreter too old to import it (this repo runs 3.8, the package
+    needs 3.9+), and this is the check that the transcription is faithful."""
     if not C.reference_available():
         pytest.skip("projectaria_tools not installed")
     from projectaria_tools.core import calibration as pcal
@@ -223,7 +290,7 @@ def test_the_fallback_projection_tracks_the_reference_implementation():
     mine = np.stack(C.Fisheye624._pure_project(c, d), axis=1)
     got = np.array([ref.project(p) for p in d])
     err = np.hypot(mine[:, 0] - got[:, 0], mine[:, 1] - got[:, 1])
-    assert np.nanmax(err) < 2.0, f"fallback drifts {np.nanmax(err):.2f} px"
+    assert np.nanmax(err) < 1e-6, f"fallback drifts {np.nanmax(err):.2e} px"
 
 
 def test_project_uses_the_reference_when_it_is_available():
