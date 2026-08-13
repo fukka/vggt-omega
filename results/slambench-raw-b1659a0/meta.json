@@ -1,0 +1,78 @@
+{
+  "run_id": "slambench-raw-b1659a0",
+  "ticket": "docs/handoff/tickets/013-slambench-harness.md",
+  "issue": "https://github.com/fukka/vggt-omega/issues/18",
+  "commit": "b1659a0",
+  "protocol": "egosynth-slam-v1",
+  "date_utc": "2026-08-12",
+  "hardware": "lambda_63, 2x NVIDIA RTX 6000 Ada Generation, driver 570.207 (GPU 0 only; GPU 1 and ~18 GB of GPU 0 were another user's idle llama-server)",
+  "env": "conda env raytun3r, python 3.11.15, torch 2.11.0+cu128, opencv 4.11.0",
+  "errors": 0,
+  "models_skipped": [],
+
+  "what_this_is": "The first real-network numbers from slambench. The raw baseline only: the fisheye frame goes to each model as it is, and the prediction is gathered at the release's own fisheye SLAM points. Nothing is rectified, warped, or depth-converted. rect_derect is absent by design -- camera.require_verified refuses it until the fetched calibration is shown to describe these frames, which it is not (see ticket 013).",
+
+  "split": {
+    "digest": "321f55a96bd4",
+    "datasets": ["aea", "nymeria", "oxford"],
+    "takes_per_dataset": 8,
+    "n_frames_per_take": 25,
+    "frames": 600,
+    "takes": 24,
+    "egoexo4d": "paused by owner decision, absent from this run"
+  },
+
+  "filters": {
+    "sigma_column": "inv_dist_std (1/m, scale-invariant)",
+    "sigma_max": 0.01,
+    "max_depth": 120.0,
+    "min_points": 256,
+    "note": "the release ships UNFILTERED, so this cut is part of every number here"
+  },
+
+  "runs": {
+    "main": {
+      "dir": "main/",
+      "digest": "321f55a96bd4",
+      "wall_clock_s_per_model": {
+        "vggt_1b": 177, "vggt_omega": 85, "dav2_large": 82,
+        "da3_small": 57, "da3_large": 70
+      },
+      "points_scored_per_model": {
+        "aea": 733694, "nymeria": 593257, "oxford": 543479,
+        "note": "identical for all five models, after the sigma cut -- every model answered at every point"
+      },
+      "frames_per_dataset": {"all": 200, "means": "8 takes x 25 frames, so min_points dropped nothing"}
+    },
+    "oracle": {
+      "dir": "oracle/",
+      "digest": "321f55a96bd4",
+      "role": "the closing invariant, run on THIS split of the real release rather than on the staged sample",
+      "result": "AbsRel 0.000 / delta1 1.000 / RMSE 0.000 on all three datasets, 600 frames",
+      "means": "decode, sigma filter, gather, alignment and report contribute no error of their own to the main table"
+    },
+    "smoke": {
+      "dir": "smoke/",
+      "digest": "8d55723b4213",
+      "role": "the ticket's CPU smoke -- analytic, aea, 1 take, 3 frames, --device cpu"
+    }
+  },
+
+  "comparability": {
+    "across_baselines_of_one_model": "the point of the harness, but only one baseline ran here",
+    "across_datasets_for_one_model": "yes -- same model, same alignment space",
+    "across_models": "NOT for absolute AbsRel. dav2_large aligns in disparity space and the other four in depth space, so its column is not on the same axis. The report's caveat is written blanket; whether the four scale_shift models are mutually comparable is a protocol question for the owner, not one this run settles."
+  },
+
+  "observations": [
+    "Oxford's median GT depth on this split is 15.07 m against 1.40 m (aea) and 1.57 m (nymeria) -- roughly ten times the indoor datasets, and about three times the ~5.3 m the data card estimated from a single sample take. Every model's AbsRel is worst on Oxford by a wide margin. Scene scale and difficulty are confounded here and this run does not separate them.",
+    "coverage is 1.00 everywhere, as it must be: raw answers at every point, and coverage only becomes informative once rect_derect runs and gives up the rim.",
+    "no frame was dropped for min_points and no model was skipped."
+  ],
+
+  "not_claimed": [
+    "that any model is better than another in absolute terms -- see comparability",
+    "that the raw baseline is the right way to feed a fisheye frame to a pinhole-trained model; measuring that against rect_derect is the whole experiment, and the second arm has not run",
+    "anything about egoexo4d, which is paused"
+  ]
+}

@@ -1,0 +1,2 @@
+digest,model,family,size,params_m,align,input_size,dataset,baseline,AbsRel,delta1,delta2,RMSE,log10,coverage,gt_median,n_frames,n_points_total
+8d55723b4213,analytic,analytic,—,0.000000,scale_shift,518.000000,aea,raw,1.062515,0.135117,0.352966,2.075026,0.287070,1.000000,1.338542,3.000000,12414.000000

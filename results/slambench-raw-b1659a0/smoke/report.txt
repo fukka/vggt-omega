@@ -1,0 +1,23 @@
+============================================================================================
+  ego-synth SLAM depth · egosynth-slam-v1 · split 8d55723b4213
+============================================================================================
+  3 frames over 1 take(s), datasets: aea
+  GT: sparse MPS SLAM points, fisheye stream, native — the harness rectifies nothing
+  cut at inv_dist_std (1/m, scale-invariant) < 0.01 (the release ships UNFILTERED, so this is part of every number below)
+  baselines ['raw'] · 1 take(s)/dataset · 3 frame(s)/take
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame over every one
+  of that frame's points, then frozen. Frames combine unweighted. Each
+  model keeps its own alignment space — disparity for Depth-Anything V2,
+  depth for the up-to-scale heads — so ABSOLUTE AbsRel IS NOT COMPARABLE
+  ACROSS MODELS. It is comparable across baselines of one model.
+
+  BASELINE · raw
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  analytic      aea            1.063    0.135    0.353    2.075    0.287    1.00    1.34       3
+
+  MODELS
+  ------------------------------------------------------------
+  analytic      analytic — · 0M · align=scale_shift · frames at 518px

@@ -1,0 +1,41 @@
+============================================================================================
+  ego-synth SLAM depth · egosynth-slam-v1 · split 321f55a96bd4
+============================================================================================
+  600 frames over 24 take(s), datasets: aea, nymeria, oxford
+  GT: sparse MPS SLAM points, fisheye stream, native — the harness rectifies nothing
+  cut at inv_dist_std (1/m, scale-invariant) < 0.01 (the release ships UNFILTERED, so this is part of every number below)
+  baselines ['raw'] · 8 take(s)/dataset · 25 frame(s)/take
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame over every one
+  of that frame's points, then frozen. Frames combine unweighted. Each
+  model keeps its own alignment space — disparity for Depth-Anything V2,
+  depth for the up-to-scale heads — so ABSOLUTE AbsRel IS NOT COMPARABLE
+  ACROSS MODELS. It is comparable across baselines of one model.
+
+  BASELINE · raw
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  da3_large     aea            0.207    0.752    0.899    0.718    0.081    1.00    1.40     200
+  da3_large     nymeria        0.173    0.789    0.930    0.516    0.068    1.00    1.57     200
+  da3_large     oxford         0.517    0.522    0.732    9.031    0.161    1.00   15.07     200
+  da3_small     aea            0.240    0.687    0.877    0.757    0.092    1.00    1.40     200
+  da3_small     nymeria        0.206    0.720    0.913    0.561    0.081    1.00    1.57     200
+  da3_small     oxford         0.740    0.425    0.638   10.472    0.197    1.00   15.07     200
+  dav2_large    aea            0.159    0.837    0.931    0.810    0.066    1.00    1.40     200
+  dav2_large    nymeria        0.145    0.838    0.950    0.579    0.062    1.00    1.57     200
+  dav2_large    oxford         0.302    0.675    0.832   10.836    0.113    1.00   15.07     200
+  vggt_1b       aea            0.199    0.760    0.902    0.727    0.080    1.00    1.40     200
+  vggt_1b       nymeria        0.145    0.826    0.937    0.500    0.064    1.00    1.57     200
+  vggt_1b       oxford         0.357    0.559    0.785    7.601    0.139    1.00   15.07     200
+  vggt_omega    aea            0.151    0.845    0.938    0.662    0.061    1.00    1.40     200
+  vggt_omega    nymeria        0.121    0.882    0.961    0.466    0.049    1.00    1.57     200
+  vggt_omega    oxford         0.275    0.707    0.869    6.221    0.098    1.00   15.07     200
+
+  MODELS
+  ------------------------------------------------------------
+  da3_large     Depth-Anything-3 Large · 411M · align=scale_shift · frames at 518px
+  da3_small     Depth-Anything-3 Small · 34M · align=scale_shift · frames at 518px
+  dav2_large    Depth-Anything-V2 Large · 335M · align=disparity_scale_shift · frames at 518px
+  vggt_1b       VGGT 1B · 1191M · align=scale_shift · frames at 518px
+  vggt_omega    VGGT-Omega 1B/512 · 1144M · align=scale_shift · frames at 512px

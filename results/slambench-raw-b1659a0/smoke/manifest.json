@@ -1,0 +1,34 @@
+{
+  "protocol": "egosynth-slam-v1",
+  "root": "/data/f.zhang2/ego-synth-5b",
+  "digest": "8d55723b4213",
+  "n_frames": 3,
+  "takes_per_dataset": 1,
+  "n_frames_per_take": 3,
+  "frames": [
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "160",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/160.mp4"
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "3064",
+      "index": 60,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/3064.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/3064.mp4"
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "5968",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/5968.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/5968.mp4"
+    }
+  ]
+}
