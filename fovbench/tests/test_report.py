@@ -245,3 +245,58 @@ def test_no_depth_figure_when_the_run_never_measured_depth(tmp_path):
     written = R.write_figures(_payload([_run()]), str(tmp_path / "f"))
     names = {os.path.basename(p) for p in written}
     assert names == {"AbsRel.png", "delta1.png"}
+
+
+def test_the_two_views_share_one_x_range_per_axis(tmp_path):
+    """The rect theta panel used to stop at 52 deg while the fisheye one ran to
+    55, and the two were read side by side as if they covered the same field —
+    a panel that had run out of camera looked like a curve that had finished.
+    One range per axis turns the missing field into blank space."""
+    pytest.importorskip("matplotlib")
+    import matplotlib
+    matplotlib.use("Agg")
+    rad = [_run(model="vggt_1b", view=v, stream="synthetic")
+           for v in ("rect", "fisheye")]
+    for r in rad:
+        for i, c in enumerate(r["bins"]):
+            c["bin_lo"], c["bin_hi"] = float(i * 10), float(i * 10 + 10)
+    th = R._shared_xlim(rad, "theta")
+    assert th is not None
+    # spans what ANY view reaches: the raw fisheye's cone, not the rect's 52
+    assert th[1] > 54.8
+    # and each view's own limits sit inside it
+    for view, expect in (("fisheye", 54.6), ("rect", 42.2)):
+        whole, reach = R._spans(rad, view, "theta")
+        assert whole == pytest.approx(expect, abs=0.5)
+        assert reach <= th[1]
+    # the radius deficit runs the other way — the image circle is inscribed, so
+    # the fisheye has nothing past 1.0 while rect carries corners to sqrt(2)
+    rr = R._shared_xlim(rad, "radius")
+    assert rr[1] > 1.4
+    assert R._spans(rad, "fisheye", "radius")[1] < 1.05
+
+
+def test_the_context_figure_refuses_to_draw_two_different_splits(tmp_path):
+    """Every line in that figure is meant to be the same 50 frames with only
+    the evidence changed. Drawing two splits together would look exactly like a
+    context effect and be a difference in scenes."""
+    pytest.importorskip("matplotlib")
+    a = _payload([_run(model="vggt_1b", view="fisheye")])
+    b = _payload([_run(model="vggt_1b", view="fisheye")])
+    b["digest"] = "deadbeefcafe"
+    with pytest.raises(SystemExit) as e:
+        R.write_context_figure({"N=1": a, "10c": b}, str(tmp_path))
+    assert "one split" in str(e.value)
+
+
+def test_context_line_style_comes_from_the_config_not_the_label():
+    """A mislabelled directory must not draw a 10-frame run as the baseline."""
+    lying = {"config": {"context_frames": 10, "context_stride": 10}}
+    colour, ls, _, legend = R._context_style(lying)
+    assert ls == "--" and "stride 10" in legend and colour != "0.15"
+    base = R._context_style({"config": {"context_frames": 1, "context_stride": 1}})
+    assert base[1] == "-" and "N=1" in base[3]
+    # consecutive and strided at the same N differ by dash, not by colour
+    c5 = R._context_style({"config": {"context_frames": 5, "context_stride": 1}})
+    s5 = R._context_style({"config": {"context_frames": 5, "context_stride": 10}})
+    assert c5[0] == s5[0] and c5[1] != s5[1]

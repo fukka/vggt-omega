@@ -94,14 +94,40 @@ The `results` branch carries JSON and logs, never images
 python -c "import json;from fovbench import report;report.write_figures(json.load(open('results.json')),'figs')"
 ```
 
-The rect θ panels carry a shaded tail past **42.2°**, which is where that view
-stops imaging a whole ring and becomes four corner wedges. Everything left of it
-is a full 360° annulus in both views and can be compared between them; the
-shaded part is a different set of directions from every point beside it, and the
-raw fisheye has no equivalent because it images whole rings out to its cone.
-`report.txt`'s RING COVERAGE table gives the same thing as numbers — the ring
-fraction per bin and the angle each bin *actually* averages, which is not the bin
-midpoint once the ring is partial.
+**Both views share one x range per axis**, so the panels can be read side by
+side. Each then carries two marks where its own field runs out:
+
+* a **grey band** past the last angle at which the view images a whole ring —
+  42.2° on rect, nothing on fisheye. Inside it the curve continues but on four
+  corner wedges, a different set of directions from every point to its left.
+* a **hatched band** where the view images nothing at all. This is the part a
+  shared axis exists to show: rect θ ends at 52.1° against fisheye's 54.8°, and
+  on the *radius* axis the deficit runs the other way — the fisheye image circle
+  is inscribed, so it has nothing past 1.0 while rect carries corners to √2.
+
+Before the axes were shared, a panel that had run out of camera looked like a
+curve that had finished. `report.txt`'s RING COVERAGE table gives the same thing
+as numbers — the ring fraction per bin and the angle each bin *actually*
+averages, which is not the bin midpoint once the ring is partial.
+
+The temporal-context arm has its own figure, which needs several runs at once
+and so is not part of `write_figures`:
+
+```bash
+python -c "
+import json, collections
+from fovbench import report
+runs = collections.OrderedDict((lab, json.load(open(f'{d}/results.json')))
+                               for lab, d in [('N=1','partA_seq131'),
+                                              ('5c','partB_5c'), ('10c','partB_10c'),
+                                              ('5s','partB_5s'), ('10s','partB_10s')])
+report.write_context_figure(runs, 'figs')"
+```
+
+One panel per (model × view × stream), one line per configuration: colour is the
+number of frames in the stack, dashed is strided rather than consecutive. Every
+payload must carry the same digest and the call refuses otherwise — lines drawn
+from different splits would look exactly like a context effect.
 
 That writes exactly three pictures — `AbsRel.png`, `delta1.png`, `gt_depth.png` —
 each carrying every model, both views, both streams and **both axes**. The line

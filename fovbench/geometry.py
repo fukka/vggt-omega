@@ -291,8 +291,22 @@ def view_maps(out_size: int, kind: str, src: int = 1408):
     return theta, _cached_map(("azimuth", out_size, cx, cy), build), imaged
 
 
-def reach_by_azimuth(out_size: int, kind: str) -> np.ndarray:
-    """Per azimuth direction, the largest incidence angle the view images.
+def _coord_map(out_size: int, kind: str, coord: str) -> np.ndarray:
+    """The per-pixel value of a binning coordinate, for coverage questions."""
+    theta, _, _ = view_maps(out_size, kind)
+    if coord == "theta":
+        return theta
+    if coord == "radius":
+        cam = aria_cam(1408, 1408)
+        if kind == "fisheye":
+            sc = scaled_cam(cam, out_size)
+            return radius_map(out_size, out_size, cx=sc.cx, cy=sc.cy)
+        return radius_map(out_size, out_size)
+    raise ValueError(f"unknown coordinate {coord!r} (choose 'theta' or 'radius')")
+
+
+def reach_by_azimuth(out_size: int, kind: str, coord: str = "theta") -> np.ndarray:
+    """Per azimuth direction, the largest coordinate value the view images.
 
     Asked along *rays* rather than within rings on purpose. A ring at a small
     angle is only a few hundred pixels wide, so counting how many azimuth cells
@@ -301,21 +315,24 @@ def reach_by_azimuth(out_size: int, kind: str) -> np.ndarray:
     at 13 deg, where it is a whole circle. A ray has many pixels at every
     azimuth, so a maximum along it is exact.
 
-    Flat at the cone limit for the raw fisheye (every direction reaches 54.8
-    deg); on the rectified pinhole it runs from the edge midpoint on the axes to
-    the corner on the diagonals, which is the whole of the story below.
+    Flat at the cone limit for the raw fisheye in ``theta`` (every direction
+    reaches 54.8 deg); on the rectified pinhole it runs from the edge midpoint on
+    the axes to the corner on the diagonals, which is the whole of the story
+    below. In ``radius`` both views are flat to the inscribed circle at 1.0, and
+    only the rectified one carries corners out to sqrt(2).
     """
-    theta, az, imaged = view_maps(out_size, kind)
+    _, az, imaged = view_maps(out_size, kind)
+    c = _coord_map(out_size, kind, coord)
     cell = np.clip((az / 360.0 * _RING_AZ).astype(int), 0, _RING_AZ - 1)
     reach = np.zeros(_RING_AZ, np.float64)
-    np.maximum.at(reach, cell[imaged], theta[imaged])
+    np.maximum.at(reach, cell[imaged], c[imaged])
     return reach
 
 
-def ring_fraction(out_size: int, kind: str, theta_deg) -> np.ndarray:
-    """Fraction of the 360-degree ring this view images, at each given angle."""
-    reach = reach_by_azimuth(out_size, kind)
-    t = np.atleast_1d(np.asarray(theta_deg, np.float64))
+def ring_fraction(out_size: int, kind: str, values, coord: str = "theta") -> np.ndarray:
+    """Fraction of the 360-degree ring this view images, at each given value."""
+    reach = reach_by_azimuth(out_size, kind, coord)
+    t = np.atleast_1d(np.asarray(values, np.float64))
     return (reach[None, :] >= t[:, None]).mean(axis=1)
 
 
@@ -348,15 +365,28 @@ def ring_coverage(out_size: int, kind: str, edges: Sequence[float]) -> List[dict
     return out
 
 
-def full_ring_limit(out_size: int, kind: str) -> float:
-    """Largest incidence angle at which this view still images the WHOLE ring.
+def full_ring_limit(out_size: int, kind: str, coord: str = "theta") -> float:
+    """Largest coordinate value at which this view still images the WHOLE ring.
 
-    Beyond it a theta bin is a set of corner wedges, so two views read past
-    their own limits are not compared on the same directions — which is the
-    confound this whole pair of functions exists to expose. Measured rather than
-    derived, so it carries the off-centre principal point.
+    Beyond it a bin is a set of corner wedges, so two views read past their own
+    limits are not compared on the same directions — which is the confound this
+    whole group of functions exists to expose. Measured rather than derived, so
+    it carries the off-centre principal point.
     """
-    return float(reach_by_azimuth(out_size, kind).min())
+    return float(reach_by_azimuth(out_size, kind, coord).min())
+
+
+def coverage_span(out_size: int, kind: str, coord: str = "theta"):
+    """``(whole_to, reach_to)`` — where the ring stops, and where pixels stop.
+
+    Two different statements that a shared axis has to distinguish: between them
+    the view images *part* of each ring, and past ``reach_to`` it images nothing
+    at all. Plotting both views on one axis makes the second visible as blank
+    space, which is the point — a rectified panel that simply ended early looked
+    like a curve that had finished rather than one that had run out of field.
+    """
+    reach = reach_by_azimuth(out_size, kind, coord)
+    return float(reach.min()), float(reach.max())
 
 
 def radius_map(H: int, W: int, cx: Optional[float] = None,

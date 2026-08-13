@@ -548,38 +548,73 @@ def _bin_points(run: dict, axis: str, key: str):
     return xs, ys
 
 
-def _shade_partial_ring(ax, rad: List[dict], view: str, axis: str,
-                        annotate: bool) -> None:
-    """Mark where this view's curve stops being a whole ring.
-
-    The rectified panel's tail is not a continuation of its curve — it is four
-    corner wedges, a *different set of directions* from every point to its left.
-    Two readers looked at the rect and fisheye panels side by side and compared
-    their right-hand ends, which is the one comparison the geometry does not
-    support; a curve that visibly changes character where it stops being a ring
-    is the cheapest way to stop that.
-
-    The raw fisheye images whole rings everywhere it images at all, so nothing
-    is drawn on those panels — the absence is the statement.
-    """
-    if axis != "theta" or view not in ("rect", "fisheye"):
-        return
+def _spans(rad: List[dict], view: str, axis: str):
+    """``(whole_to, reach_to)`` for a view on an axis, over its render sizes."""
     sizes = {r["input_size"] for r in rad if r["view"] == view}
-    if not sizes:
-        return
+    if not sizes or view not in ("rect", "fisheye"):
+        return None
     try:
-        lim = min(G.full_ring_limit(s, view) for s in sizes)
-        reach = max(float(G.reach_by_azimuth(s, view).max()) for s in sizes)
+        pairs = [G.coverage_span(s, view, axis) for s in sizes]
     except Exception:
+        return None
+    return min(p[0] for p in pairs), max(p[1] for p in pairs)
+
+
+def _shared_xlim(rad: List[dict], axis: str, pad: float = 0.02):
+    """One x range per axis, spanning what **any** view reaches.
+
+    Without this the rectified theta panel simply stopped at 52 deg while the
+    raw one ran to 55, and the two were read side by side as if they covered the
+    same field — the panel that had run out of camera looked like the panel that
+    had finished its curve. Sharing the range turns the missing field into blank
+    space, which is what it is. Same on radius, where the deficit is the other
+    way: the fisheye image circle is inscribed, so it has nothing past 1.0 while
+    the rectified frame carries corners to sqrt(2).
+    """
+    ends = [s for v in ("rect", "fisheye") if (s := _spans(rad, v, axis))]
+    if not ends:
+        return None
+    hi = max(e[1] for e in ends)
+    return -pad * hi, hi * (1 + pad)
+
+
+def _mark_unimaged(ax, rad: List[dict], view: str, axis: str,
+                   annotate: bool) -> None:
+    """Mark where this view stops being a whole ring, and where it ends.
+
+    Two different facts, drawn differently. Between ``whole_to`` and
+    ``reach_to`` the panel still has a curve, but it is four corner wedges — a
+    *different set of directions* from every point to its left, so comparing its
+    right-hand end with the other view's is the one comparison the geometry does
+    not support. Past ``reach_to`` there is no camera at all, and on a shared
+    axis that has to look like absence rather than like the end of the plot.
+    """
+    span = _spans(rad, view, axis)
+    lim = _shared_xlim(rad, axis)
+    if not span or not lim:
         return
-    if reach - lim < 1.0:               # whole ring all the way; nothing to say
-        return
-    ax.axvspan(lim, reach, color="0.5", alpha=0.13, lw=0, zorder=0)
-    ax.axvline(lim, color="0.45", lw=0.9, ls=":", zorder=1)
-    if annotate:
-        ax.annotate(f"partial ring\n(corners only)\npast {lim:.0f}°",
-                    xy=((lim + reach) / 2, 0.97), xycoords=("data", "axes fraction"),
-                    ha="center", va="top", fontsize=7, color="0.35")
+    whole_to, reach_to = span
+    unit = "°" if axis == "theta" else ""
+    width = lim[1] - lim[0]
+
+    def label(lo, hi, text):
+        # Only when the band is wide enough to hold the words. Two bands can be
+        # adjacent — the rectified theta panel has both — and a label crammed
+        # into a 3-degree strip lands on top of its neighbour's.
+        if annotate and (hi - lo) > 0.12 * width:
+            ax.annotate(text, xy=((lo + hi) / 2, 0.97),
+                        xycoords=("data", "axes fraction"),
+                        ha="center", va="top", fontsize=7, color="0.35")
+
+    if reach_to - whole_to > (1.0 if axis == "theta" else 0.02):
+        ax.axvspan(whole_to, reach_to, color="0.5", alpha=0.13, lw=0, zorder=0)
+        ax.axvline(whole_to, color="0.45", lw=0.9, ls=":", zorder=1)
+        label(whole_to, reach_to,
+              f"partial ring\n(corners only)\npast {whole_to:.3g}{unit}")
+    if lim[1] - reach_to > 0.03 * width:
+        ax.axvspan(reach_to, lim[1], facecolor="0.85", alpha=0.55, lw=0,
+                   zorder=0, hatch="///", edgecolor="0.65")
+        label(reach_to, lim[1], "not imaged\nby this view")
 
 
 def write_figures(payload: dict, out_dir: str) -> List[str]:
@@ -642,7 +677,10 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                         ax.plot(bx, by, marker="o", ms=5, color=colour,
                                 ls="none" if prof else "--", lw=1.2, zorder=4,
                                 label=None if prof else r["model"])
-                _shade_partial_ring(ax, rad, view, axis, row == 0)
+                _mark_unimaged(ax, rad, view, axis, row == 0)
+                xl = _shared_xlim(rad, axis)
+                if xl:
+                    ax.set_xlim(*xl)
                 ax.set_title(f"{view} · {axis}", fontsize=10)
                 ax.grid(alpha=0.3)
                 if row == len(streams) - 1:
@@ -782,6 +820,110 @@ def _write_depth_figure(payload, rad, out_dir, streams, plt) -> List[str]:
         "curve above is a few image corners.", fontsize=10)
     fig.tight_layout(rect=(0, 0.07, 1, 0.90))
     path = os.path.join(out_dir, "gt_depth.png")
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return [path]
+
+
+def _context_style(payload: dict):
+    """Line style for one context configuration, from its own config block.
+
+    Read off ``context_frames``/``context_stride`` rather than a caller's label,
+    so a mislabelled directory cannot draw a 10-frame run as the baseline.
+    Colour carries the frame count and dash carries the spacing, because those
+    are the two things the arm is separating: more evidence versus more
+    *parallax*, which ten consecutive frames of a head-worn camera do not give.
+    """
+    n = int(payload.get("config", {}).get("context_frames", 1))
+    s = int(payload.get("config", {}).get("context_stride", 1))
+    if n <= 1:
+        return "0.15", "-", 2.2, "N=1 (single frame)"
+    colour = {5: "tab:blue", 10: "tab:red"}.get(n, "tab:green")
+    return (colour, "-" if s == 1 else "--", 1.6,
+            f"N={n}" + (" consecutive" if s == 1 else f" stride {s}"))
+
+
+def write_context_figure(payloads: "Dict[str, dict]", out_dir: str,
+                         key: str = "AbsRel") -> List[str]:
+    """The temporal-context arm: one panel per (model, view, stream).
+
+    Needs several runs at once — one per configuration on the *same* split — so
+    it cannot live in :func:`write_figures`, which takes a single payload. The
+    caller passes ``{label: payload}``; every payload must share a digest, and
+    this refuses rather than drawing a comparison across different frames.
+
+    Only the incidence-angle axis. The question here is whether context changes
+    the *shape* against field position, and answering it twice on two
+    coordinates would double the panels without doubling the answer.
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return []
+    if len(payloads) < 2:
+        return []
+    digests = {p["digest"] for p in payloads.values()}
+    if len(digests) != 1:
+        raise SystemExit(
+            f"[fovbench] the context figure needs one split: got {sorted(digests)}. "
+            f"Runs on different frames cannot be drawn as one comparison.")
+
+    rad = {lab: [r for r in p["runs"] if r["protocol"] == "radial"]
+           for lab, p in payloads.items()}
+    models = sorted(set.intersection(*({r["model"] for r in v} for v in rad.values())))
+    cells = sorted({(r["view"], r["stream"]) for v in rad.values() for r in v},
+                   key=lambda c: (_VIEW_ORDER.get(c[0], 9), _STREAM_ORDER.get(c[1], 9)))
+    if not models or not cells:
+        return []
+    os.makedirs(out_dir, exist_ok=True)
+
+    fig, grid = plt.subplots(len(models), len(cells), squeeze=False, sharey="row",
+                             figsize=(3.9 * len(cells), 3.2 * len(models)))
+    any_rad = [r for v in rad.values() for r in v]
+    for row, model in enumerate(models):
+        for col, (view, stream) in enumerate(cells):
+            ax = grid[row][col]
+            for lab, p in payloads.items():
+                run = next((r for r in rad[lab] if r["model"] == model
+                            and r["view"] == view and r["stream"] == stream), None)
+                if not run:
+                    continue
+                colour, ls, lw, legend = _context_style(p)
+                prof = _profile_of(run, "theta")
+                if prof:
+                    x = np.asarray(prof["centre"], float)
+                    y = np.asarray(prof.get(key, []), float)
+                    n = np.asarray(prof["n"], float)
+                    keep = np.isfinite(y) & (n >= PROFILE_MIN_PX)
+                    if keep.sum() >= 2:
+                        ax.plot(x[keep], y[keep], ls, lw=lw, color=colour,
+                                label=legend if (row == 0 and col == 0) else None)
+            _mark_unimaged(ax, any_rad, view, "theta", row == 0)
+            xl = _shared_xlim(any_rad, "theta")
+            if xl:
+                ax.set_xlim(*xl)
+            ax.grid(alpha=0.3)
+            if row == 0:
+                ax.set_title(f"{view} · {stream}", fontsize=10)
+            if row == len(models) - 1:
+                ax.set_xlabel(_AXIS_LABEL["theta"], fontsize=8.5)
+        grid[row][0].set_ylabel(f"{model}\n{key}", fontsize=9)
+    handles, labels = grid[0][0].get_legend_handles_labels()
+    if handles:
+        fig.legend(handles, labels, loc="lower center", ncol=len(labels),
+                   fontsize=9, frameon=False)
+    p0 = next(iter(payloads.values()))
+    fig.suptitle(
+        f"ADT-FOV · temporal context · {key} vs incidence angle · split "
+        f"{p0['digest']} · {p0['n_frames']} frames\n"
+        "only the target frame is scored, so every line is the same pixels — "
+        "the context changes what the model may look at and nothing else.  "
+        "colour = frames in the stack, dashed = strided (parallax) rather than "
+        "consecutive.", fontsize=10)
+    fig.tight_layout(rect=(0, 0.06, 1, 0.91))
+    path = os.path.join(out_dir, f"context_{key}.png")
     fig.savefig(path, dpi=150)
     plt.close(fig)
     return [path]
