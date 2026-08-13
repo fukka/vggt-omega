@@ -114,3 +114,52 @@ def test_gt_median_is_carried_because_every_metric_here_is_relative():
     g = gt(lo=4.0, hi=6.0)
     met = MT.score_frame(g, g, "scale_shift")
     assert 4.0 < met["gt_median"] < 6.0
+
+
+# --------------------------------------------------------------------------- #
+# The shared module's own contract
+# --------------------------------------------------------------------------- #
+# ``finetune/eval/metrics.py`` owns ``align_depth`` and ``depth_metrics`` for the
+# whole repository and belongs to neither experiment, so it has no suite of its
+# own. These two live here because this is the suite that runs, and because this
+# package's own docstring names that module as the authority — a contract nobody
+# executes is a comment.
+
+
+def test_scale_ratio_is_a_post_alignment_residual_not_a_metric_grade():
+    """It is ``median(gt/pred)`` over the prediction *as passed*, and every caller
+    passes an aligned map.
+
+    ``depth_metrics`` never sees an unaligned prediction, so it cannot report a
+    pre-alignment scale however it is documented — and it was documented as
+    "median(gt/pred) before alignment, 1.0 = perfect metric scale" for long
+    enough to reach three printed tables. Under ``scale_only`` the value is 1.0
+    because that mode fits this very median; reading it as "the model is
+    metrically correct" grades the alignment.
+    """
+    from finetune.eval import metrics as FM
+
+    g = gt()
+    mask = np.ones_like(g, bool)
+    pred = g / 4.0                       # a model 4x out on metric scale
+
+    raw = FM.depth_metrics(pred, g, mask)["scale_ratio"]
+    assert raw == pytest.approx(4.0, rel=1e-3), "unaligned, this IS the scale error"
+
+    for mode in ("scale_only", "scale_shift"):
+        aligned = FM.align_depth(pred, g, mask, mode=mode)
+        got = FM.depth_metrics(aligned, g, mask)["scale_ratio"]
+        assert got == pytest.approx(1.0, rel=1e-3), (
+            f"{mode}: {got} — the alignment set this, so it cannot also grade it")
+
+
+def test_the_printed_label_says_which_of_those_two_it_is():
+    """The number is right in both cases; only its caption could mislead, and a
+    caption is what a reader of ``report.txt`` actually has."""
+    from finetune.eval.metrics import scale_ratio_note
+
+    assert "metrically correct" in scale_ratio_note("none")
+    assert "metrically correct" in scale_ratio_note("")
+    for mode in ("scale_only", "scale_shift", "disparity_scale_shift"):
+        note = scale_ratio_note(mode)
+        assert "residual" in note and "metrically correct" not in note, note

@@ -106,9 +106,29 @@ def depth_metrics(
     Returns
     -------
     dict with keys:
-        AbsRel, SqRel, RMSE, RMSElog, delta1, delta2, delta3,
-        scale_ratio (median(gt/pred) before alignment — 1.0 = perfect metric scale),
-        n_valid (number of valid pixels used)
+        AbsRel, SqRel, RMSE, RMSElog, log10, delta1, delta2, delta3,
+        scale_ratio, n_valid (number of valid pixels used)
+
+    ``scale_ratio`` is ``median(gt / pred)`` over ``pred`` **as passed to this
+    function** — this function never sees an unaligned prediction and cannot
+    report one. Every caller in this repo aligns first
+    (``run_baselines.py:223``, ``adt_depth.py:558``, ``fovbench.geometry.bin_by``,
+    ``slambench.metrics.score_frame``), so what it measures is the *residual*
+    after alignment:
+
+        align='none'                 the model's real metric-scale error;
+                                     1.0 means it is metrically correct
+        'scale_only'                 1.0 to floating point, by construction —
+                                     that mode fits this very median
+        'scale_shift' / disparity    ~1.0, and any departure is the shift's
+                                     doing, not a scale the model got wrong
+
+    So read it as a grade only in the ``none`` row. It was documented here as
+    "median(gt/pred) before alignment — 1.0 = perfect metric scale" for long
+    enough to reach three printed tables; the number never moved, only its
+    description was wrong. ``fovbench.geometry.radial_profile`` already said this
+    correctly, and ``raw_scale_ratio`` there is the pre-alignment quantity this
+    one was mistaken for.
     """
     # Valid = GT in range AND prediction in range. Excluding out-of-range PRED is
     # what the official/reference DAv2 eval does: disparity alignment can push a few
@@ -159,6 +179,20 @@ def aggregate_metrics(frames: list) -> dict:
     return out
 
 
+def scale_ratio_note(align: str) -> str:
+    """What ``scale_ratio`` means for a given alignment mode — see ``depth_metrics``.
+
+    Under every mode but ``none`` it is a post-alignment residual sitting at ~1.0
+    by construction, so labelling it "1.0 = perfect metric" invites a reader to
+    grade an aligned model on a number the alignment already set.
+    """
+    if align in ("", "none"):
+        return "1.0 = metrically correct"
+    if align == "scale_only":
+        return f"residual after {align}; 1.0 by construction"
+    return f"residual after {align}; ~1.0 by construction, not a grade"
+
+
 def print_depth_summary(summary: dict, label: str = "", align: str = "") -> None:
     tag = label + (f"  [{align}]" if align else "")
     print(f"\n{'='*60}")
@@ -168,7 +202,8 @@ def print_depth_summary(summary: dict, label: str = "", align: str = "") -> None
         print(f"  {k:10s}: {summary.get(k, float('nan')):.4f}")
     for k in ["delta1", "delta2", "delta3"]:
         print(f"  {k:10s}: {summary.get(k, float('nan'))*100:.2f}%")
-    print(f"  scale_ratio: {summary.get('scale_ratio', float('nan')):.4f}  (1.0 = perfect metric)")
+    print(f"  scale_ratio: {summary.get('scale_ratio', float('nan')):.4f}  "
+          f"({scale_ratio_note(align)})")
     print(f"{'='*60}\n")
 
 

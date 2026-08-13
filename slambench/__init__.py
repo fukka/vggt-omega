@@ -41,6 +41,23 @@ forward pass. Exactly one frame of the window is scored, so the arms measure
 identical points and only the evidence moves; the context is therefore kept out
 of the split digest, which exists to say two runs scored the same points.
 
+What is not verified
+--------------------
+One assumption underneath every number here rests on a document rather than a
+measurement: that ego-synth's ``d`` is **planar z** about the camera axis, which
+is the data card's own statement (gotcha 4) and is what the models are scored
+against. If it were euclidean range instead, every score would carry a
+``1/cos(theta)`` error — 1.00 on axis and 1.74 at 55 deg, radial, and so not
+absorbable by the per-frame affine.
+
+It is worth naming because two things in this package *look* like checks of it
+and are structurally incapable of being one: the rectified/fisheye depth
+agreement cited in ``baselines`` (range is equally invariant under a co-axial
+rectification) and ``verify_camera``'s sub-pixel reprojection (projection reads
+only the ray's direction, which both readings share). Believing either one is
+how this ends up unnoticed. Ticket 016 specifies the check that can fail, which
+needs the source MPS points and therefore the box.
+
 Layout
 ------
     camera.py     the Aria FISHEYE624 model, per take

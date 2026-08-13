@@ -152,9 +152,20 @@ def _clip_sort_key(clip: str) -> Tuple[int, str]:
 class FramePoints:
     """The ground truth of one (clip, frame): a point list, never a map."""
 
+    #: ``d`` is **planar z about the camera axis on the data card's authority
+    #: alone** (`docs/data/ego-synth-5b-sparse-depth.md`, "metric camera-frame Z
+    #: in metres — planar z, not range", gotcha 4). Nothing in this repository
+    #: checks it, and two things that look like checks cannot: the rectified /
+    #: fisheye depth agreement in ``baselines`` (range is equally invariant under
+    #: a co-axial rectification) and ``verify_camera``'s reprojection (a
+    #: projection reads only the ray's direction, which both readings share).
+    #: The card is a good authority and is probably right. But the wrong reading
+    #: would cost ``1/cos(theta)`` — 1.00 on axis, 1.74 at 55 deg — radial, and
+    #: so unabsorbable by the affine, which is the same failure CONTEXT.md
+    #: records for the fisheye port. Ticket 016 is the check that could fail.
     u: np.ndarray             # (N,) float32, pixel x in the 896 fisheye frame
     v: np.ndarray             # (N,) float32, pixel y
-    d: np.ndarray             # (N,) float32 metres, planar z about the camera axis
+    d: np.ndarray             # (N,) float32 metres — see the note above
     inv_dist_std: np.ndarray  # (N,) float32 1/m, scale-invariant triangulation quality
     dist_std: np.ndarray      # (N,) float32 m, the depth's own 1-sigma
 

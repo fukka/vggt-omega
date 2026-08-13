@@ -33,14 +33,23 @@ which resamples once, at the only place a value is actually needed.
 Depth conventions
 -----------------
 The rectification is **co-axial**: the pinhole shares the fisheye's optical
-centre and axis, differing only in how rays meet the image plane. Planar z is
-measured about that shared axis, so it is *unchanged* by rectifying and no
-conversion is applied. This is not an assumption inherited from a document — it
-is measured on the release itself, where the producer's own rectified and fisheye
-point sets carry identical depth values for the same points (99.7-99.8 % of
-rectified depths appear verbatim among the fisheye depths, with identical
-ranges). ``tests/test_baselines.py`` pins the invariant against an analytic
-scene, so a future non-co-axial rectifier cannot slip through silently.
+centre and axis, differing only in how rays meet the image plane. A depth
+measured about that shared axis is therefore *unchanged* by rectifying, and no
+conversion is applied on the way back. That invariance is measured on the release
+itself — the producer's own rectified and fisheye point sets carry identical
+depth values for the same points (99.7-99.8 % of rectified depths appear verbatim
+among the fisheye depths, with identical ranges) — and
+``tests/test_baselines.py`` pins it against an analytic scene, so a future
+non-co-axial rectifier cannot slip through silently.
+
+**That measurement establishes the invariance and not the convention**, and the
+distinction cost this repo a result once already (CONTEXT.md: the ERP-era "depth
+is range" assumption is what made the fisheye port score range against z-GT).
+Euclidean range is a property of the *ray*, so it too is unchanged by a co-axial
+rectification: the two streams agreeing is exactly as consistent with ``d`` being
+range as with ``d`` being planar z. Whether ``pts.d`` is one or the other is a
+separate question, it is worth up to 1.74x across this lens, and nothing in this
+package can currently answer it — see ``data.FramePoints.d`` and ticket 016.
 
 Support
 -------

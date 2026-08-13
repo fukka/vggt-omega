@@ -20,6 +20,15 @@ point lives in.
 Push those rays through a candidate camera and they must land where the fisheye
 points actually are. That closes the loop with no free parameters.
 
+**It is blind to the depth convention, by construction.** :func:`predicted_pixels`
+builds ``xyz = d * [(u-c)/f, (v-c)/f, 1]``, which is what a *planar z* reading of
+``d`` gives; a *range* reading gives ``d`` times the same vector normalised. The
+two differ only by the positive scalar ``|ray|``, and :meth:`Fisheye624.project`
+begins by forming ``x/z, y/z`` — so both hypotheses produce a bit-identical
+pixel and this file cannot tell them apart however small its residual gets. It
+verifies the camera model and its orientation, which is all it claims. What
+``d`` means is ticket 016.
+
 **It passes.** On both staged datasets the 90 deg rotation reads NN median
 0.29 px with 96.9 % of points inside 1 px, and the other three quarter turns sit
 at 4-6 px. Getting there took three corrections and none of them was a fit; the
