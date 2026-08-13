@@ -12,7 +12,6 @@ single clip understates a take's variety.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 from dataclasses import dataclass, field
@@ -20,6 +19,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from slambench import _REPO  # noqa: F401  (import registers sys.path)
 
+from finetune.eval import manifest as _manifest  # noqa: E402
 from slambench.data import DATASETS, find_takes  # noqa: E402
 
 #: Bumped whenever a change would make new numbers incomparable to old ones.
@@ -64,10 +64,10 @@ class Split:
 
     @property
     def digest(self) -> str:
-        h = hashlib.sha1(self.protocol.encode())
-        for f in self.frames:
-            h.update(f.key.encode())
-        return h.hexdigest()[:12]
+        """The comparability token. The rule is shared with the FOV experiment
+        (``finetune/eval/manifest.py``); ``PROTOCOL`` is not, and that is what
+        keeps a digest from one experiment out of the other's namespace."""
+        return _manifest.digest(self.protocol, (f.key for f in self.frames))
 
     @property
     def datasets(self) -> List[str]:
@@ -177,16 +177,8 @@ def context_window(clip_frames: int, index: int, n: int,
     return (idx, idx.index(i))
 
 
-def _evenly_spaced(items: Sequence, n: int) -> List:
-    """``n`` items spread across ``items``, endpoints included, order kept."""
-    if n <= 0 or not items:
-        return []
-    if n >= len(items):
-        return list(items)
-    if n == 1:
-        return [items[len(items) // 2]]
-    step = (len(items) - 1) / float(n - 1)
-    return [items[i] for i in sorted({int(round(i * step)) for i in range(n)})]
+#: Shared with the FOV experiment — see ``finetune/eval/manifest.py``.
+_evenly_spaced = _manifest.evenly_spaced
 
 
 def build(egosynth_root: str, datasets: Optional[Sequence[str]] = None,

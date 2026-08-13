@@ -23,6 +23,50 @@
 **<sup>1</sup>[Visual Geometry Group, University of Oxford](https://www.robots.ox.ac.uk/~vgg/)**; **<sup>2</sup>[Meta AI](https://ai.facebook.com/research/)**
 </div>
 
+---
+
+## What is in this fork
+
+Upstream VGGT-Omega, plus two **evaluation experiments** on Aria egocentric
+footage. They share a repository, some models and a definition of AbsRel; they
+share no protocol, no ground truth and no conclusion, and
+`tests/test_experiment_separation.py` enforces that from both sides.
+
+| | question | ground truth | run it |
+|---|---|---|---|
+| [`fovbench/`](fovbench/README.md) | *does monocular depth get worse toward the edge of a wide field of view, and does rectifying first change the answer?* | ADT, dense depth maps | `python -m fovbench.run --adt-root $ADT --out eval_out/fovbench` |
+| [`slambench/`](slambench/__init__.py) | *how accurate is each model on real egocentric footage?* | ego-synth 5B, sparse MPS SLAM points | `python -m slambench.run --egosynth-root $EGOSYNTH --models vggt_1b --baselines raw` |
+
+Neither needs a GPU to exercise: `--models analytic` (fovbench) and
+`--models analytic,oracle` (slambench) drive the whole pipeline with no weights
+and no downloads.
+
+```bash
+python -m pytest tests fovbench/tests slambench/tests -q     # ~190 tests, ~30 s, no data
+```
+
+`tests/` is the root suite and belongs to neither experiment: it holds the
+boundary between them and the two foundations they both stand on.
+
+### The shared substrate
+
+Anything both experiments need lives outside both, so that neither owns it and
+neither can quietly change it for the other:
+
+| | holds |
+|---|---|
+| [`finetune/eval/metrics.py`](finetune/eval/metrics.py) | `align_depth` and `depth_metrics` — the scoring protocol, for the whole repository |
+| [`finetune/eval/manifest.py`](finetune/eval/manifest.py) | the split digest: what makes two runs the same experiment |
+| [`finetune/eval/baselines/model_zoo.py`](finetune/eval/baselines/model_zoo.py) | the model registry, weights, availability, and each model's native alignment |
+| [`finetune/aria_calibration.py`](finetune/aria_calibration.py) | the Aria 214-1 RGB lens — one description, three consumers |
+
+Other subprojects — `VGGT-360-fisheye/`, `raytun3r/`, `cam3r/`, `fisheye3r/` —
+are separate lines of work with their own READMEs. `docs/handoff/tickets/` is the
+work log; `docs/data/` describes the datasets; `CONTEXT.md` is the domain
+glossary, and is the first thing to read if a depth convention looks ambiguous.
+
+---
+
 ## Pretrained models
 
 Before using the models, please request access to the checkpoints [here](https://huggingface.co/facebook/VGGT-Omega). Once your request is approved, you can download the checkpoints. Please note that access requests are reviewed by an automated process based on the information provided in the request.

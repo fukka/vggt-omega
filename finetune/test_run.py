@@ -79,19 +79,15 @@ def build_dav2(args):
 # finetune.viz so training and this tool share one implementation.
 
 
-# Aria RGB 214-1 KB4 coefficients fitted from the actual Fisheye624 VRS calibration
-# via least-squares over θ∈[0°,60°]; max angular error 0.22° vs the full
-# 13th-order Fisheye624 model (f=611, cx≈715, cy≈717 at native 1408×1408).
-_ARIA_214_1_D_KB4 = np.array([0.3852, -0.4442, 0.5591, -0.3254], np.float64)
-# Native 1408×1408 sensor intrinsics (before rotation)
-_ARIA_214_1_F_NORM  = 610.94 / 1408.0
-_ARIA_214_1_CX_NORM = 715.11 / 1408.0  # native cx/W
-_ARIA_214_1_CY_NORM = 716.71 / 1408.0  # native cy/H
-# After 90° CW rotation (standard for extracted Aria RGB frames):
-#   new_cx = H_native - old_cy → normalized: (1 - CY_NORM)
-#   new_cy = old_cx            → normalized: CX_NORM
-_ARIA_214_1_CX_ROT_NORM = 1.0 - _ARIA_214_1_CY_NORM  # ≈ 0.491
-_ARIA_214_1_CY_ROT_NORM = _ARIA_214_1_CX_NORM         # ≈ 0.508
+# The Aria 214-1 lens comes from ``finetune/aria_calibration.py``. This file
+# held a fourth copy, with the same off-by-one ``rectify.py`` had — its comment
+# said "new_cx = H_native - old_cy", which is a pixel past the last column of an
+# H-wide frame. The KB4 coefficients are a least-squares fit over theta in
+# [0, 60] deg to the device's own Fisheye624 calibration, max angular error
+# 0.22 deg; the provenance is in that module.
+from finetune.aria_calibration import KB4 as _ARIA_214_1_KB4, intrinsics as _aria
+
+_ARIA_214_1_D_KB4 = np.array(_ARIA_214_1_KB4, np.float64)
 # Output focal (fraction of max(H,W)) that avoids black borders for this camera.
 # Derived empirically: 0.55*H at 512px ≈ focal=281, matching projectaria_tools
 # linear-camera output at the same resolution (0.22° max error vs GT).
@@ -100,10 +96,8 @@ _ARIA_214_1_FOCAL_OUT_NORM = 0.55
 
 def _aria_K(H: int, W: int) -> np.ndarray:
     """Intrinsics for a pre-extracted (rotated 90° CW) Aria RGB 214-1 frame."""
-    f  = _ARIA_214_1_F_NORM * max(H, W)
-    cx = _ARIA_214_1_CX_ROT_NORM * W
-    cy = _ARIA_214_1_CY_ROT_NORM * H
-    return np.array([[f, 0, cx], [0, f, cy], [0, 0, 1.0]], np.float64)
+    fx, fy, cx, cy = _aria(H, W, rotated=True)
+    return np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1.0]], np.float64)
 
 
 def _detect_preset(clip_path: str) -> str:

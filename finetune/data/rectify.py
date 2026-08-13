@@ -16,14 +16,20 @@ from typing import Dict, Tuple
 
 import numpy as np
 
-# Aria RGB 214-1 calibration (native 1408x1408, KB4), as validated in test_run.py.
-_ARIA_214_1_D_KB4 = np.array([0.3852, -0.4442, 0.5591, -0.3254], np.float64)
-_ARIA_214_1_F_NORM = 610.94 / 1408.0
-_ARIA_214_1_CX_NORM = 715.11 / 1408.0
-_ARIA_214_1_CY_NORM = 716.71 / 1408.0
-# After the standard 90 deg CW storage rotation:
-_ARIA_214_1_CX_ROT_NORM = 1.0 - _ARIA_214_1_CY_NORM
-_ARIA_214_1_CY_ROT_NORM = _ARIA_214_1_CX_NORM
+# The Aria 214-1 calibration and the storage-rotation rule come from
+# ``finetune/aria_calibration.py``, which is the single description of this lens.
+#
+# This file used to hold its own copy, and its rotation was a pixel out: it put
+# the rotated principal point at ``W - cy`` where the other two consumers use
+# ``(H-1) - cy``. A pixel's centre is at its integer coordinate, so the last
+# column of an H-wide frame is at H-1; np.rot90(m, 3) sends (u, v) to
+# ((H-1) - v, u). Correcting it moves the ADT-FOV rectified arm's per-bin AbsRel
+# by 0.1-0.7% and its ``pen`` by -0.4% (measured), and it removes a one-pixel
+# disagreement between the two arms of an experiment whose whole purpose is that
+# they be comparable.
+from finetune.aria_calibration import KB4 as _ARIA_214_1_KB4, intrinsics as _aria
+
+_ARIA_214_1_D_KB4 = np.array(_ARIA_214_1_KB4, np.float64)
 _ARIA_214_1_FOCAL_OUT_NORM = 0.55  # output focal / max(H,W): avoids black borders
 
 
@@ -41,10 +47,10 @@ class FisheyeRectifier:
             fx, fy, cx, cy = (float(v) for v in self.fisheye_k.split(","))
             K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1.0]], np.float64)
         elif self.preset == "aria-214-1":
-            f = _ARIA_214_1_F_NORM * max(H, W)
-            cx = _ARIA_214_1_CX_ROT_NORM * W
-            cy = _ARIA_214_1_CY_ROT_NORM * H
-            K = np.array([[f, 0, cx], [0, f, cy], [0, 0, 1.0]], np.float64)
+            # rotated=True: every ADT loader in this repo applies np.rot90(k=3)
+            # before anything else touches the frame.
+            fx, fy, cx, cy = _aria(H, W, rotated=True)
+            K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1.0]], np.float64)
         else:
             f = 0.43 * max(H, W)
             K = np.array([[f, 0, W / 2.0], [0, f, H / 2.0], [0, 0, 1.0]], np.float64)

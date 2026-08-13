@@ -37,7 +37,6 @@ reproducibility contract.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import sys
@@ -45,6 +44,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 
 from fovbench import _REPO  # noqa: F401  (import registers sys.path)
+
+from finetune.eval import manifest as _manifest  # noqa: E402
 
 from datasets.adt import (_pair_frames, common_frame_ids,  # noqa: E402
                           find_adt_sequences)
@@ -100,11 +101,15 @@ class Split:
 
     @property
     def digest(self) -> str:
-        """Short hash over the ordered frame keys — the comparability token."""
-        h = hashlib.sha1(self.protocol.encode())
-        for f in self.frames:
-            h.update(f.key.encode())
-        return h.hexdigest()[:12]
+        """Short hash over the ordered frame keys — the comparability token.
+
+        The rule lives in ``finetune/eval/manifest.py`` because both experiments
+        answer "are these two runs comparable?" with it, and two copies of that
+        answer can drift into meaning different things while both still looking
+        like digests. ``PROTOCOL`` stays local: it is what keeps this
+        experiment's digests out of the other's namespace.
+        """
+        return _manifest.digest(self.protocol, (f.key for f in self.frames))
 
     @property
     def sequences(self) -> List[str]:
@@ -154,17 +159,8 @@ class Split:
         return sp
 
 
-def _evenly_spaced(items: List, n: int) -> List:
-    """``n`` items spread across ``items``, endpoints included, order kept."""
-    if n <= 0 or not items:
-        return []
-    if n >= len(items):
-        return list(items)
-    if n == 1:
-        return [items[len(items) // 2]]
-    step = (len(items) - 1) / float(n - 1)
-    idx = sorted({int(round(i * step)) for i in range(n)})
-    return [items[i] for i in idx]
+#: Shared with the SLAM evaluation — see ``finetune/eval/manifest.py``.
+_evenly_spaced = _manifest.evenly_spaced
 
 
 def _context_window(n_pool: int, i: int, n: int, stride: int) -> tuple:

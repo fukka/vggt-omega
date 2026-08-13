@@ -17,6 +17,10 @@ Kannala-Brandt KB4 model::
     f = 610.94,  cx = 715.11,  cy = 716.71      (pixels @ 1408)
     KB4 = [0.3852, -0.4442, 0.5591, -0.3254]
 
+(Quoted for the reader; the values themselves live in
+``finetune/aria_calibration.py``, which is the one description of this lens and
+where the storage-rotation rule is derived.)
+
 Why the *same* KB4 coefficients work for both models
 ----------------------------------------------------
 OpenCV-fisheye (DAC) distorts the incidence angle θ as
@@ -51,11 +55,17 @@ from typing import Dict, Tuple
 import numpy as np
 
 # Aria 214-1 RGB, native 1408×1408 (see finetune/data/rectify.py).
-_ARIA_F_NATIVE = 610.94
-_ARIA_CX_NATIVE = 715.11
-_ARIA_CY_NATIVE = 716.71
-_ARIA_NATIVE = 1408.0
-_ARIA_KB4 = (0.3852, -0.4442, 0.5591, -0.3254)
+# The calibration itself lives in ``finetune/aria_calibration.py`` — three
+# modules describe this lens and they used to carry three copies of these
+# numbers and three spellings of the storage rotation, one of which was a pixel
+# out. Re-exported under the old names so this module's callers are unchanged.
+from finetune.aria_calibration import (KB4 as _ARIA_KB4,  # noqa: E402
+                                       NATIVE as _ARIA_NATIVE,
+                                       F_NATIVE as _ARIA_F_NATIVE,
+                                       CX_NATIVE as _ARIA_CX_NATIVE,
+                                       CY_NATIVE as _ARIA_CY_NATIVE,
+                                       centered as _centered,
+                                       intrinsics as _intrinsics)
 
 
 @dataclass
@@ -114,15 +124,7 @@ def aria_intrinsics(H: int, W: int, rotated: bool = True) -> AriaFisheye:
                principal point accordingly. Set False for a frame in native
                sensor orientation (e.g. an already-upright EgoExo render).
     """
-    sx, sy = W / _ARIA_NATIVE, H / _ARIA_NATIVE
-    fx = _ARIA_F_NATIVE * sx
-    fy = _ARIA_F_NATIVE * sy
-    cx = _ARIA_CX_NATIVE * sx
-    cy = _ARIA_CY_NATIVE * sy
-    if rotated:
-        # 270° CCW (= 90° CW): (x,y) -> (H-1-y, x); fx/fy swap.
-        fx, fy = fy, fx
-        cx, cy = (H - 1) - cy, cx
+    fx, fy, cx, cy = _intrinsics(H, W, rotated=rotated)
     return AriaFisheye(H=H, W=W, fx=fx, fy=fy, cx=cx, cy=cy, k=_ARIA_KB4)
 
 
@@ -133,8 +135,8 @@ def aria_centered(H: int, W: int) -> AriaFisheye:
     principal point is unknown (e.g. the EgoExo4D ego renders, used qualitatively
     so a small principal-point offset does not matter).
     """
-    f = _ARIA_F_NATIVE * (max(H, W) / _ARIA_NATIVE)
-    return AriaFisheye(H=H, W=W, fx=f, fy=f, cx=W / 2.0, cy=H / 2.0, k=_ARIA_KB4)
+    fx, fy, cx, cy = _centered(H, W)
+    return AriaFisheye(H=H, W=W, fx=fx, fy=fy, cx=cx, cy=cy, k=_ARIA_KB4)
 
 
 # --------------------------------------------------------------------------- #

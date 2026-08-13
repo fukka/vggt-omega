@@ -44,26 +44,43 @@ network flagged as valid, and puts ~10.9% dead pixels into the eval mask.
 
 Provenance
 ----------
-Constants and the KB4 math are vendored from this repo's
-``finetune/eval/baselines/aria_fisheye.py`` (calibration validated there to
-<0.22 deg against projectaria_tools) so that VGGT-360-fisheye stays a
-self-contained subproject.  If you change the calibration, change it in both
-places.
+The calibration constants and the storage-rotation rule come from
+``finetune/aria_calibration.py`` at the repository root, which is the single
+description of this lens (validated to <0.22 deg against projectaria_tools).
+They were vendored here once, to keep VGGT-360-fisheye self-contained, under a
+comment telling the reader to change them in two places — and a third copy in
+``finetune/data/rectify.py`` then drifted a pixel.  The self-containment was
+already notional: ``main_adt.py`` puts the repository root on ``sys.path`` so it
+can import ``finetune.eval.metrics``, the shared scoring protocol.  The KB4
+geometry below — the ray LUT, the two angular limits — is this module's own and
+stays here.
 """
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import numpy as np
 
-# Aria 214-1 RGB calibration at native 1408x1408 (see finetune/data/rectify.py).
-_ARIA_F_NATIVE = 610.94
-_ARIA_CX_NATIVE = 715.11
-_ARIA_CY_NATIVE = 716.71
-_ARIA_NATIVE = 1408.0
-_ARIA_KB4 = (0.3852, -0.4442, 0.5591, -0.3254)
+# The calibration lives at the repository root, in
+# ``finetune/aria_calibration.py``. This subproject already depends on the root
+# for the shared scoring protocol (``main_adt.py`` puts it on sys.path to import
+# ``finetune.eval.metrics``); depending on it for the lens is the same
+# arrangement, and it is what stops the three descriptions of this camera
+# drifting — one of them was a pixel out. The bootstrap is here rather than in
+# the callers because ``checks/*.py`` add only the subproject directory.
+_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
+from finetune.aria_calibration import (KB4 as _ARIA_KB4,  # noqa: E402
+                                       NATIVE as _ARIA_NATIVE,
+                                       F_NATIVE as _ARIA_F_NATIVE,
+                                       CX_NATIVE as _ARIA_CX_NATIVE,
+                                       CY_NATIVE as _ARIA_CY_NATIVE,
+                                       intrinsics as _intrinsics)
 
 # Optional path to an Aria device-calibration JSON.  When it is set AND
 # projectaria_tools is importable, the lens' own "valid radius" is preferred
@@ -194,14 +211,7 @@ def aria_intrinsics(H: int, W: int, rotated: bool = True,
               own valid radius instead of deriving it (see
               ``aria_valid_theta_max``).
     """
-    sx, sy = W / _ARIA_NATIVE, H / _ARIA_NATIVE
-    fx = _ARIA_F_NATIVE * sx
-    fy = _ARIA_F_NATIVE * sy
-    cx = _ARIA_CX_NATIVE * sx
-    cy = _ARIA_CY_NATIVE * sy
-    if rotated:
-        fx, fy = fy, fx
-        cx, cy = (H - 1) - cy, cx
+    fx, fy, cx, cy = _intrinsics(H, W, rotated=rotated)
     return FisheyeCam(H=H, W=W, fx=fx, fy=fy, cx=cx, cy=cy, k=_ARIA_KB4,
                       valid_theta=aria_valid_theta_max(calib_json))
 
