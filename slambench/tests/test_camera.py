@@ -100,40 +100,106 @@ def test_rescale_preserves_the_direction_a_pixel_sees():
     assert np.nanmax(np.abs(a - b)) < 1e-6
 
 
-def test_rotate90_sends_the_principal_point_where_the_pixels_go():
-    """One CCW quarter turn maps ``(x, y) -> (N - y, x)``; the calibration has to
-    follow the pixels or every ray is a quarter turn out."""
+def test_a_quarter_turn_sends_pixels_where_the_rotated_image_puts_them():
+    """One CCW quarter turn maps ``(u, v) -> (N - v, u)``. The turn is carried on
+    the ray and the pixel, never on the parameters — ``p1, p2`` and ``s1..s4``
+    are not isotropic, and projectaria_tools makes the same call: its
+    ``rotate_camera_calib_cw90deg`` takes the Linear model only."""
     c = cam()
     n = c.width - 1
-    r = c.rotate90(1)
-    assert r.cx == pytest.approx(n - c.cy)
-    assert r.cy == pytest.approx(c.cx)
-    assert r.f == c.f
+    u, v = _pixels(c, n=8, margin=0.3)
+    d = c.unproject(u, v)                      # rays in the unrotated frame
+    r = c.rotated(1)
+    assert r.params == c.params, "a quarter turn must not touch the parameters"
+    ru, rv = r.project(C._rot_xyz(d, 1))       # the same rays, seen rotated
+    assert np.nanmax(np.abs(ru - (n - v))) < 1e-6
+    assert np.nanmax(np.abs(rv - u)) < 1e-6
+
+
+def test_the_quarter_turn_round_trip_closes():
+    """unproject then project through a rotated camera has to be the identity, or
+    rect_derect samples every point from the wrong place."""
+    c = cam().rotated(1)
+    u, v = _pixels(c, n=10, margin=0.28)
+    ru, rv = c.project(c.unproject(u, v))
+    assert np.nanmax(np.hypot(ru - u, rv - v)) < 1e-6
 
 
 def test_four_quarter_turns_are_the_identity():
     c = cam()
-    r = c.rotate90(4)
-    assert r.cx == pytest.approx(c.cx) and r.cy == pytest.approx(c.cy)
+    u, v = _pixels(c, n=8, margin=0.3)
+    d = c.unproject(u, v)
+    assert np.allclose(C._rot_xyz(d, 4), d)
+    assert c.rotated(4).rotation == 0
 
 
-def test_native_resolution_is_inferred_from_the_principal_point():
-    """MPS does not store the sensor size, so it is read off the calibration. The
-    two Aria RGB sizes are far enough apart that the inference cannot land
-    between them — and a file that is not this kind of calibration must be
-    refused rather than guessed at."""
-    assert C._infer_native(1440.0, 1440.0) == 2880
-    assert C._infer_native(704.0, 704.0) == 1408
+def test_the_sensor_frame_is_inferred_from_the_principal_point():
+    """MPS does not store the frame its calibration is in, so it is read off the
+    principal point. The two Aria RGB sizes are far enough apart that the
+    inference cannot land between them — and a file that is not this kind of
+    calibration must be refused rather than guessed at."""
+    assert C._sensor_frame(1440.0, 1440.0) == C.SENSOR_FULL
+    assert C._sensor_frame(704.0, 704.0) == C.STREAM_RES
     with pytest.raises(C.CalibrationUnavailable):
-        C._infer_native(120.0, 120.0)
+        C._sensor_frame(120.0, 120.0)
+
+
+def test_the_crop_reproduces_the_numbers_in_projectaria_tools_322():
+    """The 1408 stream is a 2816 window of the 2880 sensor, binned 2x — not a
+    plain downsample. projectaria_tools issue #322 reports an MPS calibration at
+    full resolution beside the same calibration regenerated at 1408, and those
+    two are the only published measurement of this offset there is.
+
+    A plain halving misses by exactly 16 px, which is the 32 px crop halved."""
+    f, cx, cy = 1221.88, 1462.73, 1465.93                 # reported, full res
+    q = C._rescale_params((f, cx, cy) + (0.0,) * 12,
+                          scale=C.STREAM_RES / C.SENSOR_WINDOW,
+                          origin_offset=C.CROP_ORIGIN)
+    assert q[0] == pytest.approx(610.94, abs=0.005)       # reported, at 1408
+    assert q[1] == pytest.approx(715.11, abs=0.005)
+    assert q[2] == pytest.approx(716.71, abs=0.005)
+
+    naive = C._rescale_params((f, cx, cy) + (0.0,) * 12,
+                              scale=0.5, origin_offset=0.0)
+    assert naive[1] - q[1] == pytest.approx(C.CROP_ORIGIN / 2, abs=0.01)
+
+
+def test_the_rescale_is_the_librarys_rescale_exactly():
+    """``_rescale_params`` is written out rather than called because
+    projectaria_tools needs Python >= 3.9 and this repo's interpreter may be
+    older. The library is the authority; this is what enforces it."""
+    try:
+        from projectaria_tools.core import calibration as pcal
+        from projectaria_tools.core.sophus import SE3
+    except ImportError:
+        pytest.skip("projectaria_tools not installed")
+    prm = np.array(PARAMS, float)
+    try:
+        lib = pcal.CameraCalibration("camera-rgb",
+                                     pcal.CameraModelType.FISHEYE624, prm,
+                                     SE3(), 2880, 2880, None, np.pi, "")
+    except TypeError:                       # older binding, no serial argument
+        lib = pcal.CameraCalibration("camera-rgb",
+                                     pcal.CameraModelType.FISHEYE624, prm,
+                                     SE3(), 2880, 2880, None, np.pi)
+    if not hasattr(lib, "rescale"):
+        pytest.skip("this projectaria_tools predates the rescale binding")
+    want = np.asarray(lib.rescale(np.array([896, 896], np.int32),
+                                  896 / C.SENSOR_WINDOW,
+                                  np.array([C.CROP_ORIGIN, C.CROP_ORIGIN])
+                                  ).get_projection_params(), float)
+    got = np.asarray(C._rescale_params(PARAMS, 896 / C.SENSOR_WINDOW,
+                                       C.CROP_ORIGIN), float)
+    assert np.abs(got - want).max() == 0.0, (
+        f"drifted from the library by {np.abs(got - want).max():.3e}")
 
 
 def test_an_unverified_orientation_is_refused_not_warned():
     """A quarter-turn error does not make the score worse, it makes it about a
     different part of the image. That is worth a hard stop."""
     c = cam().rescale(896)
-    c = C.Fisheye624(c.params, c.width, c.height, dataset="nymeria")
-    assert "nymeria" not in C.VERIFIED_ROTATION, (
+    c = C.Fisheye624(c.params, c.width, c.height, dataset="oxford")
+    assert "oxford" not in C.VERIFIED_ROTATION, (
         "this test encodes the state at the time of writing; if the rotation has "
         "since been verified, point it at a dataset that has not been")
     with pytest.raises(C.OrientationUnverified):

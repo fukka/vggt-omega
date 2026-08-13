@@ -12,12 +12,18 @@ What makes a check possible at all
 ----------------------------------
 ego-synth ships the same SLAM points projected **twice**: into the raw fisheye,
 and into a pinhole whose every parameter is stated (110 deg, focal 313.693,
-render 896, principal point at the centre). The two streams are co-axial — the
-producer's own depths agree verbatim between them — so a rectified point
-back-projects to a ray in the same camera frame the fisheye point lives in.
+render 896, principal point at :func:`rect_centre`). The two streams are
+co-axial — the producer's own depths agree verbatim between them — so a
+rectified point back-projects to a ray in the same camera frame the fisheye
+point lives in.
 
 Push those rays through a candidate camera and they must land where the fisheye
 points actually are. That closes the loop with no free parameters.
+
+**It passes.** On both staged datasets the 90 deg rotation reads NN median
+0.29 px with 96.9 % of points inside 1 px, and the other three quarter turns sit
+at 4-6 px. Getting there took three corrections and none of them was a fit; the
+last was in this file, and :func:`rect_centre` is where it is written down.
 
 Why this compares point *clouds* and not point *pairs*
 ------------------------------------------------------
@@ -46,8 +52,10 @@ Two statistics, because the first one lies about magnitude
 The nearest-neighbour distance is a good **detector** and a bad **ruler**. In a
 cloud this dense there is nearly always *some* unrelated point a few pixels away,
 so the statistic saturates at roughly the local point spacing however wrong the
-camera is. Measured on the take below: NN median 4.25 px, while the distance to
-the point actually being predicted was **15.33 px**.
+camera is. Measured on a *wrong* rotation of the take below: NN median 4.12 px,
+while the distance to the point actually being predicted was **13.20 px**. The
+twin residual is what made the crop and the centre findable at all — the NN
+statistic reads 4 px whether the camera is 6 px out or 13.
 
 So :func:`twin_residual` is reported beside it. It uses the subset of points
 whose depth appears **exactly once** in the fisheye set — about 13 % of a frame,
@@ -115,6 +123,25 @@ def rectification_of(take_dir: str) -> Tuple[float, float, int]:
     with open(os.path.join(take_dir, "meta.json")) as fh:
         r = json.load(fh)["rectification"]
     return float(r["fov_deg"]), float(r["focal_px"]), int(r["render_size"])
+
+
+def rect_centre(render: int) -> float:
+    """The rectified render's principal point: ``(N - 1) / 2``, not ``N / 2``.
+
+    A pixel's centre is at its integer coordinate, so an ``N`` square image is
+    centred on ``(N - 1) / 2``. This is what ``projectaria_tools``'
+    ``get_linear_camera_calibration`` uses, and what ``baselines.Pinhole`` uses;
+    this function exists because *this file* used ``N / 2`` and the half pixel
+    was the last of the residual.
+
+    It does not arrive at the fisheye as half a pixel. The back-projection
+    divides by the pinhole's focal and the fisheye projection multiplies by its
+    own, so the error is magnified by ``386.28 / 313.69 = 1.23`` to 0.62 px —
+    and the residual it left behind was a constant ``(+0.71, +0.71)``, flat in
+    radius, on both datasets. Correcting it takes the twin residual from 1.03 px
+    to 0.30 px.
+    """
+    return (render - 1) / 2.0
 
 
 def read_variant(npz_path: str, variant: str, frame: int) -> np.ndarray:
@@ -191,7 +218,7 @@ def verify_take(take_dir: str, calib_json: str, dataset: str,
                 clips: int = 2) -> Dict[int, RotationResult]:
     """Each of the four quarter turns, scored over several frames of a take."""
     fov, focal, render = rectification_of(take_dir)
-    centre = render / 2.0
+    centre = rect_centre(render)
     npzs = sorted(glob.glob(os.path.join(take_dir, "sparse_depth", "*.npz")))[:clips]
     if not npzs:
         raise SystemExit(f"[slambench] {take_dir} has no sparse_depth/*.npz")

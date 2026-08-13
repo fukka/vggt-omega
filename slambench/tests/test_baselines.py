@@ -184,3 +184,40 @@ def test_rect_derect_without_a_camera_refuses_rather_than_defaults():
     with pytest.raises(SystemExit) as e:
         B.build(B.RECT_DERECT, model=None, cam=None)
     assert "calibration" in str(e.value).lower() or "camera" in str(e.value).lower()
+
+
+def test_the_two_rectifiers_agree():
+    """``rectify`` prefers ``projectaria_tools.distort_by_calibration`` — the call
+    the Aria ecosystem rectifies with — and falls back to ``cv2.remap`` over this
+    module's own geometry. They are independent implementations of the same map,
+    so agreeing to interpolation rounding is a real cross-check on the camera
+    chain: a wrong crop, scale or quarter turn would separate them immediately.
+
+    Measured on a real ego-synth frame at the time of writing: median 0 levels,
+    max 3, on 0-255 uint8.
+    """
+    cv2 = pytest.importorskip("cv2")
+    cam = cam896().rotated(1)
+    lib_probe = B._library_rectify(np.zeros((RES, RES, 3), np.uint8),
+                                   cam, B.Pinhole(64, 110.0))
+    if lib_probe is None:
+        pytest.skip("projectaria_tools not installed")
+
+    # A frame with structure at every scale, so a misalignment cannot hide in
+    # flat regions. Deterministic.
+    j = np.arange(RES, dtype=np.float32)
+    xv, yv = np.meshgrid(j, j)
+    tex = (127 + 90 * np.sin(xv / 11.0) * np.cos(yv / 13.0)
+           + 30 * np.sin((xv + yv) / 3.0))
+    frame = np.repeat(np.clip(tex, 0, 255).astype(np.uint8)[:, :, None], 3, 2)
+
+    bl = B.RectDerectBaseline.__new__(B.RectDerectBaseline)
+    bl.cam, bl.pin, bl._map = cam, B.Pinhole(256, 110.0), None
+    mapx, mapy, in_cone = bl._remap()
+    ours = cv2.remap(frame, mapx, mapy, cv2.INTER_LINEAR,
+                     borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+    theirs = B._library_rectify(frame, cam, bl.pin)
+
+    d = np.abs(ours[in_cone].astype(np.int16) - theirs[in_cone].astype(np.int16))
+    assert np.median(d) <= 1, f"median differs by {np.median(d)} levels"
+    assert d.max() <= 12, f"max differs by {d.max()} levels — not interpolation"

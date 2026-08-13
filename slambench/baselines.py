@@ -193,14 +193,24 @@ class RectDerectBaseline(Baseline):
     def rectify(self, frame: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """The fisheye frame as a co-axial pinhole render, plus its valid mask.
 
+        ``projectaria_tools.distort_by_calibration`` does the resampling when it
+        is importable. That is the call the Aria ecosystem rectifies with — the
+        Ego-Exo4D undistortion tutorial and the AEA release both use it — so a
+        model fed by this baseline sees what it would see anywhere else. The
+        ``cv2.remap`` path below is the fallback, and ``test_baselines.py`` pins
+        the two together.
+
         Zero-filled outside the imaged cone rather than border-replicated: a
         replicated pixel is a fabricated observation, and the model would be
         scored on its response to one.
         """
-        import cv2
-        mapx, mapy, in_cone = self._remap()
-        out = cv2.remap(frame, mapx, mapy, cv2.INTER_LINEAR,
-                        borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+        _, _, in_cone = self._remap()
+        out = _library_rectify(frame, self.cam, self.pin)
+        if out is None:
+            import cv2
+            mapx, mapy, _ = self._remap()
+            out = cv2.remap(frame, mapx, mapy, cv2.INTER_LINEAR,
+                            borderMode=cv2.BORDER_CONSTANT, borderValue=0)
         return out, in_cone
 
     # -- the round trip ----------------------------------------------------- #
@@ -237,6 +247,39 @@ class RectDerectBaseline(Baseline):
             return out
         out[inside] = _bilinear(pred_rect, u[inside], v[inside])
         return out
+
+
+def _library_rectify(frame: np.ndarray, cam: Fisheye624,
+                     pin: Pinhole) -> Optional[np.ndarray]:
+    """Rectify with ``projectaria_tools``, or ``None`` if it is not importable.
+
+    The library has no rotated fisheye calibration to offer — its
+    ``rotate_camera_calib_cw90deg`` is Linear-model-only — so the frame is turned
+    back to the sensor's own orientation, rectified there, and turned upright
+    again. The pinhole is square and centred, so it is unchanged by that turn
+    and ``pin`` describes the result either way.
+    """
+    try:
+        from projectaria_tools.core import calibration as pcal
+        from projectaria_tools.core.sophus import SE3
+    except ImportError:
+        return None
+    if not hasattr(pcal, "distort_by_calibration"):
+        return None
+    args = ("camera-rgb", pcal.CameraModelType.FISHEYE624,
+            np.asarray(cam.params, float), SE3(), cam.width, cam.height,
+            None, np.pi)
+    try:
+        src = pcal.CameraCalibration(*args, "")
+    except TypeError:                       # older binding, no serial argument
+        src = pcal.CameraCalibration(*args)
+    dst = pcal.get_linear_camera_calibration(pin.size, pin.size, pin.focal,
+                                             "pinhole")
+    # np.rot90's exponent is the opposite sign to camera._rot_pixel's quarter
+    # turns: rot90(m, k)[i, j] == m[j, N - i], which is _rot_pixel's inverse.
+    turned = np.ascontiguousarray(np.rot90(frame, cam.rotation))
+    out = pcal.distort_by_calibration(turned, dst, src)
+    return np.ascontiguousarray(np.rot90(np.asarray(out), -cam.rotation))
 
 
 def _bilinear(img: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:

@@ -27,39 +27,79 @@ means mapping its depth back onto the raw fisheye points, which is *fisheye pixe
 -> ray -> pinhole pixel*, and both directions of this model are on that path. The
 ``raw`` baseline needs no camera model at all and does not import this.
 
-Nothing about how this calibration maps onto ego-synth's frames is settled
---------------------------------------------------------------------------
-This module loads and applies the model correctly — the FISHEYE624 maths is the
-reference implementation's when ``projectaria_tools`` is present, and the round
-trip closes exactly. What is **not** established is the convention relating the
-calibration's frame to the 896 frame ego-synth ships. ``verify_camera.py``
-measures it, and as of writing it fails:
+The frame the calibration describes is *not* the frame ego-synth ships
+----------------------------------------------------------------------
+This is the whole difficulty of this module, and it is a **known, documented
+discrepancy in the Aria ecosystem**, not something peculiar to ego-synth:
 
-    best case ~4 px median reprojection, ~5 % of points within 1 px
-    against a ~0.5-2 % chance rate and a sub-pixel bar
+    projectaria_tools issue #322, "ADT online_calibration.jsonl RGB is off by
+    factor of 2x" — the MPS ``online_calibration`` RGB intrinsics are expressed
+    at full sensor resolution, while the VRS ships the binned stream.
 
-Narrowed since, by the twin residual (see ``verify_camera``): the rotation **is**
-90 deg CCW, the same on both datasets measured, with a 2.2x/1.7x margin. What
-survives it is ~6.8 px, near-identical across datasets — systematic, not noise.
+Three facts compose into the chain this module implements:
 
-Ruled out, each measured rather than reasoned about:
+1. The Aria RGB sensor is **2880** square, and that is the frame MPS writes the
+   calibration in. :func:`_sensor_frame` reads it off the principal point.
+2. The **1408** stream every Aria recording in this evaluation was captured at
+   is not a plain downsample of it: it is a 2816 centre crop, binned 2x. That
+   the window is 2816 rather than 2880 is what issue #322 reports, and its own
+   numbers pin the offset — the reporter's full-resolution
+   ``f, cx, cy = 1221.88, 1462.73, 1465.93`` and their locally regenerated
+   1408 values ``610.94, 715.11, 716.71`` agree with a 32 px crop then a halving
+   to 0.005 px, and disagree with a plain halving by exactly 16 px.
+3. ego-synth resized that 1408 stream to **896** — ``meta.json`` records
+   ``source_width = 1408`` on all four datasets.
 
-* the other three quarter turns, and a continuous roll swept at 2 deg;
-* the resolution — the implied sensor size was swept from 1000 to 4200 px and
-  the best (~2820-2840) still leaves 1.4-1.9 px median and 10-21 % within 1 px;
-* the device-to-camera extrinsic, a real ~38.7 deg tilt that turned out not to
-  be the explanation;
-* this module's own projection, now checked against the reference.
+So the transform is one crop-then-scale, in ``CameraCalibration.rescale``'s own
+order ("(1) shift -> (2) scaling") and on its pixel-centre convention:
 
-Still open, in the order worth trying: a **crop** before the resize (only the
-scale was swept, not the centre — a joint search over scale and principal point
-is the obvious next move), a rectification axis that is tilted rather than
-merely rolled, or an online calibration describing a different stream than the
-one ego-synth read.
+    896 = rescale(scale = 896/2816, origin_offset = 32)
 
-So :data:`DATASET_ROTATION` is a placeholder, :data:`VERIFIED_ROTATION` is empty,
-and :func:`require_verified` refuses to hand out a camera. The ``raw`` baseline
-needs none of this and is unaffected.
+:func:`_rescale_params` is that formula, and ``test_camera.py`` pins it against
+the library's own ``rescale`` — exactly, not approximately. It is written out
+here rather than called because ``projectaria_tools`` needs Python >= 3.9 and
+this repo's own interpreter is older; the library is the authority, the test is
+what enforces it.
+
+The rotation is a rotation of the *ray*, not of the model
+---------------------------------------------------------
+ego-synth's frames are upright, the calibration's are not. The obvious move is
+to rotate the model's principal point, and this module used to. It is wrong:
+``p1, p2`` and ``s1..s4`` are not isotropic and a quarter turn mixes them.
+``projectaria_tools`` makes the same judgement structurally — its
+``rotate_camera_calib_cw90deg`` accepts the **Linear model only**, and there is
+no fisheye equivalent.
+
+So :attr:`Fisheye624.rotation` is carried as a quarter-turn count and applied to
+the 3D ray on the way in and to the pixel on the way out, which is exact and
+touches no coefficient. Measured against the true-twin correspondences of
+``verify_camera``, over 9 frames x 3 clips x 2 datasets:
+
+    rotating the model   1.5 px median
+    rotating the ray     1.0 px median
+
+Where this stands
+-----------------
+Settled, and ``verify_camera`` passes. Three corrections, in the order they were
+found, each worth roughly what the one before it left behind:
+
+    twin residual (px)        aea    nymeria
+    as it was                6.74     6.96
+    + the 2816 crop          1.37     1.51
+    + rotating the ray       1.05     0.99
+    + the rectified centre   0.31     0.29     <- verify_camera's own bug
+
+**Not one fitted parameter.** Every number in the chain is a sensor
+specification, a published report, or a pixel-centre convention the reference
+implementation already uses. The third correction was in the verifier rather than
+here: it back-projected through the rectified render using ``N / 2`` where the
+whole ecosystem uses ``(N - 1) / 2``, and that half pixel arrives at the fisheye
+magnified by the ratio of the focal lengths. See ``verify_camera.rect_centre``.
+
+At 0.29-0.31 px the residual is under the 0.5 px float16 quantisation of the
+stored coordinates, which is the floor this data can express. ``aea`` and
+``nymeria`` are in :data:`VERIFIED_ROTATION`; ``oxford`` and ``egoexo4d`` are
+not, and :func:`require_verified` still refuses those.
 """
 from __future__ import annotations
 
@@ -79,36 +119,53 @@ N_PARAMS = 15
 #: Frame size ego-synth ships everything at (gotcha 1 of the data card).
 EGOSYNTH_RES = 896
 
+#: The Aria RGB sensor, and the frame MPS writes ``online_calibration`` in.
+SENSOR_FULL = 2880
+
+#: The binned RGB stream every recording in this evaluation was captured at, and
+#: the resolution ``meta.json`` reports as ``source_width`` on all four datasets.
+STREAM_RES = 1408
+
+#: The window of the sensor that stream reads out, before the 2x binning. Not
+#: :data:`SENSOR_FULL`: see the module docstring and projectaria_tools #322.
+SENSOR_WINDOW = 2 * STREAM_RES                      # 2816
+
+#: Offset of that window's origin inside the full sensor frame, per axis. This
+#: is ``origin_offset`` in ``CameraCalibration.rescale``.
+CROP_ORIGIN = (SENSOR_FULL - SENSOR_WINDOW) / 2.0   # 32.0
+
 #: Quarter turns (CCW) taking the calibration's sensor frame to ego-synth's
 #: upright frame, per dataset.
 #:
-#: **Evidenced but not verified.** ``verify_camera``'s twin residual separates
-#: the four turns cleanly and gives the *same* answer on both datasets measured:
+#: ``verify_camera``'s twin residual separates the four turns by a factor of 40
+#: and gives the same answer on both datasets measured:
 #:
 #:     twin residual (px)   rot 0    rot 90   rot 180   rot 270
-#:     aea                  14.62      6.66     16.50     21.21
-#:     nymeria              11.68      6.94     13.09     16.23
-#:
-#: — a 2.2x and 1.7x margin, on a statistic that is unambiguous by construction.
-#: So 90 deg CCW is the rotation. It is still not *verified*, because ~6.8 px
-#: remains after applying it, consistent across both datasets, which is a
-#: systematic convention error rather than noise and is what the joint scale and
-#: principal-point search has to remove.
+#:     aea                  13.20      0.31     13.41     18.83
+#:     nymeria              10.11      0.29     10.41     14.56
 #:
 #: ``oxford`` has never been measured and ``egoexo4d`` is paused; both carry the
-#: same value only because it is the one with evidence behind it anywhere.
+#: same value only because it is the one with evidence behind it anywhere, and
+#: neither is in :data:`VERIFIED_ROTATION`.
 DATASET_ROTATION: Dict[str, int] = {
-    "aea": 1,          # 90 deg CCW -- twin 6.66 px, 2.2x margin
-    "nymeria": 1,      # 90 deg CCW -- twin 6.94 px, 1.7x margin
+    "aea": 1,          # 90 deg CCW -- twin 0.31 px, 43x margin
+    "nymeria": 1,      # 90 deg CCW -- twin 0.29 px, 35x margin
     "egoexo4d": 1,     #             -- PAUSED, never measured
     "oxford": 1,       #             -- never measured
 }
 
-#: Datasets whose rotation has survived :func:`verify_orientation` at the
-#: tolerance below. Empty until one does. Written by hand after a verification
-#: run, never by the verifier itself — a measurement that promotes itself is not
-#: a check.
-VERIFIED_ROTATION: Tuple[str, ...] = ()
+#: Datasets whose rotation has passed ``verify_camera`` at the tolerance below.
+#: Written by hand after a verification run, never by the verifier itself — a
+#: measurement that promotes itself is not a check.
+#:
+#: Both entries passed at NN median 0.29 px with 96.9 % of points inside 1 px,
+#: against a 80 % bar and a 0.5-2 % chance rate, and beat the runner-up rotation
+#: by 14x. **On one take each** — the local sample is one take per dataset. The
+#: rotation is a per-dataset orientation convention rather than a per-device
+#: quantity, and a quarter-turn error shows up as 4-5 px against 0.29, so one
+#: take is genuinely decisive *for the rotation*. Re-run the verifier across
+#: takes when ticket 012 lands the calibrations at scale; that is issue #17.
+VERIFIED_ROTATION: Tuple[str, ...] = ("aea", "nymeria")
 
 #: Median reprojection error, in pixels of the 896 frame, below which the model
 #: and its orientation are considered to describe the data. Half a pixel is the
@@ -166,15 +223,29 @@ class Fisheye624:
     ``params`` is the 15-vector in the order the calibration stores it. ``width``
     and ``height`` are the frame these parameters describe — changing the frame
     means :meth:`rescale`, never editing the params in place.
+
+    ``rotation`` is a count of quarter turns CCW taking the frame ``params``
+    describes to the frame the caller works in. It is deliberately *not* folded
+    into ``params``: see the module docstring on why a quarter turn may not touch
+    this model's coefficients. :meth:`project` and :meth:`unproject` apply it.
     """
 
     params: Tuple[float, ...]
     width: int
     height: int
+    rotation: int = 0
     label: str = "camera-rgb"
     serial: str = ""
     dataset: str = ""
     take: str = ""
+
+    def _with(self, **kw) -> "Fisheye624":
+        """A copy with some fields replaced, carrying the metadata across."""
+        f = dict(params=self.params, width=self.width, height=self.height,
+                 rotation=self.rotation, label=self.label, serial=self.serial,
+                 dataset=self.dataset, take=self.take)
+        f.update(kw)
+        return Fisheye624(**f)
 
     # -- accessors ---------------------------------------------------------- #
     @property
@@ -202,55 +273,39 @@ class Fisheye624:
         return np.asarray(self.params[11:15], float)
 
     # -- frame changes ------------------------------------------------------ #
-    def rescale(self, out_size: int) -> "Fisheye624":
-        """The same lens, described for a frame resized to ``out_size`` square.
+    def rescale(self, out_size: int,
+                origin_offset: float = 0.0) -> "Fisheye624":
+        """The same lens, described for a cropped and resized square frame.
 
-        Only ``f``, ``cx``, ``cy`` scale. The radial, tangential and thin-prism
+        ``origin_offset`` px are taken off every side first, then what is left is
+        resized to ``out_size``. That is ``CameraCalibration.rescale``'s own
+        order — its docstring reads "transform is done in the order of (1) shift
+        -> (2) scaling" — and :func:`_rescale_params` is its arithmetic.
+        ``test_camera.py`` pins the two together.
+
+        Only ``f``, ``cx``, ``cy`` move. The radial, tangential and thin-prism
         coefficients act on *normalised* image coordinates, so they are invariant
-        to the resize — which is exactly why they must not be touched here.
-
-        The principal point moves on the pixel-centre convention
-        ``c' = (c + 0.5) * s - 0.5``, not ``c * s``: a resize maps output pixel
-        centre ``j + 0.5`` to source ``(j + 0.5) / s``, and the two differ by
-        ``0.5 * (1 - s)`` px. At the 2880 -> 896 factor used here that is 0.35 px
-        — small, and the same order as the effect this calibration exists to fix,
-        so it is not roundable away.
+        to both steps — which is exactly why they must not be touched here, and
+        the library leaves them alone too.
         """
-        s = out_size / float(self.width)
-        q = list(self.params)
-        q[0] = self.f * s
-        q[1] = (self.cx + 0.5) * s - 0.5
-        q[2] = (self.cy + 0.5) * s - 0.5
-        return Fisheye624(tuple(q), out_size, out_size, self.label, self.serial,
-                          self.dataset, self.take)
+        window = self.width - 2.0 * origin_offset
+        if window <= 0:
+            raise ValueError(f"origin_offset {origin_offset} crops away the "
+                             f"whole {self.width} px frame")
+        q = _rescale_params(self.params, out_size / window, origin_offset)
+        return self._with(params=q, width=out_size, height=out_size)
 
-    def rotate90(self, k: int) -> "Fisheye624":
-        """The same lens, described for a frame rotated ``k`` quarter turns CCW.
+    def rotated(self, k: int) -> "Fisheye624":
+        """The same lens, read in a frame rotated ``k`` quarter turns CCW.
 
-        Square frames only, which every ego-synth frame is. One CCW quarter turn
-        sends pixel ``(x, y) -> (N - y, x)`` with ``N = width - 1``, so the
-        principal point follows and ``f`` is unchanged (the model is isotropic in
-        ``f``; there is no separate ``fy``).
-
-        The distortion coefficients are radial about the principal point and so
-        are rotation-invariant — with one exception that matters: the
-        **tangential** ``p1, p2`` and the **thin-prism** ``s1..s4`` terms are
-        *not* isotropic, and a rotation mixes them. They are tiny here (order
-        1e-4 against radial terms of order 1e-1), so rotating them is a
-        refinement below the 0.5 px floor this module works to; they are carried
-        through unrotated and :func:`verify_orientation` is what would expose it
-        if that ever stopped being true.
+        Records the turn; it is applied to rays and pixels by :meth:`project` and
+        :meth:`unproject`, never to the parameters. Square frames only, which
+        every ego-synth frame is.
         """
         if self.width != self.height:
-            raise ValueError("rotate90 is for square frames; "
+            raise ValueError("a quarter turn needs a square frame; "
                              f"got {self.width}x{self.height}")
-        cx, cy, n = self.cx, self.cy, self.width - 1.0
-        for _ in range(k % 4):
-            cx, cy = n - cy, cx
-        q = list(self.params)
-        q[1], q[2] = cx, cy
-        return Fisheye624(tuple(q), self.width, self.height, self.label,
-                          self.serial, self.dataset, self.take)
+        return self._with(rotation=k % 4)
 
     # -- geometry ----------------------------------------------------------- #
     def project(self, xyz: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -266,16 +321,22 @@ class Fisheye624:
 
         Points behind the camera are not meaningful for a fisheye of this FOV
         and come back as NaN rather than as a plausible pixel.
+
+        ``xyz`` is in the camera frame of the **rotated** view, so the turn is
+        undone on the ray, the unrotated model projects, and the turn is redone
+        on the pixel. No coefficient is touched — see the module docstring.
         """
-        xyz = np.asarray(xyz, float)
+        xyz = _rot_xyz(np.asarray(xyz, float), -self.rotation)
         ref = _reference_projection(self.params)
         if ref is not None:
             out = np.full((xyz.shape[0], 2), np.nan)
             for i, p in enumerate(xyz):
                 if p[2] > 0:
                     out[i] = ref.project(p)
-            return out[:, 0], out[:, 1]
-        return self._pure_project(xyz)
+            u, v = out[:, 0], out[:, 1]
+        else:
+            u, v = self._pure_project(xyz)
+        return _rot_pixel(u, v, self.rotation, self.width)
 
     def _pure_project(self, xyz: np.ndarray):
         """The numpy FISHEYE624 forward model, used when the reference is absent."""
@@ -313,8 +374,8 @@ class Fisheye624:
         ``test_camera.py`` pins the round trip against
         :meth:`project` rather than trusting the iteration count.
         """
-        u = np.asarray(u, float)
-        v = np.asarray(v, float)
+        u, v = _rot_pixel(np.asarray(u, float), np.asarray(v, float),
+                          -self.rotation, self.width)
         ref = _reference_projection(self.params)
         if ref is not None:
             # Both directions must come from the same implementation or the
@@ -323,7 +384,8 @@ class Fisheye624:
             out = np.empty((u.size, 3))
             for i, (uu, vv) in enumerate(zip(u.ravel(), v.ravel())):
                 out[i] = ref.unproject(np.array([uu, vv], float))
-            return out / np.linalg.norm(out, axis=-1, keepdims=True)
+            out = out / np.linalg.norm(out, axis=-1, keepdims=True)
+            return _rot_xyz(out, self.rotation)
         xd = (u - self.cx) / self.f
         yd = (v - self.cy) / self.f
         xr, yr = xd.copy(), yd.copy()
@@ -337,7 +399,8 @@ class Fisheye624:
         scale = np.divide(t, thd, out=np.ones_like(thd), where=thd > 1e-12)
         a, b = xr * scale, yr * scale
         d = np.stack([a, b, np.ones_like(a)], axis=-1)
-        return d / np.linalg.norm(d, axis=-1, keepdims=True)
+        d = d / np.linalg.norm(d, axis=-1, keepdims=True)
+        return _rot_xyz(d, self.rotation)
 
     def theta_of(self, u: np.ndarray, v: np.ndarray) -> np.ndarray:
         """Incidence angle (degrees) of the rays those pixels see."""
@@ -388,16 +451,16 @@ def load(path: str, dataset: str = "", take: str = "",
          ) -> Fisheye624:
     """One take's ``camera_rgb.json``, resolved for ego-synth's own frame.
 
-    Rescaled from the sensor's resolution to ``out_size`` and rotated by the
-    dataset's convention. ``rotation`` overrides :data:`DATASET_ROTATION`, which
-    is what the verification script uses to try each one.
+    Cropped and rescaled from the frame MPS wrote it in down to ``out_size``,
+    and rotated by the dataset's convention. ``rotation`` overrides
+    :data:`DATASET_ROTATION`, which is what the verification script uses to try
+    each one.
 
-    The sensor's resolution is not stored in the file, because MPS does not put
-    it there. It is inferred from the principal point: a calibration is centred
-    to within a few per cent, so ``2 * max(cx, cy)`` rounded to the nearest
-    standard Aria RGB size identifies it. Aria RGB is 2880 square at full
-    resolution and 1408 square binned, and those are far enough apart that the
-    inference cannot land between them.
+    The crop is the substance of this function and the module docstring is where
+    it is justified. If the calibration is at :data:`SENSOR_FULL`, the frame
+    ego-synth resized was the 2816 window inside it, so 32 px come off each side
+    before the scale. If it is already at :data:`STREAM_RES` then it describes
+    that window directly and there is nothing to crop.
     """
     with open(path) as fh:
         doc = json.load(fh)
@@ -406,21 +469,29 @@ def load(path: str, dataset: str = "", take: str = "",
         raise CalibrationUnavailable(
             f"{path}: expected {N_PARAMS} FISHEYE624 params, got "
             f"{0 if not params else len(params)}")
-    native = _infer_native(float(params[1]), float(params[2]))
-    cam = Fisheye624(tuple(float(x) for x in params), native, native,
+    sensor = _sensor_frame(float(params[1]), float(params[2]))
+    offset = CROP_ORIGIN if sensor == SENSOR_FULL else 0.0
+    cam = Fisheye624(tuple(float(x) for x in params), sensor, sensor,
                      label=doc.get("label", "camera-rgb"),
                      serial=(doc.get("serial_numbers") or [""])[0],
                      dataset=dataset or doc.get("dataset", ""),
                      take=take or doc.get("take", ""))
     k = DATASET_ROTATION.get(cam.dataset, 0) if rotation is None else rotation
-    return cam.rescale(out_size).rotate90(k)
+    return cam.rescale(out_size, origin_offset=offset).rotated(k)
 
 
-#: Aria RGB frame sizes. Full resolution and the binned stream.
-_ARIA_SIZES = (2880, 1408)
+#: Aria RGB frame sizes a calibration can arrive in.
+_ARIA_SIZES = (SENSOR_FULL, STREAM_RES)
 
 
-def _infer_native(cx: float, cy: float) -> int:
+def _sensor_frame(cx: float, cy: float) -> int:
+    """Which frame the calibration's parameters are expressed in.
+
+    MPS does not record it, so it is read off the principal point: a calibration
+    is centred to within a few per cent, so ``2 * max(cx, cy)`` rounded to the
+    nearest Aria RGB size identifies it, and the two sizes are far enough apart
+    that the inference cannot land between them.
+    """
     guess = 2.0 * max(cx, cy)
     best = min(_ARIA_SIZES, key=lambda s: abs(s - guess))
     if abs(best - guess) > 0.15 * best:
@@ -429,6 +500,45 @@ def _infer_native(cx: float, cy: float) -> int:
             f"sensor, which is not an Aria RGB size {_ARIA_SIZES}; the file is "
             f"not the calibration this expects")
     return best
+
+
+def _rescale_params(params: Tuple[float, ...], scale: float,
+                    origin_offset: float) -> Tuple[float, ...]:
+    """``CameraCalibration.rescale``'s arithmetic, on the 15-vector.
+
+    Shift then scale, on the pixel-centre convention: a resize maps output pixel
+    centre ``j + 0.5`` to source ``(j + 0.5) / s``, so ``c' = (c + 0.5) * s -
+    0.5`` and not ``c * s``. The two differ by ``0.5 * (1 - s)``, which is
+    0.34 px at the factor used here — the same order as the effect this
+    calibration exists to correct, so it is not roundable away.
+
+    ``test_camera.py`` asserts this agrees with the library exactly.
+    """
+    q = list(params)
+    q[0] = params[0] * scale
+    q[1] = (params[1] - origin_offset + 0.5) * scale - 0.5
+    q[2] = (params[2] - origin_offset + 0.5) * scale - 0.5
+    return tuple(q)
+
+
+def _rot_xyz(xyz: np.ndarray, k: int) -> np.ndarray:
+    """Rotate camera-frame points ``k`` quarter turns CCW about the optic axis."""
+    out = np.asarray(xyz, float)
+    for _ in range(k % 4):
+        out = np.stack([-out[..., 1], out[..., 0], out[..., 2]], axis=-1)
+    return out
+
+
+def _rot_pixel(u: np.ndarray, v: np.ndarray, k: int, size: int):
+    """Rotate pixels ``k`` quarter turns CCW in a ``size`` square frame.
+
+    One turn sends ``(u, v) -> (N - v, u)`` with ``N = size - 1``, the pixel-grid
+    counterpart of :func:`_rot_xyz`.
+    """
+    n = size - 1.0
+    for _ in range(k % 4):
+        u, v = n - v, u
+    return u, v
 
 
 def calibration_path(root: str, dataset: str, take: str) -> str:

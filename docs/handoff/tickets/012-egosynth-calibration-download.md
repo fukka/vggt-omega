@@ -18,13 +18,23 @@ RGB camera model on disk at
 
 ## Read this before starting
 
-The calibration this ticket downloads has **not yet been shown to describe
-ego-synth's frames**. `slambench/verify_camera.py` measures that and currently
-fails at ~4 px median reprojection against a sub-pixel bar — see ticket 013 for
-what has been ruled out. Downloading is still the right next step, because the
-open question needs many takes to settle rather than the two staged locally, but
-**do not treat these files as usable until `verify_camera` passes**. The `raw`
-baseline needs none of them and is unaffected.
+**The calibration is now known to describe ego-synth's frames, and this is no
+longer a blocker — but the resolution convention is not the obvious one.**
+`verify_camera` passes on both staged takes at 0.29 px median reprojection with
+96.9 % of points inside 1 px, against a 0.5 px bar. Ticket 013 has the chain and
+its provenance. The short version, because it will bite anyone who reads these
+files with a naive rescale:
+
+> The MPS `online_calibration` RGB intrinsics are at the **2880 full sensor**.
+> The stream every one of these datasets was recorded at is **1408**, which is a
+> **2816 centre crop binned 2x** — not a plain downsample. Scaling 2880 → 896
+> directly is wrong by 2.3 % in focal, which is 6.7 px of reprojection.
+> This is projectaria_tools issue #322, and `slambench/camera.py` implements it.
+
+So these files are usable, and `slambench.camera.load` is the only thing that
+should ever read them. What this ticket is still needed for is **scale**: the
+verdict rests on one take per dataset, and `oxford` has never been measured at
+all. The `raw` baseline needs none of them and is unaffected.
 
 ## Why this is needed
 
