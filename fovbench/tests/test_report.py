@@ -269,11 +269,17 @@ def test_the_two_views_share_one_x_range_per_axis(tmp_path):
         whole, reach = R._spans(rad, view, "theta")
         assert whole == pytest.approx(expect, abs=0.5)
         assert reach <= th[1]
-    # the radius deficit runs the other way — the image circle is inscribed, so
-    # the fisheye has nothing past 1.0 while rect carries corners to sqrt(2)
+    # The radius panels are drawn on the RAW SENSOR, not in each view's own
+    # image plane. Drawn raw they invert — rect runs to sqrt(2) in its corners
+    # and the fisheye stops at 1.0, which reads as the fisheye seeing less when
+    # it sees more — so on the plotted axis the rect arm must end FIRST, as it
+    # does on theta.
     rr = R._shared_xlim(rad, "radius")
-    assert rr[1] > 1.4
-    assert R._spans(rad, "fisheye", "radius")[1] < 1.05
+    assert rr[1] < 1.05
+    assert R._spans(rad, "rect", "radius")[1] < R._spans(rad, "fisheye", "radius")[1]
+    # and the panel's x values go through the same conversion
+    assert R._plot_x([1.411], "rect", "radius", 518)[0] < 0.95
+    assert R._plot_x([0.9], "fisheye", "radius", 518)[0] == pytest.approx(0.9)
 
 
 def test_the_context_figure_refuses_to_draw_two_different_splits(tmp_path):

@@ -94,16 +94,34 @@ The `results` branch carries JSON and logs, never images
 python -c "import json;from fovbench import report;report.write_figures(json.load(open('results.json')),'figs')"
 ```
 
-**Both views share one x range per axis**, so the panels can be read side by
-side. Each then carries two marks where its own field runs out:
+**Both axes are physical and shared, so the panels can be read side by side.**
+θ already meant the same thing in both views. Radius did not, and drawing it raw
+was worse than incomparable — it **inverted**: radius is measured in each view's
+own image plane, the rectified frame runs to √2 in its corners while the fisheye
+stops at 1.0, and that reads as the fisheye seeing less field when it sees more.
+It is still *binned* in each view's own plane (that is where the pixel sat in the
+tensor the network was given) but *drawn* where the ray lands on the raw sensor:
+
+| rect's own radius | = θ | = radius on the raw sensor |
+|---|---|---|
+| 1.000 (inscribed circle) | 42.2° | **0.73** |
+| 1.411 (corner, its axis end) | 52.1° | **0.93** |
+| — | 54.8° (fisheye's limit) | **0.98** |
+
+The whole rectified radius axis lives inside 0.93 of the sensor. On the drawn
+axis the rectified arm therefore ends *first* on both coordinates, which is the
+truth. The conversion is monotone, so no curve is reordered by it, and the bin
+widths warp with it — the pixel-count row of `gt_depth.png` is a density per unit
+of the plotted x, so it is computed on the converted edges.
+
+Each panel then carries two marks where its own field runs out:
 
 * a **grey band** past the last angle at which the view images a whole ring —
   42.2° on rect, nothing on fisheye. Inside it the curve continues but on four
   corner wedges, a different set of directions from every point to its left.
 * a **hatched band** where the view images nothing at all. This is the part a
-  shared axis exists to show: rect θ ends at 52.1° against fisheye's 54.8°, and
-  on the *radius* axis the deficit runs the other way — the fisheye image circle
-  is inscribed, so it has nothing past 1.0 while rect carries corners to √2.
+  shared axis exists to show: rect ends at 52.1° against fisheye's 54.8° on θ,
+  and at 0.93 against 0.98 on the sensor radius.
 
 Before the axes were shared, a panel that had run out of camera looked like a
 curve that had finished. `report.txt`'s RING COVERAGE table gives the same thing
@@ -300,12 +318,23 @@ the clipped aim inflates the rect numbers to 1.12–2.10 and hides it.
 `synthetic` at every bin (VGGT-1B fisheye 0.110 vs 0.068 on axis) while the two
 curves have nearly the same shape.
 
-**5. The two axes have mirror-image blind spots, which is why both are kept.**
-The rectified arm covers radius to the corners but its 50–55° θ bin is 2,939 px
-of corner; the fisheye arm reaches 55° with 36,245 px but has *nothing* past
-radius 1.0, the image circle being inscribed in the frame. Fisheye's two axes
-nearly agree (`pen` 1.79 on θ, 1.71 on radius); rect's do not and can change
-direction (1.08 on θ, 0.91 on radius), which is `tan θ` versus `θ`.
+**5. The two axes are two binnings of one field, not two fields — and an earlier
+version of this item got that wrong.** It read "the two axes have mirror-image
+blind spots": rect covering radius to its corners while the fisheye "has nothing
+past radius 1.0". That is a false symmetry. Radius 1.0 on the fisheye *is* its
+entire field, and rect's corner at radius 1.411 is only 0.93 of the same sensor —
+so the rectified arm is the shorter one on both coordinates, and there is no
+respect in which it reaches further. The figures now draw radius on the sensor
+for exactly this reason.
+
+What does survive: within a view, θ and radius are different reparametrisations,
+so the same data binned by each gives a different `pen`. Fisheye's two nearly
+agree (1.79 on θ, 1.71 on radius); rect's do not and can change direction (1.08
+on θ, 0.91 on radius), which is `tan θ` against `θ` — the rectified frame
+stretches its outer field over more pixels, so equal-width radius bins there cut
+the field at very different angles. Both are kept because a per-view radius is
+where the pixel sat in the tensor the network saw, which is a real question about
+the model; it is only the *cross-view* reading that needs the conversion.
 
 **6. 25 frames was not enough, and the run says so plainly.** Against the earlier
 25-frame run every cell moved: levels by 15–47%, and in several cells the *shape*

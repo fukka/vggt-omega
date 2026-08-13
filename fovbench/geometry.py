@@ -291,18 +291,72 @@ def view_maps(out_size: int, kind: str, src: int = 1408):
     return theta, _cached_map(("azimuth", out_size, cx, cy), build), imaged
 
 
+def raw_sensor_radius(out_size: int, kind: str, values):
+    """A view's own image-plane radius, re-expressed on the **raw sensor**.
+
+    ``radius`` is measured in each view's own frame, and the two frames are not
+    the same plane: the rectified pinhole puts a ray at ``f*tan(theta)`` while
+    the fisheye puts it at very nearly ``f*theta``, so the same number is a
+    different direction in each. Drawn side by side on one axis that is worse
+    than incomparable, it is **inverted** — the rectified frame runs out to
+    sqrt(2) in its corners and the fisheye stops at 1.0, which reads as the
+    fisheye seeing less. It sees more: rect's furthest corner is 52.1 deg, which
+    lands at raw radius 0.930, inside the fisheye's 0.978.
+
+    Converting both to where the ray actually hits the sensor makes the axis one
+    physical coordinate. For ``fisheye`` that is the identity; for ``rect`` it
+    inverts ``r = 1.1*tan(theta)`` and then applies the lens's own theta->radius
+    curve, taken from the same maps the run binned on rather than from a formula
+    that could drift from them.
+    """
+    v = np.atleast_1d(np.asarray(values, np.float64))
+    if kind == "fisheye":
+        return v
+    theta = np.degrees(np.arctan(v / (2.0 * RECTIFIER_FOCAL_FRAC)))
+    t_lut, r_lut = _fisheye_theta_radius_lut(out_size)
+    return np.interp(theta, t_lut, r_lut, left=0.0, right=float(r_lut[-1]))
+
+
+def _fisheye_theta_radius_lut(out_size: int):
+    """Sorted ``(theta_deg, raw radius)`` for this lens, from the view's maps."""
+    key = ("tr_lut", out_size)
+    hit = _MAP_CACHE.get(key)
+    if hit is None:
+        theta, _, imaged = view_maps(out_size, "fisheye")
+        sc = scaled_cam(aria_cam(1408, 1408), out_size)
+        rad = radius_map(out_size, out_size, cx=sc.cx, cy=sc.cy)
+        t, r = theta[imaged].ravel(), rad[imaged].ravel()
+        order = np.argsort(t)
+        # one radius per 0.1 deg, so the interpolation is monotone and small
+        edges = np.arange(0.0, t.max() + 0.1, 0.1)
+        idx = np.searchsorted(t[order], edges)
+        keep = np.diff(idx) > 0
+        hit = (edges[:-1][keep],
+               np.array([np.median(r[order][a:b])
+                         for a, b in zip(idx[:-1], idx[1:]) if b > a]))
+        _MAP_CACHE[key] = hit
+    return hit
+
+
 def _coord_map(out_size: int, kind: str, coord: str) -> np.ndarray:
     """The per-pixel value of a binning coordinate, for coverage questions."""
     theta, _, _ = view_maps(out_size, kind)
     if coord == "theta":
         return theta
-    if coord == "radius":
+    if coord in ("radius", "radius_raw"):
         cam = aria_cam(1408, 1408)
         if kind == "fisheye":
             sc = scaled_cam(cam, out_size)
             return radius_map(out_size, out_size, cx=sc.cx, cy=sc.cy)
-        return radius_map(out_size, out_size)
-    raise ValueError(f"unknown coordinate {coord!r} (choose 'theta' or 'radius')")
+        own = radius_map(out_size, out_size)
+        # "radius" is what the run actually binned on — the view's own frame.
+        # "radius_raw" is that same coordinate expressed on the sensor, which is
+        # the only one of the two that means the same thing in both views.
+        if coord == "radius":
+            return own
+        return raw_sensor_radius(out_size, kind, own.ravel()).reshape(own.shape)
+    raise ValueError(
+        f"unknown coordinate {coord!r} (choose 'theta', 'radius' or 'radius_raw')")
 
 
 def reach_by_azimuth(out_size: int, kind: str, coord: str = "theta") -> np.ndarray:
@@ -400,9 +454,16 @@ def radius_map(H: int, W: int, cx: Optional[float] = None,
     Read against ``theta_map_*`` with care: on the raw fisheye, radius is nearly
     proportional to the incidence angle (KB4 is close to equidistant), whereas
     the rectified pinhole puts radius at ``f*tan(theta)``, which runs away near
-    the edge. The same radius is therefore a *different direction* in the two
-    views, and a radius-binned comparison between them is not like-for-like.
-    ``theta`` is the axis on which the two views mean the same thing.
+    the edge. **The same number is therefore a different direction in the two
+    views**, and setting two views' radius curves side by side on one axis does
+    not merely fail to compare them — it inverts them, because the rectified
+    frame runs to sqrt(2) in its corners while the fisheye stops at 1.0, and the
+    fisheye is the one that sees *more* field (54.8 deg against 52.1).
+
+    So this stays the binning coordinate — it is where the pixel sat in the
+    tensor the network was given, which is a real question — and
+    :func:`raw_sensor_radius` converts it for anything that draws or compares
+    the two views.
     """
     cx = (W / 2.0 - 0.5) if cx is None else cx
     cy = (H / 2.0 - 0.5) if cy is None else cy

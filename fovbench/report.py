@@ -516,7 +516,26 @@ _PANELS = (("fisheye", "theta"), ("rect", "theta"),
            ("fisheye", "radius"), ("rect", "radius"))
 
 _AXIS_LABEL = {"theta": "incidence angle (deg)",
-               "radius": "distance from optical centre (half-widths)"}
+               "radius": "distance from optical centre, on the RAW sensor "
+                         "(half-widths)"}
+
+#: The coordinate each panel's x axis is drawn in. ``radius`` is *binned* in
+#: each view's own image plane, but those are different planes — the rectified
+#: frame puts a ray at ``f*tan(theta)`` and the fisheye at ``f*theta`` — so
+#: plotting them raw on one axis is not merely incomparable, it inverts: rect
+#: runs to sqrt(2) in its corners while the fisheye stops at 1.0, which reads as
+#: the fisheye seeing less field when it sees more. Both are drawn on the sensor.
+_PLOT_COORD = {"theta": "theta", "radius": "radius_raw"}
+
+
+def _plot_x(x, view: str, axis: str, out_size: int):
+    """A panel's x values in the coordinate the axis is drawn in."""
+    if axis != "radius":
+        return np.asarray(x, float)
+    try:
+        return G.raw_sensor_radius(out_size, view, np.asarray(x, float))
+    except Exception:
+        return np.asarray(x, float)
 
 #: Rendered per metric: the key in a bin/profile, the axis label, and whether
 #: lower is better (used only for the caption).
@@ -554,7 +573,8 @@ def _spans(rad: List[dict], view: str, axis: str):
     if not sizes or view not in ("rect", "fisheye"):
         return None
     try:
-        pairs = [G.coverage_span(s, view, axis) for s in sizes]
+        pairs = [G.coverage_span(s, view, _PLOT_COORD.get(axis, axis))
+                 for s in sizes]
     except Exception:
         return None
     return min(p[0] for p in pairs), max(p[1] for p in pairs)
@@ -664,7 +684,7 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                     colour = cmap[r["model"]]
                     prof = _profile_of(r, axis)
                     if prof:
-                        x = np.asarray(prof["centre"], float)
+                        x = _plot_x(prof["centre"], view, axis, r["input_size"])
                         y = np.asarray(prof.get(key, []), float)
                         n = np.asarray(prof["n"], float)
                         keep = np.isfinite(y) & (n >= PROFILE_MIN_PX)
@@ -674,7 +694,8 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
                     bx, by = _bin_points(r, axis, key)
                     if bx:
                         # Without a profile the bins ARE the curve, so join them.
-                        ax.plot(bx, by, marker="o", ms=5, color=colour,
+                        ax.plot(_plot_x(bx, view, axis, r["input_size"]), by,
+                                marker="o", ms=5, color=colour,
                                 ls="none" if prof else "--", lw=1.2, zorder=4,
                                 label=None if prof else r["model"])
                 _mark_unimaged(ax, rad, view, axis, row == 0)
@@ -695,7 +716,9 @@ def write_figures(payload: dict, out_dir: str) -> List[str]:
             f"{payload['digest']} · {payload['n_frames']} frames\n"
             "line = 1-deg continuous profile, dots = the six binned values; both "
             "pooled over frames and pixel-weighted, so they differ only by bin "
-            "width.  theta is comparable across views; radius is not.",
+            "width.  Both axes are physical and shared: radius is binned in each "
+            "view's own image plane but drawn where the ray hits the RAW sensor, "
+            "so the two views are on one coordinate.",
             fontsize=10)
         fig.tight_layout(rect=(0, 0.07, 1, 0.90))
         path = os.path.join(out_dir, f"{key}.png")
@@ -751,7 +774,11 @@ def _write_depth_figure(payload, rad, out_dir, streams, plt) -> List[str]:
         prof = _profile_of(r, axis)
         drew = False
         if prof and "gt_std" in prof:
-            x = np.asarray(prof["centre"], float)
+            # Edges rather than the stored centres, because the density below is
+            # per unit of the *plotted* x — and on the radius panels that x is
+            # the raw sensor, a nonlinear warp of what was binned.
+            te = _plot_x(prof["edges"], r["view"], axis, r["input_size"])
+            x = 0.5 * (te[:-1] + te[1:])
             m = np.asarray(prof["gt_mean"], float)
             sd = np.asarray(prof["gt_std"], float)
             n = np.asarray(prof["n"], float)
@@ -766,8 +793,7 @@ def _write_depth_figure(payload, rad, out_dir, streams, plt) -> List[str]:
                 # a factor of ten between two things that agree. Per frame, and
                 # per unit of x, both are the same quantity.
                 nf = max(int(prof.get("n_frames", 1)), 1)
-                ew = np.diff(np.asarray(prof["edges"], float))
-                dens = n / nf / ew
+                dens = n / nf / np.diff(te)
                 bot.fill_between(x[k], 0, dens[k], alpha=0.30,
                                  color="#1f77b4", lw=0)
                 bot.plot(x[k], dens[k], "-", lw=1.6, color="#1f77b4",
@@ -776,13 +802,16 @@ def _write_depth_figure(payload, rad, out_dir, streams, plt) -> List[str]:
         bx, by = _bin_points(r, axis, "gt_median")
         if bx:
             any_drawn = True
-            top.plot(bx, by, "o--" if not drew else "o", ms=5, lw=1.2,
+            top.plot(_plot_x(bx, r["view"], axis, r["input_size"]), by,
+                     "o--" if not drew else "o", ms=5, lw=1.2,
                      color="#c1272d", label="binned median")
         cells = [c for c in _cells_of(r, axis) if c.get("n_frames", 0)]
         if cells:
-            xs = [0.5 * (_lo(c) + _hi(c)) for c in cells]
+            lo = _plot_x([_lo(c) for c in cells], r["view"], axis, r["input_size"])
+            hi = _plot_x([_hi(c) for c in cells], r["view"], axis, r["input_size"])
+            xs = list(0.5 * (lo + hi))
             ns = [c.get("n_px_mean", 0.0) for c in cells]
-            wd = [(_hi(c) - _lo(c)) for c in cells]
+            wd = list(hi - lo)
             dens = [n / max(w, 1e-9) for n, w in zip(ns, wd)]
             bot.bar(xs, dens, width=[0.9 * w for w in wd], color="#c1272d",
                     alpha=0.28, edgecolor="#c1272d", lw=0.8,
@@ -794,9 +823,12 @@ def _write_depth_figure(payload, rad, out_dir, streams, plt) -> List[str]:
                              textcoords="offset points", xytext=(0, 3),
                              ha="center", fontsize=6.5, color="#8a1b20")
         top.set_title(f"{r['view']} · {axis}", fontsize=10)
+        xl = _shared_xlim(rad, axis)
         for ax in (top, bot):
             ax.grid(alpha=0.3)
             ax.set_ylim(bottom=0)
+            if xl:
+                ax.set_xlim(*xl)
         bot.set_xlabel(_AXIS_LABEL[axis], fontsize=8.5)
     if not any_drawn:
         plt.close(fig)

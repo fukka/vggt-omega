@@ -701,3 +701,35 @@ def test_the_same_bin_label_means_a_different_angle_in_the_two_views():
         assert abs(f[lo] - r[lo]) < 0.25                  # agree where whole
     assert f[40.0] - r[40.0] > 1.0                        # rect sits inward
     assert f[50.0] - r[50.0] > 1.0
+
+
+def test_the_radius_axis_compared_across_views_is_not_merely_unfair_it_inverts():
+    """Rect's own radius runs to sqrt(2) in its corners while the fisheye stops
+    at 1.0, so drawing both raw on one axis says the fisheye sees less field.
+    It sees more. Converted to where the ray lands on the sensor, rect's
+    furthest corner is INSIDE the fisheye's last ring."""
+    r = G.raw_sensor_radius(518, "rect", [0.0, 1.0, 1.411])
+    assert r[0] == pytest.approx(0.0, abs=1e-6)
+    # the rectified inscribed circle (42.2 deg) is only ~0.73 of the sensor
+    assert 0.70 < r[1] < 0.76
+    # and its extreme corner still lands inside the fisheye's reach
+    fish_reach = G.coverage_span(518, "fisheye", "radius")[1]
+    assert r[2] < fish_reach
+    assert 0.90 < r[2] < 0.95
+    # the fisheye's own radius already IS the sensor radius
+    assert np.allclose(G.raw_sensor_radius(518, "fisheye", [0.3, 0.9]), [0.3, 0.9])
+    # monotone, so it is a reparametrisation and cannot reorder any curve
+    v = np.linspace(0, 1.4, 60)
+    assert np.all(np.diff(G.raw_sensor_radius(518, "rect", v)) > 0)
+
+
+def test_on_the_sensor_axis_the_rectified_view_is_the_one_that_runs_out_first():
+    """The whole point of the conversion: on both physical axes the rectified
+    arm must be the shorter one, because it is."""
+    for coord in ("theta", "radius_raw"):
+        _, fish = G.coverage_span(518, "fisheye", coord)
+        _, rect = G.coverage_span(518, "rect", coord)
+        assert rect < fish, coord
+    # ...whereas in each view's own frame it looks the other way round
+    assert (G.coverage_span(518, "rect", "radius")[1]
+            > G.coverage_span(518, "fisheye", "radius")[1])
