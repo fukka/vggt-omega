@@ -22,7 +22,7 @@ no warping and no depth-convention conversion — it reads a frame, hands it to 
 baseline, receives one depth per ground-truth point, and scores that.
 
     harness    raw fisheye frame + native GT points
-                 -> baseline.predict(frame) -> depth per point
+                 -> baseline.predict(frames) -> depth per point
                  -> metrics
 
 **The lens is the baseline's business.** Two baselines differ only in what they
@@ -34,6 +34,12 @@ do behind that one call:
 
 which is what makes "is it worth rectifying first, once you have paid to map
 back?" a question this harness can answer rather than presuppose.
+
+**One frame or several.** Four of the five models are multi-view, and
+``--context-frames 1,3,5,10`` hands them a window of preceding frames in one
+forward pass. Exactly one frame of the window is scored, so the arms measure
+identical points and only the evidence moves; the context is therefore kept out
+of the split digest, which exists to say two runs scored the same points.
 
 Layout
 ------

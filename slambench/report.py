@@ -1,9 +1,14 @@
 # Copyright (c) 2026.
 """Tables for the SLAM depth evaluation.
 
-One table per baseline, one row per (model, dataset). No eccentricity axis, no
-binning, no penalty ratio — those belong to the FOV experiment and appearing here
-would invite the two to be read as one measurement.
+One table per baseline, one row per (model, dataset, context). No eccentricity
+axis, no binning, no penalty ratio — those belong to the FOV experiment and
+appearing here would invite the two to be read as one measurement.
+
+``ctx`` is how many frames the model saw in one forward pass; the column and the
+CONTEXT table only appear when more than one was swept. Only the split's own
+frame is scored at any context, so those rows are the same points measured
+against different evidence.
 
 Three things the tables say out loud, because each of them can turn a reading
 upside down:
@@ -44,17 +49,26 @@ def _fmt(x, nd=3, width=9) -> str:
     return f"{x:>{width}.{nd}f}"
 
 
+def _ctx(r: dict) -> int:
+    """How many frames this row's model saw. 1 for rows written before the
+    context axis existed, which is what those runs did."""
+    return int(r.get("context", 1) or 1)
+
+
 def _table(runs: List[dict], baseline: str) -> List[str]:
     sel = [r for r in runs if r["baseline"] == baseline]
     if not sel:
         return []
-    head = (f"{'model':14s}{'dataset':11s}"
+    swept = sorted({_ctx(r) for r in sel}) != [1]
+    head = (f"{'model':14s}{'dataset':11s}" + (f"{'ctx':>5s}" if swept else "")
             + "".join(f"{c:>9s}" for c in COLUMNS)
             + f"{'cover':>8s}{'gt_med':>8s}{'frames':>8s}")
     lines = [f"  BASELINE · {baseline}", "  " + "-" * len(head),
              "  " + head, "  " + "-" * len(head)]
-    for r in sorted(sel, key=lambda r: (r["model"], r["dataset"])):
+    for r in sorted(sel, key=lambda r: (r["model"], r["dataset"], _ctx(r))):
         row = f"{r['model']:14s}{r['dataset']:11s}"
+        if swept:
+            row += f"{_ctx(r):>5d}"
         for c in COLUMNS:
             row += _fmt(r.get(c))
         row += (_fmt(r.get("coverage"), 2, 8) + _fmt(r.get("gt_median"), 2, 8)
@@ -63,29 +77,81 @@ def _table(runs: List[dict], baseline: str) -> List[str]:
     return lines + [""]
 
 
+def _context_table(runs: List[dict]) -> List[str]:
+    """Each context size against the 1-frame arm, per model, baseline, dataset.
+
+    A within-model, within-baseline ratio, so the model's own alignment protocol
+    and the baseline's own lens handling both cancel and what is left is the
+    frames. ``<1`` means the extra frames helped.
+
+    The arms scored the **same points** — only the split's own frame is ever
+    scored, and the intersection is taken across every arm — so this ratio is
+    about the evidence and not about the sample.
+    """
+    swept = sorted({_ctx(r) for r in runs})
+    if swept == [1] or 1 not in swept:
+        return []
+    by = {(r["model"], r["baseline"], r["dataset"], _ctx(r)): r for r in runs}
+    cells = sorted({(m, b, d) for m, b, d, _ in by})
+    others = [n for n in swept if n != 1]
+    head = (f"{'model':14s}{'baseline':13s}{'dataset':11s}{'1 frame':>10s}"
+            + "".join(f"{str(n) + ' fr':>10s}" for n in others))
+    lines = ["  CONTEXT · AbsRel, and the ratio to the 1-frame arm "
+             "(<1 means more frames helped)",
+             "  " + "-" * len(head), "  " + head, "  " + "-" * len(head)]
+    any_row = False
+    for m, b, d in cells:
+        one = by.get((m, b, d, 1))
+        if one is None or not _finite(one.get("AbsRel")):
+            continue
+        any_row = True
+        row = f"{m:14s}{b:13s}{d:11s}" + _fmt(one["AbsRel"], 4, 10)
+        for n in others:
+            r = by.get((m, b, d, n))
+            ratio = (r["AbsRel"] / one["AbsRel"]
+                     if r and _finite(r.get("AbsRel")) and one["AbsRel"] > 1e-9
+                     else float("nan"))
+            row += _fmt(ratio, 3, 10)
+        lines.append("  " + row)
+    if not any_row:
+        return []
+    stride = next((r.get("context_stride") for r in runs
+                   if r.get("context_stride")), 1)
+    return lines + [
+        f"  The window PRECEDES the target at stride {stride} and is handed over "
+        f"in ONE forward pass.",
+        "  Only the target frame is scored, so every column measures the "
+        "identical points and only",
+        "  the evidence moves. Monocular models are absent by refusal, not by "
+        "having failed.", ""]
+
+
 def _delta_table(runs: List[dict]) -> List[str]:
     """rect_derect against raw, per model and dataset — the actual question.
 
     A within-model ratio, so each model's own alignment protocol cancels and the
     column is comparable across models in a way absolute AbsRel is not.
     """
-    by = {(r["model"], r["dataset"], r["baseline"]): r for r in runs}
-    pairs = sorted({(m, d) for m, d, b in by})
-    rows = [(m, d, by.get((m, d, "raw")), by.get((m, d, "rect_derect")))
-            for m, d in pairs]
-    rows = [t for t in rows if t[2] and t[3]]
+    by = {(r["model"], r["dataset"], _ctx(r), r["baseline"]): r for r in runs}
+    pairs = sorted({(m, d, n) for m, d, n, b in by})
+    rows = [(m, d, n, by.get((m, d, n, "raw")), by.get((m, d, n, "rect_derect")))
+            for m, d, n in pairs]
+    rows = [t for t in rows if t[3] and t[4]]
     if not rows:
         return []
-    head = (f"{'model':14s}{'dataset':11s}{'AbsRel raw':>12s}"
+    swept = sorted({n for _, _, n, _, _ in rows}) != [1]
+    head = (f"{'model':14s}{'dataset':11s}" + (f"{'ctx':>5s}" if swept else "")
+            + f"{'AbsRel raw':>12s}"
             f"{'rect_derect':>13s}{'ratio':>9s}{'cover raw':>11s}{'cover rd':>10s}")
     lines = ["  RECTIFY OR NOT · rect_derect / raw, within model "
              "(<1 means rectifying helped)",
              "  " + "-" * len(head), "  " + head, "  " + "-" * len(head)]
-    for m, d, raw, rd in rows:
+    for m, d, n, raw, rd in rows:
         ratio = (rd["AbsRel"] / raw["AbsRel"]
                  if _finite(raw.get("AbsRel")) and raw["AbsRel"] > 1e-9
                  and _finite(rd.get("AbsRel")) else float("nan"))
-        lines.append("  " + f"{m:14s}{d:11s}" + _fmt(raw.get("AbsRel"), 4, 12)
+        lines.append("  " + f"{m:14s}{d:11s}" + (f"{n:>5d}" if swept else "")
+                     + _fmt(raw.get("AbsRel"), 4, 12)
                      + _fmt(rd.get("AbsRel"), 4, 13) + _fmt(ratio, 3, 9)
                      + _fmt(raw.get("coverage"), 2, 11)
                      + _fmt(rd.get("coverage"), 2, 10))
@@ -114,6 +180,12 @@ def render(payload: dict) -> str:
         f"take(s)/dataset · {cfg['n_frames_per_take']} frame(s)/take",
         "",
     ]
+    ctxs = [int(n) for n in (cfg.get("context_frames") or [1])]
+    if ctxs != [1]:
+        out += [f"  CONTEXT SWEEP: {ctxs} frame(s) in one forward pass, stride "
+                f"{cfg.get('context_stride', 1)}. Only the split's own frame is",
+                "  scored, so every arm measures the identical points and the "
+                "digest above covers them all.", ""]
     for s in payload.get("skipped_models", []):
         out.append(f"  !! NOT RUN: {s['model']} ({s['state']}) — {s['detail']}")
     if payload.get("skipped_models"):
@@ -139,6 +211,7 @@ def render(payload: dict) -> str:
     for b in cfg.get("baselines", ()):
         out += _table(runs, b)
     out += _delta_table(runs)
+    out += _context_table(runs)
 
     models = sorted({r["model"] for r in runs})
     out += ["  MODELS", "  " + "-" * 60]
@@ -151,7 +224,8 @@ def render(payload: dict) -> str:
 
 def write_csv(payload: dict, path: str) -> str:
     cols = ["digest", "model", "family", "size", "params_m", "align",
-            "input_size", "dataset", "baseline"] + list(COLUMNS) + [
+            "input_size", "dataset", "baseline", "context",
+            "context_stride"] + list(COLUMNS) + [
         "coverage", "gt_median", "n_frames", "n_points_total"]
     with open(path, "w", newline="") as fh:
         w = csv.writer(fh)

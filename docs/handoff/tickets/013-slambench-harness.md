@@ -50,6 +50,24 @@ measurement.
 | `raw` | the frame goes to the model as it is | no |
 | `rect_derect` | rectify → model → map the depth back onto the fisheye points | yes, per take |
 
+**And one frame is a choice, not a fact.** `vggt_1b`, `vggt_omega`, `da3_small`
+and `da3_large` are multi-view models that this evaluation ran one frame at a
+time — deliberately, so the comparison against a monocular net stayed about the
+models. What they do with more frames is a different question and
+`--context-frames 1,3,5,10` asks it: a window of *preceding* frames handed over
+in **one forward pass**, of which exactly one is scored.
+
+Only the split's own frame is ever scored, so every context arm measures the
+identical points and the only thing that moves is the evidence. That is why the
+context is deliberately **not** in the split digest: the digest exists to say
+"these runs scored the same points", and folding the context in would give the
+arms different digests and make the harness refuse the one comparison the sweep
+exists to make.
+
+`dav2_large` is monocular and is **refused** rather than quietly handed one
+frame. That failure mode is the dangerous one: it returns a full, plausible
+table that reads "context does not help" when nothing was tried.
+
 Both are scored on the points **both** could answer for. A pinhole cannot cover
 the whole fisheye cone, so `rect_derect` has no answer at the rim; comparing
 aggregates over different point sets would compare the sets. What each gave up to
@@ -168,16 +186,42 @@ one. The table stands as measured on `b1659a0`.
 * **`rect_derect` has never run on real weights**, so the comparison the
   evaluation exists to make has not been made.
 
+### The context sweep is built and has never run on weights
+
+`--context-frames 1,3,5,10 --context-stride S`. Built and tested on the CPU
+side; **no network has seen a second frame yet.** What is pinned:
+
+* the window **precedes** the target at the requested spacing, stays inside the
+  clip, and at a clip boundary is **shifted rather than clamped** — clamping
+  repeats a frame, and a repeated frame is not evidence; a multi-view model may
+  read it as a stationary camera, which is a claim about the scene rather than a
+  gap;
+* every frame of the window goes through the baseline's **own** lens handling —
+  `rect_derect` rectifies all of them, not only the scored one, or the model
+  would be asked to match features across two different lenses;
+* a model that ignores its context reports **bit-identical** numbers at 1, 3, 5
+  and 10 frames, measured end to end on the staged sample. That is the claim the
+  whole sweep rests on and it is a test, not a comment;
+* `dav2_large` is refused **before any model loads**, from a class attribute,
+  with no weights touched.
+
+**The stride is not optional.** ego-synth clips are 20 fps, so a 10-frame window
+at stride 1 spans 0.45 s and a head-worn camera has barely moved. Without a
+strided arm beside the consecutive one, a null result cannot tell "the model
+cannot use context" from "there was no parallax to use".
+
 ## Steps remaining
 
 1. Land #17 (ticket 012). **The route changed**: the fetcher now runs on the CPU
    machine, where the signed URL JSONs already are, and only the ~1 KB/take
    reduction crosses to the box. AEA's 143 are fetched. Nymeria needs the release's
    own take list off the box; Oxford still needs a route decision.
-2. Re-run `verify_camera` **across takes**, not the one per dataset staged here,
+2. **Run the context sweep on `raw`.** It needs no calibration, so it does not
+   wait on step 1 — the same reason the first `raw` run did not.
+3. Re-run `verify_camera` **across takes**, not the one per dataset staged here,
    and on `oxford` for the first time. Add `oxford` to `VERIFIED_ROTATION` by
    hand if it passes — a measurement that promotes itself is not a check.
-3. Then the full `raw,rect_derect` run, which is the experiment.
+4. Then the full `raw,rect_derect` run, which is the lens experiment.
 
 ## Is `verify_camera` finished?
 
@@ -213,7 +257,11 @@ digit, 17 s instead of 2 s.
       results branch `b139bef`, issue #18. 0 errors, 0 models skipped; the
       oracle was re-earned on that split and still reads AbsRel 0.000.
 - [x] the convention is settled and `rect_derect` runs against a verified camera
+- [x] the context sweep is built, and a context-ignoring model reads bit-identical
+      numbers at 1/3/5/10 frames end to end
 - [ ] `verify_camera` has passed on more than one take per dataset, and on oxford
+- [ ] the context sweep has run on weights — **no network has seen a second
+      frame yet**
 
 ## The GPU run — the `raw` arm has run; `rect_derect` is what is left
 
@@ -252,6 +300,61 @@ python -m slambench.run \
 `--takes` defaults to 8 per dataset; the release is 1 611 takes, and the cap
 enters the split digest so a capped run can never be compared with a fuller one
 by accident.
+
+### The context sweep — ready now, `raw` only, no calibration needed
+
+VGGT-Omega at 1, 3, 5 and 10 frames, all four arms on **one model load and one
+frozen frame list**, so the difference between them is not partly the difference
+between four runs:
+
+```bash
+python -m slambench.run \
+  --egosynth-root /data/f.zhang2/ego-synth-5b \
+  --datasets aea,nymeria,oxford \
+  --models vggt_omega,vggt_1b,da3_large,da3_small \
+  --baselines raw --context-frames 1,3,5,10 --context-stride 1 \
+  --out eval_out/slambench_ctx_s1 2>&1 | tee eval_out/slambench_ctx_s1.log
+```
+
+Then the same thing at a stride that actually moves the camera. **Run both** —
+one without the other cannot distinguish a model that ignores context from a
+window with no parallax in it:
+
+```bash
+python -m slambench.run \
+  --egosynth-root /data/f.zhang2/ego-synth-5b \
+  --datasets aea,nymeria,oxford \
+  --models vggt_omega,vggt_1b,da3_large,da3_small \
+  --baselines raw --context-frames 1,3,5,10 --context-stride 5 \
+  --out eval_out/slambench_ctx_s5 2>&1 | tee eval_out/slambench_ctx_s5.log
+```
+
+`dav2_large` is **absent on purpose** — it is monocular and the run refuses it
+rather than filling the table with rows that read "context does not help". Score
+it in the existing `--context-frames 1` run instead.
+
+**Budget it before launching.** The 1-frame arm of the first run took 85 s for
+600 frames on `vggt_omega`; these four arms are 19 frame-passes where that was
+one, and VGGT's global attention is quadratic in the *joint* token count, so the
+10-frame arm is not 10× the 1-frame one — it is more. That figure is an
+extrapolation, not a measurement, and nobody has run this on a GPU yet. Smoke it
+on one dataset and one take first:
+
+```bash
+python -m slambench.run --egosynth-root /data/f.zhang2/ego-synth-5b \
+  --models vggt_omega --baselines raw --datasets aea --takes 1 --n-frames 3 \
+  --context-frames 1,3,5,10 --out eval_out/slambench_ctx_smoke
+```
+
+The weight-free version of that, which checks the plumbing and nothing else,
+runs on any machine in seconds and must report the **same numbers in every
+`ctx` row** — that is the invariant, and `--models analytic` is how it is read:
+
+```bash
+python -m slambench.run --egosynth-root /data/f.zhang2/ego-synth-5b \
+  --models analytic --baselines raw --datasets aea --takes 1 --n-frames 3 \
+  --context-frames 1,3,5,10 --device cpu --out eval_out/slambench_ctx_analytic
+```
 
 Once #17 has landed the calibrations, add the second arm — and re-run the
 verifier first, because so far it has only seen one take per dataset:

@@ -107,12 +107,29 @@ class Pinhole:
         return np.where(bad, np.nan, u), np.where(bad, np.nan, v)
 
 
+def _window(frames) -> list:
+    """A window as a list, whether one frame or several were handed over.
+
+    One RGB frame is itself a 3-d array, so ``list(frame)`` would silently
+    iterate its rows and hand the model 896 one-pixel-tall images.
+    """
+    if isinstance(frames, np.ndarray) and frames.ndim == 3:
+        return [frames]
+    return list(frames)
+
+
 class Baseline:
-    """Common interface. ``name`` is what the report prints."""
+    """Common interface. ``name`` is what the report prints.
+
+    ``predict`` takes a **window** of frames and the index within it of the one
+    being scored, so that a multi-view model can be handed a temporal context.
+    A window of one is the ordinary case and is not a special path.
+    """
 
     name = "?"
 
-    def predict(self, frame: np.ndarray, pts: "D.FramePoints") -> np.ndarray:
+    def predict(self, frames, pts: "D.FramePoints",
+                target: int = -1) -> np.ndarray:
         raise NotImplementedError
 
     @property
@@ -136,10 +153,10 @@ class RawBaseline(Baseline):
         self.model = model
         self.input_size = int(input_size or model.input_size)
 
-    def predict(self, frame: np.ndarray, pts: "D.FramePoints") -> np.ndarray:
-        raw = self.model.predict(D.resize_frame(frame, self.input_size),
-                                 gt=pts.d)
-        raw = np.asarray(raw)
+    def predict(self, frames, pts: "D.FramePoints",
+                target: int = -1) -> np.ndarray:
+        stack = [D.resize_frame(f, self.input_size) for f in _window(frames)]
+        raw = np.asarray(self.model.predict_stack(stack, target, gt=pts.d))
         if raw.ndim == 1:                       # the oracle stand-in
             return raw.astype(np.float32)
         return D.sample_prediction(raw, pts)
@@ -214,9 +231,14 @@ class RectDerectBaseline(Baseline):
         return out, in_cone
 
     # -- the round trip ----------------------------------------------------- #
-    def predict(self, frame: np.ndarray, pts: "D.FramePoints") -> np.ndarray:
-        rect, _ = self.rectify(frame)
-        raw = np.asarray(self.model.predict(rect, gt=None))
+    def predict(self, frames, pts: "D.FramePoints",
+                target: int = -1) -> np.ndarray:
+        # Every frame of the window is rectified, not just the scored one: a
+        # model handed one pinhole render among nine fisheye frames would be
+        # asked to match features across two different lenses, and whatever it
+        # then did would be about that mismatch.
+        stack = [self.rectify(f)[0] for f in _window(frames)]
+        raw = np.asarray(self.model.predict_stack(stack, target, gt=None))
         if raw.ndim != 2:
             raise SystemExit(
                 f"[slambench] the {self.model.key!r} stand-in answers per point, "
