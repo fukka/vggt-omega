@@ -38,9 +38,13 @@ measures it, and as of writing it fails:
     best case ~4 px median reprojection, ~5 % of points within 1 px
     against a ~0.5-2 % chance rate and a sub-pixel bar
 
+Narrowed since, by the twin residual (see ``verify_camera``): the rotation **is**
+90 deg CCW, the same on both datasets measured, with a 2.2x/1.7x margin. What
+survives it is ~6.8 px, near-identical across datasets — systematic, not noise.
+
 Ruled out, each measured rather than reasoned about:
 
-* all four 90 deg rotations, and a continuous roll swept at 2 deg (no peak);
+* the other three quarter turns, and a continuous roll swept at 2 deg;
 * the resolution — the implied sensor size was swept from 1000 to 4200 px and
   the best (~2820-2840) still leaves 1.4-1.9 px median and 10-21 % within 1 px;
 * the device-to-camera extrinsic, a real ~38.7 deg tilt that turned out not to
@@ -78,16 +82,26 @@ EGOSYNTH_RES = 896
 #: Quarter turns (CCW) taking the calibration's sensor frame to ego-synth's
 #: upright frame, per dataset.
 #:
-#: **Unverified.** Measured on one take each of ``aea`` and ``nymeria`` against
-#: contaminated correspondences (see the module docstring); ``egoexo4d`` and
-#: ``oxford`` were never measured at all and are guesses carried only so the
-#: code runs. :func:`verify_orientation` is what settles any of these, and
-#: :func:`require_verified` refuses to hand out an unverified camera.
+#: **Evidenced but not verified.** ``verify_camera``'s twin residual separates
+#: the four turns cleanly and gives the *same* answer on both datasets measured:
+#:
+#:     twin residual (px)   rot 0    rot 90   rot 180   rot 270
+#:     aea                  14.62      6.66     16.50     21.21
+#:     nymeria              11.68      6.94     13.09     16.23
+#:
+#: — a 2.2x and 1.7x margin, on a statistic that is unambiguous by construction.
+#: So 90 deg CCW is the rotation. It is still not *verified*, because ~6.8 px
+#: remains after applying it, consistent across both datasets, which is a
+#: systematic convention error rather than noise and is what the joint scale and
+#: principal-point search has to remove.
+#:
+#: ``oxford`` has never been measured and ``egoexo4d`` is paused; both carry the
+#: same value only because it is the one with evidence behind it anywhere.
 DATASET_ROTATION: Dict[str, int] = {
-    "aea": 1,          # 90 deg CCW  -- measured, contaminated
-    "nymeria": 0,      #              -- measured, contaminated
-    "egoexo4d": 0,     #              -- NOT measured
-    "oxford": 0,       #              -- NOT measured
+    "aea": 1,          # 90 deg CCW -- twin 6.66 px, 2.2x margin
+    "nymeria": 1,      # 90 deg CCW -- twin 6.94 px, 1.7x margin
+    "egoexo4d": 1,     #             -- PAUSED, never measured
+    "oxford": 1,       #             -- never measured
 }
 
 #: Datasets whose rotation has survived :func:`verify_orientation` at the

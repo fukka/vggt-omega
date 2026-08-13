@@ -40,6 +40,24 @@ against the ~100 % a correct model must produce.
 The four quarter turns are their own control. Exactly one of them should pass;
 if two do, the statistic is not discriminating and the answer is "unverified",
 not "probably that one".
+
+Two statistics, because the first one lies about magnitude
+----------------------------------------------------------
+The nearest-neighbour distance is a good **detector** and a bad **ruler**. In a
+cloud this dense there is nearly always *some* unrelated point a few pixels away,
+so the statistic saturates at roughly the local point spacing however wrong the
+camera is. Measured on the take below: NN median 4.25 px, while the distance to
+the point actually being predicted was **15.33 px**.
+
+So :func:`twin_residual` is reported beside it. It uses the subset of points
+whose depth appears **exactly once** in the fisheye set — about 13 % of a frame,
+unambiguous by construction rather than by luck, which is what the earlier
+contaminated pairing lacked. Membership is not the problem here: 99.8 % of
+rectified points do have a same-depth twin, so the subset is representative
+rather than a leftover.
+
+Read them together. NN says *whether* the camera is right; the twin residual says
+*by how much* it is wrong.
 """
 from __future__ import annotations
 
@@ -80,12 +98,16 @@ class RotationResult:
     within_1: float
     within_2: float
     n_points: int
+    twin_px: float = float("nan")
+    twin_within_2: float = float("nan")
+    n_twin: int = 0
 
     def __str__(self) -> str:
-        return (f"rot {self.rotation * 90:3d} deg  median {self.median_px:7.2f} px  "
-                f"<0.5px {100 * self.within_half:5.1f}%  "
-                f"<1px {100 * self.within_1:5.1f}%  "
-                f"<2px {100 * self.within_2:5.1f}%  (n={self.n_points})")
+        return (f"rot {self.rotation * 90:3d} deg | NN median {self.median_px:6.2f} px "
+                f"<1px {100 * self.within_1:5.1f}% "
+                f"<2px {100 * self.within_2:5.1f}% "
+                f"| twin {self.twin_px:7.2f} px "
+                f"<2px {100 * self.twin_within_2:5.1f}% (n={self.n_twin})")
 
 
 def rectification_of(take_dir: str) -> Tuple[float, float, int]:
@@ -119,6 +141,38 @@ def predicted_pixels(rect_uvd: np.ndarray, focal: float, centre: float,
     return np.stack([pu, pv], axis=1)
 
 
+def twin_residual(pred: np.ndarray, rect_depth: np.ndarray,
+                  fish: np.ndarray) -> Tuple[float, float, int]:
+    """``(median px, share within 2 px, n)`` against the point actually predicted.
+
+    The honest magnitude, on the subset where "which fisheye point is this?" has
+    one answer: those whose depth occurs **exactly once** among the fisheye
+    points. Requiring uniqueness is what the earlier, discarded pairing failed to
+    do — it matched on depth alone and paired unrelated points that happened to
+    share one.
+
+    Returns NaNs when the subset is too small to say anything.
+    """
+    seen: Dict[float, List[int]] = {}
+    for i, d in enumerate(fish[:, 2].astype(np.float64)):
+        seen.setdefault(round(float(d), 6), []).append(i)
+    idx, rows = [], []
+    for r, d in enumerate(rect_depth.astype(np.float64)):
+        cand = seen.get(round(float(d), 6), ())
+        if len(cand) == 1:
+            idx.append(cand[0])
+            rows.append(r)
+    if len(rows) < 32:
+        return float("nan"), float("nan"), len(rows)
+    p = pred[rows]
+    q = fish[idx][:, :2]
+    ok = np.isfinite(p).all(axis=1)
+    if ok.sum() < 32:
+        return float("nan"), float("nan"), int(ok.sum())
+    dist = np.hypot(p[ok, 0] - q[ok, 0], p[ok, 1] - q[ok, 1])
+    return float(np.median(dist)), float((dist < 2.0).mean()), int(ok.sum())
+
+
 def cloud_distance(pred: np.ndarray, actual: np.ndarray) -> RotationResult:
     """Nearest-neighbour distance from each predicted pixel to the real cloud."""
     from scipy.spatial import cKDTree
@@ -145,7 +199,7 @@ def verify_take(take_dir: str, calib_json: str, dataset: str,
     out: Dict[int, RotationResult] = {}
     for k in range(4):
         cam = C.load(calib_json, dataset=dataset, out_size=render, rotation=k)
-        d_all, n_all = [], 0
+        d_all, n_all, t_all = [], 0, []
         from scipy.spatial import cKDTree
         for npz in npzs:
             for fr in frames:
@@ -160,14 +214,18 @@ def verify_take(take_dir: str, calib_json: str, dataset: str,
                 dist, _ = cKDTree(fish[:, :2]).query(pred[ok], k=1)
                 d_all.append(dist)
                 n_all += int(ok.sum())
+                t_all.append(twin_residual(pred, rect[:, 2], fish))
         if not d_all:
             out[k] = RotationResult(k, float("nan"), 0.0, 0.0, 0.0, 0)
             continue
         dist = np.concatenate(d_all)
-        out[k] = RotationResult(k, float(np.median(dist)),
-                                float((dist < 0.5).mean()),
-                                float((dist < 1.0).mean()),
-                                float((dist < 2.0).mean()), n_all)
+        tw = [t for t in t_all if np.isfinite(t[0])]
+        out[k] = RotationResult(
+            k, float(np.median(dist)), float((dist < 0.5).mean()),
+            float((dist < 1.0).mean()), float((dist < 2.0).mean()), n_all,
+            twin_px=float(np.mean([t[0] for t in tw])) if tw else float("nan"),
+            twin_within_2=float(np.mean([t[1] for t in tw])) if tw else float("nan"),
+            n_twin=int(sum(t[2] for t in tw)))
     return out
 
 
@@ -226,13 +284,7 @@ def main() -> None:
             res = verify_take(os.path.join(ds_dir, name), calib, ds,
                               clips=a.clips)
             for k in sorted(res):
-                print("    " + str(res[k]).replace("rot  -1", f"rot {k*90:3d}")
-                      if res[k].rotation < 0 else
-                      "    " + str(RotationResult(k, res[k].median_px,
-                                                  res[k].within_half,
-                                                  res[k].within_1,
-                                                  res[k].within_2,
-                                                  res[k].n_points)))
+                print("    " + str(res[k]))
             win, why = decide(res)
             verdicts.setdefault(ds, []).append(win)
             print(f"    -> {'rotation ' + str(win * 90) + ' deg' if win is not None else 'UNVERIFIED'}"
