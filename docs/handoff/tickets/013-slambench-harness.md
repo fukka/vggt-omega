@@ -138,9 +138,31 @@ GPU; 6 of them drive the real staged sample end to end.
    hand if it passes — a measurement that promotes itself is not a check.
 4. Then the full `raw,rect_derect` run.
 
+## Is `verify_camera` finished?
+
+**The tool is. The verification is not.** Worth keeping those apart:
+
+| | |
+|---|---|
+| the mechanism | **done** — twin residual + NN cloud distance, three refusal modes, separates the four quarter turns by 43x |
+| the convention | **done** — settled with published provenance, no fitted parameter |
+| the code | **done** — see the cleanup below |
+| `aea`, `nymeria` | passed, **1 take each** — that is all the local sample holds |
+| `oxford` | **never measured.** No calibration staged. In scope. |
+| `egoexo4d` | paused by the owner |
+
+So `verify_camera` has seen 2 takes of the 1 611 in the release, and 2 of the 3
+in-scope datasets. Everything it *has* seen agrees, decisively. Running it at
+scale is step 3 below and needs #17 first.
+
+One environment note: `verify_camera` needs **scipy**, which is in this
+project's `demo` extra and not its core dependencies. It raises a clear message
+rather than an ImportError traceback. The evaluation itself does not need scipy —
+only this acceptance test does.
+
 ## Done when
 
-- [x] `python -m pytest slambench/tests -q` passes (49 tests)
+- [x] `python -m pytest slambench/tests -q` passes (51 tests)
 - [x] `slambench` imports nothing from `fovbench`, enforced by a test
 - [x] `--models oracle` reads AbsRel 0 end to end on the staged sample
 - [x] `verify_camera.py` exists and returns a decisive verdict

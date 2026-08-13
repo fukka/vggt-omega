@@ -113,3 +113,31 @@ def test_predicted_pixels_round_trips_through_a_known_camera():
     want_u, want_v = cam.project(np.stack([x, y, d], axis=1))
     assert np.allclose(pred[:, 0], want_u, equal_nan=True)
     assert np.allclose(pred[:, 1], want_v, equal_nan=True)
+
+
+def test_verify_take_uses_the_same_primitive_the_tests_pin():
+    """``cloud_distance`` was tested while ``verify_take`` -- the only thing the
+    CLI runs -- had its own copy of the same kd-tree query. Three green tests
+    were therefore saying nothing about the code that actually ran.
+
+    Both now go through ``nn_distances``, and this asserts it stays that way by
+    checking that the pooled statistic equals the frame-level one on a single
+    frame."""
+    rng = np.random.default_rng(11)
+    actual = rng.uniform(60, 830, size=(600, 3))
+    pred = actual[:, :2] + rng.normal(0, 0.2, size=(600, 2))
+
+    d = V.nn_distances(pred, actual)
+    assert d is not None and d.size == 600
+    r = V.cloud_distance(pred, actual)
+    assert r.median_px == pytest.approx(float(np.median(d)))
+    assert r.within_1 == pytest.approx(float((d < 1.0).mean()))
+    assert r.n_points == 600
+
+
+def test_nn_distances_declines_a_cloud_too_small_to_mean_anything():
+    rng = np.random.default_rng(3)
+    small = rng.uniform(0, 800, size=(8, 3))
+    assert V.nn_distances(small[:, :2], small) is None
+    # and the wrapper degrades to NaN rather than inventing a number
+    assert np.isnan(V.cloud_distance(small[:, :2], small).median_px)

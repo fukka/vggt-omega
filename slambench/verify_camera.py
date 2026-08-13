@@ -200,17 +200,38 @@ def twin_residual(pred: np.ndarray, rect_depth: np.ndarray,
     return float(np.median(dist)), float((dist < 2.0).mean()), int(ok.sum())
 
 
-def cloud_distance(pred: np.ndarray, actual: np.ndarray) -> RotationResult:
-    """Nearest-neighbour distance from each predicted pixel to the real cloud."""
-    from scipy.spatial import cKDTree
-    ok = np.isfinite(pred).all(axis=1)
-    pred = pred[ok]
+def nn_distances(pred: np.ndarray, actual: np.ndarray) -> Optional[np.ndarray]:
+    """Distance from each finite predicted pixel to the nearest actual one.
+
+    The primitive both :func:`cloud_distance` and :func:`verify_take` are built
+    on, so the frame-level statistic the tests pin and the pooled statistic the
+    CLI reports cannot drift apart. ``None`` when either cloud is too small to
+    say anything.
+    """
+    try:
+        from scipy.spatial import cKDTree
+    except ImportError as exc:                  # pragma: no cover - env problem
+        raise SystemExit(
+            "[slambench] verify_camera needs scipy for the nearest-neighbour "
+            "search (`pip install scipy`). It is not in this project's core "
+            "dependencies. The evaluation itself does not need it — only this "
+            "acceptance test does.") from exc
+    pred = pred[np.isfinite(pred).all(axis=1)]
     if pred.shape[0] < 32 or actual.shape[0] < 32:
-        return RotationResult(-1, float("nan"), 0.0, 0.0, 0.0, int(pred.shape[0]))
-    dist, _ = cKDTree(actual).query(pred, k=1)
+        return None
+    dist, _ = cKDTree(actual[:, :2]).query(pred, k=1)
+    return dist
+
+
+def cloud_distance(pred: np.ndarray, actual: np.ndarray) -> RotationResult:
+    """One frame's worth of :func:`nn_distances`, as a :class:`RotationResult`."""
+    dist = nn_distances(pred, actual)
+    if dist is None:
+        n = int(np.isfinite(pred).all(axis=1).sum())
+        return RotationResult(-1, float("nan"), 0.0, 0.0, 0.0, n)
     return RotationResult(-1, float(np.median(dist)),
                           float((dist < 0.5).mean()), float((dist < 1.0).mean()),
-                          float((dist < 2.0).mean()), int(pred.shape[0]))
+                          float((dist < 2.0).mean()), int(dist.size))
 
 
 def verify_take(take_dir: str, calib_json: str, dataset: str,
@@ -227,7 +248,6 @@ def verify_take(take_dir: str, calib_json: str, dataset: str,
     for k in range(4):
         cam = C.load(calib_json, dataset=dataset, out_size=render, rotation=k)
         d_all, n_all, t_all = [], 0, []
-        from scipy.spatial import cKDTree
         for npz in npzs:
             for fr in frames:
                 rect = read_variant(npz, "rectified", fr)
@@ -235,12 +255,11 @@ def verify_take(take_dir: str, calib_json: str, dataset: str,
                 if rect.shape[0] < 32 or fish.shape[0] < 32:
                     continue
                 pred = predicted_pixels(rect, focal, centre, cam)
-                ok = np.isfinite(pred).all(axis=1)
-                if ok.sum() < 32:
+                dist = nn_distances(pred, fish)
+                if dist is None:
                     continue
-                dist, _ = cKDTree(fish[:, :2]).query(pred[ok], k=1)
                 d_all.append(dist)
-                n_all += int(ok.sum())
+                n_all += int(dist.size)
                 t_all.append(twin_residual(pred, rect[:, 2], fish))
         if not d_all:
             out[k] = RotationResult(k, float("nan"), 0.0, 0.0, 0.0, 0)
@@ -326,8 +345,15 @@ def main() -> None:
     print("\n" + "=" * 72)
     for ds, wins in verdicts.items():
         agree = len(set(wins)) == 1 and wins[0] is not None
+        per_take = ", ".join("UNVERIFIED" if w is None else f"{w * 90} deg"
+                             for w in wins)
         print(f"  {ds:10s} {'rotation ' + str(wins[0] * 90) + ' deg' if agree else 'UNVERIFIED'}"
-              f"   (takes: {wins})")
+              f"   ({len(wins)} take(s): {per_take})")
+        if agree and ds not in C.VERIFIED_ROTATION:
+            print(f"{'':13s}not yet in camera.VERIFIED_ROTATION — add it by hand")
+        elif not agree and ds in C.VERIFIED_ROTATION:
+            print(f"{'':13s}** {ds} IS in camera.VERIFIED_ROTATION but did not "
+                  f"pass here — remove it **")
     print("\n  Add a dataset to camera.VERIFIED_ROTATION BY HAND once every take")
     print("  checked agrees. A measurement that promotes itself is not a check.")
 

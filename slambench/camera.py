@@ -316,8 +316,8 @@ class Fisheye624:
         identical: measured against the reference on a 2880 sensor, this one
         drifts up to 1.4 px at the rim (0.44 px once scaled to 896). That is
         under the tolerance for most uses and *over* the sub-pixel bar
-        :func:`verify_orientation` works to, so the reference is preferred
-        wherever it exists and ``test_camera.py`` pins the fallback against it.
+        ``verify_camera`` works to, so the reference is preferred wherever it
+        exists and ``test_camera.py`` pins the fallback against it.
 
         Points behind the camera are not meaningful for a fisheye of this FOV
         and come back as NaN rather than as a plausible pixel.
@@ -556,7 +556,7 @@ def require_verified(cam: Fisheye624) -> Fisheye624:
     if cam.dataset not in VERIFIED_ROTATION:
         raise OrientationUnverified(
             f"the {cam.dataset!r} sensor-to-upright rotation has not passed "
-            f"verify_orientation, so rect_derect would map predictions through "
+            f"verify_camera, so rect_derect would map predictions through "
             f"an unproven camera. Run "
             f"`python -m slambench.verify_camera --egosynth-root ... "
             f"--calib-root ...`, then add {cam.dataset!r} to "
