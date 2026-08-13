@@ -1,0 +1,101 @@
+========================================================================================
+  ADT-FOV test · adt-fov-v1 · split 8740ec736365
+========================================================================================
+  50 frames over 1 sequence(s): Apartment_release_clean_seq135_M1292
+  streams ['synthetic', 'real'] · views ['rect', 'fisheye'] · protocols ['radial']
+  GT valid <= 10.0 m; predictions beyond 100.0 m excluded from the metrics
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame, over every valid
+  pixel, and then frozen; binning is a masking step applied afterwards. Every
+  cell above — AbsRel, delta1, RMSE, and `pen` — obeys that.
+
+  pen    = AbsRel(outermost bin) / AbsRel(innermost)  — how much worse the
+           periphery is, in the metric a downstream user reads.
+  Absolute AbsRel is comparable only WITHIN an alignment protocol — see the
+  MODELS block: models sharing an `align=` may be read against each other,
+  one scored differently may not. pen is comparable across all of them,
+  being a within-model ratio.
+
+  RADIAL · rect · AbsRel   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_large     real         0.074   0.091   0.086   0.089   0.098   0.114    1.54
+  da3_large     synthetic    0.041   0.041   0.046   0.063   0.076   0.096    2.36
+  dav2_large    real         0.149   0.177   0.176   0.159   0.158   0.158    1.06
+  dav2_large    synthetic    0.103   0.122   0.140   0.139   0.143   0.143    1.40
+  vggt_1b       real         0.078   0.087   0.089   0.096   0.106   0.136    1.74
+  vggt_1b       synthetic    0.062   0.057   0.059   0.070   0.079   0.103    1.66
+  vggt_omega    real         0.047   0.052   0.057   0.067   0.073   0.084    1.79
+  vggt_omega    synthetic    0.040   0.039   0.041   0.053   0.062   0.077    1.92
+
+  RADIAL · rect · delta1   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_large     real         0.930   0.903   0.904   0.899   0.873   0.851    1.54
+  da3_large     synthetic    0.974   0.979   0.972   0.949   0.933   0.917    2.36
+  dav2_large    real         0.843   0.843   0.834   0.828   0.816   0.770    1.06
+  dav2_large    synthetic    0.905   0.895   0.881   0.868   0.852   0.820    1.40
+  vggt_1b       real         0.938   0.925   0.925   0.908   0.872   0.804    1.74
+  vggt_1b       synthetic    0.963   0.968   0.964   0.945   0.922   0.890    1.66
+  vggt_omega    real         0.954   0.953   0.944   0.934   0.924   0.907    1.79
+  vggt_omega    synthetic    0.975   0.978   0.974   0.957   0.951   0.945    1.92
+
+  RADIAL · fisheye · AbsRel   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_large     real         0.082   0.093   0.089   0.095   0.118   0.148    1.80
+  da3_large     synthetic    0.052   0.055   0.060   0.074   0.098   0.136    2.61
+  dav2_large    real         0.153   0.202   0.194   0.179   0.172   0.181    1.18
+  dav2_large    synthetic    0.139   0.176   0.182   0.181   0.199   0.231    1.66
+  vggt_1b       real         0.076   0.084   0.086   0.096   0.114   0.140    1.83
+  vggt_1b       synthetic    0.062   0.062   0.065   0.080   0.098   0.122    1.97
+  vggt_omega    real         0.052   0.054   0.055   0.057   0.076   0.115    2.21
+  vggt_omega    synthetic    0.049   0.050   0.050   0.057   0.075   0.113    2.32
+
+  RADIAL · fisheye · delta1   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_large     real         0.938   0.924   0.919   0.908   0.870   0.833    1.80
+  da3_large     synthetic    0.972   0.975   0.968   0.943   0.908   0.863    2.61
+  dav2_large    real         0.877   0.857   0.836   0.832   0.822   0.795    1.18
+  dav2_large    synthetic    0.904   0.863   0.837   0.827   0.800   0.750    1.66
+  vggt_1b       real         0.931   0.920   0.927   0.910   0.867   0.832    1.83
+  vggt_1b       synthetic    0.964   0.964   0.953   0.929   0.899   0.878    1.97
+  vggt_omega    real         0.956   0.964   0.963   0.957   0.940   0.919    2.21
+  vggt_omega    synthetic    0.961   0.968   0.969   0.960   0.947   0.925    2.32
+
+  COVERAGE · mean valid samples per incidence bin (radial protocol)
+  ----------------------------------------------------------------------------------
+  view      stream        px     0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye   real         512     4825    15660    29260    46481    66244    35413
+  fisheye   real         518     4944    16022    29936    47582    67818    36247
+  fisheye   synthetic    512     4825    15660    29260    46481    66244    35413
+  fisheye   synthetic    518     4944    16022    29936    47582    67818    36247
+  rect      real         512     7744    25248    50008    92336    83846     2873
+  rect      real         518     7925    25856    51168    94540    85806     2939
+  rect      synthetic    512     7744    25248    50008    92336    83846     2873
+  rect      synthetic    518     7925    25856    51168    94540    85806     2939
+  A rectified ~85 deg pinhole has no pixels past 42.3 deg off-axis except
+  in its corners (52.6 deg at most). Empty outer bins there are geometry,
+  not model failure — and are themselves the cost of rectifying.
+
+  BIN DEPTH · median GT depth per incidence bin (m) — a confound, not a score
+  ----------------------------------------------------------------------------------
+  view      stream              px     0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye   real+synthetic     512     3.15     2.98     2.74     2.51     2.14     1.78
+  fisheye   real+synthetic     518     3.15     2.98     2.74     2.51     2.14     1.78
+  rect      real+synthetic     512     3.15     2.98     2.74     2.51     2.25     2.36
+  rect      real+synthetic     518     3.15     2.98     2.74     2.51     2.25     2.36
+  Read the AbsRel tables against this row: a bin that is both farther and
+  worse has not yet been shown to be worse *because of* where it sits.
+
+  MODELS
+  ------------------------------------------------------------
+  da3_large     Depth-Anything-3 Large · 411M · align=scale_shift · views at 518px
+  dav2_large    Depth-Anything-V2 Large · 335M · align=disparity_scale_shift · views at 518px
+  vggt_1b       VGGT 1B · 1191M · align=scale_shift · views at 518px
+  vggt_omega    VGGT-Omega 1B/512 · 1144M · align=scale_shift · views at 512px

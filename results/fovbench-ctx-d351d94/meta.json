@@ -1,0 +1,90 @@
+{
+  "run_id": "fovbench-ctx-d351d94",
+  "ticket": "docs/handoff/tickets/010-adt-fov-context-and-sequences.md",
+  "issue": "https://github.com/fukka/vggt-omega/issues/15",
+  "commit": "d351d94",
+  "protocol": "adt-fov-v1",
+  "date_utc": "2026-08-12",
+  "hardware": "lambda_63, 2x NVIDIA RTX 6000 Ada Generation, driver 570.207",
+  "env": "conda env raytun3r, python 3.11.15, matplotlib 3.11.1; unchanged from #14",
+  "errors": 0,
+  "models_skipped": [],
+
+  "sequences_available": {
+    "directories_under_adt_root": 20,
+    "usable_before_this_ticket": 1,
+    "usable_after_extraction": 6,
+    "ceiling_if_all_caches_extracted": 19,
+    "note": "No data was missing. synthetic_video.vrs and depth/depth_images.vrs are on disk for every sequence; videos_synthetic/ and depth_npy/ are decoded caches that existed only for seq131 (depth also for 5 others). 13 sequences still need depth_npy extracted as well and were left alone.",
+    "extracted_here": ["seq133", "seq134", "seq135", "seq136", "decoration_seq132"],
+    "extracted_frames_per_sequence": 400,
+    "extraction_tool": "extract_synthetic.py (in this directory)",
+    "disk_cost_gb": 13
+  },
+
+  "cache_naming_defect_found": {
+    "where": "the pre-existing seq131 videos_synthetic cache",
+    "rule_recovered": "a stem is frame_<idx>_<ts>.png with idx the record index in the REAL video.vrs camera-rgb stream and ts that record's capture_timestamp_ns; a synthetic record takes the name of the NEAREST real record (offset +312 on seq131, residual lag 15.4 -> 0.09 ms, never half a frame)",
+    "verified_by": "12 spread frames pixel-identical, 0 timestamp mismatches",
+    "defect_1": "synthetic record 0 is omitted (would be frame_000312_*)",
+    "defect_2": "the last record is written TWICE, as frame_003189_* and frame_003190_*, so frame_003190 carries pixels 33 ms older than its name and is scored against the wrong depth map. 1 frame in 2878 of seq131's candidate set.",
+    "impact": "negligible for aggregates, but it is a real mispairing in the data every ADT-FOV number so far was measured on"
+  },
+
+  "runs": {
+    "partA_6seq": {
+      "digest": "601fcb22767e", "n_frames": 300, "sequences": 6,
+      "role": "the headline Part A; the three figures live here",
+      "wall_clock_s_per_model": {"vggt_1b": 517, "vggt_omega": 307, "dav2_large": 404, "da3_large": 386}
+    },
+    "partA_seq131": {
+      "digest": "8ca25fd0ebd2", "n_frames": 50, "sequences": 1,
+      "role": "Part B's N=1 baseline, and seq131's entry in the per-sequence comparison",
+      "wall_clock_s_per_model": {"vggt_1b": 91, "vggt_omega": 46, "dav2_large": 43, "da3_large": 39}
+    },
+    "partA_seq131_200f": {
+      "digest": "fcc6c600f83b", "n_frames": 200, "sequences": 1,
+      "role": "not requested by the ticket; run to verify the pooling change against fovbench-v3-24b38e1 on identical data",
+      "wall_clock_s_per_model": {"vggt_1b": 365, "vggt_omega": 157, "dav2_large": 160, "da3_large": 145}
+    },
+    "perseq_seq132": {"digest": "fbac195fae55", "n_frames": 50},
+    "perseq_seq133": {"digest": "da093501b9f5", "n_frames": 50},
+    "perseq_seq134": {"digest": "5f658a6fe8c8", "n_frames": 50},
+    "perseq_seq135": {"digest": "8740ec736365", "n_frames": 50},
+    "perseq_seq136": {"digest": "4d565fa5957e", "n_frames": 50},
+    "partB_5c": {"digest": "8ca25fd0ebd2", "context_frames": 5, "context_stride": 1,
+                 "wall_clock_s_per_model": {"vggt_1b": 590, "vggt_omega": 158, "da3_large": 167}},
+    "partB_10c": {"digest": "8ca25fd0ebd2", "context_frames": 10, "context_stride": 1,
+                  "wall_clock_s_per_model": {"vggt_1b": 1081, "vggt_omega": 221, "da3_large": 221}},
+    "partB_5s": {"digest": "8ca25fd0ebd2", "context_frames": 5, "context_stride": 10,
+                 "wall_clock_s_per_model": {"vggt_1b": 695, "vggt_omega": 169, "da3_large": 175}},
+    "partB_10s": {"digest": "8ca25fd0ebd2", "context_frames": 10, "context_stride": 10,
+                  "wall_clock_s_per_model": {"vggt_1b": 1212, "vggt_omega": 218, "da3_large": 213}}
+  },
+
+  "digest_invariant": {
+    "requirement": "one digest across every run in Parts A and B",
+    "held_for": "Part B -- all four configurations and their N=1 baseline share 8ca25fd0ebd2, so the context comparison is on identical pixels",
+    "not_held_for": "the 6-sequence Part A (601fcb22767e) and the five per-sequence runs, which are DIFFERENT splits by construction and are reported as such rather than folded in",
+    "how_part_B_was_restricted": "a one-symlink ADT root at /tmp/adt_seq131, NOT --manifest; build_split there reproduces 8ca25fd0ebd2 exactly, with and without context, because the digest is sha1(protocol + frame keys) and excludes the root path"
+  },
+
+  "manifest_context_bug_found": {
+    "symptom": "four Part B runs whose predictions were bit-identical to N=1 in all 12 cells while results.json config reported context_frames: 10",
+    "cause": "a manifest stores context_frames/context_stride and a pre-baked per-frame context dict; Split.load restores all of it (split.py:136-147), so --manifest silently overrides --context-frames and the run's own config block still echoes the CLI flags",
+    "consequence": "--manifest plus --context-frames is a silent no-op whose artifacts are indistinguishable from a real context run except by diffing against the baseline",
+    "status": "those four runs were discarded and re-run without --manifest; context confirmed real (0 of 12 cells identical to N=1 in every configuration)",
+    "suggested_fix": "refuse --context-frames that disagrees with the manifest, or rebuild the context lists from the CLI and say so in the header"
+  },
+
+  "pooling_verification": {
+    "against": "results/fovbench-v3-24b38e1 (old equal-weight _mean_metrics)",
+    "same_split": "fcc6c600f83b, 200 frames of seq131",
+    "ticket_prediction": "moves exactly one cell (DAv2 rect 0-10 deg, 0.1101 -> 0.0915), depth heads untouched",
+    "measured": "the named cell is exact (0.1101 -> 0.0915); depth heads untouched is exact (0 of 72 depth-head cells moved); but 8 of 96 cells moved by >0.0005, not one -- all eight are DAv2",
+    "largest_other_move": "DAv2 real rect 0-10 deg, 0.1216 -> 0.1103",
+    "effect_on_the_dav2_anomaly": "rect pen 0.733 -> 0.809 (real) and 0.727 -> 0.875 (synthetic); reduced, not removed"
+  },
+
+  "gpu_utilisation_note": "The harness is CPU-bound, not GPU-bound: measured mid-run at 25-30% on one GPU with 3.1 GB of 48 GB resident and ~2 of 64 cores busy. Running the configurations concurrently across both GPUs reached 99-100% on both and cut the grid from ~1.4 h serial to ~28 min wall clock. Intra-run parallelism would be a change under fovbench/ and is not attempted here."
+}

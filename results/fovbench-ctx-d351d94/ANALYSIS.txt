@@ -1,0 +1,144 @@
+ADT-FOV ticket 010 (context + sequences) -- derived tables
+Generated from the results.json files in this directory; see meta.json.
+
+############ ITEM 3: per-sequence pen ############
+digests (each sequence is its own split, so these differ by design):
+  seq131: 8ca25fd0ebd2  n_frames=50
+  seq132: fbac195fae55  n_frames=50
+  seq133: da093501b9f5  n_frames=50
+  seq134: 5f658a6fe8c8  n_frames=50
+  seq135: 8740ec736365  n_frames=50
+  seq136: 4d565fa5957e  n_frames=50
+
+=== pen, fisheye / synthetic ===
+model          seq131   seq132   seq133   seq134   seq135   seq136      min      max  spread
+vggt_1b         1.844    2.024    2.216    1.805    1.968    1.469    1.469    2.216    0.75
+vggt_omega      1.810    2.326    2.757    2.297    2.319    2.194    1.810    2.757    0.95
+dav2_large      1.471    0.908    1.128    1.428    1.657    1.332    0.908    1.657    0.75
+da3_large       2.095    1.982    2.429    2.257    2.614    2.396    1.982    2.614    0.63
+
+=== pen, fisheye / real ===
+model          seq131   seq132   seq133   seq134   seq135   seq136      min      max  spread
+vggt_1b         1.462    1.506    1.967    1.629    1.830    1.344    1.344    1.967    0.62
+vggt_omega      1.483    2.024    2.863    2.063    2.214    1.862    1.483    2.863    1.38
+dav2_large      1.069    0.740    0.978    1.088    1.183    1.073    0.740    1.183    0.44
+da3_large       1.450    2.083    2.199    2.051    1.805    2.249    1.450    2.249    0.80
+
+=== pen, rect / synthetic ===
+model          seq131   seq132   seq133   seq134   seq135   seq136      min      max  spread
+vggt_1b         1.301    1.060    1.873    1.617    1.663    1.403    1.060    1.873    0.81
+vggt_omega      1.112    1.032    2.376    1.882    1.925    1.699    1.032    2.376    1.34
+dav2_large      0.924    0.821    1.121    1.335    1.395    1.221    0.821    1.395    0.57
+da3_large       1.242    1.299    2.207    2.068    2.364    2.082    1.242    2.364    1.12
+
+=== pen, rect / real ===
+model          seq131   seq132   seq133   seq134   seq135   seq136      min      max  spread
+vggt_1b         1.147    1.149    2.241    1.333    1.739    1.215    1.147    2.241    1.09
+vggt_omega      0.975    1.340    2.115    1.473    1.787    1.445    0.975    2.115    1.14
+dav2_large      1.031    0.855    1.154    1.325    1.062    1.092    0.855    1.325    0.47
+da3_large       1.265    1.452    2.001    1.801    1.538    2.263    1.265    2.263    1.00
+
+=== sign agreement: how many sequences have pen > 1 (periphery worse) ===
+model       view     stream       pen>1  of   per-sequence pen
+vggt_1b     fisheye  synthetic        6   6   1.84 2.02 2.22 1.80 1.97 1.47
+vggt_1b     fisheye  real             6   6   1.46 1.51 1.97 1.63 1.83 1.34
+vggt_1b     rect     synthetic        6   6   1.30 1.06 1.87 1.62 1.66 1.40
+vggt_1b     rect     real             6   6   1.15 1.15 2.24 1.33 1.74 1.22
+vggt_omega  fisheye  synthetic        6   6   1.81 2.33 2.76 2.30 2.32 2.19
+vggt_omega  fisheye  real             6   6   1.48 2.02 2.86 2.06 2.21 1.86
+vggt_omega  rect     synthetic        6   6   1.11 1.03 2.38 1.88 1.92 1.70
+vggt_omega  rect     real             5   6   0.97 1.34 2.11 1.47 1.79 1.44
+dav2_large  fisheye  synthetic        5   6   1.47 0.91 1.13 1.43 1.66 1.33
+dav2_large  fisheye  real             4   6   1.07 0.74 0.98 1.09 1.18 1.07
+dav2_large  rect     synthetic        4   6   0.92 0.82 1.12 1.33 1.40 1.22
+dav2_large  rect     real             5   6   1.03 0.86 1.15 1.33 1.06 1.09
+da3_large   fisheye  synthetic        6   6   2.09 1.98 2.43 2.26 2.61 2.40
+da3_large   fisheye  real             6   6   1.45 2.08 2.20 2.05 1.80 2.25
+da3_large   rect     synthetic        6   6   1.24 1.30 2.21 2.07 2.36 2.08
+da3_large   rect     real             6   6   1.27 1.45 2.00 1.80 1.54 2.26
+
+=== dav2 rect innermost vs the rest, per sequence (the seq131 anomaly) ===
+seq     stream         0-10   10-20   20-30   30-40   40-50   50-55     pen
+seq131  real          0.095   0.093   0.081   0.090   0.089   0.098   1.031
+seq131  synthetic     0.089   0.079   0.065   0.078   0.091   0.082   0.924
+seq132  real          0.116   0.090   0.079   0.084   0.093   0.099   0.855
+seq132  synthetic     0.116   0.104   0.097   0.095   0.088   0.095   0.821
+seq133  real          0.111   0.112   0.110   0.103   0.112   0.128   1.154
+seq133  synthetic     0.104   0.099   0.098   0.095   0.110   0.117   1.121
+seq134  real          0.087   0.118   0.121   0.117   0.113   0.116   1.325
+seq134  synthetic     0.086   0.105   0.110   0.119   0.116   0.115   1.335
+seq135  real          0.149   0.177   0.176   0.159   0.158   0.158   1.062
+seq135  synthetic     0.103   0.122   0.140   0.139   0.143   0.143   1.395
+seq136  real          0.108   0.109   0.112   0.118   0.119   0.118   1.092
+seq136  synthetic     0.088   0.092   0.096   0.104   0.108   0.108   1.221
+
+############ ITEM 4: Part B, context and spacing ############
+digests: {'fovA': '8ca25fd0ebd2', 'fovB_5c': '8ca25fd0ebd2', 'fovB_10c': '8ca25fd0ebd2', 'fovB_5s': '8ca25fd0ebd2', 'fovB_10s': '8ca25fd0ebd2'}
+
+overall AbsRel (lower better); 10c/N1 isolates 'more of the same instant',
+10s/10c isolates parallax at fixed frame count
+model       stream     view           N=1       5c      10c       5s      10s   10c/N1   10s/10c
+vggt_1b     synthetic  fisheye     0.1024   0.1246   0.1421   0.1222   0.1274    1.388     0.897
+vggt_1b     synthetic  rect        0.0702   0.0745   0.0744   0.0679   0.0654    1.059     0.879
+vggt_1b     real       fisheye     0.1246   0.1399   0.1485   0.1327   0.1344    1.191     0.905
+vggt_1b     real       rect        0.0930   0.0932   0.0960   0.0803   0.0789    1.032     0.822
+vggt_omega  synthetic  fisheye     0.0647   0.0748   0.0863   0.0864   0.0895    1.334     1.037
+vggt_omega  synthetic  rect        0.0452   0.0461   0.0424   0.0390   0.0383    0.938     0.902
+vggt_omega  real       fisheye     0.0760   0.0820   0.0856   0.0877   0.0915    1.126     1.070
+vggt_omega  real       rect        0.0609   0.0613   0.0569   0.0522   0.0526    0.934     0.924
+da3_large   synthetic  fisheye     0.0918   0.0929   0.0966   0.1000   0.1020    1.052     1.056
+da3_large   synthetic  rect        0.0515   0.0528   0.0506   0.0454   0.0427    0.983     0.843
+da3_large   real       fisheye     0.0997   0.1006   0.1034   0.0985   0.0999    1.037     0.966
+da3_large   real       rect        0.0774   0.0782   0.0689   0.0501   0.0478    0.890     0.693
+
+pen per configuration -- context changes the level, not the shape
+model       stream     view           N=1       5c      10c       5s      10s
+vggt_1b     synthetic  fisheye      1.844    1.793    1.818    1.779    1.733
+vggt_1b     synthetic  rect         1.301    1.305    1.345    1.256    1.221
+vggt_1b     real       fisheye      1.462    1.469    1.465    1.652    1.662
+vggt_1b     real       rect         1.147    1.095    1.220    1.206    1.108
+vggt_omega  synthetic  fisheye      1.810    1.946    1.846    1.668    1.743
+vggt_omega  synthetic  rect         1.112    1.053    0.978    0.968    0.986
+vggt_omega  real       fisheye      1.483    1.531    1.606    1.608    1.667
+vggt_omega  real       rect         0.975    0.852    0.859    0.918    0.910
+da3_large   synthetic  fisheye      2.095    2.128    1.958    2.004    2.113
+da3_large   synthetic  rect         1.242    1.317    1.338    1.239    1.166
+da3_large   real       fisheye      1.450    1.567    1.656    1.753    2.020
+da3_large   real       rect         1.265    1.249    1.228    1.308    1.253
+
+############ ITEM 5: wall clock, seconds per model ############
+run            vggt_1b  vggt_omega  dav2_large  da3_large   (blank = not in that run)
+fovA           91 46 43 39 
+fovA6          517 307 404 386 
+fovB_5c        590 158 167 
+fovB_10c       1081 221 221 
+fovB_5s        695 169 175 
+fovB_10s       1212 218 213 
+fovS_seq132    158 59 69 54 
+fovS_seq133    157 59 69 56 
+fovS_seq134    115 51 44 40 
+fovS_seq135    157 59 69 54 
+fovS_seq136    115 51 44 40 
+
+Part B multipliers over N=1, per model (same 50 frames of seq131):
+  vggt_1b     N=5c 590/91 = 6.5x   N=10c 1081/91 = 11.9x
+  vggt_omega  N=5c 158/46 = 3.4x   N=10c  221/46 =  4.8x
+  da3_large   N=5c 167/39 = 4.3x   N=10c  221/39 =  5.7x
+
+############ POOLING VERIFICATION vs fovbench-v3-24b38e1 ############
+Same split (fcc6c600f83b, 200 frames of seq131), old equal-weight pooling
+vs new pixel-weighted pooling. The ticket predicted DAv2 rect 0-10 deg
+0.1101 -> 0.0915 and the depth heads untouched.
+digest new=fcc6c600f83b old=fcc6c600f83b match=True
+model       stream     view         bin      old      new    delta
+dav2_large  real       rect        0-10   0.1216   0.1103  -0.0113
+dav2_large  real       rect       10-20   0.0926   0.0901  -0.0025
+dav2_large  real       rect       20-30   0.0867   0.0857  -0.0010
+dav2_large  synthetic  fisheye     0-10   0.1210   0.1199  -0.0012
+dav2_large  synthetic  fisheye    10-20   0.1094   0.1083  -0.0011
+dav2_large  synthetic  rect        0-10   0.1101   0.0915  -0.0186
+dav2_large  synthetic  rect       10-20   0.0810   0.0777  -0.0033
+dav2_large  synthetic  rect       20-30   0.0745   0.0735  -0.0010
+moved: 8/96 cells; of those, depth-head (non-dav2) cells: 0
+dav2 rect real       pen old 0.733 -> new 0.809
+dav2 rect synthetic  pen old 0.727 -> new 0.875
