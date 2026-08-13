@@ -109,27 +109,13 @@ def summarise(run: dict) -> dict:
         clipped = len(cells) - len(clean)
         cells = clean
     if len(cells) < 2:
-        return dict(pen=float("nan"), drift=float("nan"),
-                    lo=float("nan"), hi=float("nan"),
+        return dict(pen=float("nan"), lo=float("nan"), hi=float("nan"),
                     n_cells=len(cells), clipped=clipped)
     a, b = cells[0], cells[-1]
     key = "bin_lo" if "bin_lo" in a else ("theta_lo" if "theta_lo" in a else "tilt")
     pen = (b["AbsRel"] / a["AbsRel"]) if a["AbsRel"] > 1e-9 else float("nan")
-    # `drift` is no longer part of the ADT-FOV experiment and no ADT table
-    # prints it: `bin_by` stopped emitting `anchored_ratio`, so it is NaN there
-    # by construction rather than by a flag anyone could flip back. It survives
-    # here only for `datasets_egosynth`, whose pooled path sets `anchored_ratio`
-    # itself and reads this. Radial only — every window is a separate forward
-    # pass of an up-to-scale model, so a window-to-window ratio would compare
-    # two arbitrary constants.
-    drift = float("nan")
-    if run["protocol"] == "radial" \
-            and _finite(a.get("anchored_ratio")) \
-            and _finite(b.get("anchored_ratio")) \
-            and abs(b["anchored_ratio"]) > 1e-9:
-        drift = a["anchored_ratio"] / b["anchored_ratio"]
-    return dict(pen=pen, drift=drift,
-                lo=a[key], hi=b[key], n_cells=len(cells), clipped=clipped)
+    return dict(pen=pen, lo=a[key], hi=b[key],
+                n_cells=len(cells), clipped=clipped)
 
 
 # --------------------------------------------------------------------------- #
@@ -149,10 +135,11 @@ def _hi(c: dict) -> float:
 def _cells_of(run: dict, axis: str = "theta") -> List[dict]:
     """The run's cells on one axis, or ``[]`` if it has none.
 
-    A run can genuinely lack an axis. ego-synth's raw-fisheye arm ships no
-    camera model, so an incidence angle is not computable for it at all and it
-    is binned by radius only — an empty list here, and a skipped row in the
-    theta tables, rather than a fabricated column.
+    ``theta`` and ``radius`` are two binnings of one frozen fit, never
+    interchangeable: on the raw fisheye radius is near-proportional to theta and
+    on the rectified pinhole it goes as ``tan theta``, so the same number is a
+    different direction in the two views. Selecting the axis here rather than at
+    each call site is what keeps them out of one column.
     """
     if run["protocol"] != "radial":
         return run.get("cells", [])
@@ -212,10 +199,9 @@ def _coverage_note(runs: List[dict]) -> List[str]:
     rad = [r for r in runs if r["protocol"] == "radial"]
     if not rad:
         return []
-    # Prefer the incidence-angle axis; fall back to radius for a run that has no
-    # theta at all (ego-synth's raw fisheye ships no camera model). Mixing the
-    # two in one table would put `tan theta` and `theta` in the same column.
-    axis = "theta" if any(_cells_of(r, "theta") for r in rad) else "radius"
+    # Incidence angle, never mixed with radius: putting `tan theta` and `theta`
+    # in one column is the confound `fovbench/README.md` warns about.
+    axis = "theta"
     rad = [r for r in rad if _cells_of(r, axis)]
     if not rad:
         return []
@@ -345,14 +331,12 @@ def _bin_depth_note(rad: List[dict]) -> List[str]:
     the bins are at comparable depths; in an egocentric indoor frame they need
     not be. This table is model-independent (it is the GT), so it collapses on
     the GT itself: one row per distinct depth profile, labelled with the streams
-    that share it. On ADT both streams read one depth map and collapse to a
-    single row, as before. On ego-synth the ``stream`` column is the *dataset*,
-    and their scene scales differ by an order of magnitude — ~1.2 m median
-    indoors against ~5.3 m at Oxford with a 23 m p99 — so they do not collapse,
-    and must not: pooling four scene scales into one row is exactly the confound
-    this table exists to expose.
+    that share it. Both ADT streams read one depth map, so they collapse to a
+    single row; the collapse is on the measured profile rather than on the
+    stream name, so a future stream with its own depth would separate out
+    instead of being pooled into someone else's.
     """
-    axis = "theta" if any(_cells_of(r, "theta") for r in rad) else "radius"
+    axis = "theta"
     have = [r for r in rad if any("gt_median" in b for b in _cells_of(r, axis))]
     if not have:
         return []
@@ -385,26 +369,16 @@ def render_report(payload: dict) -> str:
     seqs = payload["sequences"]
     out = [
         "=" * 88,
-        f"  {'ego-synth' if payload['protocol'].startswith('egosynth') else 'ADT'}"
-        f"-FOV test · {payload['protocol']} · split {payload['digest']}",
+        f"  ADT-FOV test · {payload['protocol']} · split {payload['digest']}",
         "=" * 88,
         f"  {payload['n_frames']} frames over {len(seqs)} sequence(s): "
         + (", ".join(seqs) if len(seqs) <= 6
            else f"{', '.join(seqs[:5])}, … (+{len(seqs) - 5} more)"),
         f"  streams {cfg['streams']} · views {cfg['views']} · protocols {cfg['protocols']}",
     ]
-    # The window protocol re-renders an angular window out of the raw fisheye,
-    # which needs a fisheye camera model. ego-synth ships none, so its runs are
-    # radial-only and have no window line to print.
     if "window" in cfg.get("protocols", ()):
         out.append(f"  window FOV {cfg['window_fov']} deg held fixed; aims "
                    f"{cfg['tilts']} deg x azimuths {cfg['azimuths']}")
-    if "sigma_max" in cfg:
-        out += [f"  GT is a sparse SLAM point list, cut at "
-                f"{cfg['sigma_column']} < {cfg['sigma_max']} — the release ships "
-                f"UNFILTERED, so this cut is part of every number below",
-                f"  {cfg.get('takes_per_dataset', 0) or 'all'} take(s) per dataset; "
-                f"prediction read at the points by: {', '.join(cfg.get('gather', ())) or 'n/a'}"]
     out += [
         f"  GT valid <= {cfg['depth_max_m']} m; predictions beyond "
         f"{cfg['metric_max_depth']} m excluded from the metrics",
@@ -435,16 +409,6 @@ def render_report(payload: dict) -> str:
         for view in ("rect", "fisheye"):
             for metric in ("AbsRel", "delta1"):
                 out += _table(runs, protocol, view, metric)
-            # An arm with no incidence-angle axis at all would otherwise print
-            # nothing: ego-synth's raw fisheye ships no camera model, so theta
-            # is not computable for it and radius is the only axis it has. Give
-            # it its own table, labelled by radius — never silently in the theta
-            # tables, where the same number would mean a different direction.
-            if protocol == "radial" and not any(
-                    _cells_of(r, "theta") for r in runs
-                    if r["protocol"] == protocol and r["view"] == view):
-                for metric in ("AbsRel", "delta1"):
-                    out += _table(runs, protocol, view, metric, axis="radius")
     out += _coverage_note(runs)
     out += _window_geometry_note(runs)
 
@@ -469,10 +433,9 @@ def write_csv(payload: dict, path: str) -> str:
     """One flat row per (model, stream, view, protocol, cell).
 
     The ``axis`` column names what ``theta_lo``/``theta_hi`` measure on that
-    row. It is incidence angle wherever incidence angle exists, and radius on a
-    run that has no theta at all — ego-synth's raw fisheye, which ships no
-    camera model. Without the column those two would be the same pair of
-    numbers meaning different things, which is the confusion
+    row: every radial run is binned twice off one fit, by incidence angle and by
+    distance from the optical centre. Without the column those two would be the
+    same pair of numbers meaning different things, which is the confusion
     `fovbench/README.md` spends a paragraph warning about.
     """
     with open(path, "w", newline="") as fh:

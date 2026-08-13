@@ -493,7 +493,13 @@ between the streams is *sensor reality plus registration*, not blur alone.
 | `models.py` | the four models behind one call + the analytic stand-in |
 | `run.py` | the driver (CLI) |
 | `report.py` | tables, CSV, the three figures, `pen` |
-| `tests/` | 123 CPU tests: no weights, no data, ~9 s (needs Python 3.8+) |
+| `tests/` | 118 CPU tests: no weights, no data, ~14 s (needs Python 3.8+) |
+
+**This package reads ADT and nothing else.** It carried a second ground truth
+once — ego-synth 5B, the release `slambench/` was written to score — and that
+duplicate reader is what `tests/test_experiment_separation.py` now exists to
+prevent: the invariant is which experiment owns which dataset, checked from
+outside both, because an import graph cannot see a second *copy*.
 
 Model loading, availability and downloads live in
 [`finetune/eval/baselines/model_zoo.py`](../finetune/eval/baselines/model_zoo.py);

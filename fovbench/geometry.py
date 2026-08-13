@@ -83,7 +83,6 @@ THETA_EDGES: Tuple[float, ...] = (0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 55.0)
 METRIC_KEYS: Tuple[str, ...] = ("AbsRel", "SqRel", "RMSE", "RMSElog", "log10",
                                 "delta1", "delta2", "delta3",
                                 "scale_ratio", "raw_scale_ratio",
-                                "anchored_ratio",
                                 "gt_median", "gt_std", "gt_spread")
 
 #: Distance-from-the-optical-centre bin edges, in units of the frame's HALF
@@ -107,24 +106,6 @@ RADIUS_EDGES: Tuple[float, ...] = (0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.45)
 PROFILE_THETA_EDGES: Tuple[float, ...] = tuple(float(x) for x in range(0, 56))
 PROFILE_RADIUS_EDGES: Tuple[float, ...] = tuple(
     round(0.025 * i, 4) for i in range(59))
-
-#: Depth strata for ``standardise_by_depth``, which the ADT-FOV experiment does
-#: not use; ``datasets_egosynth`` does. Four is the last value that standardises
-#: every bin on a scene whose whole radial penalty is depth — the share of that
-#: penalty still standing runs 100% at 1 stratum, 44% at 2, 25% at 4, and beyond
-#: that the bins stop overlapping in depth and nothing can be said at all.
-DEPTH_STRATA: int = 4
-
-#: A (bin x depth stratum) cell below this many pixels is not a measurement.
-MIN_STRATUM_PX: int = 64
-
-#: Minimum GT interquartile-range-over-median for a band to anchor an affine
-#: fit. Real ADT bands measure 0.71-0.88; a single flat wall measures 0.00.
-#:
-#: The ADT-FOV report no longer has a ``drift`` column and does not use this;
-#: ``datasets_egosynth`` does, for its own anchored pooling, and imports the
-#: constant rather than restating it so the two cannot diverge.
-MIN_ANCHOR_SPREAD = 0.05
 
 #: ``finetune/data/rectify.py`` renders the pinhole at ``0.55 * max(H, W)``.
 RECTIFIER_FOCAL_FRAC = 0.55
@@ -880,7 +861,6 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
     out["overall"].update(_gt_stats(gt_z, mask))
     for name, (coord, edges) in axes.items():
         edges = [float(e) for e in edges]
-        anchored = anchored_ratios(pred_z, gt_z, mask, coord, edges, align_mode)
         bins = []
         for i, (lo, hi) in enumerate(zip(edges[:-1], edges[1:])):
             m = mask & (coord >= lo) & (coord < hi)
@@ -889,7 +869,6 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
             met["n_valid"] = 0 if not np.isfinite(n) else int(n)
             met["n_bin"] = int(m.sum())
             met["raw_scale_ratio"] = raw_scale_ratio(pred_z, gt_z, m)
-            met["anchored_ratio"] = anchored[i]
             # What the bin was looking at, so "the rim is worse" can be told
             # apart from "the rim is nearer". Model-independent by construction.
             met.update(_gt_stats(gt_z, m))
@@ -984,83 +963,6 @@ def pool_profiles(profiles: Sequence[dict]) -> dict:
                 "n_frames": len(live)}
 
 
-def standardise_by_depth(aligned: np.ndarray, gt_z: np.ndarray,
-                         mask: np.ndarray, coord: np.ndarray,
-                         edges: Sequence[float], n_strata: int = DEPTH_STRATA,
-                         min_depth: float = 0.01, max_depth: float = 100.0,
-                         min_cell_px: int = MIN_STRATUM_PX) -> List[dict]:
-    """What each bin would score **if it saw the whole frame's depth mix**.
-
-    **The ADT-FOV experiment does not use this.** It reports AbsRel and delta1
-    against position in the field, with the measured per-bin GT depth beside
-    them, and leaves the reader to weigh the confound rather than correcting for
-    it. The function stays because ``datasets_egosynth`` calls it directly for
-    its own pooled path.
-
-    Direct standardisation, the oldest trick for the job. Cut
-    the frame's valid GT at its own depth quantiles, score every
-    (bin x stratum) cell separately, and average a bin's cells with the weight
-    each stratum has in the frame rather than the weight it has in that bin.
-    Quantile cuts make those weights uniform, so the standardised value is the
-    plain mean over strata. Any difference between a bin's raw and standardised
-    score is what its depth distribution was contributing.
-
-    **It reduces the confound, it does not remove it.** Within a stratum the
-    bins' depths still differ, and the residual scales with how coarse the
-    strata are — measured at ~25% of a purely-depth penalty left standing at
-    four strata (see ``DEPTH_STRATA``). So a standardised curve that is still
-    rising is evidence of a real effect; a standardised curve that goes flat has
-    only been shown to be *mostly* depth. Quote both columns, never this one
-    alone.
-
-    It cannot conjure overlap that is not there. If a bin misses a stratum — the
-    rim of an egocentric frame may hold no far pixels at all — then *what the rim
-    would score at the centre's depth* is not in this data, and the cell is
-    ``nan`` with ``ds_strata`` recording how many strata it did populate. That is
-    the honest answer; dropping the missing stratum and averaging the rest would
-    reintroduce exactly the bias being removed.
-
-    Returns one dict per bin, keyed ``AbsRel_ds``, ``delta1_ds``, ``ds_strata``.
-    """
-    empty = {"AbsRel_ds": float("nan"), "delta1_ds": float("nan"),
-             "ds_strata": 0}
-    n_bins = len(edges) - 1
-    if n_strata < 1:
-        return [dict(empty) for _ in range(n_bins)]
-    g = gt_z[mask]
-    g = g[np.isfinite(g) & (g > min_depth) & (g < max_depth)]
-    if g.size < min_cell_px * n_strata:
-        return [dict(empty) for _ in range(n_bins)]
-    cuts = np.quantile(g.astype(np.float64), np.linspace(0.0, 1.0, n_strata + 1))
-    # A frame that is one flat wall has collapsed quantiles: there is no depth
-    # axis to standardise along, so say so rather than emit strata that are not
-    # distinct. Only the interior cuts matter; the ends are opened out.
-    if np.unique(cuts[1:-1]).size < n_strata - 1:
-        return [dict(empty) for _ in range(n_bins)]
-    cuts[0], cuts[-1] = -np.inf, np.inf
-    strata = [(mask & (gt_z >= lo) & (gt_z < hi))
-              for lo, hi in zip(cuts[:-1], cuts[1:])]
-    out = []
-    for lo, hi in zip(edges[:-1], edges[1:]):
-        b = mask & (coord >= lo) & (coord < hi)
-        cells, used = [], 0
-        for s in strata:
-            m = b & s
-            if int(m.sum()) < min_cell_px:
-                cells.append(None)
-                continue
-            used += 1
-            cells.append(depth_metrics(aligned, gt_z, m, min_depth, max_depth))
-        if used < n_strata:
-            out.append({"AbsRel_ds": float("nan"), "delta1_ds": float("nan"),
-                        "ds_strata": used})
-            continue
-        out.append({"AbsRel_ds": float(np.mean([c["AbsRel"] for c in cells])),
-                    "delta1_ds": float(np.mean([c["delta1"] for c in cells])),
-                    "ds_strata": used})
-    return out
-
-
 def _gt_stats(gt_z: np.ndarray, mask: np.ndarray) -> dict:
     """The bin's own GT depth: median, standard deviation, and IQR/median.
 
@@ -1079,81 +981,6 @@ def _gt_stats(gt_z: np.ndarray, mask: np.ndarray) -> dict:
     return {"gt_median": float(np.median(g)),
             "gt_std": float(np.std(g)),
             "gt_spread": _relative_spread(gt_z, mask)}
-
-
-def anchored_ratios(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
-                    theta_deg: np.ndarray, edges: Sequence[float],
-                    align_mode: str, min_anchor_px: int = 64) -> List[float]:
-    """Per-bin ``median(gt/pred)`` after fitting the model's own global affine
-    **on the innermost populated bin alone**.
-
-    **The ADT-FOV report does not use this.** That experiment reports AbsRel and
-    delta1 against position in the field and nothing else, and the ``drift``
-    column this fed was removed. It stays because ``datasets_egosynth`` mirrors
-    it for its pooled path and cross-checks that path against ``bin_by``'s
-    output, so the number must keep existing in the JSON even though no ADT
-    table prints it.
-
-    Why the anchor, rather than fitting on the whole frame or not at all — the
-    two obvious choices, both of which are wrong in opposite directions:
-
-    * **No fit** (``raw_scale_ratio``): every one of these models has an additive
-      degree of freedom, and an offset makes ``gt/pred`` vary with the *scene
-      depth* of each bin. On a scene whose depth falls with eccentricity — which
-      an enclosed egocentric frame is, for a reason that is geometric rather
-      than about clutter: past ~35 deg the field leaves the wall it faces and
-      starts catching floor, ceiling and side walls, surfaces the optical axis
-      is *parallel* to, where planar z goes as the perpendicular distance over
-      ``tan(theta)`` and collapses (``tests/test_geometry.py::
-      test_but_planar_z_falls_by_a_factor_of_two_on_the_same_room`` measures
-      x0.57 across an empty 5x4x2.6 m room, while euclidean range over the same
-      room stays flat) — a model with **no radial error at all**
-      reports 0.648 or 1.253 depending on the offset's sign, and an
-      affine-invariant disparity model reports 1.143. Those are the size of the
-      effect being looked for, so the measure has no specificity.
-    * **Fit on the whole frame** (``scale_ratio``): least squares then spends its
-      scale and shift partly on the radial trend itself. Correct 1.000 on the
-      no-distortion cases, but a real ``+0.6 theta^2`` bias reads 0.965 — the
-      effect is absorbed, so the measure has no sensitivity.
-
-    Anchoring gets both. The anchor band spans ~10 deg about the optical axis, so
-    it carries almost none of the radial variation the fit must not absorb, while
-    still removing the offset. Measured on analytic scenes
-    (``tests/test_geometry.py``): exactly 1.000 for pure-scale, for either sign
-    of offset, and for a disparity model — no false positive — and 1.37 against a
-    true 1.49 for a real bias. It under-reports by <10%, because the anchor band
-    itself carries a little bias, and never invents.
-
-    The anchor must be **conditioned**, not merely populated. The affine has two
-    parameters, so fitting it needs depth *spread*: on a band that is one flat
-    wall at a constant range, ``(s, t)`` is undetermined and the fit returns an
-    arbitrary pair that then corrupts every other bin. That is not hypothetical —
-    a synthetic box scene whose central 25 deg is a single wall drives this
-    function to report drift 1.86 for a model with no radial error whatever.
-    Real ADT is nowhere near that: measured on seq131, IQR/median of the GT
-    inside each band runs 0.71 to 0.88, because the centre of an egocentric frame
-    sees a table, objects and floor at many ranges. So the guard below almost
-    never fires on real data, and when it does the answer is NaN rather than a
-    fabricated one.
-
-    The anchor is the innermost band that is both populated and conditioned;
-    bands are merged inward-outward until one qualifies. Returns NaN per bin when
-    none does.
-    """
-    edges = [float(e) for e in edges]
-    bands = [mask & (theta_deg >= lo) & (theta_deg < hi)
-             for lo, hi in zip(edges[:-1], edges[1:])]
-    anchor = None
-    for b in bands:
-        if b.sum() < min_anchor_px:
-            continue
-        if _relative_spread(gt_z, b) >= MIN_ANCHOR_SPREAD:
-            anchor = b
-            break
-    if anchor is None:
-        return [float("nan")] * len(bands)
-    fitted = align_depth(pred_z, gt_z, anchor, mode=align_mode)
-    return [raw_scale_ratio(fitted, gt_z, b) for b in bands]
 
 
 def _relative_spread(gt_z: np.ndarray, mask: np.ndarray) -> float:
@@ -1178,10 +1005,10 @@ def raw_scale_ratio(pred_z: np.ndarray, gt_z: np.ndarray,
                     mask: np.ndarray) -> float:
     """``median(gt / pred)`` on the **unaligned** prediction over ``mask``.
 
-    A diagnostic, **not** a distortion measure — see ``anchored_ratios``, which
-    is what the report's ``drift`` column uses. Compared across incidence bins
-    this quantity moves whenever the model carries an additive offset, whether
-    or not anything is bending: for ``pred = (gt - 1.5)/3`` on a scene whose
+    A diagnostic, **not** a distortion measure, and no table reads a trend off
+    it. Compared across incidence bins it moves whenever the model carries an
+    additive offset, whether or not anything is bending: for
+    ``pred = (gt - 1.5)/3`` on a scene whose
     depth falls with eccentricity, and with no radial error whatever, it reports
     0.648; for ``pred = (gt + 2)/3`` it reports 1.253; for an affine-invariant
     disparity model it reports 1.143. Those are the size of the effect this

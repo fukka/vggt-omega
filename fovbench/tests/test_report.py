@@ -8,6 +8,7 @@ import os
 
 import pytest
 
+from fovbench import geometry as G
 from fovbench import report as R  # noqa: E402
 
 EDGES = [(0, 10), (10, 20), (20, 30), (30, 40), (40, 50), (50, 55)]
@@ -16,7 +17,6 @@ EDGES = [(0, 10), (10, 20), (20, 30), (30, 40), (40, 50), (50, 55)]
 def _bin(lo, hi, absrel, scale_ratio=1.0, n_frames=4, n_px=5000.0, **extra):
     return dict(theta_lo=lo, theta_hi=hi, AbsRel=absrel, delta1=1 - absrel,
                 scale_ratio=scale_ratio, raw_scale_ratio=scale_ratio,
-                anchored_ratio=scale_ratio,
                 n_frames=n_frames, n_px_mean=n_px,
                 SqRel=absrel, RMSE=absrel, RMSElog=absrel, log10=absrel,
                 delta2=1.0, delta3=1.0, n_valid_total=int(n_px * n_frames),
@@ -55,7 +55,6 @@ def test_a_flat_model_scores_penalty_one():
     flat = [_bin(lo, hi, 0.08, 1.0) for lo, hi in EDGES]
     s = R.summarise(_run(bins=flat))
     assert s["pen"] == pytest.approx(1.0)
-    assert s["drift"] == pytest.approx(1.0)
 
 
 def test_empty_outer_bins_are_skipped_not_scored_as_zero():
@@ -75,20 +74,17 @@ def test_a_single_populated_bin_refuses_to_report_a_ratio():
             for lo, hi in EDGES]
     bins[0] = _bin(0, 10, 0.05)
     s = R.summarise(_run(bins=bins))
-    assert math.isnan(s["pen"]) and math.isnan(s["drift"])
+    assert math.isnan(s["pen"])
 
 
 def test_window_runs_are_summarised_on_tilt():
     cells = [dict(tilt=t, AbsRel=0.05 + 0.01 * i, delta1=0.9,
                   scale_ratio=1.0, raw_scale_ratio=1.0 - 0.02 * i,
-                  anchored_ratio=1.0 - 0.02 * i,
                   n_frames=4, n_px_mean=5000.0)
              for i, t in enumerate((0, 10, 20, 30, 40))]
     s = R.summarise(_run(protocol="window", cells=cells, bins=None))
     assert s["lo"] == 0 and s["hi"] == 40
     assert s["pen"] == pytest.approx(0.09 / 0.05)
-    # Windows are separate forward passes of up-to-scale models: no drift.
-    assert math.isnan(s["drift"])
 
 
 def test_report_text_names_the_split_and_its_headline_column():
@@ -220,12 +216,15 @@ def test_exactly_three_figures_are_written_and_they_are_the_stated_three(tmp_pat
     assert names == {"AbsRel.png", "delta1.png"}      # no depth in this fixture
 
 
-def test_no_table_or_legend_mentions_drift_any_more():
-    """`drift` was dropped from this experiment. The number survives in the
-    JSON only because `datasets_egosynth` cross-checks against it; nothing the
-    reader of an ADT report sees may mention it."""
+def test_nothing_survives_of_the_drift_column():
+    """`drift` and the anchored fit behind it existed for the ego-synth arm, which
+    is gone. Not merely absent from the report — absent from `summarise`'s own
+    output, so nothing downstream can start reading a key that is always NaN."""
     txt = R.render_report(_payload([_run()]))
     assert "drift" not in txt.lower()
+    assert "drift" not in R.summarise(_run())
+    assert not hasattr(G, "anchored_ratios")
+    assert "anchored_ratio" not in G.METRIC_KEYS
 
 
 def test_the_depth_figure_is_drawn_from_bins_alone_without_profiles(tmp_path):

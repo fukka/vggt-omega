@@ -10,9 +10,13 @@ repository, some models and a definition of AbsRel; they share no protocol, no
 ground truth and no conclusion. Do not read a number from one as if it came from
 the other.
 
-Nothing here imports `fovbench`, and
-``tests/test_separation.py::test_slambench_does_not_import_fovbench`` enforces
-that mechanically rather than by good intentions.
+Nothing here imports `fovbench` and nothing here reads ADT.
+``tests/test_experiment_separation.py`` enforces both mechanically, from the
+repository root so that it can see each package from outside — the earlier guard
+lived in this package and checked only the direction *into* it, which is how a
+duplicate ego-synth reader grew on the other side and stayed green for months.
+
+    python -m pytest tests fovbench/tests slambench/tests -q
 
 The shape of the evaluation
 ---------------------------
