@@ -121,10 +121,22 @@ GPU; 6 of them drive the real staged sample end to end.
 - [x] `slambench` imports nothing from `fovbench`, enforced by a test
 - [x] `--models oracle` reads AbsRel 0 end to end on the staged sample
 - [x] `verify_camera.py` exists and returns a decisive verdict
-- [ ] the `raw` run below is in `results/`
+- [x] the `raw` run below is in `results/` — `results/slambench-raw-b1659a0`,
+      results branch `b139bef`, issue #18. 0 errors, 0 models skipped; the
+      oracle was re-earned on that split and still reads AbsRel 0.000.
 - [ ] the convention is settled and `rect_derect` runs against a verified camera
 
 ## The GPU run — the `raw` arm is ready now
+
+Two things the box needs that this ticket did not say, both found on the run:
+
+* **`pytest slambench/tests -q` reads 40 passed, 6 skipped on lambda_63**, and
+  the skip is silent. `test_end_to_end.py` falls back to a Mac path; export
+  `EGOSYNTH_SAMPLE=/data/f.zhang2/ego-synth-5b-sample` and all 46 pass. The six
+  that skip are exactly the ones that drive the real release.
+* **`da3_small`'s weights are not in the persistent cache.** The registry
+  reports `download` because they sit in `~/.cache/huggingface/hub` only;
+  copying the 131 MB into `checkpoints/hf/hub` makes all five ready.
 
 Smoke it first, no weights, no camera, one dataset:
 

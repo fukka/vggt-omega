@@ -203,5 +203,11 @@ A runnable version of all of the above, over one take of each dataset, is
 
 Observed across the sample, as a sanity range: ~1 300–5 300 points per frame,
 depth 0.10 m to 114 m, median 1.2–5.3 m depending on whether the take is indoors.
+
+**That upper figure is one take and it is low.** Measured over eight takes each
+in `results/slambench-raw-b1659a0`, the median depth is 1.40 m on `aea`, 1.57 m
+on `nymeria` and **15.07 m** on `oxford` — an order of magnitude between indoors
+and out, not the factor of four one Oxford take suggested. Anything that pools
+the four datasets pools four scene scales.
 The `rectified` point set runs ~2 % larger than the `fisheye` one and the two are
 not row-aligned.
