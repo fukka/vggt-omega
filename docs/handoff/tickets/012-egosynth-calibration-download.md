@@ -293,23 +293,49 @@ already produces a 15-param `FISHEYE624` per take, so this is a question about
       (`/data/f.zhang2/ego-synth-5b-calib` and
       `/group-volume/Fengjia/data/ego-synth-5b-calib`). The nymeria take in it
       is the staged one, so aea is 143 and nymeria is 1 so far.
-- [x] **nymeria** — `nymeria_takes.txt` is off the box and back on the phone
-      (254 names, sha256 verified both sides). The fetch itself is **running on
-      the `gpu` session's Mac** — see the lock at the top.
-- [ ] **oxford** — route 2 chosen (per-recording VRS factory calibration). The
-      take names map **1:1** onto the release: ego-synth's `<loc>__<uuid>` is
-      exactly `aria/<loc>/vrs/blur/<uuid>.vrs` in
-      `active-vision-lab/oxford-day-and-night`, and the per-location counts
-      match the release exactly (bodleian 44, keble 24, observatory 25,
-      robotics 21, hb-allen 10 = 124). Cost is the problem, not identification:
-      ~2 GB per take, ~250 GB for all 124.
+- [x] **nymeria** — **254/254, 0 failed**, fetched on the `gpu` session's Mac
+      2026-08-14 and landed **on lambda_63** with a per-file manifest, 0
+      mismatches. Five takes failed the first pass on `curl (18) Transferred a
+      partial file` — transient, and a re-run (which skips what exists) took
+      them. Names `diff` clean against `ls /data/f.zhang2/ego-synth-5b/nymeria`.
+      **Independently verified:** the staged take fetched here is *byte
+      identical* to the one the `cpu` machine fetched weeks earlier and shipped
+      in the aea tarball — two machines, two fetches, one sha256.
+- [x] **oxford** — **124/124** factory calibrations, via route 2's head-only
+      read. All 15-param `FISHEYE624`, all at 1408×1408, names `diff` clean
+      against the release, 0 checksum mismatches, **1.1 MB total**. Staged at
+      `/data/f.zhang2/oxford-calib-factory/` on lambda_63, deliberately *not*
+      in `ego-synth-5b-calib/` — see the resolution warning in step 4.
+      Only **two distinct focal values** across all 124 (610.0692 ×68,
+      610.3768 ×56), both appearing in every location: Oxford was recorded on
+      two Aria devices. That is still a real per-device calibration, but this
+      dataset is the one case where the ticket's "a nominal calibration will not
+      do" argument has almost no room to bite — the spread is 0.31 px at 1408,
+      against aea's 7.4 px at 2880 over 7 devices.
 - [x] each fetched file's `model` reads `FisheyeRadTanThinPrism` and `params` has
-      15 entries — checked across all 143
-- [ ] `/data/f.zhang2/ego-synth-5b-calib/{aea,nymeria,oxford}/<take>/camera_rgb.json`
-      on the **box**, for every take that dataset contributes to ego-synth
-- [ ] the take counts match the release: aea 143, nymeria 254, oxford 124
+      15 entries — checked across all 143 aea, all 254 nymeria, all 124 oxford
+- [x] `ego-synth-5b-calib/{aea,nymeria}/<take>/camera_rgb.json` on **lambda_63**,
+      for every take those datasets contribute. Oxford is present but staged
+      separately and is **not** consumable by `camera.load` yet.
+- [ ] **space-container mirror of nymeria + oxford** — aea landed there and
+      verified 144/144 earlier on 2026-08-14, but the pod went away mid-session
+      before the other two could follow. Diagnosed rather than retried blindly:
+      the jump host answers, and `/dev/tcp/10.9.108.238/22` from lambda_63 does
+      not, which is the "pod recreated with a new address" case, not the flaky
+      chain. Needs an interactive `space login --region n6` to recover the new
+      address. **Nothing is lost** — both tarballs are on lambda_63 at
+      `/tmp/{nymeria-calib,oxford-calib-factory}.tar.gz`, and lambda_63 is the
+      box #020 actually runs on.
+- [x] the take counts match the release: aea 143, nymeria 254, oxford 124
       (`egoexo4d` is paused and out of scope)
 - [ ] issue commented with the counts, total bytes, and which Oxford route worked
+
+**What this unblocks, and what it does not.** `rect_derect` in #020 is now
+runnable on **aea and nymeria** — both are in `camera.VERIFIED_ROTATION` and both
+have a full calibration set. Oxford has calibration but is still excluded, for a
+different reason than it was yesterday: not missing files, but an unverified
+rotation *and* a resolution convention `camera.load` does not yet carry. Neither
+is a download.
 
 ## What is verified, and what is not
 
