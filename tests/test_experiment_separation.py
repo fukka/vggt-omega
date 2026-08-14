@@ -173,7 +173,8 @@ def test_the_shared_infrastructure_is_the_only_cross_package_dependency():
                # this repo's ADT loader -- fovbench reading its OWN dataset
                "datasets.")
     stdlib_ok = {"os", "sys", "json", "math", "glob", "ast", "csv", "io", "re",
-                 "time", "struct", "zlib", "argparse", "hashlib", "dataclasses",
+                 "time", "struct", "zlib", "gzip", "argparse", "hashlib",
+                 "dataclasses",
                  "typing", "collections", "subprocess", "threading", "itertools",
                  "contextlib", "functools", "warnings", "concurrent",
                  "pytest", "__future__"}
