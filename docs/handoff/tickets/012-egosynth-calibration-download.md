@@ -117,6 +117,17 @@ They are on the CPU machine at `~/Downloads/`:
     AriaEverydayActivities_download_urls.json     143 sequences
     nymeria_download_urls.json                   1100 sequences
 
+> **They are currently unreadable to the agent** — macOS TCC does not grant this
+> process the Downloads folder, so `cp`, `head` and `adb push` all return
+> `Operation not permitted` on them. AEA was fetched before that took effect.
+> This blocks step 3 and nothing else. The fix is one command by the owner:
+>
+>     mv ~/Downloads/*_download_urls.json ~/Desktop/ADT/
+>
+> after which `--urls ~/Desktop/ADT/nymeria_download_urls.json` works. Granting
+> the terminal blanket Downloads access would also work and is a bigger hammer
+> than this needs.
+
 **They are signed, expiring credentials and must never be committed** — this
 repo is public and its history is permanent and mirrored. They also no longer
 need to be copied anywhere: the fetch happens on the machine that already holds
@@ -148,7 +159,29 @@ Two things the full set shows that one take could not:
   **0.29 px, 96.9 % within 1 px**, twin 0.31 px, and 4.0–4.1 px for the other
   three quarter turns.
 
-What is left for this dataset is moving those 34 KB to the box.
+What is left for this dataset is moving those 42 KB to the box — **in flight**:
+
+    egosynth-calib.tar.gz   42 024 bytes
+    sha256  47e9918f8d96c57c157c58f4ab9abb467dfd461be78142d38108ef3aa395d0e7
+    holds   aea/ 143 takes, nymeria/ 1 (the staged take), SHA256SUMS.txt
+
+on the phone at `/sdcard/Documents/`, beside `egosynth-calib-README.txt`, which
+repeats the resolution warning above. On the box:
+
+```bash
+mkdir -p /data/f.zhang2/ego-synth-5b-calib
+tar xzf egosynth-calib.tar.gz -C /data/f.zhang2/ego-synth-5b-calib
+cd /data/f.zhang2/ego-synth-5b-calib && shasum -c SHA256SUMS.txt | grep -v OK
+```
+
+The last line should print nothing. The manifest is **per file**, not just the
+tarball, because a truncated calibration still parses as JSON and still produces
+numbers — a corrupt transfer here fails as a plausible result, not as an error.
+
+**Re-fetching on the box instead would not be equivalent.** `verify_camera`'s
+0.29 px verdict was measured against *these bytes*; a re-fetch produces a set
+nobody has checked, at 0.76 GB of CDN reads, and makes the expiring credentials
+a standing dependency of the box. Ship the bytes and check the hash.
 
 ### 3. Nymeria — the 254 takes ego-synth used, of 1100 in the JSON
 
@@ -213,7 +246,10 @@ looked inside. Option 1's experiment answers that too.
 ## Done when
 
 - [x] **aea** — 143/143 fetched on the CPU machine, 0 failed, 148 KB
-- [ ] **nymeria** — needs `nymeria_takes.txt` off the box first (step 3)
+- [x] **aea** — handed off: 42 KB tarball on the phone, sha256 `47e9918f…`,
+      per-file manifest inside. Unpacked and hash-checked on the box? → not yet
+- [ ] **nymeria** — needs `nymeria_takes.txt` off the box, *and* the URL JSON
+      moved out of `~/Downloads` (see the note in step 1)
 - [ ] **oxford** — needs the route decision in step 4
 - [x] each fetched file's `model` reads `FisheyeRadTanThinPrism` and `params` has
       15 entries — checked across all 143
