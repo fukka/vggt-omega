@@ -1,0 +1,71 @@
+{
+  "run_id": "fovbench-rectfix-393cab9",
+  "ticket": "docs/handoff/tickets/019-adt-fov-rect-rerun.md",
+  "commit": "393cab9",
+  "protocol": "adt-fov-v1",
+  "date_utc": "2026-08-14",
+  "hardware": "lambda_63, 2x NVIDIA RTX 6000 Ada Generation, driver 570.207",
+  "env": "conda env raytun3r; unchanged from #14",
+  "errors": 0,
+  "models_skipped": [],
+  "supersedes": {
+    "run": "fovbench-ctx-d351d94",
+    "why": "its rect arm predates #018's lens fix, so that run is a mixture: its fisheye column matches the current code and its rect column does not"
+  },
+
+  "splits": {
+    "partA_6seq": {"digest": "601fcb22767e", "frames": 300, "sequences": 6,
+                   "root": "~/Documents/projectaria_tools_adt_data_clean"},
+    "seq131_context": {"digest": "8ca25fd0ebd2", "frames": 50, "sequences": 1,
+                       "root": "~/Documents/adt_seq131_root",
+                       "note": "a symlink root holding seq131 alone. The 6-seq root now has 6 usable sequences, so rebuilding the context split from it would give 601fcb22767e; the digest is over seq/frame_id keys, not paths, so the symlink root reproduces 8ca25fd0ebd2 exactly."}
+  },
+  "digests_reproduced": true,
+
+  "control": {
+    "claim": "the fisheye arm must come back bit-identical; the lens fix touches only the rectifier",
+    "result": "BIT-IDENTICAL",
+    "leaves_compared": 8336,
+    "leaves_differing": 0,
+    "published_run_threading": "single-threaded — fovbench-ctx-d351d94 predates d2d2cfc, which introduced --workers",
+    "this_run_threading": "--workers 16",
+    "discharges": "#014, in a stronger form than it asked for: serial -> 16-thread, not 8 -> 16"
+  },
+
+  "rect_movement": {
+    "largest_cell": "vggt_omega/real, pen -1.650%",
+    "range_over_8_cells": "-1.650% to +0.228%",
+    "ticket_019_prediction": "-0.385%, measured on the synthetic stand-in scene",
+    "note": "the real ADT grid moved up to ~4x more than the ticket's stated margin, same order and same sign; no README conclusion changes"
+  },
+
+  "readme_items": {
+    "item3_headline_span": {"published": 0.835, "this_run": 0.828},
+    "item3_matched_bins": {"published": 1.017, "this_run": 1.013},
+    "item3_profile_42_over_5": {"published": 0.999, "this_run": 1.001},
+    "item5_rect_theta": {"published": 1.471, "this_run": 1.457},
+    "item5_rect_radius": {"published": 1.257, "this_run": 1.246},
+    "item5_fisheye": "unchanged, both axes",
+    "item7_rect_range": {"published": "1.08-1.83", "this_run": "1.06-1.80"},
+    "item7_fisheye_range": {"published": "1.01-2.27", "this_run": "1.01-2.27"},
+    "item3b": "NOT MEASURED — 3b is the window protocol and ticket 019 prescribes --protocols radial. Unverified, not unchanged.",
+    "item7_per_sequence": "NOT MEASURED — came from separate per-sequence runs; only the pooled range is re-measured here."
+  },
+
+  "timings": {
+    "wall_clock_total": "32m13s",
+    "serial_sum": "55m12s",
+    "scheduling": "two lanes, one per GPU; the 6-seq headline stayed one invocation as the ticket requires, and the 5 seq131 context runs were split across the two GPUs",
+    "per_run": {
+      "partA_6seq": "10m43s (5 models, 300 frames)",
+      "partA_seq131": "2m12s",
+      "partB_5c": "6m44s",
+      "partB_10c": "14m45s",
+      "partB_5s": "6m17s",
+      "partB_10s": "14m31s"
+    },
+    "comparison": "the published 4-model 6-seq run took ~27m single-threaded; this one did 5 models in 10m43s, and both GPUs held 93-100% against the 25-30% fovbench/README.md records"
+  },
+
+  "tests": "python -m pytest tests fovbench/tests -q -> 131 passed, 2 skipped, on 393cab9"
+}

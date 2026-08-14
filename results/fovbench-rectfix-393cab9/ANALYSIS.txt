@@ -1,0 +1,122 @@
+ADT-FOV re-run on the corrected lens — ticket 019
+Commit 393cab9 · lambda_63 · conda env raytun3r · --workers 16
+
+The published run fovbench-ctx-d351d94 PREDATES the threading commit
+d2d2cfc, so it ran single-threaded. This run used --workers 16, which
+makes the control below a serial -> 16-thread reproduction and
+discharges #014 in a stronger form than it asked for.
+
+digest  old=601fcb22767e  new=601fcb22767e  MATCH
+frames  old=300  new=300
+in new run only:   ['da3_small']
+
+=== leaf-by-leaf, per view ===
+fisheye  compared  8336 leaves, 0 differ, max|diff| = 0  (BIT-IDENTICAL)
+rect     compared  8336 leaves, 5998 differ, max|diff| = 5658
+         worst: dav2_large/radial/real.overall.n_px_total  80251780.0 -> 80257438.0
+
+=== CONTROL ===
+fisheye arm: BIT-IDENTICAL to the published run (8336 leaves).
+
+=== rect  pen: published -> this run ===
+model       stream           old      new     delta      pct
+da3_large   real          1.6857   1.6807   -0.0050  -0.300%
+da3_large   synthetic     1.8285   1.8018   -0.0267  -1.462%
+da3_small   real              --   1.4041          new model
+da3_small   synthetic         --   1.3512          new model
+dav2_large  real          1.0765   1.0609   -0.0155  -1.443%
+dav2_large  synthetic     1.1271   1.1262   -0.0009  -0.081%
+vggt_1b     real          1.4297   1.4280   -0.0017  -0.117%
+vggt_1b     synthetic     1.4553   1.4524   -0.0029  -0.201%
+vggt_omega  real          1.4863   1.4618   -0.0245  -1.650%
+vggt_omega  synthetic     1.5929   1.5966   +0.0036  +0.228%
+  largest |change| in this view: 1.650%
+
+=== fisheye  pen: published -> this run ===
+model       stream           old      new     delta      pct
+da3_large   real          1.9485   1.9485   +0.0000  +0.000%
+da3_large   synthetic     2.2713   2.2713   +0.0000  +0.000%
+da3_small   real              --   1.4732          new model
+da3_small   synthetic         --   1.5779          new model
+dav2_large  real          1.0108   1.0108   +0.0000  +0.000%
+dav2_large  synthetic     1.3003   1.3003   +0.0000  +0.000%
+vggt_1b     real          1.5966   1.5966   +0.0000  +0.000%
+vggt_1b     synthetic     1.8592   1.8592   +0.0000  +0.000%
+vggt_omega  real          2.0217   2.0217   +0.0000  +0.000%
+vggt_omega  synthetic     2.2723   2.2723   +0.0000  +0.000%
+  largest |change| in this view: 0.000%
+
+=== ITEM 3 — rect pen / fisheye pen, 8 model x stream cells ===
+variant                             published   this run    delta
+headline span, 50-55 / 0-10             0.835      0.828   -0.007
+matched bins, 30-40 / 0-10              1.017      1.013   -0.004
+continuous profile, 42 / 5 deg          0.999      1.001   +0.002
+
+=== ITEM 5 — same data, two binnings: pen on theta vs on radius ===
+view     axis      published   this run    delta
+fisheye  theta         1.904      1.904   +0.000
+fisheye  radius        1.717      1.717   +0.000
+rect     theta         1.471      1.457   -0.014
+rect     radius        1.257      1.246   -0.010
+
+=== ITEM 7 — pooled 6-seq pen range, per view (8 cells) ===
+view              published          this run
+fisheye      1.01-2.27         1.01-2.27     
+rect         1.08-1.83         1.06-1.80     
+
+=== ITEM 4 — DA3-Small beside DA3-Large (6-seq split) ===
+view     stream     metric     da3_large  da3_small  small/large
+fisheye  real       level         0.0778     0.1466        1.886
+fisheye  real       outer         0.1515     0.2160        1.426
+fisheye  real       pen           1.9485     1.4732        0.756
+fisheye  synthetic  level         0.0593     0.1388        2.340
+fisheye  synthetic  outer         0.1347     0.2191        1.626
+fisheye  synthetic  pen           2.2713     1.5779        0.695
+rect     real       level         0.0662     0.1297        1.957
+rect     real       outer         0.1113     0.1821        1.635
+rect     real       pen           1.6807     1.4041        0.835
+rect     synthetic  level         0.0447     0.1304        2.916
+rect     synthetic  outer         0.0806     0.1762        2.187
+rect     synthetic  pen           1.8018     1.3512        0.750
+
+=== CONTEXT ARM (seq131) — digests ['8ca25fd0ebd2'] ===
+model       view     stream           N=1       5c      10c       5s      10s      best
+vggt_1b     fisheye  real          0.1246   0.1399   0.1485   0.1327   0.1344       N=1
+  5c:+12.3% 10c:+19.1% 5s:+6.5% 10s:+7.8%
+vggt_1b     fisheye  synthetic     0.1024   0.1246   0.1421   0.1222   0.1274       N=1
+  5c:+21.7% 10c:+38.8% 5s:+19.3% 10s:+24.5%
+vggt_1b     rect     real          0.0941   0.0939   0.0964   0.0801   0.0787       10s
+  5c:-0.2% 10c:+2.4% 5s:-14.9% 10s:-16.4%
+vggt_1b     rect     synthetic     0.0701   0.0750   0.0743   0.0678   0.0656       10s
+  5c:+7.0% 10c:+6.1% 5s:-3.3% 10s:-6.4%
+vggt_omega  fisheye  real          0.0760   0.0820   0.0856   0.0877   0.0915       N=1
+  5c:+8.0% 10c:+12.6% 5s:+15.4% 10s:+20.5%
+vggt_omega  fisheye  synthetic     0.0647   0.0748   0.0863   0.0864   0.0895       N=1
+  5c:+15.7% 10c:+33.4% 5s:+33.5% 10s:+38.3%
+vggt_omega  rect     real          0.0609   0.0608   0.0561   0.0525   0.0526        5s
+  5c:-0.1% 10c:-7.9% 5s:-13.8% 10s:-13.6%
+vggt_omega  rect     synthetic     0.0445   0.0454   0.0421   0.0387   0.0382       10s
+  5c:+2.2% 10c:-5.4% 5s:-13.0% 10s:-14.2%
+da3_large   fisheye  real          0.0997   0.1006   0.1034   0.0985   0.0999        5s
+  5c:+0.9% 10c:+3.7% 5s:-1.2% 10s:+0.2%
+da3_large   fisheye  synthetic     0.0918   0.0929   0.0966   0.1000   0.1020       N=1
+  5c:+1.2% 10c:+5.2% 5s:+8.8% 10s:+11.0%
+da3_large   rect     real          0.0780   0.0787   0.0680   0.0498   0.0475       10s
+  5c:+0.9% 10c:-12.8% 5s:-36.1% 10s:-39.1%
+da3_large   rect     synthetic     0.0520   0.0530   0.0508   0.0452   0.0427       10s
+  5c:+1.8% 10c:-2.3% 5s:-13.2% 10s:-18.0%
+da3_small   fisheye  real          0.1786   0.1620   0.1597   0.1387   0.1382       10s
+  5c:-9.3% 10c:-10.6% 5s:-22.4% 10s:-22.7%
+da3_small   fisheye  synthetic     0.1796   0.1613   0.1602   0.1433   0.1455        5s
+  5c:-10.2% 10c:-10.8% 5s:-20.2% 10s:-18.9%
+da3_small   rect     real          0.1524   0.1287   0.1271   0.1105   0.1034       10s
+  5c:-15.6% 10c:-16.6% 5s:-27.5% 10s:-32.2%
+da3_small   rect     synthetic     0.1495   0.1301   0.1280   0.0988   0.0951       10s
+  5c:-13.0% 10c:-14.4% 5s:-33.9% 10s:-36.4%
+
+NOT MEASURED HERE
+  README item 3b is the *window* protocol. Ticket 019 prescribes
+  --protocols radial, so 3b is unverified by this run, not unchanged.
+  The lens fix does move rect window numbers; that needs its own run.
+  Item 7 per-sequence pen came from separate per-sequence runs and is
+  likewise not re-measured; only the pooled 6-seq range is above.

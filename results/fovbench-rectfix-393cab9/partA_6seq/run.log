@@ -1,0 +1,479 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/user/f.zhang2/projects/vggt-omega-organized/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+  [ADT] 6 usable sequence(s) (need: depth_npy, videos_synthetic, videos_rgb)
+  [ADT]   SKIP Apartment_release_clean_seq137_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq138_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq140_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq141_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq142_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq143_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq144_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq145_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq146_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq147_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq148_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq149_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq150_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP exocentric_rendered: missing/empty ['depth_npy', 'videos_synthetic', 'videos_rgb']
+  [fovbench] Apartment_release_clean_seq131_M1292: 50 of 2878 common frames
+  [fovbench] Apartment_release_clean_seq133_M1292: 50 of 399 common frames
+  [fovbench] Apartment_release_clean_seq134_M1292: 50 of 399 common frames
+  [fovbench] Apartment_release_clean_seq135_M1292: 50 of 399 common frames
+  [fovbench] Apartment_release_clean_seq136_M1292: 50 of 399 common frames
+  [fovbench] Apartment_release_decoration_seq132_M1292: 50 of 399 common frames
+  [fovbench] ADT-FOV split 601fcb22767e: 300 frames across 6 sequence(s), streams=['synthetic', 'real']
+[fovbench] scoring frames on 16 threads (forward pass serialised; results pooled in split order)
+
+[fovbench] ══ vggt_1b ══
+[fovbench]   VGGT 1B | 1191M params | align=scale_shift | views rendered at 518px
+[fovbench]   frame 5/300 (21s)
+[fovbench]   frame 10/300 (21s)
+[fovbench]   frame 15/300 (21s)
+[fovbench]   frame 20/300 (32s)
+[fovbench]   frame 25/300 (33s)
+[fovbench]   frame 30/300 (34s)
+[fovbench]   frame 35/300 (46s)
+[fovbench]   frame 40/300 (47s)
+[fovbench]   frame 45/300 (48s)
+[fovbench]   frame 50/300 (60s)
+[fovbench]   frame 55/300 (61s)
+[fovbench]   frame 60/300 (62s)
+[fovbench]   frame 65/300 (74s)
+[fovbench]   frame 70/300 (75s)
+[fovbench]   frame 75/300 (76s)
+[fovbench]   frame 80/300 (78s)
+[fovbench]   frame 85/300 (90s)
+[fovbench]   frame 90/300 (91s)
+[fovbench]   frame 95/300 (92s)
+[fovbench]   frame 100/300 (104s)
+[fovbench]   frame 105/300 (106s)
+[fovbench]   frame 110/300 (107s)
+[fovbench]   frame 115/300 (119s)
+[fovbench]   frame 120/300 (120s)
+[fovbench]   frame 125/300 (122s)
+[fovbench]   frame 130/300 (134s)
+[fovbench]   frame 135/300 (135s)
+[fovbench]   frame 140/300 (137s)
+[fovbench]   frame 145/300 (149s)
+[fovbench]   frame 150/300 (150s)
+[fovbench]   frame 155/300 (151s)
+[fovbench]   frame 160/300 (153s)
+[fovbench]   frame 165/300 (165s)
+[fovbench]   frame 170/300 (166s)
+[fovbench]   frame 175/300 (167s)
+[fovbench]   frame 180/300 (180s)
+[fovbench]   frame 185/300 (181s)
+[fovbench]   frame 190/300 (182s)
+[fovbench]   frame 195/300 (195s)
+[fovbench]   frame 200/300 (196s)
+[fovbench]   frame 205/300 (197s)
+[fovbench]   frame 210/300 (209s)
+[fovbench]   frame 215/300 (211s)
+[fovbench]   frame 220/300 (212s)
+[fovbench]   frame 225/300 (224s)
+[fovbench]   frame 230/300 (225s)
+[fovbench]   frame 235/300 (226s)
+[fovbench]   frame 240/300 (228s)
+[fovbench]   frame 245/300 (240s)
+[fovbench]   frame 250/300 (241s)
+[fovbench]   frame 255/300 (242s)
+[fovbench]   frame 260/300 (255s)
+[fovbench]   frame 265/300 (256s)
+[fovbench]   frame 270/300 (257s)
+[fovbench]   frame 275/300 (269s)
+[fovbench]   frame 280/300 (271s)
+[fovbench]   frame 285/300 (272s)
+[fovbench]   frame 290/300 (281s)
+[fovbench]   frame 295/300 (282s)
+[fovbench]   frame 300/300 (284s)
+[fovbench]   done in 284s
+
+[fovbench] ══ vggt_omega ══
+[fovbench]   VGGT-Omega 1B/512 | 1144M params | align=scale_shift | views rendered at 512px
+[fovbench]   frame 5/300 (14s)
+[fovbench]   frame 10/300 (14s)
+[fovbench]   frame 15/300 (14s)
+[fovbench]   frame 20/300 (18s)
+[fovbench]   frame 25/300 (19s)
+[fovbench]   frame 30/300 (19s)
+[fovbench]   frame 35/300 (23s)
+[fovbench]   frame 40/300 (24s)
+[fovbench]   frame 45/300 (24s)
+[fovbench]   frame 50/300 (29s)
+[fovbench]   frame 55/300 (29s)
+[fovbench]   frame 60/300 (30s)
+[fovbench]   frame 65/300 (34s)
+[fovbench]   frame 70/300 (34s)
+[fovbench]   frame 75/300 (35s)
+[fovbench]   frame 80/300 (35s)
+[fovbench]   frame 85/300 (40s)
+[fovbench]   frame 90/300 (40s)
+[fovbench]   frame 95/300 (41s)
+[fovbench]   frame 100/300 (45s)
+[fovbench]   frame 105/300 (45s)
+[fovbench]   frame 110/300 (46s)
+[fovbench]   frame 115/300 (50s)
+[fovbench]   frame 120/300 (51s)
+[fovbench]   frame 125/300 (51s)
+[fovbench]   frame 130/300 (56s)
+[fovbench]   frame 135/300 (56s)
+[fovbench]   frame 140/300 (56s)
+[fovbench]   frame 145/300 (61s)
+[fovbench]   frame 150/300 (61s)
+[fovbench]   frame 155/300 (63s)
+[fovbench]   frame 160/300 (63s)
+[fovbench]   frame 165/300 (67s)
+[fovbench]   frame 170/300 (67s)
+[fovbench]   frame 175/300 (68s)
+[fovbench]   frame 180/300 (72s)
+[fovbench]   frame 185/300 (72s)
+[fovbench]   frame 190/300 (73s)
+[fovbench]   frame 195/300 (77s)
+[fovbench]   frame 200/300 (78s)
+[fovbench]   frame 205/300 (78s)
+[fovbench]   frame 210/300 (82s)
+[fovbench]   frame 215/300 (83s)
+[fovbench]   frame 220/300 (84s)
+[fovbench]   frame 225/300 (87s)
+[fovbench]   frame 230/300 (88s)
+[fovbench]   frame 235/300 (89s)
+[fovbench]   frame 240/300 (90s)
+[fovbench]   frame 245/300 (93s)
+[fovbench]   frame 250/300 (94s)
+[fovbench]   frame 255/300 (95s)
+[fovbench]   frame 260/300 (99s)
+[fovbench]   frame 265/300 (99s)
+[fovbench]   frame 270/300 (100s)
+[fovbench]   frame 275/300 (104s)
+[fovbench]   frame 280/300 (105s)
+[fovbench]   frame 285/300 (105s)
+[fovbench]   frame 290/300 (108s)
+[fovbench]   frame 295/300 (109s)
+[fovbench]   frame 300/300 (109s)
+[fovbench]   done in 110s
+
+[fovbench] ══ dav2_large ══
+Loading weights:   0%|          | 0/503 [00:00<?, ?it/s]Loading weights: 100%|██████████| 503/503 [00:00<00:00, 7065.92it/s]
+[fovbench]   Depth-Anything-V2 Large | 335M params | align=disparity_scale_shift | views rendered at 518px
+[fovbench]   frame 5/300 (10s)
+[fovbench]   frame 10/300 (10s)
+[fovbench]   frame 15/300 (10s)
+[fovbench]   frame 20/300 (14s)
+[fovbench]   frame 25/300 (14s)
+[fovbench]   frame 30/300 (15s)
+[fovbench]   frame 35/300 (19s)
+[fovbench]   frame 40/300 (19s)
+[fovbench]   frame 45/300 (20s)
+[fovbench]   frame 50/300 (24s)
+[fovbench]   frame 55/300 (24s)
+[fovbench]   frame 60/300 (25s)
+[fovbench]   frame 65/300 (29s)
+[fovbench]   frame 70/300 (29s)
+[fovbench]   frame 75/300 (30s)
+[fovbench]   frame 80/300 (30s)
+[fovbench]   frame 85/300 (34s)
+[fovbench]   frame 90/300 (34s)
+[fovbench]   frame 95/300 (35s)
+[fovbench]   frame 100/300 (39s)
+[fovbench]   frame 105/300 (39s)
+[fovbench]   frame 110/300 (40s)
+[fovbench]   frame 115/300 (44s)
+[fovbench]   frame 120/300 (44s)
+[fovbench]   frame 125/300 (45s)
+[fovbench]   frame 130/300 (49s)
+[fovbench]   frame 135/300 (49s)
+[fovbench]   frame 140/300 (50s)
+[fovbench]   frame 145/300 (54s)
+[fovbench]   frame 150/300 (54s)
+[fovbench]   frame 155/300 (55s)
+[fovbench]   frame 160/300 (55s)
+[fovbench]   frame 165/300 (59s)
+[fovbench]   frame 170/300 (60s)
+[fovbench]   frame 175/300 (60s)
+[fovbench]   frame 180/300 (64s)
+[fovbench]   frame 185/300 (64s)
+[fovbench]   frame 190/300 (65s)
+[fovbench]   frame 195/300 (69s)
+[fovbench]   frame 200/300 (69s)
+[fovbench]   frame 205/300 (70s)
+[fovbench]   frame 210/300 (74s)
+[fovbench]   frame 215/300 (74s)
+[fovbench]   frame 220/300 (75s)
+[fovbench]   frame 225/300 (78s)
+[fovbench]   frame 230/300 (79s)
+[fovbench]   frame 235/300 (80s)
+[fovbench]   frame 240/300 (80s)
+[fovbench]   frame 245/300 (84s)
+[fovbench]   frame 250/300 (84s)
+[fovbench]   frame 255/300 (85s)
+[fovbench]   frame 260/300 (89s)
+[fovbench]   frame 265/300 (89s)
+[fovbench]   frame 270/300 (90s)
+[fovbench]   frame 275/300 (94s)
+[fovbench]   frame 280/300 (94s)
+[fovbench]   frame 285/300 (95s)
+[fovbench]   frame 290/300 (98s)
+[fovbench]   frame 295/300 (98s)
+[fovbench]   frame 300/300 (98s)
+[fovbench]   done in 99s
+
+[fovbench] ══ da3_large ══
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+[97m[INFO ] using MLP layer as FFN[0m
+[fovbench]   Depth-Anything-3 Large | 411M params | align=scale_shift | views rendered at 518px
+[fovbench]   frame 5/300 (9s)
+[fovbench]   frame 10/300 (9s)
+[fovbench]   frame 15/300 (9s)
+[fovbench]   frame 20/300 (12s)
+[fovbench]   frame 25/300 (12s)
+[fovbench]   frame 30/300 (13s)
+[fovbench]   frame 35/300 (16s)
+[fovbench]   frame 40/300 (16s)
+[fovbench]   frame 45/300 (17s)
+[fovbench]   frame 50/300 (20s)
+[fovbench]   frame 55/300 (20s)
+[fovbench]   frame 60/300 (21s)
+[fovbench]   frame 65/300 (24s)
+[fovbench]   frame 70/300 (24s)
+[fovbench]   frame 75/300 (25s)
+[fovbench]   frame 80/300 (25s)
+[fovbench]   frame 85/300 (29s)
+[fovbench]   frame 90/300 (29s)
+[fovbench]   frame 95/300 (29s)
+[fovbench]   frame 100/300 (33s)
+[fovbench]   frame 105/300 (33s)
+[fovbench]   frame 110/300 (33s)
+[fovbench]   frame 115/300 (37s)
+[fovbench]   frame 120/300 (37s)
+[fovbench]   frame 125/300 (37s)
+[fovbench]   frame 130/300 (41s)
+[fovbench]   frame 135/300 (41s)
+[fovbench]   frame 140/300 (42s)
+[fovbench]   frame 145/300 (45s)
+[fovbench]   frame 150/300 (45s)
+[fovbench]   frame 155/300 (46s)
+[fovbench]   frame 160/300 (46s)
+[fovbench]   frame 165/300 (49s)
+[fovbench]   frame 170/300 (49s)
+[fovbench]   frame 175/300 (50s)
+[fovbench]   frame 180/300 (53s)
+[fovbench]   frame 185/300 (53s)
+[fovbench]   frame 190/300 (54s)
+[fovbench]   frame 195/300 (57s)
+[fovbench]   frame 200/300 (58s)
+[fovbench]   frame 205/300 (58s)
+[fovbench]   frame 210/300 (61s)
+[fovbench]   frame 215/300 (61s)
+[fovbench]   frame 220/300 (62s)
+[fovbench]   frame 225/300 (65s)
+[fovbench]   frame 230/300 (65s)
+[fovbench]   frame 235/300 (66s)
+[fovbench]   frame 240/300 (66s)
+[fovbench]   frame 245/300 (69s)
+[fovbench]   frame 250/300 (70s)
+[fovbench]   frame 255/300 (70s)
+[fovbench]   frame 260/300 (74s)
+[fovbench]   frame 265/300 (74s)
+[fovbench]   frame 270/300 (74s)
+[fovbench]   frame 275/300 (78s)
+[fovbench]   frame 280/300 (78s)
+[fovbench]   frame 285/300 (78s)
+[fovbench]   frame 290/300 (81s)
+[fovbench]   frame 295/300 (81s)
+[fovbench]   frame 300/300 (81s)
+[fovbench]   done in 82s
+
+[fovbench] ══ da3_small ══
+[97m[INFO ] using MLP layer as FFN[0m
+[fovbench]   Depth-Anything-3 Small | 34M params | align=scale_shift | views rendered at 518px
+[fovbench]   frame 5/300 (4s)
+[fovbench]   frame 10/300 (4s)
+[fovbench]   frame 15/300 (4s)
+[fovbench]   frame 20/300 (7s)
+[fovbench]   frame 25/300 (7s)
+[fovbench]   frame 30/300 (7s)
+[fovbench]   frame 35/300 (10s)
+[fovbench]   frame 40/300 (10s)
+[fovbench]   frame 45/300 (10s)
+[fovbench]   frame 50/300 (13s)
+[fovbench]   frame 55/300 (13s)
+[fovbench]   frame 60/300 (14s)
+[fovbench]   frame 65/300 (16s)
+[fovbench]   frame 70/300 (16s)
+[fovbench]   frame 75/300 (16s)
+[fovbench]   frame 80/300 (17s)
+[fovbench]   frame 85/300 (19s)
+[fovbench]   frame 90/300 (19s)
+[fovbench]   frame 95/300 (20s)
+[fovbench]   frame 100/300 (22s)
+[fovbench]   frame 105/300 (23s)
+[fovbench]   frame 110/300 (23s)
+[fovbench]   frame 115/300 (25s)
+[fovbench]   frame 120/300 (25s)
+[fovbench]   frame 125/300 (26s)
+[fovbench]   frame 130/300 (28s)
+[fovbench]   frame 135/300 (28s)
+[fovbench]   frame 140/300 (29s)
+[fovbench]   frame 145/300 (31s)
+[fovbench]   frame 150/300 (31s)
+[fovbench]   frame 155/300 (32s)
+[fovbench]   frame 160/300 (32s)
+[fovbench]   frame 165/300 (34s)
+[fovbench]   frame 170/300 (35s)
+[fovbench]   frame 175/300 (35s)
+[fovbench]   frame 180/300 (38s)
+[fovbench]   frame 185/300 (38s)
+[fovbench]   frame 190/300 (38s)
+[fovbench]   frame 195/300 (40s)
+[fovbench]   frame 200/300 (41s)
+[fovbench]   frame 205/300 (41s)
+[fovbench]   frame 210/300 (43s)
+[fovbench]   frame 215/300 (44s)
+[fovbench]   frame 220/300 (44s)
+[fovbench]   frame 225/300 (46s)
+[fovbench]   frame 230/300 (47s)
+[fovbench]   frame 235/300 (47s)
+[fovbench]   frame 240/300 (47s)
+[fovbench]   frame 245/300 (50s)
+[fovbench]   frame 250/300 (50s)
+[fovbench]   frame 255/300 (50s)
+[fovbench]   frame 260/300 (53s)
+[fovbench]   frame 265/300 (53s)
+[fovbench]   frame 270/300 (53s)
+[fovbench]   frame 275/300 (56s)
+[fovbench]   frame 280/300 (56s)
+[fovbench]   frame 285/300 (56s)
+[fovbench]   frame 290/300 (58s)
+[fovbench]   frame 295/300 (58s)
+[fovbench]   frame 300/300 (59s)
+[fovbench]   done in 59s
+
+========================================================================================
+  ADT-FOV test · adt-fov-v1 · split 601fcb22767e
+========================================================================================
+  300 frames over 6 sequence(s): Apartment_release_clean_seq131_M1292, Apartment_release_clean_seq133_M1292, Apartment_release_clean_seq134_M1292, Apartment_release_clean_seq135_M1292, Apartment_release_clean_seq136_M1292, Apartment_release_decoration_seq132_M1292
+  streams ['synthetic', 'real'] · views ['rect', 'fisheye'] · protocols ['radial']
+  GT valid <= 10.0 m; predictions beyond 100.0 m excluded from the metrics
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame, over every valid
+  pixel, and then frozen; binning is a masking step applied afterwards. Every
+  cell above — AbsRel, delta1, RMSE, and `pen` — obeys that.
+
+  pen    = AbsRel(outermost bin) / AbsRel(innermost)  — how much worse the
+           periphery is, in the metric a downstream user reads.
+  Absolute AbsRel is comparable only WITHIN an alignment protocol — see the
+  MODELS block: models sharing an `align=` may be read against each other,
+  one scored differently may not. pen is comparable across all of them,
+  being a within-model ratio.
+
+  RADIAL · rect · AbsRel   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_large     real         0.066   0.079   0.076   0.081   0.092   0.111    1.68
+  da3_large     synthetic    0.045   0.047   0.049   0.060   0.069   0.081    1.80
+  da3_small     real         0.130   0.153   0.151   0.144   0.157   0.182    1.40
+  da3_small     synthetic    0.130   0.148   0.146   0.138   0.149   0.176    1.35
+  dav2_large    real         0.112   0.118   0.113   0.112   0.114   0.118    1.06
+  dav2_large    synthetic    0.097   0.100   0.101   0.104   0.110   0.109    1.13
+  vggt_1b       real         0.092   0.094   0.090   0.093   0.101   0.131    1.43
+  vggt_1b       synthetic    0.068   0.065   0.066   0.071   0.078   0.098    1.45
+  vggt_omega    real         0.052   0.056   0.056   0.063   0.069   0.077    1.46
+  vggt_omega    synthetic    0.043   0.044   0.045   0.052   0.059   0.069    1.60
+
+  RADIAL · rect · delta1   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_large     real         0.946   0.928   0.932   0.923   0.902   0.870    1.68
+  da3_large     synthetic    0.974   0.969   0.968   0.957   0.945   0.932    1.80
+  da3_small     real         0.865   0.842   0.836   0.833   0.788   0.726    1.40
+  da3_small     synthetic    0.862   0.839   0.836   0.837   0.800   0.747    1.35
+  dav2_large    real         0.906   0.900   0.899   0.893   0.880   0.856    1.06
+  dav2_large    synthetic    0.928   0.921   0.917   0.908   0.898   0.877    1.13
+  vggt_1b       real         0.932   0.920   0.922   0.911   0.886   0.822    1.43
+  vggt_1b       synthetic    0.960   0.957   0.955   0.944   0.926   0.886    1.45
+  vggt_omega    real         0.950   0.948   0.949   0.941   0.938   0.925    1.46
+  vggt_omega    synthetic    0.972   0.969   0.967   0.957   0.953   0.947    1.60
+
+  RADIAL · fisheye · AbsRel   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_large     real         0.078   0.088   0.086   0.092   0.116   0.152    1.95
+  da3_large     synthetic    0.059   0.061   0.065   0.078   0.100   0.135    2.27
+  da3_small     real         0.147   0.165   0.164   0.157   0.174   0.216    1.47
+  da3_small     synthetic    0.139   0.153   0.153   0.151   0.173   0.219    1.58
+  dav2_large    real         0.138   0.149   0.139   0.139   0.133   0.139    1.01
+  dav2_large    synthetic    0.131   0.143   0.145   0.148   0.150   0.170    1.30
+  vggt_1b       real         0.096   0.100   0.101   0.107   0.126   0.153    1.60
+  vggt_1b       synthetic    0.071   0.072   0.076   0.086   0.106   0.133    1.86
+  vggt_omega    real         0.057   0.058   0.056   0.061   0.078   0.116    2.02
+  vggt_omega    synthetic    0.051   0.052   0.053   0.059   0.075   0.116    2.27
+
+  RADIAL · fisheye · delta1   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_large     real         0.930   0.921   0.926   0.911   0.879   0.833    1.95
+  da3_large     synthetic    0.967   0.965   0.962   0.942   0.906   0.862    2.27
+  da3_small     real         0.850   0.823   0.814   0.809   0.773   0.693    1.47
+  da3_small     synthetic    0.851   0.827   0.825   0.822   0.777   0.694    1.58
+  dav2_large    real         0.885   0.882   0.884   0.881   0.877   0.855    1.01
+  dav2_large    synthetic    0.916   0.898   0.888   0.878   0.865   0.827    1.30
+  vggt_1b       real         0.916   0.905   0.907   0.891   0.861   0.824    1.60
+  vggt_1b       synthetic    0.954   0.949   0.940   0.919   0.889   0.863    1.86
+  vggt_omega    real         0.949   0.952   0.957   0.949   0.936   0.915    2.02
+  vggt_omega    synthetic    0.960   0.961   0.963   0.956   0.948   0.919    2.27
+
+  COVERAGE · mean valid samples per incidence bin (radial protocol)
+  ----------------------------------------------------------------------------------
+  view      stream        px     0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye   real         512     4819    15648    29252    46482    66252    35412
+  fisheye   real         518     4938    16010    29928    47583    67827    36246
+  fisheye   synthetic    512     4819    15648    29252    46482    66252    35412
+  fisheye   synthetic    518     4938    16010    29928    47583    67827    36246
+  rect      real         512     7735    25228    49995    92338    83857     2873
+  rect      real         518     7916    25837    51154    94541    85817     2939
+  rect      synthetic    512     7735    25228    49995    92338    83857     2873
+  rect      synthetic    518     7916    25837    51154    94541    85817     2939
+  A rectified ~85 deg pinhole has no pixels past 42.3 deg off-axis except
+  in its corners (52.6 deg at most). Empty outer bins there are geometry,
+  not model failure — and are themselves the cost of rectifying.
+
+  RING COVERAGE · how much of each annulus the view images — geometry only
+  ----------------------------------------------------------------------------------
+  view         px  whole to       0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye     512     54.6°       100%     100%     100%     100%     100%      98%
+    mean θ                         6.7     15.6     25.4     35.3     45.2     52.4
+  fisheye     518     54.6°       100%     100%     100%     100%     100%      98%
+    mean θ                         6.7     15.6     25.4     35.3     45.2     52.4
+  rect        512     42.2°       100%     100%     100%     100%      55%       3%
+    mean θ                         6.7     15.7     25.5     35.5     43.8     50.7
+  rect        518     42.2°       100%     100%     100%     100%      55%       3%
+    mean θ                         6.7     15.7     25.5     35.5     43.8     50.7
+  `whole to` is the last angle at which EVERY azimuth is imaged. Past it a
+  bin is corner wedges, not a ring, so a `pen` spanning it is not the same
+  measurement in both views — compare the two only where both read 100%.
+
+  BIN DEPTH · median GT depth per incidence bin (m) — a confound, not a score
+  ----------------------------------------------------------------------------------
+  view      stream              px     0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye   real+synthetic     512     2.96     2.79     2.59     2.29     1.93     1.65
+  fisheye   real+synthetic     518     2.96     2.79     2.59     2.29     1.93     1.65
+  rect      real+synthetic     512     2.96     2.79     2.58     2.28     1.98     2.00
+  rect      real+synthetic     518     2.96     2.79     2.58     2.28     1.98     2.01
+  Read the AbsRel tables against this row: a bin that is both farther and
+  worse has not yet been shown to be worse *because of* where it sits.
+
+  MODELS
+  ------------------------------------------------------------
+  da3_large     Depth-Anything-3 Large · 411M · align=scale_shift · views at 518px
+  da3_small     Depth-Anything-3 Small · 34M · align=scale_shift · views at 518px
+  dav2_large    Depth-Anything-V2 Large · 335M · align=disparity_scale_shift · views at 518px
+  vggt_1b       VGGT 1B · 1191M · align=scale_shift · views at 518px
+  vggt_omega    VGGT-Omega 1B/512 · 1144M · align=scale_shift · views at 512px
+
+
+[fovbench] wrote eval_out/fovbench-rect-fix/partA_6seq/results.json (+ csv, report.txt, figures/)
