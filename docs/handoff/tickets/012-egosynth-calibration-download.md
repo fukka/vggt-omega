@@ -4,8 +4,18 @@
 **Status:** **done** — calibrations fetched for aea and nymeria; oxford and egoexo4d outstanding, which is what gates rect_derect on those two (see #020).
 **Files I may touch:** nothing in the repo — this ticket only downloads data.
 The fetcher it runs, `tools/fetch_egosynth_calibration.py`, is already landed.
-**Blocked by:** none for AEA. Nymeria needs one file off the box; Oxford needs a
-route decision.
+**Blocked by:** nothing any more. Nymeria's take list is off the box, and Oxford
+has a route.
+
+> **LOCK, 2026-08-14 — `gpu` is running the Nymeria fetch. Do not start it.**
+> The take list went back over the phone (254 names, 9641 B, sha256
+> `5304711f…`), and rather than round-trip it, the `gpu` session pulled
+> `nymeria_download_urls.json` off the phone and started the fetch on its own
+> Mac. It measures **~53 s/take there, not the ~7.5 s/take this ticket records**
+> — that figure was measured on the `cpu` machine's link — so it is a ~3 hour
+> job finishing around 17:10 EDT, not 32 minutes. Two sessions fetching the same
+> 254 takes would be 160 GB of duplicated reads against a signed URL set that
+> expires 2026-09-11.
 
 ## The route changed — fetch on the CPU machine, not the box
 
@@ -206,10 +216,41 @@ Budget ~32 minutes. If it reports takes missing from the JSON, re-export it from
 the [Nymeria explorer](https://explorer.projectaria.com/nymeria) with those
 sequences selected and the `recording_head` group ticked.
 
-### 4. Oxford Day-and-Night — no gating, but no cheap path either
+### 4. Oxford Day-and-Night — **route 2, and it is cheap after all**
 
-This one needs a decision before any bytes move, because **the ranged-zip trick
-does not apply**. Measured against the HuggingFace API:
+> **SETTLED 2026-08-14.** Route 2 was taken and measured. Two things this
+> section did not know:
+>
+> **The take names map 1:1 onto the release.** ego-synth's
+> `<loc>__<uuid>` is exactly `aria/<loc>/vrs/blur/<uuid>.vrs` in
+> `active-vision-lab/oxford-day-and-night`, and the per-location counts match
+> the release take-for-take: bodleian 44, keble 24, observatory 25, robotics 21,
+> hb-allen 10 = **124**. So there is no group/member puzzle here at all.
+>
+> **The 1.7–2.5 GB is not the price.** The device calibration lives in the VRS
+> header, so a **head-only ranged read reproduces it exactly**. Verified against
+> a full 1.67 GB download of `1b688365`: 32 MB, 8 MB and even **2 MB** heads all
+> give `f, cx, cy = 610.0692, 716.6490, 711.0387`, identical to the whole file.
+> The fetch therefore costs ~1 GB for all 124 at an 8 MB head, not ~250 GB.
+>
+> **But the resolution convention differs from aea/nymeria, and this is the
+> thing that will bite.** The factory calibration is at the **1408 stream**,
+> while the MPS `online_calibration` for aea/nymeria is at the **2880 full
+> sensor**: `aea f / oxford f = 1.99`. `slambench.camera.load` implements the
+> 2880 → 2816 crop → bin 2× chain, so handing it a 1408-native file would apply
+> that reduction a *second* time and halve the focal again — silently, and with
+> plausible-looking numbers out the other end. **These files are therefore
+> staged at `/data/f.zhang2/oxford-calib-factory/`, deliberately NOT inside
+> `ego-synth-5b-calib/`.** Teaching `camera.load` to carry a per-file source
+> resolution is a code change and so a separate ticket, per this ticket's own
+> "nothing in the repo" rule and #020's.
+>
+> Oxford still cannot join `rect_derect` even once that lands: its rotation has
+> never been measured and `camera.VERIFIED_ROTATION` excludes it by design.
+> Calibration was necessary, not sufficient.
+
+The original survey, kept for the argument. **The ranged-zip trick does not
+apply**; measured against the HuggingFace API:
 
     aria/<loc>/mps/multi/day_23.tar.gz          18.7 GB
     aria/<loc>/mps/multi/day_night_44.tar.gz    24.3 GB
@@ -237,18 +278,31 @@ to, so a member cannot be range-read. Two options, cheapest experiment first:
 under 2 KB, so it is free to fetch first and tells you which recordings a group
 covers.
 
-**Unresolved:** whether Oxford's multi-session MPS even contains a per-recording
-`online_calibration`. The README says "per image camera parameters"; nobody has
-looked inside. Option 1's experiment answers that too.
+**Still unresolved, and now optional:** whether Oxford's multi-session MPS
+contains a per-recording `online_calibration`. Nobody has looked inside. It only
+matters if the factory/online difference above turns out to bite — route 2
+already produces a 15-param `FISHEYE624` per take, so this is a question about
+*which* calibration is better, not about whether one is available.
 
 ## Done when
 
 - [x] **aea** — 143/143 fetched on the CPU machine, 0 failed, 148 KB
-- [x] **aea** — handed off: 42 KB tarball on the phone, sha256 `47e9918f…`,
-      per-file manifest inside. Unpacked and hash-checked on the box? → not yet
-- [ ] **nymeria** — needs `nymeria_takes.txt` off the box; that is now the only
-      thing missing, and it is a 10 KB `ls`
-- [ ] **oxford** — needs the route decision in step 4
+- [x] **aea** — handed off and **landed**: the 42 KB tarball came off the phone
+      on 2026-08-14, sha256 matched, and its per-file manifest verified
+      **144/144 with 0 mismatches on both `lambda_63` and `space-container`**
+      (`/data/f.zhang2/ego-synth-5b-calib` and
+      `/group-volume/Fengjia/data/ego-synth-5b-calib`). The nymeria take in it
+      is the staged one, so aea is 143 and nymeria is 1 so far.
+- [x] **nymeria** — `nymeria_takes.txt` is off the box and back on the phone
+      (254 names, sha256 verified both sides). The fetch itself is **running on
+      the `gpu` session's Mac** — see the lock at the top.
+- [ ] **oxford** — route 2 chosen (per-recording VRS factory calibration). The
+      take names map **1:1** onto the release: ego-synth's `<loc>__<uuid>` is
+      exactly `aria/<loc>/vrs/blur/<uuid>.vrs` in
+      `active-vision-lab/oxford-day-and-night`, and the per-location counts
+      match the release exactly (bodleian 44, keble 24, observatory 25,
+      robotics 21, hb-allen 10 = 124). Cost is the problem, not identification:
+      ~2 GB per take, ~250 GB for all 124.
 - [x] each fetched file's `model` reads `FisheyeRadTanThinPrism` and `params` has
       15 entries — checked across all 143
 - [ ] `/data/f.zhang2/ego-synth-5b-calib/{aea,nymeria,oxford}/<take>/camera_rgb.json`
