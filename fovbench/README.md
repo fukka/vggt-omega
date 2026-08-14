@@ -224,11 +224,21 @@ measured depth is reported instead. Weigh it yourself.
 
 ## What it found
 
-The headline run is `fovbench-ctx-d351d94`, split `601fcb22767e` — **50 frames
-each of six ADT sequences**, four models, both streams, both views, radial only.
-Its three figures (`AbsRel`, `delta1`, `gt_depth`) are in
-[`results/fovbench-ctx-d351d94/partA_6seq/figures/`](../results) on the `results`
-branch, per-sequence tables in `ANALYSIS.txt`.
+The headline run is `fovbench-rectfix-393cab9`, split `601fcb22767e` — **50
+frames each of six ADT sequences**, five models, both streams, both views,
+radial only. Its three figures (`AbsRel`, `delta1`, `gt_depth`) are in
+[`results/fovbench-rectfix-393cab9/partA_6seq/figures/`](../results) on the
+`results` branch, the old/new comparison in `ANALYSIS.txt`.
+
+> **It replaced `fovbench-ctx-d351d94`, whose rect arm predates #018.** That run
+> is a mixture — its fisheye column matches the current code and its rect column
+> was measured through a lens description a pixel wrong — so a comparison drawn
+> from it needs a footnote saying which half is current. Re-scoring cost the rect
+> arm up to **−1.65 %** on `pen`, and the fisheye arm **nothing**: it came back
+> bit-identical across all 8336 numeric leaves, from a single-threaded run to a
+> `--workers 16` one, which is also the threading control #014 wanted.
+> Per-sequence tables are still only in the older run's `ANALYSIS.txt`, and
+> item 3b below has *not* been re-measured — see its note.
 
 > **Items 1–6 below were measured on seq131 alone, and seq131 is the mildest of
 > the six scenes.** It ranks in the two mildest in 13 of 16 (model × view ×
@@ -335,6 +345,14 @@ A rectified window scores the same wherever it is aimed; a raw one does not.
 That is a cleaner statement of "rectifying helps" than the radial arm can make,
 because here the two views see the same directions by construction. Including
 the clipped aim inflates the rect numbers to 1.12–2.10 and hides it.
+
+> **This item's rect numbers still predate #018 and have not been re-measured.**
+> `fovbench-rectfix-393cab9` is `--protocols radial`, so it re-scored item 3's
+> rect column and not this one. The lens fix moves rect wherever it appears, so
+> treat the 0.90–1.21 above as *unverified*, not as unchanged. The radial arm's
+> movement (≤1.65 % on `pen`) is the best available guide to its size, and it is
+> far smaller than the rect/fisheye gap this item rests on — but that is an
+> argument, not a measurement.
 
 **4. The sensor sets the level, the lens sets the slope.** `real` sits well above
 `synthetic` at every bin (VGGT-1B fisheye 0.110 vs 0.068 on axis) while the two
