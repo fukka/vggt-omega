@@ -20,7 +20,7 @@ each. Nothing already published moves, and #020 step 2 may run.
 
     |d - z| / z  by incidence angle          |d - range| / range
       theta        aea      nymeria            aea    (1-cos)   nymeria  (1-cos)
-      0-15      0.0002       0.0002         0.0158   0.0157    0.0185   0.0185
+      0-15      0.0002       0.0002         0.0158   0.0158    0.0185   0.0185
      15-30      0.0002       0.0002         0.0831   0.0831    0.0897   0.0898
      30-45      0.0002       0.0002         0.2097   0.2096    0.2051   0.2051
      45-90      0.0002       0.0002         0.3665   0.3664    0.3590   0.3591
