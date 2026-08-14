@@ -4,7 +4,9 @@
 **Status:** **DONE. The verdict is `z`** — planar camera-frame Z, on both
 staged datasets, decisively. The data card was right, no published number moves,
 and **#020 step 2 is released to run.** Measured 2026-08-14 on the Mac; see
-"The answer" below.
+"The answer" below. Issue
+[#21](https://github.com/fukka/vggt-omega/issues/21), reported and closed;
+code on `organized` @ `8573cf0`.
 **Files I may touch:** `tools/fetch_egosynth_mps_points.py` (new),
 `slambench/verify_depth_convention.py` (new),
 `slambench/tests/test_depth_convention.py` (new — see the note on scope below).

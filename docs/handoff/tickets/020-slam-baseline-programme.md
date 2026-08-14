@@ -1,7 +1,13 @@
 # slambench: a proper baseline evaluation on real egocentric SLAM data
 
-**Owner:** gpu (with #016's fetch on cpu)
-**Status:** **open** — this is the SLAM evaluation's live ticket. Successor to #013.
+**Owner:** gpu (#016's fetch is done, and it ran on cpu)
+**Status:** **open, and dispatched** — issue
+[#22](https://github.com/fukka/vggt-omega/issues/22). This is the SLAM
+evaluation's live ticket. Successor to #013. The issue carries two pre-flight
+items this file does not: run `verify_camera --takes 8` first (possible for the
+first time now that #012 has landed, and #013's step 3 already asked for it),
+and record whether `projectaria_tools` or the cv2 fallback did the
+rectification — `baselines.rectify` prefers the former and falls back silently.
 **Files I may touch:** nothing under `slambench/` except what #016 adds — runs only.
 Results to `results`.
 **Blocked by:** nothing. **Step 1 is answered — `d` is planar z (#016,
