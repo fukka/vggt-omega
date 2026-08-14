@@ -112,21 +112,16 @@ online calibration does not move over a recording.
 
 ### 1. The URL JSONs stay put
 
-They are on the CPU machine at `~/Downloads/`:
+They are on the CPU machine at `~/Desktop/ADT/`:
 
     AriaEverydayActivities_download_urls.json     143 sequences
     nymeria_download_urls.json                   1100 sequences
 
-> **They are currently unreadable to the agent** — macOS TCC does not grant this
-> process the Downloads folder, so `cp`, `head` and `adb push` all return
-> `Operation not permitted` on them. AEA was fetched before that took effect.
-> This blocks step 3 and nothing else. The fix is one command by the owner:
->
->     mv ~/Downloads/*_download_urls.json ~/Desktop/ADT/
->
-> after which `--urls ~/Desktop/ADT/nymeria_download_urls.json` works. Granting
-> the terminal blanket Downloads access would also work and is a bigger hammer
-> than this needs.
+> They lived in `~/Downloads/` until 2026-08-14 and were **moved out**: macOS
+> TCC does not grant this agent the Downloads folder, so `cp`, `head` and
+> `adb push` all returned `Operation not permitted` there. AEA was fetched
+> before that took effect, which is why it succeeded and nothing after it did.
+> Anything the agent must read belongs outside `~/Downloads`.
 
 **They are signed, expiring credentials and must never be committed** — this
 repo is public and its history is permanent and mirrored. They also no longer
@@ -141,7 +136,7 @@ no filtering is needed.
 
 ```bash
 python tools/fetch_egosynth_calibration.py aea \
-  --urls ~/Downloads/AriaEverydayActivities_download_urls.json \
+  --urls ~/Desktop/ADT/AriaEverydayActivities_download_urls.json \
   --out  ~/Desktop/ADT/ego-synth-5b-calib
 ```
 
@@ -185,10 +180,13 @@ a standing dependency of the box. Ship the bytes and check the hash.
 
 ### 3. Nymeria — the 254 takes ego-synth used, of 1100 in the JSON
 
-**This one needs a file off the box first.** `--takes` filters by the release's
-own directory names, and the release is only on lambda_63 — the CPU machine has
-one Nymeria take. Fetching all 1100 blind would be ~2.3 hours and ~80 GB read to
-throw three quarters of it away. So: on the box,
+**This one needs a file off the box first, and there is no way around it.**
+`--takes` filters by the release's own directory names, and those names exist in
+exactly one place: `/data/f.zhang2/ego-synth-5b/` on lambda_63. The release is
+not published anywhere the names could be listed remotely, and the CPU machine
+holds one Nymeria take, so nothing local can name the other 253. Fetching all
+1100 blind would be ~2.3 hours and ~80 GB read to throw three quarters away.
+So: on the box,
 
 ```bash
 ls /data/f.zhang2/ego-synth-5b/nymeria > nymeria_takes.txt
@@ -198,7 +196,7 @@ ls /data/f.zhang2/ego-synth-5b/nymeria > nymeria_takes.txt
 
 ```bash
 python tools/fetch_egosynth_calibration.py nymeria \
-  --urls  ~/Downloads/nymeria_download_urls.json \
+  --urls  ~/Desktop/ADT/nymeria_download_urls.json \
   --out   ~/Desktop/ADT/ego-synth-5b-calib \
   --takes nymeria_takes.txt
 ```
@@ -248,8 +246,8 @@ looked inside. Option 1's experiment answers that too.
 - [x] **aea** — 143/143 fetched on the CPU machine, 0 failed, 148 KB
 - [x] **aea** — handed off: 42 KB tarball on the phone, sha256 `47e9918f…`,
       per-file manifest inside. Unpacked and hash-checked on the box? → not yet
-- [ ] **nymeria** — needs `nymeria_takes.txt` off the box, *and* the URL JSON
-      moved out of `~/Downloads` (see the note in step 1)
+- [ ] **nymeria** — needs `nymeria_takes.txt` off the box; that is now the only
+      thing missing, and it is a 10 KB `ls`
 - [ ] **oxford** — needs the route decision in step 4
 - [x] each fetched file's `model` reads `FisheyeRadTanThinPrism` and `params` has
       15 entries — checked across all 143
