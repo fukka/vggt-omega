@@ -4,7 +4,10 @@
 **Status:** **open** — this is the SLAM evaluation's live ticket. Successor to #013.
 **Files I may touch:** nothing under `slambench/` except what #016 adds — runs only.
 Results to `results`.
-**Blocked by:** step 1 gates steps 2 and 3. Nothing gates step 1.
+**Blocked by:** nothing. **Step 1 is answered — `d` is planar z (#016,
+2026-08-14) — and steps 2 and 3 are released.** #012 has also landed all three
+calibration sets on lambda_63, so `rect_derect` on aea + nymeria has no
+remaining technical gate.
 
 ## The goal
 
@@ -20,23 +23,30 @@ the other two mean.
 
 ---
 
-## Step 1 — is `d` planar z? (#016)
+## Step 1 — is `d` planar z? (#016) — **ANSWERED: yes. Proceed.**
 
-**Do this first and do not skip it.** Every number already published, and every
-number below, is scored against `pts.d` as planar z on the data card's word
-alone. If it is euclidean range, everything carries a `1/cos(theta)` error —
-1.00 on axis, **1.74 at 55 deg** — which is radial and so unabsorbable by the
-per-frame affine, and which lands hardest exactly where `rect_derect` and `raw`
-are supposed to differ.
+**Done 2026-08-14. The verdict is `z`, planar camera-frame Z**, on both staged
+takes, decisively. Nothing already published moves and steps 2 and 3 are
+released. Full table and method in #016; the short version:
 
-Two things in `slambench/` look like checks of this and provably are not; #016
-explains why and specifies the one that can fail. It needs the source MPS
-semi-dense points, which is a fetch rather than a GPU job.
+* `|d - z| / z` reads **0.0002 at every incidence angle** on both datasets —
+  the float16 floor of the stored `d`, and *flat*, which is what a radial
+  convention error cannot be;
+* `|d - range| / range` matches **`1 - cos(theta)` to four decimal places in all
+  eight bins**, which is the signature of `d` *being* z rather than merely of
+  range being wrong. (Note the algebra: each reading predicts the *other's*
+  residual, and `d=z => 1-cos(theta)` while `d=range => sec(theta)-1`. They are
+  different curves — 0.36 against 0.56 at 50 deg.)
+* an independent reading that matches nothing agrees: reconstructed under z the
+  points land 0.0007-0.0016 m from the cloud and flat; under range,
+  0.0065-0.0216 m and growing with theta.
 
-**If the answer is "range", stop.** The fix is a conversion at
-`data.read_points` plus a re-run of everything, and that is its own ticket. Do
-not carry on to step 2 with a known-wrong convention because the runs were
-already queued.
+Measured on **two takes, one per dataset** — the limit of the local sample, the
+same limit `verify_camera` has. `oxford` is unmeasured, and is out of step 2 for
+other reasons anyway.
+
+The check was built so it *could* fail: matching is on ray direction alone, and
+a test requires it to return **range** on a synthetic take built as range.
 
 ---
 
@@ -129,7 +139,8 @@ then the same with `--context-stride 10`.
 
 ## Done when
 
-- [ ] #016 has reported a verdict and it is recorded here
+- [x] #016 has reported a verdict and it is recorded here — **z**, planar
+      camera-frame Z, both staged takes
 - [ ] `python -m pytest tests slambench/tests -q` passes on the run's commit
 - [ ] steps 2 and 3 share one digest
 - [ ] the tables above are in the issue, `kept` included

@@ -19,12 +19,13 @@ number forever; numbers are referenced from commit messages and are never reused
 | # | | owner |
 |---|---|---|
 | [019](019-adt-fov-rect-rerun.md) | **ADT-FOV: re-score on the corrected lens**, with DA3-Small in the same table. Supersedes #014 and #015. | gpu |
-| [020](020-slam-baseline-programme.md) | **The SLAM baseline programme**: settle the depth convention, then both lens strategies, then multi-frame. Successor to #013. | gpu |
-| [016](016-egosynth-depth-convention.md) | Is ego-synth's `d` planar z or range? **Step 1 of #020** — nothing else in that evaluation means anything until it is answered. | gpu |
+| [020](020-slam-baseline-programme.md) | **The SLAM baseline programme**: both lens strategies, then multi-frame. Successor to #013. **Step 1 is now answered**, so steps 2 and 3 are released. | gpu |
 
-Read #016 before #020, and #020's step ordering before queueing anything: step 1
-can invalidate steps 2 and 3, and both later steps must run as single invocations
-because `slambench` intersects its scored points across every arm in a run.
+**#016 is done: `d` is planar z**, on both staged datasets, decisively — so no
+published number moves and #020's steps 2 and 3 may run. Read #020's step
+ordering before queueing anything: both remaining steps must run as single
+invocations, because `slambench` intersects its scored points across every arm
+in a run.
 
 ---
 
@@ -50,10 +51,10 @@ footage?*
 
 | # | | status |
 |---|---|---|
-| [012](012-egosynth-calibration-download.md) | Fetch the Aria calibration the release omits | done for aea + nymeria; oxford and egoexo4d outstanding, which is what gates `rect_derect` on those two |
+| [012](012-egosynth-calibration-download.md) | Fetch the Aria calibration the release omits | done · aea 143, nymeria 254, oxford 124, all on lambda_63. Oxford is still out of `rect_derect`, now for an unverified rotation and a 1408-vs-2880 convention rather than for missing files |
 | [013](013-slambench-harness.md) | Build the harness, run the raw arm | done · `slambench-raw-b1659a0` |
-| [016](016-egosynth-depth-convention.md) | Is `d` planar z or range? | **open** |
-| [020](020-slam-baseline-programme.md) | Convention → both baselines → multi-frame | **open** |
+| [016](016-egosynth-depth-convention.md) | Is `d` planar z or range? | done · **z**, both staged takes, `d - z` flat at the float16 floor and the range residual matching `1-cos(theta)` to 4 dp |
+| [020](020-slam-baseline-programme.md) | Both baselines → multi-frame | **open** — step 1 cleared |
 
 ---
 

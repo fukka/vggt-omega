@@ -1,12 +1,109 @@
 # slambench: is ego-synth's `d` planar z, or is it range?
 
-**Owner:** gpu
-**Status:** **open, and now step 1 of #020** — nothing else in the SLAM evaluation means anything until this is settled.
+**Owner:** cpu (it needed no GPU box — see "the route changed" below)
+**Status:** **DONE. The verdict is `z`** — planar camera-frame Z, on both
+staged datasets, decisively. The data card was right, no published number moves,
+and **#020 step 2 is released to run.** Measured 2026-08-14 on the Mac; see
+"The answer" below.
 **Files I may touch:** `tools/fetch_egosynth_mps_points.py` (new),
-`slambench/verify_depth_convention.py` (new). **Not** `slambench/data.py`,
-`baselines.py` or `metrics.py` — if the answer comes back "range" that is a
-second ticket, not this one.
+`slambench/verify_depth_convention.py` (new),
+`slambench/tests/test_depth_convention.py` (new — see the note on scope below).
+**Not** `slambench/data.py`, `baselines.py` or `metrics.py`, and none of them
+was touched.
 **Blocked by:** none. Independent of the `rect_derect` arm and of ticket 013.
+
+## The answer: `d` is planar z
+
+**Verdict `z` on both staged takes**, 2026-08-14, on `aea/loc1_script1_seq1_rec1`
+and `nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du`, 4 clips x 121 frames
+each. Nothing already published moves, and #020 step 2 may run.
+
+    |d - z| / z  by incidence angle          |d - range| / range
+      theta        aea      nymeria            aea    (1-cos)   nymeria  (1-cos)
+      0-15      0.0002       0.0002         0.0158   0.0157    0.0185   0.0185
+     15-30      0.0002       0.0002         0.0831   0.0831    0.0897   0.0898
+     30-45      0.0002       0.0002         0.2097   0.2096    0.2051   0.2051
+     45-90      0.0002       0.0002         0.3665   0.3664    0.3590   0.3591
+
+     aea      2 598 579 stored rows -> 261 275 uniquely matched (10.1 %)
+     nymeria    539 936 stored rows ->   9 366 uniquely matched  (1.7 %)
+
+Two things make this decisive rather than merely favourable.
+
+**`d - z` is 0.0002 at every angle — flat.** 0.0002 is the float16 quantisation
+of the stored `d`, so the residual is not small, it is *absent*: there is nothing
+left above the noise floor of what the ground truth can express. And flat is the
+part that matters. Any error in this convention is radial by construction, so a
+convention error cannot hide in a flat residual.
+
+**The losing hypothesis is wrong by exactly the predicted amount.** This is the
+stronger half and it is easy to state wrongly, so: the two readings each predict
+the *other's* residual, and they are **different functions**.
+
+    if d is z:      |d - range| / range  =  1 - cos(theta)
+    if d is range:  |d - z| / z          =  sec(theta) - 1
+
+Those are not the same curve — at 50 deg one is 0.36 and the other 0.56. The
+measured range residual matches **`1 - cos(theta)` to four decimal places in all
+eight bins across both datasets**, which is the signature of `d` being z, not
+merely of range being wrong. `sec(theta) - 1` is the wrong comparator here and an
+earlier draft of the report printed it, which made an exact agreement look
+approximate.
+
+**An independent second reading agrees.** Reconstruct each stored row into the
+world under each hypothesis and measure how far it lands from the actual cloud —
+no matching at all, so it shares no arithmetic with the table above. Distance
+under z is 0.0007-0.0016 m and **flat**; under range it is 0.0065-0.0216 m and
+**grows with theta**, on both datasets, over ~2.6 M and ~1.3 M points.
+
+**The check can return "range".** The load-bearing test in
+`slambench/tests/test_depth_convention.py` builds a synthetic take under each
+convention and requires the check to recover that one; on range-built data it
+reads range, and the loser's residual matches its predicted function to 10 %. A
+check that could only ever say "z" would make agreement with the data card
+worthless, and that is the failure mode this ticket was written against.
+
+### The route changed: no GPU box, and no trajectory
+
+Two departures from the Steps below, both of which made the work smaller.
+
+1. **The trajectory does not need fetching.** Steps 1-2 specify
+   `closed_loop_trajectory.csv` (101 MB per Nymeria take) plus `T_device_camera`,
+   composed here. The release already ships that composition:
+   `camera_poses.json` carries `T_world_camera` per frame and states its own
+   provenance — MPS closed-loop trajectory @ `T_device_camera(camera-rgb)`,
+   looked up at each frame's exact capture timestamp. Re-deriving it would have
+   spent 101 MB to reproduce the producer's own arithmetic and introduced two
+   fresh ways to be wrong (the extrinsic, the interpolation) inside a check whose
+   purpose is to *remove* an unverified assumption. Only the world points were
+   fetched: **44.8 MB for aea** (of a 349.1 MB archive) and **161.3 MB for
+   nymeria** (of 593.0 MB), by the same ranged-zip read ticket 012 built.
+2. **It never needed the box.** Both signed URL JSONs and the staged sample are
+   on the Mac, and the sample holds exactly the one `aea` and one `nymeria` take
+   this ticket calls for. Owner corrected from `gpu` to `cpu` accordingly.
+
+### On the scope line
+
+`slambench/tests/test_depth_convention.py` is a third new file, beyond the two
+this ticket names. It collides with nothing — #020 touches nothing under
+`slambench/`, and the file is new — but it is more than the ticket said, and the
+falsifiability test is the reason it exists rather than tidiness.
+
+Nothing under `slambench/` that the evaluation runs on was modified:
+`data.py`, `baselines.py` and `metrics.py` are untouched, as specified.
+
+### What this does not settle
+
+* **Two takes, one per dataset** — the same limit `verify_camera` has, and for
+  the same reason: that is what the local sample holds. `oxford` and `egoexo4d`
+  are unmeasured. `oxford` is out of #020 step 2 anyway; if it is ever added,
+  this check should run on it first.
+* The unique-match rate is low (10.1 % on aea, **1.7 %** on nymeria) because a
+  row is dropped whenever a second world point falls inside the angular
+  tolerance. That is deliberate — resolving the ambiguity by depth would put a
+  hypothesis back into the matching — but it is why nymeria needed all 484
+  frames to clear the coverage bar. The independent reconstruction reading has
+  no such filter and carries ~1.3 M points on nymeria.
 
 ## The question
 
@@ -95,12 +192,19 @@ pose, so *both* readings are computable and they differ by `sec(theta)`.
 
 ## Done when
 
-- [ ] `python -m pytest slambench/tests -q` passes
-- [ ] the check runs on one `aea` take and one `nymeria` take
-- [ ] the per-theta-bin table for both readings is in the issue, with the number
-      of matched points per bin
-- [ ] a one-line verdict: **z**, **range**, or **undecided** — and if undecided,
-      which step was too noisy, not a guess
+- [x] `python -m pytest slambench/tests -q` passes — **79 passed, 1 skipped**
+      with `EGOSYNTH_SAMPLE` set. The skip is the pre-existing
+      `test_camera.py:187` (a `projectaria_tools` predating the `rescale`
+      binding), not anything this ticket added. 9 of the passes are new.
+- [x] the check runs on one `aea` take and one `nymeria` take
+- [x] the per-theta-bin table for both readings, with the number of matched
+      points per bin — above, and in the issue
+- [x] a one-line verdict: **z — planar camera-frame Z.** aea reads |rel| 0.0002
+      vs 0.2781 beyond 30 deg over 172 831 points; nymeria 0.0002 vs 0.2522 over
+      5 089. Not undecided, and the coverage bar (1 000 matched points beyond
+      30 deg) was cleared rather than lowered — a 48-frame nymeria run that
+      reached only 138 was reported as undecided and re-run longer, not
+      re-thresholded.
 
 ## What "undecided" costs, so it does not get rounded to "z"
 
