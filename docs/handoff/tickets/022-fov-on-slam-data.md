@@ -46,8 +46,8 @@ error-against-eccentricity curve on this data is partly a distance curve, and
 `test_a_depth_gradient_alone_invents_a_field_effect` shows a model with **no**
 field dependence producing a sloping curve from that alone. So the primitive is
 a two-way table, eccentricity x distance, and the report prints the pooled curve
-and the distance-held-fixed curve side by side. On the smoke run the two
-disagreed about the *sign* of the effect.
+and the distance-held-fixed curve side by side. How far apart they land on this
+data is measured below.
 
 The third row of that table is the price: centre and rim barely overlap in
 distance, so the shared strata can describe a small slice of a bin. It is
