@@ -15,6 +15,17 @@ Results to `results`. Nothing under `slambench/` was touched.
 calibration sets on lambda_63, so `rect_derect` on aea + nymeria has no
 remaining technical gate.
 
+> **Provenance, added after the run (#021).** This run's `vggt_1b` column was
+> produced in **fp32**, because `raytun3r.backbones.VGGTBackbone.forward` was
+> the one VGGT call site in the repo not opening the bf16 autocast the model is
+> written to expect. That was fixed after publication and the run was
+> **deliberately not repeated**, so no current checkout reproduces this
+> artefact. The accuracy cost is bounded — ≤0.51% on AbsRel with no ordering
+> flip, against findings of 8–21% — so nothing below moves. The **timings**
+> are not comparable across models here: VGGT-1B was fp32 while the other
+> three were bf16, and the 13.7× context scaling quoted below is
+> substantially a property of the dtype, not the architecture.
+
 ## What it says
 
 **Rectifying is nearly free here, and this ticket expected it not to be.** The

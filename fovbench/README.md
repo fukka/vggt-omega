@@ -13,6 +13,16 @@ fine-tuning, no adapters, no lens model given to any of them:
 | `dav2_large` | Depth-Anything V2 Large | relative disparity | affine in **disparity** |
 | `da3_large` | Depth-Anything 3 Large | up-to-scale depth | affine in depth |
 
+> **Every published `vggt_1b` column here was produced in fp32 (#021).**
+> `raytun3r.backbones.VGGTBackbone.forward` was the one VGGT call site in the
+> repo not opening the bf16 autocast the model is written to expect — the other
+> three models were already on their own reference precision. Fixed after these
+> runs and **deliberately not re-run**, so no current checkout reproduces the
+> `vggt_1b` rows in any `results/fovbench-*`. The accuracy cost is ≤0.51% on
+> AbsRel with no model ordering flip, measured on the SLAM grid; nothing this
+> README concludes depends on a margin that small. Any *timing* comparison
+> against the other three models is invalid for these runs.
+
 ## The grid
 
 ```

@@ -475,7 +475,29 @@ class VGGTBackbone(Backbone):
             images = images.unsqueeze(0)
         # save_attn=True makes the aggregator collect and assert on frame
         # attention maps, which RayTun3R never reads.
-        preds, _ = self.model(images, save_attn=False)
+        #
+        # The autocast is not an optimisation, it is how VGGT is specified to
+        # run, and this was the only caller in the repo omitting it. The
+        # evidence is inside the model: ``vggt_visfeat/models/vggt.py:72``
+        # wraps the heads in ``autocast(enabled=False)``, which is a no-op
+        # unless a caller has opened one -- the model is written expecting a
+        # bf16 aggregator and fp32 heads. Every other VGGT call site here
+        # supplies it (``main_adt.py`` defaults ``--dtype bf16``,
+        # ``main_erp_upstream.py`` hardcodes the autocast), and the sibling
+        # backbones do too: ``vggt_omega/models/vggt_omega.py:41`` opens bf16
+        # for its aggregator and disables it at :51 for its heads, and
+        # ``depth_anything_3/api.py:126`` uses this exact dtype expression.
+        #
+        # fp16 rather than bf16 is a KNOWN VGGT failure mode -- the official
+        # repo recommends bf16 and ``main_adt.py`` warns loudly when it falls
+        # back -- so the fallback here is pre-Ampere only, where bf16 does not
+        # exist.
+        if images.is_cuda:
+            dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+            with torch.autocast(device_type="cuda", dtype=dtype):
+                preds, _ = self.model(images, save_attn=False)
+        else:
+            preds, _ = self.model(images, save_attn=False)
         h, w = images.shape[-2:]
         extri, _ = pose_encoding_to_extri_intri(preds["pose_enc"], (h, w))
         extri = extri[0]                                   # (S, 3, 4) cam-from-world
