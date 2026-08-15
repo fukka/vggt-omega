@@ -5,6 +5,8 @@
 `slambench/fov_report.py`, `slambench/tests/test_fov.py`, `slamfov_lane.sh`
 (all new; nothing in the published `slambench.run` path)
 **Blocked by:** nothing. The code is on `organized` and the CPU suites are green.
+**Issue:** https://github.com/fukka/vggt-omega/issues/23 — that, not this file,
+is what reaches the box.
 
 ## Goal
 
