@@ -1,0 +1,162 @@
+============================================================================================
+  ego-synth SLAM depth · egosynth-slam-v1 · split 61195914f090
+============================================================================================
+  400 frames over 16 take(s), datasets: aea, nymeria
+  GT: sparse MPS SLAM points, fisheye stream, native — the harness rectifies nothing
+  cut at inv_dist_std (1/m, scale-invariant) < 0.01 (the release ships UNFILTERED, so this is part of every number below)
+  baselines ['raw', 'rect_derect'] · 8 take(s)/dataset · 25 frame(s)/take
+
+  CONTEXT SWEEP: [1, 3, 5, 10] frame(s) in one forward pass, stride 1. Only the split's own frame is
+  scored, so every arm measures the identical points and the digest above covers them all.
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame over every one
+  of that frame's points, then frozen. Frames combine unweighted. Each
+  model keeps its own alignment space — disparity for Depth-Anything V2,
+  depth for the up-to-scale heads — so ABSOLUTE AbsRel IS NOT COMPARABLE
+  ACROSS MODELS. It is comparable across baselines of one model.
+
+  BASELINE · raw
+  ---------------------------------------------------------------------------------------------------
+  model         dataset      ctx   AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ---------------------------------------------------------------------------------------------------
+  da3_large     aea            1    0.207    0.754    0.899    0.718    0.081    1.00    1.40     200
+  da3_large     aea            3    0.213    0.750    0.891    0.722    0.083    1.00    1.40     200
+  da3_large     aea            5    0.212    0.753    0.891    0.723    0.083    1.00    1.40     200
+  da3_large     aea           10    0.210    0.760    0.893    0.718    0.082    1.00    1.40     200
+  da3_large     nymeria        1    0.172    0.790    0.931    0.517    0.068    1.00    1.58     200
+  da3_large     nymeria        3    0.170    0.797    0.931    0.519    0.067    1.00    1.58     200
+  da3_large     nymeria        5    0.170    0.795    0.931    0.520    0.067    1.00    1.58     200
+  da3_large     nymeria       10    0.166    0.797    0.935    0.520    0.066    1.00    1.58     200
+  da3_small     aea            1    0.240    0.688    0.878    0.756    0.092    1.00    1.40     200
+  da3_small     aea            3    0.252    0.682    0.863    0.760    0.097    1.00    1.40     200
+  da3_small     aea            5    0.253    0.681    0.865    0.757    0.096    1.00    1.40     200
+  da3_small     aea           10    0.248    0.688    0.868    0.752    0.095    1.00    1.40     200
+  da3_small     nymeria        1    0.205    0.722    0.915    0.561    0.080    1.00    1.58     200
+  da3_small     nymeria        3    0.215    0.712    0.902    0.573    0.083    1.00    1.58     200
+  da3_small     nymeria        5    0.213    0.714    0.905    0.572    0.083    1.00    1.58     200
+  da3_small     nymeria       10    0.210    0.714    0.907    0.570    0.082    1.00    1.58     200
+  vggt_1b       aea            1    0.199    0.761    0.902    0.727    0.079    1.00    1.40     200
+  vggt_1b       aea            3    0.210    0.740    0.899    0.735    0.084    1.00    1.40     200
+  vggt_1b       aea            5    0.213    0.733    0.900    0.737    0.085    1.00    1.40     200
+  vggt_1b       aea           10    0.220    0.717    0.893    0.743    0.088    1.00    1.40     200
+  vggt_1b       nymeria        1    0.144    0.827    0.937    0.501    0.063    1.00    1.58     200
+  vggt_1b       nymeria        3    0.156    0.809    0.927    0.510    0.069    1.00    1.58     200
+  vggt_1b       nymeria        5    0.161    0.800    0.923    0.515    0.071    1.00    1.58     200
+  vggt_1b       nymeria       10    0.167    0.785    0.920    0.522    0.073    1.00    1.58     200
+  vggt_omega    aea            1    0.151    0.846    0.938    0.662    0.061    1.00    1.40     200
+  vggt_omega    aea            3    0.151    0.845    0.938    0.664    0.061    1.00    1.40     200
+  vggt_omega    aea            5    0.153    0.841    0.938    0.666    0.061    1.00    1.40     200
+  vggt_omega    aea           10    0.153    0.839    0.937    0.667    0.062    1.00    1.40     200
+  vggt_omega    nymeria        1    0.121    0.884    0.961    0.467    0.049    1.00    1.58     200
+  vggt_omega    nymeria        3    0.119    0.887    0.964    0.466    0.048    1.00    1.58     200
+  vggt_omega    nymeria        5    0.120    0.885    0.964    0.467    0.049    1.00    1.58     200
+  vggt_omega    nymeria       10    0.122    0.880    0.964    0.469    0.050    1.00    1.58     200
+
+  BASELINE · rect_derect
+  ---------------------------------------------------------------------------------------------------
+  model         dataset      ctx   AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ---------------------------------------------------------------------------------------------------
+  da3_large     aea            1    0.194    0.778    0.905    0.712    0.075    0.99    1.40     200
+  da3_large     aea            3    0.204    0.769    0.895    0.718    0.078    0.99    1.40     200
+  da3_large     aea            5    0.205    0.771    0.894    0.717    0.078    0.99    1.40     200
+  da3_large     aea           10    0.208    0.769    0.890    0.717    0.079    0.99    1.40     200
+  da3_large     nymeria        1    0.164    0.805    0.933    0.517    0.064    0.99    1.58     200
+  da3_large     nymeria        3    0.165    0.803    0.935    0.518    0.065    0.99    1.58     200
+  da3_large     nymeria        5    0.163    0.803    0.937    0.518    0.064    0.99    1.58     200
+  da3_large     nymeria       10    0.159    0.812    0.939    0.515    0.063    0.99    1.58     200
+  da3_small     aea            1    0.234    0.694    0.875    0.757    0.090    0.99    1.40     200
+  da3_small     aea            3    0.237    0.703    0.878    0.748    0.091    0.99    1.40     200
+  da3_small     aea            5    0.237    0.707    0.878    0.744    0.090    0.99    1.40     200
+  da3_small     aea           10    0.239    0.703    0.875    0.744    0.091    0.99    1.40     200
+  da3_small     nymeria        1    0.208    0.714    0.905    0.568    0.082    0.99    1.58     200
+  da3_small     nymeria        3    0.208    0.718    0.906    0.569    0.082    0.99    1.58     200
+  da3_small     nymeria        5    0.210    0.712    0.903    0.571    0.082    0.99    1.58     200
+  da3_small     nymeria       10    0.210    0.711    0.904    0.571    0.083    0.99    1.58     200
+  vggt_1b       aea            1    0.158    0.834    0.924    0.686    0.063    0.99    1.40     200
+  vggt_1b       aea            3    0.160    0.828    0.922    0.688    0.064    0.99    1.40     200
+  vggt_1b       aea            5    0.161    0.826    0.923    0.690    0.065    0.99    1.40     200
+  vggt_1b       aea           10    0.161    0.823    0.923    0.689    0.065    0.99    1.40     200
+  vggt_1b       nymeria        1    0.131    0.864    0.949    0.503    0.053    0.99    1.58     200
+  vggt_1b       nymeria        3    0.134    0.858    0.948    0.504    0.055    0.99    1.58     200
+  vggt_1b       nymeria        5    0.133    0.857    0.948    0.504    0.055    0.99    1.58     200
+  vggt_1b       nymeria       10    0.135    0.857    0.947    0.506    0.056    0.99    1.58     200
+  vggt_omega    aea            1    0.148    0.855    0.933    0.667    0.057    0.99    1.40     200
+  vggt_omega    aea            3    0.146    0.858    0.934    0.666    0.057    0.99    1.40     200
+  vggt_omega    aea            5    0.145    0.860    0.934    0.666    0.056    0.99    1.40     200
+  vggt_omega    aea           10    0.143    0.863    0.935    0.666    0.055    0.99    1.40     200
+  vggt_omega    nymeria        1    0.125    0.870    0.957    0.485    0.050    0.99    1.58     200
+  vggt_omega    nymeria        3    0.123    0.877    0.959    0.484    0.049    0.99    1.58     200
+  vggt_omega    nymeria        5    0.122    0.879    0.958    0.485    0.049    0.99    1.58     200
+  vggt_omega    nymeria       10    0.121    0.882    0.959    0.484    0.048    0.99    1.58     200
+
+  RECTIFY OR NOT · rect_derect / raw, within model (<1 means rectifying helped)
+  -------------------------------------------------------------------------------------
+  model         dataset      ctx  AbsRel raw  rect_derect    ratio  cover raw  cover rd
+  -------------------------------------------------------------------------------------
+  da3_large     aea            1      0.2069       0.1941    0.938       1.00      0.99
+  da3_large     aea            3      0.2129       0.2044    0.960       1.00      0.99
+  da3_large     aea            5      0.2120       0.2052    0.968       1.00      0.99
+  da3_large     aea           10      0.2095       0.2079    0.992       1.00      0.99
+  da3_large     nymeria        1      0.1722       0.1641    0.953       1.00      0.99
+  da3_large     nymeria        3      0.1696       0.1645    0.970       1.00      0.99
+  da3_large     nymeria        5      0.1696       0.1627    0.959       1.00      0.99
+  da3_large     nymeria       10      0.1659       0.1594    0.961       1.00      0.99
+  da3_small     aea            1      0.2396       0.2345    0.979       1.00      0.99
+  da3_small     aea            3      0.2523       0.2374    0.941       1.00      0.99
+  da3_small     aea            5      0.2526       0.2366    0.936       1.00      0.99
+  da3_small     aea           10      0.2484       0.2392    0.963       1.00      0.99
+  da3_small     nymeria        1      0.2051       0.2078    1.013       1.00      0.99
+  da3_small     nymeria        3      0.2147       0.2076    0.967       1.00      0.99
+  da3_small     nymeria        5      0.2129       0.2102    0.987       1.00      0.99
+  da3_small     nymeria       10      0.2103       0.2100    0.999       1.00      0.99
+  vggt_1b       aea            1      0.1986       0.1577    0.794       1.00      0.99
+  vggt_1b       aea            3      0.2095       0.1602    0.764       1.00      0.99
+  vggt_1b       aea            5      0.2134       0.1611    0.755       1.00      0.99
+  vggt_1b       aea           10      0.2204       0.1612    0.731       1.00      0.99
+  vggt_1b       nymeria        1      0.1439       0.1313    0.912       1.00      0.99
+  vggt_1b       nymeria        3      0.1563       0.1337    0.855       1.00      0.99
+  vggt_1b       nymeria        5      0.1607       0.1331    0.828       1.00      0.99
+  vggt_1b       nymeria       10      0.1671       0.1347    0.806       1.00      0.99
+  vggt_omega    aea            1      0.1513       0.1481    0.979       1.00      0.99
+  vggt_omega    aea            3      0.1513       0.1457    0.963       1.00      0.99
+  vggt_omega    aea            5      0.1529       0.1449    0.948       1.00      0.99
+  vggt_omega    aea           10      0.1531       0.1429    0.933       1.00      0.99
+  vggt_omega    nymeria        1      0.1206       0.1254    1.040       1.00      0.99
+  vggt_omega    nymeria        3      0.1189       0.1232    1.036       1.00      0.99
+  vggt_omega    nymeria        5      0.1199       0.1224    1.021       1.00      0.99
+  vggt_omega    nymeria       10      0.1224       0.1212    0.990       1.00      0.99
+  Both arms are scored on the points BOTH could answer for, so the
+  ratio is like-for-like; `cover` is what each gave up to get there and
+  is NOT in the ratio. A rect_derect that wins on 60% coverage has won
+  a different, smaller question.
+
+  CONTEXT · AbsRel, and the ratio to the 1-frame arm (<1 means more frames helped)
+  ------------------------------------------------------------------------------
+  model         baseline     dataset       1 frame      3 fr      5 fr     10 fr
+  ------------------------------------------------------------------------------
+  da3_large     raw          aea            0.2069     1.029     1.025     1.013
+  da3_large     raw          nymeria        0.1722     0.985     0.985     0.963
+  da3_large     rect_derect  aea            0.1941     1.053     1.057     1.071
+  da3_large     rect_derect  nymeria        0.1641     1.003     0.991     0.971
+  da3_small     raw          aea            0.2396     1.053     1.054     1.037
+  da3_small     raw          nymeria        0.2051     1.047     1.038     1.025
+  da3_small     rect_derect  aea            0.2345     1.013     1.009     1.020
+  da3_small     rect_derect  nymeria        0.2078     0.999     1.012     1.011
+  vggt_1b       raw          aea            0.1986     1.055     1.074     1.110
+  vggt_1b       raw          nymeria        0.1439     1.086     1.117     1.161
+  vggt_1b       rect_derect  aea            0.1577     1.016     1.022     1.023
+  vggt_1b       rect_derect  nymeria        0.1313     1.018     1.014     1.026
+  vggt_omega    raw          aea            0.1513     1.000     1.011     1.012
+  vggt_omega    raw          nymeria        0.1206     0.986     0.994     1.015
+  vggt_omega    rect_derect  aea            0.1481     0.984     0.978     0.965
+  vggt_omega    rect_derect  nymeria        0.1254     0.982     0.976     0.966
+  The window PRECEDES the target at stride 1 and is handed over in ONE forward pass.
+  Only the target frame is scored, so every column measures the identical points and only
+  the evidence moves. Monocular models are absent by refusal, not by having failed.
+
+  MODELS
+  ------------------------------------------------------------
+  da3_large     Depth-Anything-3 Large · 411M · align=scale_shift · frames at 518px
+  da3_small     Depth-Anything-3 Small · 34M · align=scale_shift · frames at 518px
+  vggt_1b       VGGT 1B · 1191M · align=scale_shift · frames at 518px
+  vggt_omega    VGGT-Omega 1B/512 · 1144M · align=scale_shift · frames at 512px

@@ -1,0 +1,110 @@
+{
+  "run_id": "slambench-020-143686a",
+  "ticket": "docs/handoff/tickets/020-slam-baseline-programme.md",
+  "issue": "https://github.com/fukka/vggt-omega/issues/22",
+  "commit": "143686a",
+  "protocol": "egosynth-slam-v1",
+  "date_utc": "2026-08-15",
+  "hardware": "lambda_63, 2x NVIDIA RTX 6000 Ada Generation, driver 570.207. BOTH cards used, one lane each; another user's llama-server held ~20 GB on GPU 0 and ~23 GB on GPU 1 throughout. Peak of ours was ~15 GB.",
+  "env": "conda env raytun3r, python 3.11.15, torch 2.11.0+cu128, opencv 4.11.0",
+  "errors": 0,
+  "models_skipped": [],
+
+  "what_this_is": "Steps 2 and 3 of #020: both lens strategies and the context sweep, on the split #016 released by settling the depth convention. Successor to slambench-raw-b1659a0, which was raw-only, no context. Three runs, one split.",
+
+  "sharded": {
+    "by": "model, across the two GPUs; shards/ holds the six raw results.json",
+    "why_this_is_exact": "slambench.run computes the support intersection INSIDE its per-model loop, over that model's own arms and contexts. No other model enters the expression, and each shard rebuilds the same split from the same root. Two processes with disjoint model lists therefore produce the numbers one process would.",
+    "checked_not_assumed": "tools/merge_slambench_shards.py refuses to merge unless the shards agree on digest, root and the whole config block, and refuses overlapping model sets rather than letting the last writer win. All three merges passed. manifest.json was byte-identical across each run's two shards.",
+    "speedup": "1.40x overall (14739 s of model time in 10537 s of wall clock). Step 2 got 1.83x; step 3 got ~1.3x because the partition was balanced on step-2 timings and vggt_1b's cost under a 10-frame window grows 13.7x where vggt_omega's grows 4.4x. See slam020_lane.sh for the corrected partition."
+  },
+
+  "preflight": {
+    "verify_camera": "--takes 8 on aea and nymeria, 8/8 takes each, rotation 90 deg CCW, twin residual 0.30 px against the 0.5 px tolerance; nearest wrong rotation 3.7-5.9 px. First time it has been run past 2 takes. logs/verify_camera.log",
+    "rectification_backend": "projectaria_tools, NOT the cv2 fallback. baselines._library_rectify returns an array rather than None, and distort_by_calibration is present. #22 asked for this because the fallback is silent.",
+    "tests": "pytest tests slambench/tests -> 98 passed at 143686a, on the box, in the run's own env"
+  },
+
+  "split": {
+    "digest": "61195914f090",
+    "datasets": ["aea", "nymeria"],
+    "takes_per_dataset": 8,
+    "n_frames_per_take": 25,
+    "frames": 400,
+    "takes": 16,
+    "oxford": "absent. camera.require_verified refuses it -- its sensor-to-upright rotation has never been measured -- and the factory calibration staged by #012 at /data/f.zhang2/oxford-calib-factory is at the 1408 stream while camera.load implements the 2880 crop-then-bin. Two code changes away, not a download away.",
+    "egoexo4d": "paused by owner decision, absent from this run",
+    "note": "this digest is NOT slambench-raw-b1659a0's 321f55a96bd4, because that run carried oxford. The aea and nymeria takes are the same 16."
+  },
+
+  "filters": {
+    "sigma_column": "inv_dist_std (1/m, scale-invariant)",
+    "sigma_max": 0.01,
+    "max_depth": 120.0,
+    "min_points": 256,
+    "rect_fov_deg": 110.0,
+    "note": "the release ships UNFILTERED, so this cut is part of every number here"
+  },
+
+  "runs": {
+    "step2": {
+      "dir": "step2/",
+      "digest": "61195914f090",
+      "grid": "5 models x 2 datasets x {raw, rect_derect} x context 1 = 20 rows",
+      "wall_clock_s_per_model": {
+        "vggt_1b": 334, "vggt_omega": 206, "dav2_large": 207,
+        "da3_small": 179, "da3_large": 195
+      },
+      "lanes": "g0 (vggt_1b, da3_small) 8m35s | g1 (vggt_omega, dav2_large, da3_large) 10m11s"
+    },
+    "step3-s1": {
+      "dir": "step3-s1/",
+      "digest": "61195914f090",
+      "grid": "4 models x 2 datasets x {raw, rect_derect} x context {1,3,5,10} at stride 1 = 64 rows",
+      "wall_clock_s_per_model": {
+        "vggt_1b": 4571, "vggt_omega": 910, "da3_small": 440, "da3_large": 886
+      },
+      "dav2_large": "absent by refusal, not by failure -- it is monocular and predict_stack raises"
+    },
+    "step3-s10": {
+      "dir": "step3-s10/",
+      "digest": "61195914f090",
+      "grid": "same, at stride 10 = 64 rows",
+      "wall_clock_s_per_model": {
+        "vggt_1b": 4563, "vggt_omega": 915, "da3_small": 442, "da3_large": 891
+      }
+    }
+  },
+
+  "the_stride_gap_measured_to_zero": {
+    "concern": "--context-stride is a single int, so stride 1 and stride 10 must be separate runs and each intersects its own support. Their context=1 arm is the identical computation on the identical frames, so any difference between those two rows would be the support moving underneath -- and would be the floor below which no stride effect is resolvable.",
+    "result": "0.00% on all 16 (model x baseline x dataset) cells, and coverage identical to four decimals. The support did not move.",
+    "why": "rect_derect gives up 1.25% of points on aea and 1.04% on nymeria, and gives up the SAME points at every context size -- the rim it cannot reach does not depend on how many frames it was shown. So the intersection is set by rect_derect alone and is constant across the whole sweep.",
+    "consequence": "the stride-1 and stride-10 tables are directly comparable, measured rather than assumed. Making --context-stride take a list would have bought nothing here.",
+    "scope": "this is a property of THIS grid, not a theorem. A run whose context arms lost points of their own -- a shorter clip, a larger window, a model that returns non-finite depth under context -- would move the support and the check would catch it. ANALYSIS.txt section 2 recomputes it."
+  },
+
+  "comparability": {
+    "across_baselines_and_contexts_of_one_model": "yes, by construction -- one support per model, spanning all its arms and all its context sizes",
+    "across_datasets_for_one_model": "yes -- same model, same alignment space",
+    "across_models": "NOT for absolute AbsRel. dav2_large aligns in disparity space and the other four in depth space. Also, the per-model supports differ very slightly: n_points_total spans 724887-724894 on aea and 587559-587563 on nymeria, i.e. up to 7 points in 725k (0.001%), because the intersection is computed per model. Within a model it is exact.",
+    "against_slambench-raw-b1659a0": "the raw column moves by -0.1% to -0.9% (all improvements), because adding rect_derect removes the ~1.2% of points it cannot reach from BOTH arms. #020 predicted this and expected it to be large; it is under 1%."
+  },
+
+  "observations": [
+    "Rectifying is close to free on this ground truth. coverage is 0.988 (aea) and 0.990 (nymeria), not the heavy rim loss #020's trap section anticipated -- MPS semi-dense points are concentrated centrally enough that a 110 deg pinhole reaches almost all of them.",
+    "VGGT-1B is the only model rectification clearly helps: -20.6% AbsRel on aea, -8.8% on nymeria. VGGT-Omega is the only one it hurts (+4.0% on nymeria), and Omega is already the best raw model on both datasets.",
+    "Consecutive context (stride 1) hurts, replicating the FOV experiment on real footage: vggt_1b raw is 1.161x at 10 frames on nymeria. Strided context (stride 10) helps almost everywhere -- da3_large rect_derect reaches 0.866 on nymeria.",
+    "vggt_1b raw is the one arm that strided context does NOT rescue (1.085-1.088 at 10 frames). Its rect_derect arm does improve (0.955 on nymeria). Both of VGGT-1B's context failures are in the unrectified arm.",
+    "gt_median is 1.40 m (aea) and 1.58 m (nymeria). Oxford's 15.07 m from the raw run is absent here, so no cross-scale confound in this table.",
+    "no frame was dropped for min_points and no model was skipped."
+  ],
+
+  "not_claimed": [
+    "that any model is better than another in absolute terms -- see comparability",
+    "anything about oxford or egoexo4d, neither of which ran",
+    "that dav2_large gains nothing from context -- it was never asked, because it cannot be",
+    "that the 0.00% stride gap generalises beyond this grid -- see the_stride_gap_measured_to_zero.scope",
+    "that VGGT-Omega's preference for the raw frame is a fisheye-awareness result. None of these five networks is fisheye-aware; this run measures the preference, not its cause."
+  ]
+}

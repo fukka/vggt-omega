@@ -1,0 +1,77 @@
+
+1. ONE SPLIT?  digest, root and config across the three runs
+============================================================
+  step2      digest 61195914f090  OK   frames 400   takes 16   sharded_by model
+  step3-s1   digest 61195914f090  OK   frames 400   takes 16   sharded_by model
+  step3-s10  digest 61195914f090  OK   frames 400   takes 16   sharded_by model
+
+  config identical apart from the context axis: YES
+  context axis: step2 = [1] @ stride 1, step3-s1 = [1, 3, 5, 10] @ stride 1, step3-s10 = [1, 3, 5, 10] @ stride 10
+
+  verdict: one split, three runs
+
+2. THE STRIDE GAP  context=1 is the same computation in both stride runs
+========================================================================
+  Identical frames, identical window (a 1-frame window has no stride),
+  so every difference below is the support intersection moving, not the
+  model. Read it as the error bar on any stride-1 vs stride-10 comparison.
+
+  model        baseline     dataset      AbsRel s1  AbsRel s10    rel diff    cover s1   cover s10
+  ----------------------------------------------------------------------------------------------------------
+  da3_large    raw          aea             0.2069      0.2069      0.00%        1.000       1.000
+  da3_large    rect_derect  aea             0.1941      0.1941      0.00%        0.988       0.988
+  da3_large    raw          nymeria         0.1722      0.1722      0.00%        1.000       1.000
+  da3_large    rect_derect  nymeria         0.1641      0.1641      0.00%        0.990       0.990
+  da3_small    raw          aea             0.2396      0.2396      0.00%        1.000       1.000
+  da3_small    rect_derect  aea             0.2345      0.2345      0.00%        0.988       0.988
+  da3_small    raw          nymeria         0.2051      0.2051      0.00%        1.000       1.000
+  da3_small    rect_derect  nymeria         0.2078      0.2078      0.00%        0.990       0.990
+  vggt_1b      raw          aea             0.1986      0.1986      0.00%        1.000       1.000
+  vggt_1b      rect_derect  aea             0.1577      0.1577      0.00%        0.988       0.988
+  vggt_1b      raw          nymeria         0.1439      0.1439      0.00%        1.000       1.000
+  vggt_1b      rect_derect  nymeria         0.1313      0.1313      0.00%        0.990       0.990
+  vggt_omega   raw          aea             0.1513      0.1513      0.00%        1.000       1.000
+  vggt_omega   rect_derect  aea             0.1481      0.1481      0.00%        0.987       0.987
+  vggt_omega   raw          nymeria         0.1206      0.1206      0.00%        1.000       1.000
+  vggt_omega   rect_derect  nymeria         0.1254      0.1254      0.00%        0.990       0.990
+
+  largest context=1 disagreement between the two runs: 0.00%
+  A stride effect smaller than this is not resolvable across the runs.
+
+3. STEP 2's RAW COLUMN vs the published raw-only run
+====================================================
+  published digest 321f55a96bd4   this run 61195914f090   DIFFERENT split
+  published datasets ['aea', 'nymeria', 'oxford']   this run ['aea', 'nymeria']
+
+  #020 predicts these differ: a 110 deg pinhole cannot cover the
+  fisheye cone, so adding rect_derect strips the rim from BOTH arms.
+
+  model        dataset     AbsRel pub  AbsRel now    change  cover now
+  --------------------------------------------------------------------
+  da3_large    aea             0.2072      0.2069    -0.1%      1.000
+  da3_large    nymeria         0.1733      0.1722    -0.6%      1.000
+  da3_small    aea             0.2404      0.2396    -0.3%      1.000
+  da3_small    nymeria         0.2064      0.2051    -0.6%      1.000
+  dav2_large   aea             0.1587      0.1575    -0.7%      1.000
+  dav2_large   nymeria         0.1454      0.1441    -0.9%      1.000
+  vggt_1b      aea             0.1989      0.1986    -0.2%      1.000
+  vggt_1b      nymeria         0.1449      0.1439    -0.7%      1.000
+  vggt_omega   aea             0.1514      0.1513    -0.1%      1.000
+  vggt_omega   nymeria         0.1214      0.1206    -0.7%      1.000
+
+4. gt_median PER DATASET  (every metric here is relative)
+=========================================================
+  aea        gt_median [1.4022]  m
+  nymeria    gt_median [1.5763]  m
+
+5. WHAT WAS LEFT OUT
+====================
+  step2      ran ['da3_large', 'da3_small', 'dav2_large', 'vggt_1b', 'vggt_omega']
+             shard eval_out/slambench-020/step2.g0: ['da3_small', 'vggt_1b'] (8 rows)
+             shard eval_out/slambench-020/step2.g1: ['da3_large', 'dav2_large', 'vggt_omega'] (12 rows)
+  step3-s1   ran ['da3_large', 'da3_small', 'vggt_1b', 'vggt_omega']
+             shard eval_out/slambench-020/step3-s1.g0: ['da3_small', 'vggt_1b'] (32 rows)
+             shard eval_out/slambench-020/step3-s1.g1: ['da3_large', 'vggt_omega'] (32 rows)
+  step3-s10  ran ['da3_large', 'da3_small', 'vggt_1b', 'vggt_omega']
+             shard eval_out/slambench-020/step3-s10.g0: ['da3_small', 'vggt_1b'] (32 rows)
+             shard eval_out/slambench-020/step3-s10.g1: ['da3_large', 'vggt_omega'] (32 rows)

@@ -1,0 +1,3610 @@
+{
+  "protocol": "egosynth-slam-v1",
+  "root": "/data/f.zhang2/ego-synth-5b",
+  "digest": "61195914f090",
+  "n_frames": 400,
+  "takes_per_dataset": 8,
+  "n_frames_per_take": 25,
+  "frames": [
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "160",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "402",
+      "index": 5,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/402.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/402.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "644",
+      "index": 10,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/644.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/644.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "886",
+      "index": 15,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/886.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/886.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "1128",
+      "index": 20,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/1128.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/1128.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "1370",
+      "index": 25,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/1370.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/1370.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "1612",
+      "index": 30,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/1612.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/1612.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "1854",
+      "index": 35,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/1854.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/1854.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "2096",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/2096.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/2096.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "2338",
+      "index": 45,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/2338.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/2338.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "2580",
+      "index": 50,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/2580.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/2580.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "2822",
+      "index": 55,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/2822.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/2822.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "3064",
+      "index": 60,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/3064.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/3064.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "3306",
+      "index": 65,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/3306.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/3306.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "3548",
+      "index": 70,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/3548.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/3548.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "3790",
+      "index": 75,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/3790.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/3790.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "4032",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/4032.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/4032.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "4274",
+      "index": 85,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/4274.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/4274.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "4516",
+      "index": 90,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/4516.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/4516.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "4758",
+      "index": 95,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/4758.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/4758.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "5000",
+      "index": 100,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/5000.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/5000.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "5242",
+      "index": 105,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/5242.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/5242.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "5484",
+      "index": 110,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/5484.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/5484.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "5726",
+      "index": 115,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/5726.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/5726.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq1_rec1",
+      "clip": "5968",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/sparse_depth/5968.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq1_rec1/fisheye/5968.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "160",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "402",
+      "index": 55,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/402.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/402.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "644",
+      "index": 111,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/644.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/644.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "1007",
+      "index": 45,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/1007.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/1007.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "1249",
+      "index": 101,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/1249.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/1249.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "1612",
+      "index": 35,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/1612.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/1612.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "1854",
+      "index": 90,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/1854.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/1854.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "2217",
+      "index": 25,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/2217.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/2217.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "2459",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/2459.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/2459.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "2822",
+      "index": 15,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/2822.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/2822.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "3064",
+      "index": 70,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/3064.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/3064.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "3427",
+      "index": 5,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/3427.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/3427.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "3669",
+      "index": 60,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/3669.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/3669.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "3911",
+      "index": 115,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/3911.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/3911.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "4274",
+      "index": 50,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/4274.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/4274.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "4516",
+      "index": 105,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/4516.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/4516.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "4879",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/4879.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/4879.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "5121",
+      "index": 95,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/5121.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/5121.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "5484",
+      "index": 30,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/5484.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/5484.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "5726",
+      "index": 85,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/5726.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/5726.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "6089",
+      "index": 19,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/6089.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/6089.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "6331",
+      "index": 75,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/6331.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/6331.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "6694",
+      "index": 9,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/6694.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/6694.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "6936",
+      "index": 65,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/6936.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/6936.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq3_rec1",
+      "clip": "7178",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/sparse_depth/7178.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq3_rec1/fisheye/7178.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "160",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "160",
+      "index": 86,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "281",
+      "index": 50,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/281.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/281.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "402",
+      "index": 15,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/402.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/402.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "402",
+      "index": 101,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/402.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/402.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "523",
+      "index": 65,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/523.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/523.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "644",
+      "index": 30,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/644.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/644.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "644",
+      "index": 116,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/644.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/644.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "765",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/765.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/765.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "886",
+      "index": 45,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/886.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/886.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1007",
+      "index": 10,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1007.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1007.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1007",
+      "index": 95,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1007.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1007.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1128",
+      "index": 60,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1128.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1128.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1249",
+      "index": 25,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1249.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1249.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1249",
+      "index": 110,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1249.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1249.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1370",
+      "index": 75,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1370.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1370.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1491",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1491.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1491.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1612",
+      "index": 4,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1612.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1612.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1612",
+      "index": 90,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1612.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1612.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1733",
+      "index": 55,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1733.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1733.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1854",
+      "index": 19,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1854.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1854.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1854",
+      "index": 105,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1854.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1854.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "1975",
+      "index": 70,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/1975.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/1975.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "2096",
+      "index": 34,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/2096.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/2096.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq5_rec1",
+      "clip": "2096",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/sparse_depth/2096.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq5_rec1/fisheye/2096.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "160",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "160",
+      "index": 116,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "281",
+      "index": 111,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/281.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/281.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "402",
+      "index": 106,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/402.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/402.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "523",
+      "index": 101,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/523.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/523.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "644",
+      "index": 96,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/644.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/644.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "765",
+      "index": 91,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/765.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/765.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "886",
+      "index": 85,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/886.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/886.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "1007",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/1007.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/1007.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "1128",
+      "index": 75,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/1128.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/1128.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "1249",
+      "index": 70,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/1249.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/1249.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "1370",
+      "index": 65,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/1370.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/1370.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "1491",
+      "index": 60,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/1491.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/1491.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "1612",
+      "index": 55,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/1612.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/1612.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "1733",
+      "index": 50,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/1733.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/1733.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "1854",
+      "index": 45,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/1854.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/1854.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "1975",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/1975.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/1975.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "2096",
+      "index": 35,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/2096.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/2096.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "2217",
+      "index": 29,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/2217.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/2217.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "2338",
+      "index": 24,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/2338.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/2338.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "2459",
+      "index": 19,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/2459.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/2459.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "2580",
+      "index": 14,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/2580.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/2580.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "2701",
+      "index": 9,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/2701.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/2701.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "2822",
+      "index": 4,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/2822.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/2822.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq6_rec1",
+      "clip": "2822",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/sparse_depth/2822.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq6_rec1/fisheye/2822.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "160",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "281",
+      "index": 81,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/281.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/281.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "523",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/523.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/523.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "765",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/765.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/765.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "886",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/886.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/886.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "1128",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/1128.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/1128.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "1370",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/1370.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/1370.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "1491",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/1491.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/1491.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "1733",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/1733.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/1733.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "1975",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/1975.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/1975.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "2096",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/2096.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/2096.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "2338",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/2338.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/2338.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "2580",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/2580.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/2580.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "2701",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/2701.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/2701.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "2943",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/2943.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/2943.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "3064",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/3064.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/3064.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "3306",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/3306.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/3306.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "3548",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/3548.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/3548.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "3669",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/3669.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/3669.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "3911",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/3911.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/3911.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "4153",
+      "index": 39,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/4153.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/4153.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "4274",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/4274.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/4274.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "4516",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/4516.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/4516.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "4758",
+      "index": 39,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/4758.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/4758.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script1_seq7_rec1",
+      "clip": "4879",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/sparse_depth/4879.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script1_seq7_rec1/fisheye/4879.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "160",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "160",
+      "index": 86,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "281",
+      "index": 50,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/281.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/281.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "402",
+      "index": 15,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/402.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/402.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "402",
+      "index": 101,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/402.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/402.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "523",
+      "index": 65,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/523.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/523.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "644",
+      "index": 30,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/644.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/644.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "644",
+      "index": 116,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/644.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/644.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "765",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/765.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/765.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "886",
+      "index": 45,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/886.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/886.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1007",
+      "index": 10,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1007.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1007.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1007",
+      "index": 95,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1007.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1007.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1128",
+      "index": 60,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1128.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1128.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1249",
+      "index": 25,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1249.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1249.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1249",
+      "index": 110,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1249.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1249.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1370",
+      "index": 75,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1370.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1370.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1491",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1491.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1491.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1612",
+      "index": 4,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1612.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1612.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1612",
+      "index": 90,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1612.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1612.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1733",
+      "index": 55,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1733.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1733.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1854",
+      "index": 19,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1854.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1854.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1854",
+      "index": 105,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1854.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1854.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "1975",
+      "index": 70,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/1975.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/1975.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "2096",
+      "index": 34,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/2096.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/2096.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec1",
+      "clip": "2096",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/sparse_depth/2096.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec1/fisheye/2096.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "160",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "160",
+      "index": 86,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "281",
+      "index": 50,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/281.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/281.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "402",
+      "index": 15,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/402.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/402.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "402",
+      "index": 101,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/402.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/402.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "523",
+      "index": 65,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/523.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/523.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "644",
+      "index": 30,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/644.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/644.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "644",
+      "index": 116,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/644.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/644.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "765",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/765.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/765.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "886",
+      "index": 45,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/886.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/886.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1007",
+      "index": 10,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1007.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1007.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1007",
+      "index": 95,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1007.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1007.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1128",
+      "index": 60,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1128.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1128.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1249",
+      "index": 25,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1249.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1249.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1249",
+      "index": 110,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1249.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1249.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1370",
+      "index": 75,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1370.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1370.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1491",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1491.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1491.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1612",
+      "index": 4,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1612.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1612.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1612",
+      "index": 90,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1612.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1612.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1733",
+      "index": 55,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1733.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1733.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1854",
+      "index": 19,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1854.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1854.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1854",
+      "index": 105,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1854.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1854.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "1975",
+      "index": 70,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/1975.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/1975.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "2096",
+      "index": 34,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/2096.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/2096.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq1_rec2",
+      "clip": "2096",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/sparse_depth/2096.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq1_rec2/fisheye/2096.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "160",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/160.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/160.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "281",
+      "index": 25,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/281.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/281.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "402",
+      "index": 50,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/402.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/402.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "523",
+      "index": 75,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/523.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/523.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "644",
+      "index": 101,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/644.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/644.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "886",
+      "index": 5,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/886.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/886.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "1007",
+      "index": 30,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/1007.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/1007.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "1128",
+      "index": 55,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/1128.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/1128.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "1249",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/1249.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/1249.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "1370",
+      "index": 106,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/1370.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/1370.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "1612",
+      "index": 10,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/1612.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/1612.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "1733",
+      "index": 35,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/1733.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/1733.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "1854",
+      "index": 60,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/1854.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/1854.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "1975",
+      "index": 85,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/1975.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/1975.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "2096",
+      "index": 110,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/2096.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/2096.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "2338",
+      "index": 14,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/2338.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/2338.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "2459",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/2459.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/2459.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "2580",
+      "index": 65,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/2580.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/2580.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "2701",
+      "index": 90,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/2701.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/2701.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "2822",
+      "index": 115,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/2822.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/2822.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "3064",
+      "index": 19,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/3064.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/3064.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "3185",
+      "index": 45,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/3185.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/3185.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "3306",
+      "index": 70,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/3306.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/3306.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "3427",
+      "index": 95,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/3427.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/3427.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "aea",
+      "take": "loc1_script2_seq3_rec1",
+      "clip": "3548",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/sparse_depth/3548.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/aea/loc1_script2_seq3_rec1/fisheye/3548.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "5489",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/5489.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/5489.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "6354",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/6354.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/6354.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "7219",
+      "index": 81,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/7219.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/7219.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "8948",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/8948.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/8948.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "9813",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/9813.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/9813.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "10678",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/10678.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/10678.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "12408",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/12408.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/12408.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "13273",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/13273.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/13273.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "14138",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/14138.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/14138.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "15867",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/15867.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/15867.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "16732",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/16732.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/16732.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "17597",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/17597.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/17597.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "19327",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/19327.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/19327.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "20192",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/20192.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/20192.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "21057",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/21057.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/21057.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "21922",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/21922.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/21922.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "23651",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/23651.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/23651.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "24516",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/24516.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/24516.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "25381",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/25381.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/25381.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "27111",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/27111.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/27111.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "27976",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/27976.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/27976.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "28841",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/28841.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/28841.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "30570",
+      "index": 39,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/30570.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/30570.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "31435",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/31435.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/31435.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s0_elizabeth_sandoval_act0_bzf7du",
+      "clip": "32300",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/sparse_depth/32300.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du/fisheye/32300.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "4801",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/4801.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/4801.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "5650",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/5650.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/5650.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "6500",
+      "index": 81,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/6500.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/6500.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "8198",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/8198.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/8198.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "9047",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/9047.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/9047.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "9897",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/9897.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/9897.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "11595",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/11595.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/11595.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "12444",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/12444.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/12444.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "13294",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/13294.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/13294.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "14992",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/14992.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/14992.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "15841",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/15841.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/15841.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "16691",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/16691.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/16691.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "18389",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/18389.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/18389.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "19238",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/19238.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/19238.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "20088",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/20088.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/20088.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "20937",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/20937.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/20937.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "22635",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/22635.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/22635.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "23485",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/23485.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/23485.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "24334",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/24334.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/24334.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "26032",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/26032.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/26032.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "26882",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/26882.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/26882.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "27731",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/27731.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/27731.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "29429",
+      "index": 39,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/29429.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/29429.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "30279",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/30279.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/30279.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230614_s1_matthew_harper_act0_e1qur5",
+      "clip": "31128",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/sparse_depth/31128.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230614_s1_matthew_harper_act0_e1qur5/fisheye/31128.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "6317",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/6317.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/6317.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "7163",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/7163.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/7163.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "8009",
+      "index": 81,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/8009.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/8009.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "9701",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/9701.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/9701.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "10547",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/10547.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/10547.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "11393",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/11393.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/11393.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "13086",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/13086.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/13086.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "13932",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/13932.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/13932.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "14778",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/14778.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/14778.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "16470",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/16470.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/16470.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "17316",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/17316.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/17316.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "18162",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/18162.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/18162.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "19854",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/19854.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/19854.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "20700",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/20700.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/20700.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "21546",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/21546.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/21546.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "22392",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/22392.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/22392.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "24084",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/24084.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/24084.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "24930",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/24930.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/24930.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "25776",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/25776.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/25776.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "27469",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/27469.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/27469.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "28315",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/28315.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/28315.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "29161",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/29161.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/29161.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "30853",
+      "index": 39,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/30853.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/30853.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "31699",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/31699.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/31699.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s0_dawn_heath_act1_9s9e13",
+      "clip": "32545",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/sparse_depth/32545.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s0_dawn_heath_act1_9s9e13/fisheye/32545.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "10707",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/10707.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/10707.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "11545",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/11545.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/11545.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "12383",
+      "index": 81,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/12383.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/12383.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "14059",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/14059.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/14059.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "14897",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/14897.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/14897.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "15735",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/15735.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/15735.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "17412",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/17412.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/17412.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "18250",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/18250.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/18250.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "19088",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/19088.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/19088.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "20764",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/20764.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/20764.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "21602",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/21602.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/21602.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "22440",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/22440.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/22440.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "24116",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/24116.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/24116.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "24954",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/24954.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/24954.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "25792",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/25792.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/25792.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "26630",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/26630.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/26630.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "28306",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/28306.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/28306.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "29144",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/29144.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/29144.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "29982",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/29982.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/29982.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "31659",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/31659.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/31659.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "32497",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/32497.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/32497.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "33335",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/33335.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/33335.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "35011",
+      "index": 39,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/35011.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/35011.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "35849",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/35849.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/35849.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230615_s1_vincent_bell_act0_s0kg0n",
+      "clip": "36687",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/sparse_depth/36687.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230615_s1_vincent_bell_act0_s0kg0n/fisheye/36687.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "10052",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/10052.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/10052.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "10839",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/10839.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/10839.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "11626",
+      "index": 81,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/11626.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/11626.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "13199",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/13199.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/13199.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "13986",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/13986.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/13986.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "14773",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/14773.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/14773.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "16346",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/16346.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/16346.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "17133",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/17133.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/17133.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "17920",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/17920.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/17920.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "19493",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/19493.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/19493.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "20280",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/20280.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/20280.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "21067",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/21067.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/21067.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "22640",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/22640.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/22640.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "23427",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/23427.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/23427.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "24214",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/24214.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/24214.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "25001",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/25001.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/25001.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "26574",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/26574.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/26574.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "27361",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/27361.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/27361.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "28148",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/28148.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/28148.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "29721",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/29721.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/29721.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "30508",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/30508.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/30508.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "31295",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/31295.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/31295.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "32868",
+      "index": 39,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/32868.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/32868.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "33655",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/33655.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/33655.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s0_kristen_thomas_act0_5edc0f",
+      "clip": "34442",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/sparse_depth/34442.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s0_kristen_thomas_act0_5edc0f/fisheye/34442.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "12628",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/12628.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/12628.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "13456",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/13456.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/13456.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "14283",
+      "index": 81,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/14283.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/14283.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "15939",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/15939.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/15939.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "16767",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/16767.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/16767.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "17594",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/17594.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/17594.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "19250",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/19250.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/19250.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "20077",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/20077.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/20077.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "20905",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/20905.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/20905.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "22561",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/22561.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/22561.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "23388",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/23388.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/23388.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "24216",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/24216.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/24216.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "25871",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/25871.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/25871.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "26699",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/26699.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/26699.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "27527",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/27527.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/27527.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "28354",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/28354.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/28354.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "30010",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/30010.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/30010.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "30838",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/30838.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/30838.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "31665",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/31665.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/31665.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "33321",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/33321.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/33321.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "34148",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/34148.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/34148.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "34976",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/34976.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/34976.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "36632",
+      "index": 39,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/36632.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/36632.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "37459",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/37459.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/37459.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230616_s1_michael_griffin_act0_g5u8n8",
+      "clip": "38287",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/sparse_depth/38287.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230616_s1_michael_griffin_act0_g5u8n8/fisheye/38287.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "11061",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/11061.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/11061.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "11693",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/11693.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/11693.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "12325",
+      "index": 81,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/12325.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/12325.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "13589",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/13589.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/13589.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "14221",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/14221.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/14221.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "14853",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/14853.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/14853.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "16118",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/16118.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/16118.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "16750",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/16750.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/16750.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "17382",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/17382.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/17382.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "18646",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/18646.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/18646.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "19278",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/19278.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/19278.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "19910",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/19910.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/19910.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "21174",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/21174.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/21174.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "21806",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/21806.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/21806.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "22438",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/22438.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/22438.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "23070",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/23070.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/23070.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "24334",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/24334.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/24334.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "24966",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/24966.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/24966.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "25598",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/25598.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/25598.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "26863",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/26863.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/26863.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "27495",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/27495.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/27495.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "28127",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/28127.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/28127.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "29391",
+      "index": 39,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/29391.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/29391.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "30023",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/30023.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/30023.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230619_s1_eric_martin_act0_oeiu1g",
+      "clip": "30655",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/sparse_depth/30655.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230619_s1_eric_martin_act0_oeiu1g/fisheye/30655.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "4379",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/4379.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/4379.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "5066",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/5066.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/5066.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "5752",
+      "index": 81,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/5752.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/5752.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "7125",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/7125.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/7125.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "7812",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/7812.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/7812.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "8498",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/8498.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/8498.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "9872",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/9872.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/9872.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "10558",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/10558.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/10558.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "11245",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/11245.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/11245.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "12618",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/12618.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/12618.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "13305",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/13305.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/13305.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "13991",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/13991.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/13991.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "15364",
+      "index": 0,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/15364.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/15364.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "16051",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/16051.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/16051.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "16737",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/16737.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/16737.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "17424",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/17424.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/17424.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "18797",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/18797.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/18797.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "19484",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/19484.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/19484.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "20170",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/20170.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/20170.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "21544",
+      "index": 40,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/21544.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/21544.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "22230",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/22230.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/22230.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "22917",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/22917.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/22917.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "24290",
+      "index": 39,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/24290.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/24290.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "24976",
+      "index": 80,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/24976.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/24976.mp4",
+      "clip_frames": 121
+    },
+    {
+      "dataset": "nymeria",
+      "take": "20230620_s0_marie_vasquez_act0_5vd9yy",
+      "clip": "25663",
+      "index": 120,
+      "npz": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/sparse_depth/25663.npz",
+      "video": "/data/f.zhang2/ego-synth-5b/nymeria/20230620_s0_marie_vasquez_act0_5vd9yy/fisheye/25663.mp4",
+      "clip_frames": 121
+    }
+  ]
+}

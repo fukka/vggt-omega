@@ -1,0 +1,119 @@
+
+=== aea / loc1_script1_seq1_rec1
+    rot   0 deg | NN median   4.64 px <1px   4.3% <2px  14.5% | twin   13.05 px <2px   0.0% (n=3898)
+    rot  90 deg | NN median   0.30 px <1px  95.7% <2px  95.7% | twin    0.30 px <2px  93.3% (n=3898)
+    rot 180 deg | NN median   4.70 px <1px   3.8% <2px  13.7% | twin   13.35 px <2px   0.0% (n=3898)
+    rot 270 deg | NN median   4.59 px <1px   3.9% <2px  14.4% | twin   18.73 px <2px   0.0% (n=3898)
+    -> rotation 90 deg
+
+=== aea / loc1_script1_seq3_rec1
+    rot   0 deg | NN median   5.86 px <1px   2.6% <2px   9.2% | twin   13.10 px <2px   0.0% (n=5178)
+    rot  90 deg | NN median   0.29 px <1px  96.4% <2px  96.4% | twin    0.30 px <2px  97.7% (n=5178)
+    rot 180 deg | NN median   6.28 px <1px   2.4% <2px   8.9% | twin   13.30 px <2px   0.0% (n=5178)
+    rot 270 deg | NN median   5.35 px <1px   3.9% <2px  13.0% | twin   18.73 px <2px   0.0% (n=5178)
+    -> rotation 90 deg
+
+=== aea / loc1_script1_seq5_rec1
+    rot   0 deg | NN median   7.23 px <1px   2.0% <2px   7.2% | twin   13.08 px <2px   0.0% (n=8320)
+    rot  90 deg | NN median   0.29 px <1px  96.3% <2px  96.3% | twin    0.30 px <2px  97.8% (n=8320)
+    rot 180 deg | NN median   7.68 px <1px   2.0% <2px   7.2% | twin   13.42 px <2px   0.0% (n=8320)
+    rot 270 deg | NN median   6.26 px <1px   5.1% <2px  14.3% | twin   18.78 px <2px   0.0% (n=8320)
+    -> rotation 90 deg
+
+=== aea / loc1_script1_seq6_rec1
+    rot   0 deg | NN median   4.78 px <1px   3.9% <2px  14.1% | twin   13.11 px <2px   0.0% (n=4718)
+    rot  90 deg | NN median   0.29 px <1px  96.4% <2px  96.4% | twin    0.30 px <2px  95.3% (n=4718)
+    rot 180 deg | NN median   5.18 px <1px   3.4% <2px  12.3% | twin   13.38 px <2px   0.0% (n=4718)
+    rot 270 deg | NN median   5.41 px <1px   3.8% <2px  13.0% | twin   18.76 px <2px   0.0% (n=4718)
+    -> rotation 90 deg
+
+=== aea / loc1_script1_seq7_rec1
+    rot   0 deg | NN median   6.06 px <1px   5.8% <2px  14.8% | twin   13.21 px <2px   0.0% (n=5344)
+    rot  90 deg | NN median   0.29 px <1px  94.6% <2px  94.7% | twin    0.32 px <2px  91.9% (n=5344)
+    rot 180 deg | NN median   5.72 px <1px   5.7% <2px  18.0% | twin   13.46 px <2px   0.0% (n=5344)
+    rot 270 deg | NN median   6.43 px <1px   4.9% <2px  14.9% | twin   18.91 px <2px   0.0% (n=5344)
+    -> rotation 90 deg
+
+=== aea / loc1_script2_seq1_rec1
+    rot   0 deg | NN median   4.50 px <1px   4.4% <2px  14.3% | twin    7.75 px <2px   0.0% (n=5940)
+    rot  90 deg | NN median   0.30 px <1px  96.4% <2px  96.4% | twin    0.30 px <2px  96.4% (n=5940)
+    rot 180 deg | NN median   4.48 px <1px   3.7% <2px  12.2% | twin    8.07 px <2px   0.0% (n=5940)
+    rot 270 deg | NN median   4.26 px <1px   3.6% <2px  13.4% | twin   11.25 px <2px   0.0% (n=5940)
+    -> rotation 90 deg
+
+=== aea / loc1_script2_seq1_rec2
+    rot   0 deg | NN median   4.05 px <1px   4.0% <2px  15.7% | twin    8.72 px <2px   0.0% (n=6261)
+    rot  90 deg | NN median   0.30 px <1px  97.5% <2px  97.5% | twin    0.29 px <2px  97.8% (n=6261)
+    rot 180 deg | NN median   3.74 px <1px   5.1% <2px  17.1% | twin    9.11 px <2px   0.0% (n=6261)
+    rot 270 deg | NN median   4.44 px <1px   3.9% <2px  14.7% | twin   12.57 px <2px   0.0% (n=6261)
+    -> rotation 90 deg
+
+=== aea / loc1_script2_seq3_rec1
+    rot   0 deg | NN median   4.37 px <1px   3.9% <2px  14.6% | twin    8.72 px <2px   0.0% (n=5144)
+    rot  90 deg | NN median   0.30 px <1px  96.0% <2px  96.1% | twin    0.30 px <2px  95.0% (n=5144)
+    rot 180 deg | NN median   4.13 px <1px   3.1% <2px  13.2% | twin    9.11 px <2px   0.0% (n=5144)
+    rot 270 deg | NN median   5.08 px <1px   3.0% <2px  11.0% | twin   12.52 px <2px   0.0% (n=5144)
+    -> rotation 90 deg
+
+=== nymeria / 20230614_s0_elizabeth_sandoval_act0_bzf7du
+    rot   0 deg | NN median   5.40 px <1px   3.4% <2px  11.7% | twin   10.09 px <2px   0.0% (n=4560)
+    rot  90 deg | NN median   0.28 px <1px  95.7% <2px  95.7% | twin    0.29 px <2px  96.7% (n=4560)
+    rot 180 deg | NN median   4.95 px <1px   4.2% <2px  14.9% | twin   10.35 px <2px   0.0% (n=4560)
+    rot 270 deg | NN median   6.36 px <1px   2.7% <2px   9.5% | twin   14.45 px <2px   0.0% (n=4560)
+    -> rotation 90 deg
+
+=== nymeria / 20230614_s1_matthew_harper_act0_e1qur5
+    rot   0 deg | NN median   6.37 px <1px   2.1% <2px   6.9% | twin   10.15 px <2px   0.0% (n=4467)
+    rot  90 deg | NN median   0.29 px <1px  95.8% <2px  95.9% | twin    0.29 px <2px  99.0% (n=4467)
+    rot 180 deg | NN median   5.88 px <1px   3.1% <2px   9.9% | twin   10.51 px <2px   0.0% (n=4467)
+    rot 270 deg | NN median   4.73 px <1px   3.2% <2px  11.4% | twin   14.68 px <2px   0.0% (n=4467)
+    -> rotation 90 deg
+
+=== nymeria / 20230615_s0_dawn_heath_act1_9s9e13
+    rot   0 deg | NN median   5.57 px <1px   3.6% <2px  12.0% | twin   10.12 px <2px   0.0% (n=5744)
+    rot  90 deg | NN median   0.30 px <1px  96.0% <2px  96.0% | twin    0.30 px <2px  96.5% (n=5744)
+    rot 180 deg | NN median   5.65 px <1px   2.7% <2px   9.9% | twin   10.43 px <2px   0.0% (n=5744)
+    rot 270 deg | NN median   4.97 px <1px   4.2% <2px  14.7% | twin   14.58 px <2px   0.0% (n=5744)
+    -> rotation 90 deg
+
+=== nymeria / 20230615_s1_vincent_bell_act0_s0kg0n
+    rot   0 deg | NN median   4.67 px <1px   3.7% <2px  14.0% | twin   10.06 px <2px   0.0% (n=4483)
+    rot  90 deg | NN median   0.30 px <1px  97.5% <2px  97.5% | twin    0.30 px <2px  97.0% (n=4483)
+    rot 180 deg | NN median   4.85 px <1px   3.8% <2px  13.4% | twin   10.46 px <2px   0.0% (n=4483)
+    rot 270 deg | NN median   4.70 px <1px   3.9% <2px  13.9% | twin   14.54 px <2px   0.0% (n=4483)
+    -> rotation 90 deg
+
+=== nymeria / 20230616_s0_kristen_thomas_act0_5edc0f
+    rot   0 deg | NN median   4.85 px <1px   4.6% <2px  15.0% | twin   10.06 px <2px   0.0% (n=5014)
+    rot  90 deg | NN median   0.30 px <1px  95.9% <2px  95.9% | twin    0.30 px <2px  95.8% (n=5014)
+    rot 180 deg | NN median   4.67 px <1px   5.8% <2px  17.2% | twin   10.42 px <2px   0.0% (n=5014)
+    rot 270 deg | NN median   5.30 px <1px   4.0% <2px  14.0% | twin   14.54 px <2px   0.0% (n=5014)
+    -> rotation 90 deg
+
+=== nymeria / 20230616_s1_michael_griffin_act0_g5u8n8
+    rot   0 deg | NN median   5.36 px <1px   4.2% <2px  14.6% | twin    9.03 px <2px   0.0% (n=4503)
+    rot  90 deg | NN median   0.31 px <1px  94.0% <2px  94.0% | twin    0.30 px <2px  96.7% (n=4503)
+    rot 180 deg | NN median   3.74 px <1px   5.9% <2px  21.4% | twin    9.21 px <2px   0.0% (n=4503)
+    rot 270 deg | NN median   5.90 px <1px   2.9% <2px  10.4% | twin   12.96 px <2px   0.0% (n=4503)
+    -> rotation 90 deg
+
+=== nymeria / 20230619_s1_eric_martin_act0_oeiu1g
+    rot   0 deg | NN median   4.86 px <1px   3.8% <2px  13.3% | twin   10.12 px <2px   0.0% (n=5963)
+    rot  90 deg | NN median   0.30 px <1px  97.3% <2px  97.3% | twin    0.30 px <2px  97.2% (n=5963)
+    rot 180 deg | NN median   4.75 px <1px   3.7% <2px  13.0% | twin   10.45 px <2px   0.0% (n=5963)
+    rot 270 deg | NN median   4.54 px <1px   4.2% <2px  14.2% | twin   14.58 px <2px   0.0% (n=5963)
+    -> rotation 90 deg
+
+=== nymeria / 20230620_s0_marie_vasquez_act0_5vd9yy
+    rot   0 deg | NN median   3.87 px <1px   4.6% <2px  16.1% | twin    9.01 px <2px   0.0% (n=6602)
+    rot  90 deg | NN median   0.30 px <1px  97.8% <2px  97.8% | twin    0.30 px <2px  98.8% (n=6602)
+    rot 180 deg | NN median   3.93 px <1px   4.5% <2px  16.0% | twin    9.22 px <2px   0.0% (n=6602)
+    rot 270 deg | NN median   4.86 px <1px   4.2% <2px  15.3% | twin   12.85 px <2px   0.0% (n=6602)
+    -> rotation 90 deg
+
+========================================================================
+  aea        rotation 90 deg   (8 take(s): 90 deg, 90 deg, 90 deg, 90 deg, 90 deg, 90 deg, 90 deg, 90 deg)
+  nymeria    rotation 90 deg   (8 take(s): 90 deg, 90 deg, 90 deg, 90 deg, 90 deg, 90 deg, 90 deg, 90 deg)
+
+  Add a dataset to camera.VERIFIED_ROTATION BY HAND once every take
+  checked agrees. A measurement that promotes itself is not a check.
