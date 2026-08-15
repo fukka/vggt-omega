@@ -192,7 +192,14 @@ def _nn(query: np.ndarray, tree, k: int = 1):
             i[s:s + 256] = order
             d[s:s + 256] = np.take_along_axis(dd, order, axis=1)
         return (d[:, 0], i[:, 0]) if k == 1 else (d, i)
-    d, i = tree.query(query, k=k, workers=-1)
+    # ``workers`` arrived in scipy 1.6. An acceptance test that cannot run on
+    # the machine it is being read on is an acceptance test nobody runs, and
+    # this file's own brute-force branch above exists for the same reason --
+    # so an older scipy loses the threads, not the check.
+    try:
+        d, i = tree.query(query, k=k, workers=-1)
+    except TypeError:
+        d, i = tree.query(query, k=k)
     return (d, i)
 
 

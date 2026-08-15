@@ -20,6 +20,7 @@ number forever; numbers are referenced from commit messages and are never reused
 |---|---|---|
 | [019](019-adt-fov-rect-rerun.md) | **ADT-FOV: re-score on the corrected lens**, with DA3-Small in the same table. Supersedes #014 and #015. | gpu |
 | [020](020-slam-baseline-programme.md) | **The SLAM baseline programme**: both lens strategies, then multi-frame. Successor to #013. **Step 1 is now answered**, so steps 2 and 3 are released. | gpu |
+| [022](022-fov-on-slam-data.md) | **The FOV question on real SLAM points**: the `fovbench` experiment, repeated against ego-synth's MPS points. Code, tests and lane script are on `organized`; the run is the ticket. | gpu |
 
 **#016 is done: `d` is planar z**, on both staged datasets, decisively — so no
 published number moves and #020's steps 2 and 3 may run. Read #020's step
@@ -55,6 +56,7 @@ footage?*
 | [013](013-slambench-harness.md) | Build the harness, run the raw arm | done · `slambench-raw-b1659a0` |
 | [016](016-egosynth-depth-convention.md) | Is `d` planar z or range? | done · **z**, both staged takes, `d - z` flat at the float16 floor and the range residual matching `1-cos(theta)` to 4 dp |
 | [020](020-slam-baseline-programme.md) | Both baselines → multi-frame | **open** — step 1 cleared |
+| [022](022-fov-on-slam-data.md) | Where in the field does it degrade, on this data | **open** — code green on CPU, run not started. Carries the distance control the dense experiment does not need: an oracle with no field dependence reads a 1.86x rim effect until distance is held fixed |
 
 ---
 

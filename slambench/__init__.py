@@ -1,14 +1,28 @@
 # Copyright (c) 2026.
 """Depth evaluation against real egocentric SLAM ground truth.
 
-**This is not the ADT-FOV experiment.** `fovbench/` asks *where in the field of
-view does depth degrade*, on a synthetic twin, by binning error against
-eccentricity. This package asks a different and simpler question — *how accurate
-is each model on real egocentric footage* — against ego-synth 5B's semi-dense
-MPS SLAM points, and it has no eccentricity axis at all. The two share a
-repository, some models and a definition of AbsRel; they share no protocol, no
-ground truth and no conclusion. Do not read a number from one as if it came from
-the other.
+**This is not the ADT-FOV experiment**, and the two must not be read as one.
+`fovbench/` asks *where in the field of view does depth degrade*, on a synthetic
+twin whose ground truth is a dense depth map. This package's headline question is
+different and simpler — *how accurate is each model on real egocentric footage* —
+against ego-synth 5B's semi-dense MPS SLAM points.
+
+``run.py`` is that question and has no eccentricity axis; three published
+artefacts were produced under that contract and it does not change.
+
+``run_fov.py`` asks the **FOV question of this data**, which is a third thing
+again: the same question ``fovbench`` asks, of different ground truth, under a
+protocol that had to be rebuilt for it. Sparse points need a different estimator
+(sums pooled across frames, not per-frame bin means) and one control the dense
+experiment does not need at all — distance falls 3.6x from this field's centre to
+its rim, so an uncontrolled error-against-eccentricity curve here is partly a
+distance curve. ``fov.py`` is where that is written down.
+
+So the three share a repository, some models and a definition of AbsRel. They do
+not share ground truth, and only the two FOV drivers share a question. **Do not
+read a number from one as if it came from another**; in particular ``run.py``'s
+tables and ``run_fov.py``'s are not two views of one measurement, because the
+second pools by points and the first by frames.
 
 Nothing here imports `fovbench` and nothing here reads ADT.
 ``tests/test_experiment_separation.py`` enforces both mechanically, from the
@@ -69,8 +83,13 @@ Layout
     baselines.py  the two lens strategies
     metrics.py    per-point scoring, under each model's own alignment protocol
     split.py      the frozen frame manifest and its digest
-    run.py        the driver
+    run.py        the driver — the published one, no eccentricity axis
     report.py     tables
+
+    fov.py        the FOV question on this data: the eccentricity axis, the
+                  distance control it needs, and the re-aimed window
+    run_fov.py    its driver. Shares everything above and owns only the binning
+    fov_report.py its tables
 
 Importing this package puts the repo root on ``sys.path`` so that
 ``finetune.eval.metrics`` and ``finetune.eval.baselines.model_zoo`` — shared

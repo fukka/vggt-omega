@@ -102,6 +102,68 @@ def test_planar_z_is_unchanged_by_the_co_axial_rectification():
     assert np.allclose(slanted_plane(d_fish), slanted_plane(d_pin), atol=1e-12)
 
 
+def test_derectify_holds_up_at_the_rim_where_the_pinhole_stretches():
+    """The same round trip, but out where it is hard.
+
+    The test above lives inside 18 % of the frame, and every step of the chain
+    is nearly linear there — it would pass with the tangential and thin-prism
+    terms deleted. Out at the edge of the pinhole's own field the projection
+    goes as ``tan``, so the pinhole pixel moves ~3x faster per degree than it
+    does on axis and any residual in ``unproject`` is magnified by the same
+    factor. This is also the only part of the field where the two arms are
+    scored on different physics, so it is the part a regression would reach
+    first.
+    """
+    c = cam896()
+    bl = B.RectDerectBaseline(model=None, cam=c, fov_deg=110.0, rect_size=518)
+    pts = fisheye_points(c, n=40, margin=0.46)          # out to theta ~53 deg
+    got = bl.derectify(true_pinhole_depth(bl.pin), pts)
+    ok = np.isfinite(got)
+    assert ok.mean() > 0.90, f"only {100 * ok.mean():.0f}% of rim points landed"
+    theta = c.theta_of(pts.u[ok], pts.v[ok])
+    assert theta.max() > 45.0, f"this grid only reached {theta.max():.0f} deg"
+    rel = np.abs(got[ok] - pts.d[ok]) / pts.d[ok]
+    assert np.median(rel) < 2e-3, f"median relative error {np.median(rel):.2e}"
+    assert np.max(rel) < 3e-2, f"max relative error {np.max(rel):.2e}"
+
+
+def test_the_run_settings_leave_no_void_for_the_sampler_to_average_over():
+    """At 110 deg the pinhole is fully backed by real pixels, and that is load-bearing.
+
+    ``derectify`` reads 2x2 bilinear. Where the render has a black region
+    outside the imaged cone, a point next to that region is averaged with the
+    model's response to padding, and nothing downstream can tell. It never
+    happens at the settings every published run used, because the 896 fisheye
+    reaches further than a 110 deg pinhole asks for in every direction — but
+    that is a fact about ``--rect-fov``, not a property of the code, so widening
+    it must fail here rather than quietly start mixing in padding.
+
+    Measured on the release itself: 100 % of the pinhole grid is backed, and
+    zero of 120 028 real ground-truth points have a stencil touching a void.
+    """
+    c = cam896()
+    for size in (512, 518):
+        _, _, in_cone = B.RectDerectBaseline(None, c, 110.0, size)._remap()
+        assert in_cone.all(), (
+            f"a 110 deg / {size} px pinhole left {100 * (~in_cone).mean():.2f}% "
+            f"of its grid unbacked; derectify's bilinear read would average "
+            f"real depth with the model's answer to black padding")
+    # ...and the guard is not vacuous: ask for more than the lens has.
+    _, _, wide = B.RectDerectBaseline(None, c, 150.0, 192)._remap()
+    assert not wide.all()
+
+
+def test_a_prediction_on_the_wrong_grid_is_refused_not_sampled():
+    """The addresses are the pinhole's. A map on another grid would be read at
+    the wrong pixel for every point, which looks like a mediocre model rather
+    than a broken harness — the one failure this class is written against."""
+    c = cam896()
+    bl = B.RectDerectBaseline(model=None, cam=c, fov_deg=110.0, rect_size=518)
+    with pytest.raises(SystemExit) as e:
+        bl.derectify(np.ones((256, 256), np.float32), fisheye_points(c, n=6))
+    assert "518" in str(e.value) and "256" in str(e.value)
+
+
 def test_points_outside_the_pinhole_field_get_nan_not_a_guess():
     """A 110 deg pinhole cannot cover the whole fisheye cone. The rim points it
     cannot see must be absent, not extrapolated — they are then dropped from

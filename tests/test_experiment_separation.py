@@ -196,17 +196,74 @@ def test_the_shared_infrastructure_is_the_only_cross_package_dependency():
     assert not unexpected, f"unexpected cross-package imports: {unexpected}"
 
 
-def test_no_eccentricity_vocabulary_leaked_into_the_slam_evaluation():
-    """The SLAM evaluation has no field-of-view axis and its code should not
-    imply one. ``pen``, ``drift`` and incidence-angle binning are the FOV
-    experiment's apparatus; a reader who found them here would reasonably
-    conclude the two measure the same thing."""
+#: The SLAM evaluation's published path: the modules `slambench.run` reaches,
+#: which produced `results/slambench-*`. The FOV question is now also asked of
+#: ego-synth (`slambench/fov*.py`), so "this package has no field-of-view axis"
+#: stopped being true — but the thing that guard was protecting is still worth
+#: protecting, and it was never the package. It was that a reader of #020's
+#: tables should not find eccentricity apparatus in the code that made them.
+PUBLISHED_SLAM_PATH = ("run.py", "report.py", "metrics.py", "baselines.py",
+                       "data.py", "camera.py", "split.py", "models.py")
+
+
+def test_no_eccentricity_vocabulary_in_the_published_slam_path():
+    """The driver that produced ``results/slambench-*`` has no field-of-view axis.
+
+    This guard used to cover the whole ``slambench`` package, on the grounds
+    that the SLAM evaluation had no field-of-view axis at all. It now has one —
+    ``slambench/fov.py``, asking the FOV experiment's question of ego-synth's
+    SLAM points — so the old form would forbid the work rather than protect
+    anything.
+
+    What it was protecting is narrower than what it checked, and is unchanged:
+    the modules behind ``python -m slambench.run`` are the ones whose numbers are
+    published, and eccentricity apparatus appearing *there* would mean the
+    headline table had grown a field-of-view axis nobody asked for. So the ban
+    now names those modules. ``run_fov.py``, ``fov.py`` and ``fov_report.py`` are
+    the FOV question and are expected to use its vocabulary.
+
+    Relaxed here, in the open, rather than by deleting the check — the file this
+    lives in says a guard at the repository root is nobody's to quietly relax,
+    and this is the loud version.
+    """
     banned = ("anchored_ratio", "raw_scale_ratio", "theta_edges", "radius_edges")
     hits = {}
     for path in _sources("slambench"):
+        if os.path.basename(path) not in PUBLISHED_SLAM_PATH:
+            continue
         with open(path) as fh:
             src = fh.read()
         found = [b for b in banned if b in src]
         if found:
             hits[os.path.relpath(path, ROOT)] = found
-    assert not hits, f"FOV-experiment vocabulary in the SLAM evaluation: {hits}"
+    assert not hits, (
+        f"FOV-experiment vocabulary in the published SLAM path: {hits}. The FOV "
+        f"question on this data lives in slambench/fov.py and its own driver; "
+        f"binning does not belong in the run that produced results/slambench-*.")
+
+
+def test_the_published_slam_driver_cannot_reach_the_fov_binning():
+    """``slambench.run`` must not import ``slambench.fov``.
+
+    The vocabulary ban above is a spelling check and this is the structural one:
+    it is what actually keeps the FOV binning out of the published path, and it
+    would still hold if every name were changed. The two drivers share the
+    split, the reader, the camera, the baselines and the registry — deliberately,
+    so that a FOV run can be pointed at ``run``'s own manifest and bin exactly
+    the frames it scored — and the sharing goes one way only.
+    """
+    with open(os.path.join(ROOT, "slambench", "run.py")) as fh:
+        tree = ast.parse(fh.read(), filename="run.py")
+    names = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.extend(a.name for a in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                names.append(node.module)
+            names.extend(a.name for a in node.names)
+    bad = sorted({n for n in names if n == "fov" or n.startswith("fov")})
+    assert not bad, (
+        f"slambench/run.py imports {bad}. That driver's contract is that it has "
+        f"no eccentricity axis, and three published artefacts were produced "
+        f"under it; the FOV question has its own driver.")

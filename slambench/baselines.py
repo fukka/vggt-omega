@@ -266,7 +266,23 @@ class RectDerectBaseline(Baseline):
         Planar z needs no conversion because the pinhole is co-axial with the
         fisheye — see the module docstring, where that is measured rather than
         assumed. Points whose ray leaves the pinhole's field come back NaN.
+
+        The addresses are computed on ``self.pin``'s grid, so a map that arrived
+        on a different one would be sampled at the wrong place *silently* — the
+        failure mode this whole class is written against, since it reads as a
+        merely mediocre model rather than as an error. Both adapters in the zoo
+        resize their output back to the frame they were handed, so the contract
+        holds today; it is asserted because it is a cross-module one.
         """
+        n_pin = self.pin.size
+        if pred_rect.shape != (n_pin, n_pin):
+            raise SystemExit(
+                f"[slambench] {RECT_DERECT!r} rectified to {n_pin}x{n_pin} but "
+                f"{getattr(self.model, 'key', 'the model')!r} answered with a "
+                f"{pred_rect.shape[0]}x{pred_rect.shape[1]} map. Every point "
+                f"would be sampled at the wrong pixel and the run would look "
+                f"like a bad model rather than a broken one. The adapter must "
+                f"return depth on the grid it was given.")
         d = self.cam.unproject(pts.u.astype(np.float64),
                                pts.v.astype(np.float64))
         u, v = self.pin.project(d)
