@@ -25,18 +25,30 @@ export CUDA_VISIBLE_DEVICES="$GPU"
 OUT=eval_out/slambench-020
 mkdir -p "$OUT"
 
-# The shards. Balanced on the raw run's own per-model timings (vggt_1b 177 s,
-# vggt_omega 85, dav2_large 82, da3_large 70, da3_small 57 over 600 frames):
-# step 2 splits 234 s against 237 s. Step 3 drops dav2_large -- it is monocular
-# and predict_stack raises rather than scoring the target alone -- and puts one
-# heavy transformer plus one DA3 in each lane, which is the partition least
-# sensitive to how badly VGGT's global attention scales with a 10-frame window.
+# The shards. Step 2 is balanced on the raw run's own per-model timings
+# (vggt_1b 177 s, vggt_omega 85, dav2_large 82, da3_large 70, da3_small 57 over
+# 600 frames) and that held: 8m35s against 10m11s, 1.83x over serial.
+#
+# **Step 3's partition below is wrong, and the 2026-08-14 run is why.** Those
+# step-2 timings do not predict step 3, because the models do not pay for a
+# 10-frame window at the same rate. Measured on this grid:
+#
+#     vggt_1b     334 s -> 4571 s   (13.7x)
+#     vggt_omega  206 s ->  910 s   ( 4.4x)
+#     da3_large   195 s ->  891 s   ( 4.6x)
+#     da3_small   179 s ->  442 s   ( 2.5x)
+#
+# vggt_1b is 1.6x vggt_omega at step 2 and 5.0x at step 3. So this split put
+# 5013 s in lane 0 against 1801 s in lane 1: lane 1 finished both strides at
+# 21:11 and its card sat idle until 22:57. Step 3 got ~1.3x where step 2 got
+# 1.83x. For a re-run, give vggt_1b a lane to itself (4571 s) and the other
+# three the second (2243 s) -- 2.0x, and it needs no new machinery.
 if [ "$LANE" = "0" ]; then
   S2=vggt_1b,da3_small
-  S3=vggt_1b,da3_small
+  S3=vggt_1b
 else
   S2=vggt_omega,dav2_large,da3_large
-  S3=vggt_omega,da3_large
+  S3=vggt_omega,da3_large,da3_small
 fi
 
 run () {  # run <name> <models> [extra flags...]

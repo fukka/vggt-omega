@@ -1,19 +1,110 @@
 # slambench: a proper baseline evaluation on real egocentric SLAM data
 
 **Owner:** gpu (#016's fetch is done, and it ran on cpu)
-**Status:** **open, and dispatched** — issue
-[#22](https://github.com/fukka/vggt-omega/issues/22). This is the SLAM
-evaluation's live ticket. Successor to #013. The issue carries two pre-flight
-items this file does not: run `verify_camera --takes 8` first (possible for the
-first time now that #012 has landed, and #013's step 3 already asked for it),
-and record whether `projectaria_tools` or the cv2 fallback did the
-rectification — `baselines.rectify` prefers the former and falls back silently.
+**Status:** **RUN. Steps 2 and 3 are measured** on `143686a`, digest
+`61195914f090`, published to `results` @ `b10b087` as
+`results/slambench-020-143686a`. Issue
+[#22](https://github.com/fukka/vggt-omega/issues/22). See "What it says" below.
+Both pre-flight items the issue carries are done: `verify_camera --takes 8`
+passes 8/8 on aea and nymeria at 0.30 px, and the rectification was done by
+**`projectaria_tools`**, not the silent cv2 fallback.
 **Files I may touch:** nothing under `slambench/` except what #016 adds — runs only.
-Results to `results`.
+Results to `results`. Nothing under `slambench/` was touched.
 **Blocked by:** nothing. **Step 1 is answered — `d` is planar z (#016,
 2026-08-14) — and steps 2 and 3 are released.** #012 has also landed all three
 calibration sets on lambda_63, so `rect_derect` on aea + nymeria has no
 remaining technical gate.
+
+## What it says
+
+**Rectifying is nearly free here, and this ticket expected it not to be.** The
+trap section below warns that a 110 deg pinhole cannot cover the fisheye cone
+and will strip the rim from both arms. Measured, it strips **1.25% on aea and
+1.04% on nymeria** — MPS semi-dense points are concentrated centrally enough
+that the pinhole reaches almost all of them. Against the published raw-only run
+the raw column moves by **−0.1% to −0.9%**, all improvements. The shrinkage is
+real, and it is an order of magnitude smaller than the warning implies.
+
+**Step 2 — rectify or not** (AbsRel, raw → rect_derect, ratio):
+
+| model | aea | nymeria |
+|---|---|---|
+| vggt_1b | 0.199 → 0.158 (**0.794**) | 0.144 → 0.131 (0.912) |
+| vggt_omega | 0.151 → 0.148 (0.979) | 0.121 → 0.125 (**1.040**) |
+| dav2_large | 0.158 → 0.150 (0.952) | 0.144 → 0.139 (0.966) |
+| da3_large | 0.207 → 0.194 (0.938) | 0.172 → 0.164 (0.953) |
+| da3_small | 0.240 → 0.235 (0.979) | 0.205 → 0.208 (1.013) |
+
+**VGGT-1B is the only model rectification clearly helps; VGGT-Omega is the only
+one it hurts** — and Omega is already the best raw model on both datasets. So
+the answer to "is rectifying worth it" is per-model, not global, and it is
+worth most to the model that needs it most.
+
+**Step 3 — what a second frame is worth** (ratio to the 1-frame arm at 10
+frames; <1 means more frames helped):
+
+| model | baseline | stride 1 aea / nym | stride 10 aea / nym |
+|---|---|---|---|
+| vggt_1b | raw | 1.110 / **1.161** | 1.088 / 1.085 |
+| vggt_1b | rect_derect | 1.023 / 1.026 | 1.022 / 0.955 |
+| vggt_omega | raw | 1.012 / 1.015 | 0.991 / 0.969 |
+| vggt_omega | rect_derect | 0.965 / 0.966 | 0.933 / 0.943 |
+| da3_large | raw | 1.013 / 0.963 | 0.976 / 0.892 |
+| da3_large | rect_derect | 1.071 / 0.971 | 0.990 / **0.866** |
+| da3_small | raw | 1.037 / 1.025 | 1.001 / 0.934 |
+| da3_small | rect_derect | 1.020 / 1.011 | 0.972 / 0.923 |
+
+**The FOV experiment's finding survives on real footage.** Consecutive frames
+hurt, strided frames help, in 14 of 16 arms. The exception is worth naming:
+**`vggt_1b`'s raw arm is not rescued by striding** (1.085–1.088), while its
+rectified arm is (0.955 on nymeria). Both of VGGT-1B's context failures are in
+the unrectified arm, which is the same model and the same axis on which
+rectification helped it most.
+
+**VGGT-Omega does not behave like VGGT-1B**, which report item 4 asks directly.
+Omega gains from context in every arm at stride 10 and never degrades past
+1.015; VGGT-1B degrades in three of four.
+
+### The stride gap measures to exactly zero
+
+`--context-stride` is a single int, so stride 1 and stride 10 are separate runs
+and each intersects its own support. Their `context=1` arm is the *identical
+computation on the identical frames*, so any difference between those two rows
+is the support moving underneath — the floor below which no stride effect is
+resolvable. **It is 0.00% on all 16 cells, with coverage identical to four
+decimals.**
+
+The reason is worth keeping: `rect_derect` gives up the *same* rim at every
+context size, because the rim it cannot reach does not depend on how many frames
+it was shown. So the intersection is set by `rect_derect` alone and is constant
+across the whole sweep. The two tables are therefore directly comparable —
+measured, not assumed — and widening `--context-stride` to a list would have
+bought nothing. That is a property of this grid, not a theorem: a run whose
+context arms lost points of their own would move the support, and
+`ANALYSIS.txt` section 2 recomputes the check rather than restating the result.
+
+### Both GPUs, sharded by model
+
+`slambench.run` computes the support intersection **inside** its per-model loop,
+over that model's own arms and contexts, so two processes carrying disjoint
+model lists produce the numbers one process would. `tools/merge_slambench_shards.py`
+does not take that on faith — it refuses to merge unless the shards agree on
+digest, root and the whole `config` block, and refuses overlapping model sets.
+All three merges passed and each run's two `manifest.json` were byte-identical.
+
+1.40× overall. Step 2 got 1.83×; step 3 ran lopsided because the partition was
+balanced on step-2 timings and **`vggt_1b`'s cost under a 10-frame window grows
+13.7× where `vggt_omega`'s grows 4.4×** (334 s → 4571 s against 206 s → 910 s).
+`slam020_lane.sh` now carries the corrected split: `vggt_1b` alone in one lane.
+
+### One thing this run needed that was not in the ticket
+
+`pytest tests slambench/tests` was **red** on `bd1a86e`: #016's new
+`slambench/verify_depth_convention.py` imports `gzip`, which was missing from
+the stdlib allowlist in `tests/test_experiment_separation.py` though `zlib`
+beside it was there. #016 reported green because it ran `pytest slambench/tests`,
+the narrower path, which never sees that file. Fixed in `143686a`; 98 passed on
+the box in the run's own env.
 
 ## The goal
 
@@ -147,10 +238,17 @@ then the same with `--context-stride 10`.
 
 - [x] #016 has reported a verdict and it is recorded here — **z**, planar
       camera-frame Z, both staged takes
-- [ ] `python -m pytest tests slambench/tests -q` passes on the run's commit
-- [ ] steps 2 and 3 share one digest
-- [ ] the tables above are in the issue, `kept` included
-- [ ] pushed to `results`, issue commented with the sha
+- [x] `python -m pytest tests slambench/tests -q` passes on the run's commit —
+      **98 passed** on `143686a`, on the box, in the run's own env. It was red
+      on `bd1a86e`; see the `gzip` note above.
+- [x] steps 2 and 3 share one digest — **`61195914f090`** across all three
+      runs, with root and the whole `config` block identical apart from the
+      context axis. Checked by `ANALYSIS.txt` section 1, not by eye.
+- [x] the tables above are in the issue, `kept` included — `coverage` is beside
+      every row in `report.txt` and in the tables above (raw 1.000,
+      `rect_derect` 0.988 aea / 0.990 nymeria)
+- [x] pushed to `results` — `b10b087`, `results/slambench-020-143686a`
+- [ ] issue commented with the sha
 
 ## Not in scope
 
