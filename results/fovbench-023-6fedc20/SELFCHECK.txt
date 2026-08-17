@@ -1,0 +1,21 @@
+run A     fov_A.json
+reference fov_ref_019.json
+digest    run=601fcb22767e  ref=601fcb22767e  MATCH
+n_frames  run=300  ref=300
+sequences MATCH
+
+### must match exactly
+  da3_large    real      AbsRel 0.108977 -> 0.108977 (+0.0000%)  identical
+  da3_large    synthetic AbsRel 0.091630 -> 0.091630 (+0.0000%)  identical
+  da3_small    real      AbsRel 0.174687 -> 0.174687 (+0.0000%)  identical
+  da3_small    synthetic AbsRel 0.170821 -> 0.170821 (+0.0000%)  identical
+  dav2_large   real      AbsRel 0.137916 -> 0.137916 (+0.0000%)  identical
+  dav2_large   synthetic AbsRel 0.151616 -> 0.151616 (+0.0000%)  identical
+  vggt_omega   real      AbsRel 0.075560 -> 0.075560 (+0.0000%)  identical
+  vggt_omega   synthetic AbsRel 0.072895 -> 0.072895 (+0.0000%)  identical
+
+### expected to move (#021 bf16 fix)
+  vggt_1b      real      AbsRel 0.119657 -> 0.119828 (+0.1430%)  worst SqRel +0.2953%
+  vggt_1b      synthetic AbsRel 0.098142 -> 0.098385 (+0.2472%)  worst RMSElog +0.3828%
+
+SELF-CHECK PASS

@@ -1,0 +1,75 @@
+{
+  "run_id": "fovbench-023-6fedc20",
+  "ticket": "docs/handoff/tickets/023-vggt360-on-both-benchmarks.md",
+  "issue": 25,
+  "code_commit": "6fedc20",
+  "code_branch": "organized",
+  "protocol": "adt-fov-v1",
+  "split_digest": "601fcb22767e",
+  "date_utc": "2026-08-17",
+  "box": "lambda_63",
+  "gpu": "NVIDIA RTX 6000 Ada Generation (1 of 2, CUDA_VISIBLE_DEVICES=0)",
+  "driver": "570.207",
+  "conda_env": "raytun3r",
+  "torch": "2.11.0+cu128",
+  "transformers": "5.15.0",
+  "numpy": "1.26.4",
+
+  "status": "PARTIAL — run A only. Run C (the resolution control) was still on the card when this landed; it is required, not optional, and this row is not readable without it. See 'pending'.",
+  "pending": {
+    "fov_C": "python -m fovbench.run ... --models vggt360 --vggt360-source view — running on lambda_63, expected ~55 min like run A's vggt360 stage",
+    "slam_B": "the slambench half, results/slambench-023-*",
+    "slam_B3": "the three-arm version, read only against itself"
+  },
+
+  "runs": {
+    "fov_A": {
+      "command": "python -m fovbench.run --adt-root $ADT --n-frames 50 --models vggt_1b,vggt_omega,dav2_large,da3_large,da3_small,vggt360 --views fisheye --protocols radial --workers 1 --out eval_out/vggt360-023/fov_A",
+      "wall_clock_s": 3844,
+      "per_model_s": {"vggt_1b": 131, "vggt_omega": 112, "dav2_large": 110,
+                      "da3_large": 101, "da3_small": 85, "vggt360": 3298},
+      "exit_code": 0
+    }
+  },
+
+  "deviations_from_the_ticket": {
+    "n_frames": {
+      "ticket_says": 25,
+      "run_used": 50,
+      "why": "the ticket's own self-check -- 'the vanilla cells must match the #019 headline run, because views and protocols are not in the split digest' -- only works at the frame count the reference used. The published #019 headline is results/fovbench-rectfix-393cab9/partA_6seq: 6 sequences x 50 frames, digest 601fcb22767e. 25 frames reproduces no published digest on this box; the older 25-frame run (fovbench-main-22c108d / 2ab412af0ccc) is a ONE-sequence run from when only 1 of 20 ADT sequences carried all three streams, and there are 6 now."
+    },
+    "da3_small_added": "costs ~85 s and turns the self-check from three exact-match rows into four. fovbench aligns and scores per model, so adding one cannot perturb the others -- and the self-check below confirms it did not.",
+    "workers": {
+      "ticket_says": "unspecified; the #019 reference used 16",
+      "run_used": 1,
+      "why": "fovbench deadlocks on this box at dav2_large at any thread count above 1: 498 threads at --workers 8, 754 at --workers 16, every one sleeping in futex_wait, GPU 0%, no frame line ever printed. Not starvation (469 GB RAM free, load 2.3/64 cores) and not the HF Hub (dav2_large alone scores a frame in 6 s, online or HF_HUB_OFFLINE=1). _ordered_map pools rows in split order so serial is bit-identical to threaded, and tests/test_end_to_end.py pins that -- confirmed here by the self-check, which is exact against a reference produced with --workers 16."
+    }
+  },
+
+  "self_check": {
+    "what": "views and protocols are not in the split digest, so this run carries the same digest as the #019 headline and its vanilla fisheye/radial cells must match it",
+    "reference": "results/fovbench-rectfix-393cab9/partA_6seq",
+    "digest": "601fcb22767e on both",
+    "result": "PASS",
+    "bit_identical": ["da3_large", "da3_small", "dav2_large", "vggt_omega"],
+    "bit_identical_cells": 8,
+    "expected_to_move": {
+      "vggt_1b": {"real": "+0.1430%", "synthetic": "+0.2472%"},
+      "why": "the reference predates ticket 021, which opened the bf16 autocast VGGTBackbone is written to expect. Its vggt_1b column is fp32. Well inside #021's measured <=0.51% bound.",
+      "recorded_in": ["docs/handoff/tickets/021-vggt-1b-runs-in-fp32.md", "fovbench/README.md", "results/slambench-020-143686a/PROVENANCE.md"]
+    },
+    "script": "fov023_selfcheck.py"
+  },
+
+  "headline": {
+    "overall_AbsRel_real": {"vggt_omega": 0.07556, "da3_large": 0.10898,
+                            "vggt360": 0.11980, "vggt_1b": 0.11983,
+                            "dav2_large": 0.13792, "da3_small": 0.17469},
+    "read_the_bins_not_the_pool": "vggt360 and vggt_1b are level on pooled AbsRel (0.1198 both) and that hides the entire result. By eccentricity, real stream, centre bin -> rim bin: vggt_1b 0.0957 -> 0.1529 (1.60x), vggt_omega 0.0574 -> 0.1160 (2.02x), da3_large 0.0778 -> 0.1515 (1.95x), vggt360 0.1240 -> 0.1295 (1.04x). vggt360 is WORSE at the centre than the VGGT-1B it wraps and BETTER at the rim, crossing over around 40 deg.",
+    "caveat": "NOT resolution matched, and it favours this row: the nine tangent views are cut from ADT's native 1408 frame (0.62x downsample to 518) while the vanilla models see a 518 resize (from which the same views would be 1.69x up). How much of the rim advantage is the lens treatment rather than the source resolution is exactly what run C measures, and run C is not in this artefact yet."
+  },
+
+  "log_lines_the_tables_cannot_carry": {
+    "constant_fill": "PASS, by silence. fovbench/models.py:_report_holes prints 'N% of the imaged cone had no view covering it and was filled with a constant' only when the worst-seen fraction exceeds 1%. It never printed across all 300 frames, so the ring tiled its cone within 1% throughout — which is what the ticket predicted ('expect well under 1%'). Absence of the line IS the result here; do not read it as the diagnostic not running."
+  }
+}
