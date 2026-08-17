@@ -1,8 +1,9 @@
-# ADT-FOV: the depth-controlled table, and the missing 3-frame point
+# ADT-FOV: the depth-controlled table, and the context arms on the right split
 
 **Owner:** gpu
-**Status:** **open** — two runs, both on splits that already exist. Code is on
-`organized`; the runs are the ticket.
+**Status:** **open** — part A unchanged; **part B rewritten 2026-08-17**, it is
+now the six-sequence split and not seq131. Code is on `organized`; the runs are
+the ticket.
 **Files I may touch:** nothing under `fovbench/` — runs only. Results to `results`.
 **Blocked by:** none. `organized` @ the commit that adds `geometry.joint_grid`.
 
@@ -84,30 +85,67 @@ EOF
 real stream. Run the rest when there is room; the joint key is free for every
 model once the forward pass is happening anyway.
 
-## Part B — 3 frames at stride 10
+## Part B — the context arms on the **six-sequence** split
 
-The seq131 context split, digest `8ca25fd0ebd2`, one run:
+**Rewritten 2026-08-17. The old Part B asked for 3 frames on seq131, to join the
+existing `N=1/5s/10s` there. Do not run that.** The seq131 context arms are the
+wrong split to begin with, and a fourth point on them would deepen the problem
+rather than fix it.
+
+Why: the deck plots those curves next to the Result page, which is the
+six-sequence split (`601fcb22767e`). seq131 is not a representative sixth of it.
+Per-sequence `pen` (`results/fovbench-ctx-d351d94/ANALYSIS.txt` and the
+`perseq_seq13*` runs), real stream:
+
+| | seq131 | 132 | 133 | 134 | 135 | 136 |
+|---|---|---|---|---|---|---|
+| VGGT-Omega fisheye | **1.48** | 2.02 | 2.86 | 2.06 | 2.21 | 1.86 |
+| DA3-Large fisheye | **1.45** | 2.08 | 2.20 | 2.05 | 1.80 | 2.25 |
+| VGGT-Omega rect | **0.98** | 1.34 | 2.12 | 1.47 | 1.79 | 1.45 |
+| DA3-Large rect | **1.27** | 1.45 | 2.00 | 1.80 | 1.54 | 2.26 |
+
+seq131 is lowest of the six in 5 of 6 model x view cells and second-lowest in
+the sixth. It is not sample size: `partA_seq131_200f` (200 frames of the same
+sequence) moves `pen` *further* from the pooled value, not toward it — rect
+VGGT-Omega 0.97 at 50 frames, 0.86 at 200.
+
+So run the context arms on the same split the Result page uses. Context does not
+enter the digest by design (`fovbench/split.py`), so these come back as
+`601fcb22767e` and are directly comparable to #019's `partA_6seq`:
 
 ```bash
-python -m fovbench.run --adt-root "$SEQ131_ROOT" --protocols radial \
-  --models vggt_1b,vggt_omega,da3_large,da3_small \
-  --n-frames 50 --context-frames 3 --context-stride 10 \
-  --out eval_out/fovbench-joint/partB_3s 2>&1 | tee eval_out/fovbench-joint/partB.log
+for N in 3 5 10; do
+  python -m fovbench.run --adt-root "$ADT" --protocols radial \
+    --models vggt_1b,vggt_omega,da3_large,da3_small \
+    --n-frames 50 --context-frames $N --context-stride 10 \
+    --out eval_out/fovbench-joint/partB_6seq_${N}s \
+    2>&1 | tee eval_out/fovbench-joint/partB_${N}s.log
+done
 ```
 
-This joins `N=1`, `5s` and `10s` from `results/fovbench-rectfix-393cab9`, which
-were measured on code this commit changes only by addition — so the four points
-form one curve. `dav2_large` is not in the list on purpose: it is monocular and
-has no context path.
+`--n-frames` is **per sequence**, so 50 over six sequences is the 300-frame
+split. `dav2_large` is out on purpose: monocular, no context path.
+
+**Cost.** Scaling the seq131 timings in `ANALYSIS.txt` item 5 by the measured
+6x frame ratio: roughly 3.9 h for `vggt_1b` across the three arms and ~0.8 h
+each for the other three, **~6.3 h total**. If that is too much in one queue,
+**drop the 3-frame arm first** (~1.5 h) — it is a nice-to-have; 5 and 10 are
+what the deck pages plot. Dropping a *model* instead is worse: all four are on
+the page.
+
+**Do not** re-run `N=1` on this split. #019's `partA_6seq` already is it, and
+re-running would risk two `N=1` curves that differ.
 
 ## Done when
 
 - [ ] Part A's non-`joint` payload is byte-identical to #019's, and it is said so
       in the issue comment
 - [ ] `report.txt` carries a `JOINT` block for vggt_omega on both views
-- [ ] both `results.json` on the `results` branch under
+- [ ] Part B's three runs all report digest `601fcb22767e` — **stop and report if
+      any does not**, that is the whole point of the ticket
+- [ ] all `results.json` on the `results` branch under
       `results/fovbench-joint-<sha>/`
-- [ ] issue commented with the sha and the two digests
+- [ ] issue commented with the sha and the digests
 
 ## Needs a GPU run afterwards?
 
