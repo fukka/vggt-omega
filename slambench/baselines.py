@@ -19,6 +19,22 @@ lens treatment by building it into the measurement.
                   points. Every step is inside here; the harness never learns it
                   happened.
 
+    vggt360       this repository's VGGT-360-fisheye port: split the frame into a
+                  centre view plus an 8-direction ring of 60 deg tangent views,
+                  reconstruct all nine in one VGGT pass, fuse back onto the
+                  fisheye grid, gather at the points. A third lens strategy, in
+                  the same slot as the other two, which is the whole reason this
+                  file is written the way it is.
+
+The third arm is not a third model
+----------------------------------
+``vggt360`` brings its own backbone — the vendored VGGT-1B, because its
+attention-weighted fusion reads frame attention off a 37x37 patch grid that no
+model-zoo adapter exposes. So it is a lens strategy *for that one model*, and
+``run.py`` refuses to pair it with any other: a row labelled ``dav2_large ×
+vggt360`` would contain no Depth-Anything at all, which is a full plausible table
+saying something that never happened.
+
 Why de-rectification is a gather, not an image
 -----------------------------------------------
 The obvious implementation renders a full de-rectified depth map and then samples
@@ -79,7 +95,16 @@ DEFAULT_RECT_FOV_DEG = 110.0
 
 RAW = "raw"
 RECT_DERECT = "rect_derect"
-BASELINES = (RAW, RECT_DERECT)
+VGGT360 = "vggt360"
+
+#: Every arm this module can build.
+BASELINES = (RAW, RECT_DERECT, VGGT360)
+
+#: What ``--baselines`` defaults to. Deliberately **not** :data:`BASELINES`:
+#: every published SLAM number was produced by the two-arm default, and silently
+#: adding a third would change what the bare command measures and what a
+#: re-run of it reproduces. ``vggt360`` is asked for by name.
+DEFAULT_BASELINES = (RAW, RECT_DERECT)
 
 
 @dataclass
@@ -296,6 +321,80 @@ class RectDerectBaseline(Baseline):
         return out
 
 
+class VGGT360Baseline(Baseline):
+    """VGGT-360-fisheye: nine tangent views, one pass, fused back to the lens.
+
+    The pipeline itself is ``VGGT-360-fisheye/utils/pipeline.py``, shared with
+    ``main_adt.py`` and with the ADT-FOV test, so this class holds none of the
+    method — only the three things that are about *this* evaluation:
+
+    **The lens.** ego-synth is FISHEYE624, not the KB4 the port was written on,
+    and the take's own camera answers both the forward warp and the inverse ray
+    field rather than a KB4 fitted to it (``slambench/vggt360.py``).
+
+    **The depth convention.** Fusion produces euclidean range along each ray and
+    ``pts.d`` is planar z, so this arm converts by ``cos(theta)`` — 1.00 on axis,
+    1.74x at 55 deg, radial and therefore not absorbable by the alignment affine.
+    It is the only arm that converts, because it is the only one that leaves the
+    camera axis: ``raw`` and ``rect_derect`` both answer about the same axis the
+    ground truth is measured about, so neither needs to.
+
+    That ``pts.d`` is planar z is **measured**, not assumed — ticket 016, closed
+    2026-08-14, ``slambench/verify_depth_convention.py``: the residual against z
+    is 0.0002 and flat across incidence angle (the float16 noise floor of the
+    stored value), while the range hypothesis is wrong by exactly ``1 - cos
+    theta`` in all eight bins on both aea and nymeria. Being flat is the load
+    bearing part: a convention error is radial by construction, so it cannot hide
+    in a flat residual.
+
+    **The rim.** The pipeline answers for the imaged cone and NaN outside it.
+    That is left as NaN on purpose: ``run.py`` intersects support across arms and
+    reports what each gave up, so an honest hole is information here. (The
+    ADT-FOV harness owns its own mask and cannot take a NaN, which is why
+    ``fovbench`` fills and this does not — same pipeline, two callers, and the
+    difference is in the callers.)
+    """
+
+    name = VGGT360
+
+    def __init__(self, model, cam: Fisheye624, pipe, cfg,
+                 theta_max_deg: Optional[float] = None):
+        from slambench.vggt360 import Fisheye624Lens
+        self.model = model
+        self.pipe = pipe
+        self.cfg = cfg
+        self.lens = Fisheye624Lens(cam, theta_max_deg=theta_max_deg)
+
+    @property
+    def needs_camera(self) -> bool:
+        return True
+
+    def predict(self, frames, pts: "D.FramePoints",
+                target: int = -1) -> np.ndarray:
+        from utils.pipeline import range_to_planar_z
+
+        window = _window(frames)
+        if len(window) != 1:
+            # One frame in, nine views out. A temporal window would be nine
+            # views per frame in a single pass — a different experiment, and
+            # not one to perform by accident because a sweep flag was set.
+            raise SystemExit(
+                f"[slambench] {VGGT360!r} takes one frame at a time: it already "
+                f"hands VGGT a {self.cfg.n_ring + 1}-view reconstruction of that "
+                f"frame, and a {len(window)}-frame context would silently make "
+                f"that {(self.cfg.n_ring + 1) * len(window)} views in one pass. "
+                f"Run this arm with --context-frames 1.")
+
+        ff = self.pipe.range_map(window[0], self.lens,
+                                 project=self.lens.project,
+                                 ray_lut=self.lens.ray_lut(),
+                                 maps_for=self.lens.maps_for)
+        z = range_to_planar_z(ff.range_map, self.lens.cos_theta())
+        # Outside the cone, or covered by no view: no answer, not a guess.
+        z = np.where(ff.covered, z, np.nan).astype(np.float32)
+        return D.sample_prediction(z, pts)
+
+
 def _library_rectify(frame: np.ndarray, cam: Fisheye624,
                      pin: Pinhole) -> Optional[np.ndarray]:
     """Rectify with ``projectaria_tools``, or ``None`` if it is not importable.
@@ -347,7 +446,8 @@ def _bilinear(img: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
 def build(name: str, model, cam: Optional[Fisheye624] = None,
           fov_deg: float = DEFAULT_RECT_FOV_DEG,
-          rect_size: Optional[int] = None) -> Baseline:
+          rect_size: Optional[int] = None,
+          vggt360_pipe=None, vggt360_cfg=None) -> Baseline:
     if name == RAW:
         return RawBaseline(model)
     if name == RECT_DERECT:
@@ -358,5 +458,19 @@ def build(name: str, model, cam: Optional[Fisheye624] = None,
                 f"tools/fetch_egosynth_calibration.py (ticket 012) and pass "
                 f"--calib-root, or run --baselines raw, which needs no camera.")
         return RectDerectBaseline(model, cam, fov_deg, rect_size)
+    if name == VGGT360:
+        if cam is None:
+            raise SystemExit(
+                f"[slambench] {VGGT360!r} needs this take's camera model: it "
+                f"renders tangent views through the lens and fuses back through "
+                f"its inverse. Fetch it with "
+                f"tools/fetch_egosynth_calibration.py (ticket 012) and pass "
+                f"--calib-root.")
+        if vggt360_pipe is None:
+            raise SystemExit(
+                f"[slambench] {VGGT360!r} was built without a loaded pipeline. "
+                f"It is created once per run, not once per take — nine views of "
+                f"VGGT-1B is not a per-clip construction cost.")
+        return VGGT360Baseline(model, cam, vggt360_pipe, vggt360_cfg)
     raise SystemExit(f"[slambench] unknown baseline {name!r}; "
                      f"choose from {list(BASELINES)}")

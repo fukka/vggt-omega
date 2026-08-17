@@ -170,7 +170,8 @@ def _score_radial(model, view: "G.FrameView", edges, radius_edges,
             pred = model.predict_stack(context, target, gt_z=view.gt_z,
                                        theta_deg=view.theta)
         else:
-            pred = model.predict(view.rgb, gt_z=view.gt_z, theta_deg=view.theta)
+            pred = model.predict(view.rgb, gt_z=view.gt_z, theta_deg=view.theta,
+                                 view=view)
     prof = G.bin_by(pred, view.gt_z, view.valid, model.align_mode,
                     {"theta": (view.theta, edges),
                      "radius": (view.radius, radius_edges)},
@@ -340,6 +341,31 @@ def run(a: argparse.Namespace) -> dict:
     tilts = tuple(float(x) for x in a.tilts.split(","))
     azimuths = tuple(float(x) for x in a.azimuths.split(","))
 
+    # A model that cannot answer on a requested view is refused before anything
+    # is loaded or decoded. ``vggt360`` is the only such model: it consumes a
+    # fisheye frame and a lens, so the rectified pinhole is not an input it has,
+    # and the 40 deg ``window`` protocol hands it a crop a 55 deg nine-view
+    # layout would tile with eight views of nothing. Either would still produce
+    # a full column of plausible numbers, which is the failure mode worth an
+    # explicit check.
+    for k in keys:
+        allowed = M.restricted_views(k)
+        if allowed is None:
+            continue
+        bad = [v for v in views if v not in allowed]
+        if bad:
+            raise SystemExit(
+                f"[fovbench] {k} cannot answer on view(s) {bad}: it is given "
+                f"the lens and re-renders the frame into its own tangent views, "
+                f"so it needs raw fisheye pixels. Run it with "
+                f"--views {','.join(allowed)}, or drop it from --models.")
+        if "window" in protocols:
+            raise SystemExit(
+                f"[fovbench] {k} cannot run the window protocol: a window is a "
+                f"{a.window_fov:g} deg crop, and this model's layout tiles a "
+                f"~55 deg cone with a centre view plus a ring — aimed at a crop, "
+                f"most of that ring images nothing. Use --protocols radial.")
+
     # Model availability is checked BEFORE the data is touched: it is the
     # cheapest check and the most common failure (gated weights, a missing pip
     # package), so it should not be masked by an ADT path problem.
@@ -426,7 +452,17 @@ def run(a: argparse.Namespace) -> dict:
         print(f"\n[fovbench] ══ {key} ══")
         t0 = time.time()
         model = M.load_model(key, device, checkpoint=a.omega_checkpoint,
-                             radial_bias=a.analytic_bias)
+                             radial_bias=a.analytic_bias,
+                             v360_fov=a.vggt360_fov,
+                             v360_ring_tilt=a.vggt360_ring_tilt,
+                             v360_n_ring=a.vggt360_n_ring,
+                             v360_persp_size=a.vggt360_persp_size,
+                             v360_source=a.vggt360_source,
+                             v360_fuse=a.vggt360_fuse,
+                             v360_head=a.vggt360_head,
+                             v360_dtype=a.vggt360_dtype,
+                             v360_adaptive=not a.vggt360_no_adaptive,
+                             v360_sa_mask=not a.vggt360_no_sa_mask)
         n = model.input_size
         print(f"[fovbench]   {model.family} {model.size} | {model.params_m:.0f}M "
               f"params | align={model.align_mode} | views rendered at {n}px")
@@ -508,6 +544,20 @@ def run(a: argparse.Namespace) -> dict:
                     depth_max_m=a.depth_max_m,
                     metric_max_depth=a.metric_max_depth,
                     min_in_cone_frac=MIN_IN_CONE_FRAC,
+                    # The lens-aware model's own configuration, recorded
+                    # whether or not it ran: a results.json that does not say
+                    # which layout produced a vggt360 row is not readable, and
+                    # one that says so only when the model was present makes
+                    # the two cases look different for the wrong reason.
+                    vggt360=dict(fov=a.vggt360_fov,
+                                 ring_tilt=a.vggt360_ring_tilt,
+                                 n_ring=a.vggt360_n_ring,
+                                 persp_size=a.vggt360_persp_size,
+                                 source=a.vggt360_source,
+                                 fuse=a.vggt360_fuse, head=a.vggt360_head,
+                                 dtype=a.vggt360_dtype,
+                                 adaptive=not a.vggt360_no_adaptive,
+                                 sa_mask=not a.vggt360_no_sa_mask),
                     # Recorded for provenance only: the worker count is pinned
                     # not to change any number (see _ordered_map), so two runs
                     # differing only here are still directly comparable.
@@ -568,6 +618,50 @@ def build_parser() -> argparse.ArgumentParser:
                         "deliberately separate from --depth-max-m")
     p.add_argument("--omega-checkpoint", default=None,
                    help="local VGGT-Omega .pt (default: $VGGT_OMEGA_CKPT)")
+
+    # -- the vggt360 model's own layout ------------------------------------- #
+    # Defaults are main_adt.py's, so `--models vggt360` with no further flags
+    # is the same model that driver reports, seeing this harness's 518 px view
+    # instead of ADT's native 1408 (fovbench/models.py says why).
+    g = p.add_argument_group(
+        "vggt360", "VGGT-360-fisheye layout; ignored unless --models includes "
+                   "vggt360. Defaults match VGGT-360-fisheye/main_adt.py.")
+    g.add_argument("--vggt360-fov", type=float, default=60.0,
+                   help="per-view FOV (deg) of the tangent views")
+    g.add_argument("--vggt360-ring-tilt", type=float, default=26.0,
+                   help="ring tilt off the optical axis (deg); the layout rule "
+                        "is tilt + fov/2 >~ 54.8, the Aria usable cone")
+    g.add_argument("--vggt360-n-ring", type=int, default=8,
+                   help="ring view count (the centre view is extra)")
+    g.add_argument("--vggt360-source", choices=["native", "view"],
+                   default="native",
+                   help="which pixels the nine tangent views are cut from. "
+                        "'native' = ADT's own 1408 frame, the resolution the "
+                        "port is designed for (a 60 deg view at 518 is then a "
+                        "0.62x downsample). 'view' = the 518 frame the other "
+                        "four models get, strictly resolution-matched but a "
+                        "1.69x UPsample that starves the method. Either way the "
+                        "answer is fused onto the 518 scoring grid, so the "
+                        "metrics, masks and bins are identical")
+    g.add_argument("--vggt360-persp-size", type=int, default=518,
+                   help="side length each tangent view is rendered at. 518 is "
+                        "the backbone's own token grid, so nothing is resampled "
+                        "between the view and the network — the same rule the "
+                        "four vanilla models are held to. main_adt.py uses 512, "
+                        "which VGGT then bicubic-resizes up to 518 anyway")
+    g.add_argument("--vggt360-fuse", choices=["attn", "mean"], default="attn",
+                   help="correlation-weighted fusion (the paper) or uniform")
+    g.add_argument("--vggt360-head", choices=["depth", "point"], default="depth",
+                   help="range source: depth head z * secant, or the point "
+                        "head's ||world_points||")
+    g.add_argument("--vggt360-dtype", choices=["bf16", "fp16", "fp32"],
+                   default="bf16", help="autocast dtype for the VGGT pass")
+    g.add_argument("--vggt360-no-adaptive", action="store_true",
+                   help="module-1 ablation: base views only, no "
+                        "uncertainty-guided neighbours")
+    g.add_argument("--vggt360-no-sa-mask", action="store_true",
+                   help="module-2 ablation: vanilla attention, no "
+                        "structure-saliency log-bias")
     p.add_argument("--analytic-bias", type=float, default=0.6,
                    help="radial bias injected by --models analytic, for "
                         "verifying that the harness reports what it is given")

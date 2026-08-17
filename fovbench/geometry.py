@@ -549,6 +549,29 @@ class FrameView:
     radius: np.ndarray        # (N, N) float32 distance from the optical centre,
                               #        in half-widths (see ``radius_map``)
     in_cone_frac: float
+    #: The lens describing THIS view's ``(N, N)`` grid — ``scaled_cam``'s
+    #: output, carrying the resize on the pixel-centre convention, not
+    #: ``aria_cam(N, N)``. ``None`` on the rectified view, which is a pinhole
+    #: and has no fisheye model. Nothing in the scoring path reads it; it is
+    #: here for a model that renders its own views out of the frame and would
+    #: otherwise have to guess the camera it was handed (``models.vggt360``).
+    #: The half-pixel between the two conventions is a third of a degree of
+    #: incidence angle at this working size — enough to put a re-rendered view
+    #: off the axis its errors are binned by.
+    cam: Optional[FisheyeCam] = None
+    #: The frame this view was *resampled from*, and its camera — ADT's native
+    #: 1408, before the resize to the model's token grid. Also fisheye-only, and
+    #: also read by nothing in the scoring path.
+    #:
+    #: A model that re-renders the frame into its own views should cut them from
+    #: these rather than from ``rgb``: a 60 deg tangent view at 518 px is a 1.7x
+    #: *up*sample of the 518 view and a 0.6x *down*sample of the native frame,
+    #: so taking it from ``rgb`` interpolates detail that the 1408 frame is
+    #: sitting on. The answer still has to land on ``rgb``'s grid, because that
+    #: is where ``gt_z``, ``valid`` and ``theta`` are — which is why both are
+    #: carried and not just one.
+    source_rgb: Optional[np.ndarray] = None
+    source_cam: Optional[FisheyeCam] = None
 
 
 def _to_u8(x: np.ndarray) -> np.ndarray:
@@ -728,8 +751,9 @@ def full_frame_view(rgb: np.ndarray, gt_z: np.ndarray, gt_valid: np.ndarray,
     camera centre and axis, so planar z is unchanged and only the pixel grid
     moves. ``kind="fisheye"`` hands over the raw frame untouched.
     """
+    view_cam = None
     if kind == "fisheye":
-        small = scaled_cam(cam, out_size)
+        small = view_cam = scaled_cam(cam, out_size)
         _, cone = fisheye_rays(small)
         rgb_v = _to_u8(cv2.resize(rgb.astype(np.float32), (out_size, out_size),
                                   interpolation=cv2.INTER_AREA))
@@ -768,7 +792,9 @@ def full_frame_view(rgb: np.ndarray, gt_z: np.ndarray, gt_valid: np.ndarray,
         radius = radius_map(out_size, out_size)
     return FrameView(kind=kind, rgb=rgb_v, gt_z=gt_v * valid, valid=valid,
                      theta=theta, radius=radius,
-                     in_cone_frac=float(in_cone.mean()))
+                     in_cone_frac=float(in_cone.mean()), cam=view_cam,
+                     source_rgb=rgb if kind == "fisheye" else None,
+                     source_cam=cam if kind == "fisheye" else None)
 
 
 # --------------------------------------------------------------------------- #

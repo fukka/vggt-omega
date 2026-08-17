@@ -53,7 +53,7 @@ single cone constraint ``tilt + fov/2 <= theta_max + margin``.
 from __future__ import annotations
 
 import math
-from typing import List, Optional, Sequence, Tuple
+from typing import Callable, List, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -111,6 +111,76 @@ def angular_sep_deg(v1: Sequence[float], v2: Sequence[float]) -> float:
 # Fisheye -> perspective warp  (the ERP2Persp replacement)
 # --------------------------------------------------------------------------- #
 
+def persp_maps(cam: FisheyeCam,
+               azimuth_deg: float,
+               tilt_deg: float,
+               fov_deg: float,
+               height: int = 512,
+               width: int = 512,
+               theta_max: Optional[float] = None,
+               project: Optional[Callable] = None
+               ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """``(mapx, mapy, valid)`` taking one tangent view's grid to fisheye pixels.
+
+    Split out of :func:`fisheye_to_persp` because it depends only on the lens
+    and the aim, never on the pixels: every frame of a recording re-derives the
+    identical maps otherwise.  On ADT that is merely wasteful — one KB4
+    polynomial over the grid — but a FISHEYE624 lens has no closed-form
+    projection worth the name, and rebuilding thirteen views' worth per frame
+    dominates the run.  ``slambench`` caches the result per take, which is
+    exactly as long as the maps are valid for.
+
+    ``height``/``width`` are the grid these maps address, so a caller using
+    ``supersample=s`` asks for ``s * size`` here and :func:`fisheye_to_persp`
+    checks that back.
+    """
+    if theta_max is None:
+        theta_max = cam.theta_max()
+
+    # Tangent-plane ray grid; y down to match image row order (row 0 = top).
+    t = math.tan(math.radians(fov_deg) / 2.0)
+    xs = np.linspace(-t, t, width, dtype=np.float64)
+    ys = np.linspace(-t, t, height, dtype=np.float64)
+    xv, yv = np.meshgrid(xs, ys)
+    vec = np.stack([xv, yv, np.ones_like(xv)], axis=-1)
+    vec /= np.linalg.norm(vec, axis=-1, keepdims=True)
+
+    # View -> camera frame (row vectors: v_cam = v_view @ R^T).
+    R = view_rotation(azimuth_deg, tilt_deg)
+    vec = vec @ R.T
+
+    # Ray -> pixel.  KB4 forward projection unless the caller supplied its own
+    # lens (see ``project``); theta is needed either way, for the cone test.
+    z = np.clip(vec[..., 2], -1.0, 1.0)
+    theta = np.arccos(z)
+    if project is None:
+        theta_d = kb4_forward_theta(theta, cam.k)
+        rxy = np.sqrt(vec[..., 0] ** 2 + vec[..., 1] ** 2)
+        inv = np.where(rxy > 1e-12, 1.0 / rxy, 0.0)
+        u = cam.cx + cam.fx * theta_d * vec[..., 0] * inv
+        v = cam.cy + cam.fy * theta_d * vec[..., 1] * inv
+    else:
+        u, v = project(vec)
+        u = np.asarray(u, np.float64).reshape(vec.shape[:-1])
+        v = np.asarray(v, np.float64).reshape(vec.shape[:-1])
+        # A ray the lens cannot image comes back NaN, which cv2.remap would
+        # read as an address rather than as "no pixel". Send it out of bounds
+        # so BORDER_CONSTANT zeroes it, and let ``valid`` below record it.
+        off = ~np.isfinite(u) | ~np.isfinite(v)
+        u = np.where(off, -1.0e9, u)
+        v = np.where(off, -1.0e9, v)
+
+    # Half-pixel tolerance on the frame bounds: the Aria principal point is
+    # off-center, so the imaged cone can overhang the frame border by a
+    # fraction of a pixel; a strict check would punch pinholes into the
+    # coverage exactly on the border column/row (found by checks test C).
+    valid = ((theta <= theta_max - 1e-6)
+             & (u > -0.5) & (u < cam.W - 0.5)
+             & (v > -0.5) & (v < cam.H - 0.5))
+    return (u.astype(np.float32), v.astype(np.float32),
+            valid.astype(np.float32))
+
+
 def fisheye_to_persp(img: np.ndarray,
                      cam: FisheyeCam,
                      azimuth_deg: float,
@@ -120,7 +190,10 @@ def fisheye_to_persp(img: np.ndarray,
                      width: int = 512,
                      theta_max: Optional[float] = None,
                      return_maps: bool = False,
-                     supersample: int = 1):
+                     supersample: int = 1,
+                     project: Optional[Callable] = None,
+                     maps: Optional[Tuple[np.ndarray, np.ndarray,
+                                          np.ndarray]] = None):
     """Render one perspective (tangent) view from a KB4 fisheye frame.
 
     Mirrors upstream ``ERP2Persp`` structure — build the tangent-plane ray
@@ -139,6 +212,21 @@ def fisheye_to_persp(img: np.ndarray,
     theta_max   : incidence cone cutoff; default = ``cam.theta_max()``, the
                   lens' usable FOV (not the KB4 fold-back turnover).
     return_maps : also return the ``(u, v)`` sampling maps (for checkers).
+    project     : optional ray -> pixel map, ``(..., 3) -> (u, v)``, replacing
+                  the KB4 forward projection below.  It exists so that this
+                  renderer can serve a lens that is **not** KB4 — ego-synth's
+                  per-take FISHEYE624 has tangential and thin-prism terms that
+                  no radially-symmetric model carries, and approximating them
+                  away would be a geometric error inside the very warp the
+                  method depends on.  ``None`` keeps the KB4 path exactly, so
+                  every ADT caller is unaffected.  ``cam`` still supplies the
+                  frame bounds and ``theta_max``.
+    maps        : optional ``(mapx, mapy, valid)`` from :func:`persp_maps`, for
+                  exactly this ``(cam, azimuth, tilt, fov)`` at
+                  ``size * supersample``.  A cache and nothing more — the render
+                  is identical either way — but the shape is checked, because
+                  maps built for a different view would sample real pixels at
+                  the wrong addresses and read as a merely poor prediction.
     supersample : anti-aliasing factor.  ``cv2.remap`` with INTER_LINEAR only
                   reads a 2x2 neighbourhood, so rendering a view DIRECTLY at
                   518 from a 1408 fisheye point-samples (aliases) — the
@@ -161,48 +249,24 @@ def fisheye_to_persp(img: np.ndarray,
                   fusion weights).
     (mapx, mapy): only if ``return_maps``.
     """
-    if theta_max is None:
-        theta_max = cam.theta_max()
-
     # Anti-aliasing: render at s x resolution, box-downsample at the end.
     s = 1 if return_maps else max(1, int(supersample))
     out_h, out_w = height, width
-    height, width = height * s, width * s
 
-    # Tangent-plane ray grid; y down to match image row order (row 0 = top).
-    t = math.tan(math.radians(fov_deg) / 2.0)
-    xs = np.linspace(-t, t, width, dtype=np.float64)
-    ys = np.linspace(-t, t, height, dtype=np.float64)
-    xv, yv = np.meshgrid(xs, ys)
-    vec = np.stack([xv, yv, np.ones_like(xv)], axis=-1)
-    vec /= np.linalg.norm(vec, axis=-1, keepdims=True)
+    if maps is None:
+        mapx, mapy, valid_f = persp_maps(cam, azimuth_deg, tilt_deg, fov_deg,
+                                         height=height * s, width=width * s,
+                                         theta_max=theta_max, project=project)
+    else:
+        mapx, mapy, valid_f = maps
+        if mapx.shape != (height * s, width * s):
+            raise ValueError(
+                f"cached maps are {mapx.shape} but this call renders "
+                f"{(height * s, width * s)} (height x width x supersample); "
+                f"remapping through them would sample the wrong pixels")
 
-    # View -> camera frame (row vectors: v_cam = v_view @ R^T).
-    R = view_rotation(azimuth_deg, tilt_deg)
-    vec = vec @ R.T
-
-    # KB4 forward projection.
-    z = np.clip(vec[..., 2], -1.0, 1.0)
-    theta = np.arccos(z)
-    theta_d = kb4_forward_theta(theta, cam.k)
-    rxy = np.sqrt(vec[..., 0] ** 2 + vec[..., 1] ** 2)
-    inv = np.where(rxy > 1e-12, 1.0 / rxy, 0.0)
-    u = cam.cx + cam.fx * theta_d * vec[..., 0] * inv
-    v = cam.cy + cam.fy * theta_d * vec[..., 1] * inv
-
-    # Half-pixel tolerance on the frame bounds: the Aria principal point is
-    # off-center, so the imaged cone can overhang the frame border by a
-    # fraction of a pixel; a strict check would punch pinholes into the
-    # coverage exactly on the border column/row (found by checks test C).
-    valid = ((theta <= theta_max - 1e-6)
-             & (u > -0.5) & (u < cam.W - 0.5)
-             & (v > -0.5) & (v < cam.H - 0.5))
-
-    mapx = u.astype(np.float32)
-    mapy = v.astype(np.float32)
     persp = cv2.remap(img, mapx, mapy, interpolation=cv2.INTER_LINEAR,
                       borderMode=cv2.BORDER_CONSTANT, borderValue=0)
-    valid_f = valid.astype(np.float32)
     if persp.ndim == 3:
         persp = persp * valid_f[..., None]
     else:
@@ -384,7 +448,9 @@ def view_generation_fisheye(fisheye_img: np.ndarray,
                             view_hw: Tuple[int, int] = (512, 512),
                             adaptive: bool = True,
                             max_total: int = 13,
-                            supersample: int = 3) -> List[ViewParam]:
+                            supersample: int = 3,
+                            project: Optional[Callable] = None,
+                            maps_for: Optional[Callable] = None) -> List[ViewParam]:
     """Full module-1 pipeline: base layout + uncertainty-guided augmentation.
 
     Renders the base views once (cheap, cv2.remap), scores each with the
@@ -405,9 +471,12 @@ def view_generation_fisheye(fisheye_img: np.ndarray,
     theta_max_deg = math.degrees(cam.theta_max())
     scores = []
     for (psi, a, f) in views:
-        persp, valid = fisheye_to_persp(fisheye_img, cam, psi, a, f,
-                                        height=view_hw[0], width=view_hw[1],
-                                        supersample=supersample)
+        s = max(1, int(supersample))
+        persp, valid = fisheye_to_persp(
+            fisheye_img, cam, psi, a, f, height=view_hw[0], width=view_hw[1],
+            supersample=supersample, project=project,
+            maps=None if maps_for is None
+            else maps_for(psi, a, f, view_hw[0] * s))
         conf_map, vmask = perspective_confidence_map(persp, valid_mask=valid > 0.5)
         scores.append(confidence_score_from_map(conf_map, vmask))
     worst2 = list(np.argsort(np.asarray(scores))[:2])

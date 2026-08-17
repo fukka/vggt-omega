@@ -96,6 +96,36 @@ def run(a: argparse.Namespace) -> dict:
     keys = [k.strip() for k in a.models.split(",") if k.strip()]
     ctxs = _context_sizes(a.context_frames)
 
+    # The vggt360 arm brings its own backbone (VGGT-1B, for the attention its
+    # fusion reads), so it is a lens strategy for that model and no other. Two
+    # refusals, both up front, both against tables that would look complete:
+    #   * paired with another model, every row would be labelled with a network
+    #     that never ran;
+    #   * given a temporal context, it would put 9xN views in one pass while the
+    #     column header said N frames.
+    if B.VGGT360 in arms:
+        if not a.calib_root:
+            raise SystemExit(
+                f"[slambench] --baselines {B.VGGT360} needs --calib-root: it "
+                f"warps through each take's own camera model in both directions. "
+                f"See ticket 012.")
+        wrong = [k for k in keys if k != "vggt_1b"]
+        if wrong:
+            raise SystemExit(
+                f"[slambench] --baselines {B.VGGT360} runs the vendored VGGT-1B "
+                f"itself — its fusion reads frame attention off a 37x37 patch "
+                f"grid that no other backbone exposes. Asking for {wrong} would "
+                f"report a {B.VGGT360} row per model, all of them the same "
+                f"numbers, each labelled with a network that never ran. Use "
+                f"--models vggt_1b, and run the others in a separate pass.")
+        if max(ctxs) > 1:
+            raise SystemExit(
+                f"[slambench] --baselines {B.VGGT360} with --context-frames "
+                f"{a.context_frames}: this arm already hands VGGT a nine-view "
+                f"reconstruction of one frame, so an N-frame context is 9N views "
+                f"in a single pass and not the temporal sweep the column claims. "
+                f"Run it at --context-frames 1.")
+
     ready, skipped = M.available(keys)
     for key, state, detail in skipped:
         print(f"[slambench] {key}: {state} — {detail}")
@@ -144,6 +174,20 @@ def run(a: argparse.Namespace) -> dict:
             print("[slambench] WARNING: real weights on CPU — minutes per frame. "
                   "Use --device cuda on the GPU box.")
 
+    # The VGGT-360 pipeline is loaded once for the whole run: it is a 1.2 GB
+    # backbone, and the only thing that varies per take is the lens it is
+    # handed. Its per-take view maps are cached inside the lens adapter.
+    v360_pipe = v360_cfg = None
+    if B.VGGT360 in arms:
+        from utils.pipeline import VGGT360Config, VGGT360Pipeline
+        v360_cfg = VGGT360Config(
+            fov=a.vggt360_fov, ring_tilt=a.vggt360_ring_tilt,
+            n_ring=a.vggt360_n_ring, persp_size=a.vggt360_persp_size,
+            adaptive=not a.vggt360_no_adaptive,
+            sa_mask=not a.vggt360_no_sa_mask, fuse=a.vggt360_fuse,
+            head=a.vggt360_head, dtype=a.vggt360_dtype).check()
+        v360_pipe = VGGT360Pipeline(v360_cfg, device=str(device)).load()
+
     clips = sp.by_clip()
     runs: List[dict] = []
     for key in ready:
@@ -162,9 +206,17 @@ def run(a: argparse.Namespace) -> dict:
         thin = 0
         for ci, (ds, take, clip, npz, video, frs) in enumerate(clips):
             cam = None
-            if B.RECT_DERECT in arms:
+            if B.RECT_DERECT in arms or B.VGGT360 in arms:
                 cam = _load_camera(a.calib_root, ds, take, not a.allow_unverified)
-            arm_objs = {n: B.build(n, model, cam, a.rect_fov) for n in arms}
+            arm_objs = {n: B.build(n, model, cam, a.rect_fov,
+                                   vggt360_pipe=v360_pipe, vggt360_cfg=v360_cfg)
+                        for n in arms}
+            if B.VGGT360 in arms:
+                # How the ADT-designed layout sits on THIS take's lens, in the
+                # log beside the numbers rather than reconstructed afterwards.
+                from slambench.vggt360 import layout_report
+                print(f"[slambench]   {ds}/{take}: "
+                      f"{layout_report(v360_cfg, arm_objs[B.VGGT360].lens)}")
             # Every window of every context size, so the mp4 is decoded once for
             # all arms rather than once per arm.
             wins, want = {}, set()
@@ -245,7 +297,14 @@ def run(a: argparse.Namespace) -> dict:
                     gt_variant=D.VARIANT, max_depth=a.max_depth,
                     min_points=a.min_points, rect_fov=a.rect_fov,
                     calib_root=a.calib_root or None,
-                    orientation_verified=list(C.VERIFIED_ROTATION)),
+                    orientation_verified=list(C.VERIFIED_ROTATION),
+                    # The lens-aware arm's configuration, recorded whether or
+                    # not it ran: a vggt360 row whose layout is not written down
+                    # beside it is not readable, and recording it only when
+                    # present would make the two cases differ for the wrong
+                    # reason.
+                    vggt360=(v360_cfg.__dict__ if v360_cfg is not None
+                             else None)),
         runs=runs)
     with open(os.path.join(a.out, "results.json"), "w") as fh:
         json.dump(payload, fh, indent=2)
@@ -268,7 +327,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--models", default=",".join(M.DEFAULT_MODELS),
                    help=f"comma keys, or {M.ANALYTIC!r}/{M.ORACLE!r} for a "
                         f"weight-free run")
-    p.add_argument("--baselines", default=",".join(B.BASELINES))
+    p.add_argument("--baselines", default=",".join(B.DEFAULT_BASELINES),
+                   help=f"lens strategies to score, from {list(B.BASELINES)}. "
+                        f"The default is the published two; {B.VGGT360!r} is "
+                        f"this repo's VGGT-360-fisheye port and is asked for by "
+                        f"name, because adding it to the default would change "
+                        f"what every existing command measures")
     p.add_argument("--n-frames", type=int, default=25,
                    help="frames PER TAKE, spread over its clips (not a prefix)")
     p.add_argument("--takes", type=int, default=8,
@@ -306,6 +370,38 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--oracle-bias", type=float, default=0.0,
                    help="multiplicative error injected by --models oracle, for "
                         "checking the harness reports what it was given")
+    # -- the vggt360 arm's own layout --------------------------------------- #
+    # Defaults are VGGT-360-fisheye/main_adt.py's, so `--baselines vggt360` with
+    # no further flags is the same model that driver reports on ADT, here on
+    # ego-synth's lens and ground truth.
+    g = p.add_argument_group(
+        "vggt360", "VGGT-360-fisheye layout; ignored unless --baselines "
+                   "includes vggt360. Defaults match main_adt.py.")
+    g.add_argument("--vggt360-fov", type=float, default=60.0,
+                   help="per-view FOV (deg) of the tangent views")
+    g.add_argument("--vggt360-ring-tilt", type=float, default=26.0,
+                   help="ring tilt off the optical axis (deg); the layout rule "
+                        "is tilt + fov/2 >~ the lens' usable cone, which is "
+                        "derived per take and printed, not assumed")
+    g.add_argument("--vggt360-n-ring", type=int, default=8,
+                   help="ring view count (the centre view is extra)")
+    g.add_argument("--vggt360-persp-size", type=int, default=518,
+                   help="side length each tangent view is rendered at. 518 is "
+                        "the backbone's own token grid, so nothing is resampled "
+                        "between the view and the network. main_adt.py uses "
+                        "512, which VGGT then bicubic-resizes up to 518 anyway")
+    g.add_argument("--vggt360-fuse", choices=["attn", "mean"], default="attn",
+                   help="correlation-weighted fusion (the paper) or uniform")
+    g.add_argument("--vggt360-head", choices=["depth", "point"], default="depth",
+                   help="range source: depth head z * secant, or the point "
+                        "head's ||world_points||")
+    g.add_argument("--vggt360-dtype", choices=["bf16", "fp16", "fp32"],
+                   default="bf16", help="autocast dtype for the VGGT pass")
+    g.add_argument("--vggt360-no-adaptive", action="store_true",
+                   help="module-1 ablation: base views only")
+    g.add_argument("--vggt360-no-sa-mask", action="store_true",
+                   help="module-2 ablation: vanilla attention")
+
     p.add_argument("--omega-checkpoint", default=None)
     p.add_argument("--skip-unavailable", action="store_true")
     p.add_argument("--device", default="cuda")

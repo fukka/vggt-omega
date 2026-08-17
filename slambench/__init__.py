@@ -91,14 +91,18 @@ Layout
     run_fov.py    its driver. Shares everything above and owns only the binning
     fov_report.py its tables
 
-Importing this package puts the repo root on ``sys.path`` so that
-``finetune.eval.metrics`` and ``finetune.eval.baselines.model_zoo`` — shared
-infrastructure belonging to neither experiment — can be reached; the repo is not
-installed.
+Importing this package puts the repo root and ``VGGT-360-fisheye/`` on
+``sys.path``. The root is for ``finetune.eval.metrics`` and
+``finetune.eval.baselines.model_zoo`` — shared infrastructure belonging to
+neither experiment — and the repo is not installed. ``VGGT-360-fisheye/`` is for
+the ``vggt360`` baseline arm, which runs that port's pipeline rather than
+reimplementing it; the directory has a hyphen, so its ``utils`` package can only
+be reached by path. ``fovbench/__init__.py`` does the same, for the same reasons.
 """
 import os as _os
 import sys as _sys
 
 _REPO = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _REPO not in _sys.path:
-    _sys.path.insert(0, _REPO)
+for _p in (_REPO, _os.path.join(_REPO, "VGGT-360-fisheye")):
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)

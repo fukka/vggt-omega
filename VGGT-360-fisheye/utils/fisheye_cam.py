@@ -59,6 +59,7 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -278,6 +279,10 @@ def kb4_unproject_theta(theta_d: np.ndarray,
 # Per-pixel ray field (the fisheye analogue of upstream's ERP lon/lat grid)
 # --------------------------------------------------------------------------- #
 
+_RAY_LUT_CACHE: dict = {}
+_RAY_LUT_LOCK = threading.Lock()
+
+
 def fisheye_ray_lut(cam: FisheyeCam,
                     theta_max: Optional[float] = None
                     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -294,9 +299,24 @@ def fisheye_ray_lut(cam: FisheyeCam,
     valid : ``(H, W)`` bool — True where the pixel lies inside the physically
             imaged cone (``theta <= theta_max``).  Pixels outside (vignette
             corners of the square sensor) get a clamped-but-meaningless ray.
+
+    **Memoised**, because it depends only on the intrinsics and is the most
+    expensive thing in a frame's geometry — it inverts the KB4 polynomial on
+    every pixel, by interpolating an 8192-point table.  Fusion calls it once per
+    frame, so every driver in this repository was rebuilding an identical LUT for
+    the length of a run.  The arrays come back **read-only and shared**: a caller
+    that mutated one would raise here rather than silently corrupt every later
+    frame, which is also what makes them safe to hand to worker threads.
     """
     if theta_max is None:
         theta_max = cam.theta_max()
+    key = (cam.H, cam.W, cam.fx, cam.fy, cam.cx, cam.cy, tuple(cam.k),
+           float(theta_max))
+    with _RAY_LUT_LOCK:
+        hit = _RAY_LUT_CACHE.get(key)
+    if hit is not None:
+        return hit
+
     us, vs = np.meshgrid(np.arange(cam.W, dtype=np.float64),
                          np.arange(cam.H, dtype=np.float64))
     x = (us - cam.cx) / cam.fx
@@ -310,8 +330,13 @@ def fisheye_ray_lut(cam: FisheyeCam,
                      np.cos(theta)], axis=-1).astype(np.float32)
     # On-axis pixel: theta_d ~ 0 -> ray is exactly +z.
     rays[theta_d <= 1e-9] = np.array([0.0, 0.0, 1.0], dtype=np.float32)
-    valid = theta <= (theta_max - 1e-6)
-    return rays, valid.astype(bool)
+    valid = np.asarray(theta <= (theta_max - 1e-6), dtype=bool)
+    rays.flags.writeable = False
+    valid.flags.writeable = False
+    out = (rays, valid)
+    with _RAY_LUT_LOCK:
+        _RAY_LUT_CACHE[key] = out
+    return out
 
 
 def ray_cos_incidence(cam: FisheyeCam) -> np.ndarray:

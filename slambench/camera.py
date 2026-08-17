@@ -414,6 +414,103 @@ class Fisheye624:
         d = self.unproject(u, v)
         return np.degrees(np.arccos(np.clip(d[:, 2], -1.0, 1.0)))
 
+    # -- bulk geometry, for warps rather than point lists -------------------- #
+    #
+    # :meth:`project` and :meth:`unproject` call ``projectaria_tools`` **one
+    # point at a time**, because its binding takes one point. That is right for
+    # this evaluation's own work — a frame's ground truth is a few thousand
+    # points — and unusable for a warp: rendering the VGGT-360 view layout asks
+    # for ~21 million rays per frame, where a Python-level loop is the whole run
+    # rather than a cost inside it.
+    #
+    # The two methods below take the vectorised numpy path unconditionally. That
+    # is safe *because of* ``test_camera.py``, which pins that path against a
+    # transcription of the public reference model to 1e-9 px out to 62 deg of
+    # incidence — the same pin that exists so ``rect_derect`` may run on a box
+    # without the package. They are not a second camera model; they are the same
+    # one, called in a shape a warp can afford. A number produced through them is
+    # a number about this lens.
+
+    def project_bulk(self, xyz: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """:meth:`project` for many rays at once, shape-preserving.
+
+        Accepts any ``(..., 3)`` and returns ``u, v`` with that leading shape,
+        so a ``(H, W, 3)`` ray field comes back as two ``(H, W)`` maps.
+        """
+        a = np.asarray(xyz, float)
+        lead = a.shape[:-1]
+        u, v = self._pure_project(_rot_xyz(a.reshape(-1, 3), -self.rotation))
+        u, v = _rot_pixel(u, v, self.rotation, self.width)
+        return u.reshape(lead), v.reshape(lead)
+
+    def unproject_bulk(self, u: np.ndarray, v: np.ndarray,
+                       iters: int = 20) -> np.ndarray:
+        """:meth:`unproject` for many pixels at once, shape-preserving.
+
+        ``(H, W)`` in, ``(H, W, 3)`` out.
+        """
+        u = np.asarray(u, float)
+        lead = u.shape
+        uu, vv = _rot_pixel(u.reshape(-1), np.asarray(v, float).reshape(-1),
+                            -self.rotation, self.width)
+        xd = (uu - self.cx) / self.f
+        yd = (vv - self.cy) / self.f
+        xr, yr = xd.copy(), yd.copy()
+        for _ in range(iters):
+            cx_, cy_ = self._tangential_prism(xr, yr)
+            xr = xd - (cx_ - xr)
+            yr = yd - (cy_ - yr)
+        thd = np.hypot(xr, yr)
+        th = self._invert_radial(thd, iters)
+        t = np.tan(th)
+        scale = np.divide(t, thd, out=np.ones_like(thd), where=thd > 1e-12)
+        a, b = xr * scale, yr * scale
+        d = np.stack([a, b, np.ones_like(a)], axis=-1)
+        d = d / np.linalg.norm(d, axis=-1, keepdims=True)
+        return _rot_xyz(d, self.rotation).reshape(lead + (3,))
+
+    def max_imaged_theta(self, n: int = 4096) -> float:
+        """Largest incidence angle this lens actually images, in **radians**.
+
+        The FISHEYE624 calibration carries no valid radius, so it is derived the
+        way ``VGGT-360-fisheye``'s KB4 model derives its own (``fisheye_cam.
+        inscribed_valid_theta``): walk theta outward and stop at the first of two
+        things — the projected pixel leaving the frame, or the radial polynomial
+        turning over, past which the projection is non-injective and sampling it
+        aliases distant rays onto in-cone pixels.
+
+        Averaged over eight azimuths, because this model is **not** radially
+        symmetric: the tangential and thin-prism terms make the imaged region
+        slightly non-circular, so a single azimuth would report one radius of an
+        oval as if it were the cone. The minimum over azimuths is taken, which is
+        the largest angle imaged in *every* direction — the conservative reading,
+        and the one a view layout should be sized against.
+
+        Computed in the sensor's **own** orientation, not the caller's. The cone
+        is a property of the lens, and a quarter turn of a square frame permutes
+        the four principal-point margins without changing their minimum — the
+        same argument ``fisheye_cam.inscribed_valid_theta`` makes. Projecting
+        through the rotation instead would test rotated pixels against an
+        unrotated principal point and report the on-axis ray as already outside.
+        """
+        th = np.linspace(0.0, math.pi / 2 - 1e-3, n)
+        best = math.pi / 2
+        for az in np.linspace(0.0, 2 * math.pi, 8, endpoint=False):
+            d = np.stack([np.sin(th) * math.cos(az),
+                          np.sin(th) * math.sin(az),
+                          np.cos(th)], axis=-1)
+            u, v = self._pure_project(d)
+            r = np.hypot(u - self.cx, v - self.cy)
+            inside = (np.isfinite(u) & np.isfinite(v)
+                      & (u >= 0) & (u <= self.width - 1)
+                      & (v >= 0) & (v <= self.height - 1))
+            # First index that is either out of frame or past the turnover.
+            turn = np.r_[False, np.diff(r) <= 0]
+            bad = (~inside) | turn
+            i = int(np.argmax(bad)) if bad.any() else n - 1
+            best = min(best, float(th[max(i - 1, 0)]))
+        return best
+
     # -- internals ---------------------------------------------------------- #
     def _radial(self, th: np.ndarray) -> np.ndarray:
         k = self.k

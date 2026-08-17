@@ -55,6 +55,7 @@ def fuse_views_to_fisheye(
     min_weight: float = 0.0,
     erode_valid_px: int = 3,
     rescue_rim: bool = True,
+    ray_lut: Optional[Tuple[np.ndarray, np.ndarray]] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Weighted-average fusion of per-view maps onto the fisheye pixel grid.
 
@@ -76,6 +77,15 @@ def fuse_views_to_fisheye(
     min_weight  : drop samples whose weight falls below this (upstream knob).
     erode_valid_px : erosion radius applied to view_valids before use, so
                   bilinear value samples never straddle the invalid boundary.
+    ray_lut     : optional ``(rays[H,W,3], inside_cone[H,W])`` for the output
+                  grid, replacing ``fisheye_ray_lut(cam)``.  Same reason as
+                  ``fisheye_to_persp(project=...)``: a FISHEYE624 lens has no
+                  KB4 inverse, and this is where the inverse is needed.  It
+                  also lets a caller that already built the LUT for its own
+                  masking hand it over instead of paying for it twice.
+                  ``cam`` still supplies the output grid size, and the two must
+                  agree — checked below, because a mismatch would fuse onto a
+                  correctly-shaped grid with every ray wrong.
     rescue_rim  : two-tier fallback (default True).  Eroding the valid masks
                   retires a thin band at the cone rim in EVERY view at once
                   (all views share the same theta_max), which would leave
@@ -93,8 +103,15 @@ def fuse_views_to_fisheye(
                (counted on whichever tier the pixel used).
     """
     assert len(values) == len(view_params)
-    rays, cone = fisheye_ray_lut(cam)              # (H, W, 3), (H, W)
     H, W = cam.H, cam.W
+    if ray_lut is None:
+        rays, cone = fisheye_ray_lut(cam)          # (H, W, 3), (H, W)
+    else:
+        rays, cone = ray_lut
+        if rays.shape[:2] != (H, W) or cone.shape[:2] != (H, W):
+            raise ValueError(
+                f"ray_lut is {rays.shape[:2]} but cam describes a {(H, W)} "
+                f"grid; fusing would land every ray on the wrong pixel")
 
     first = np.asarray(values[0])
     C = 1 if first.ndim == 2 else first.shape[2]

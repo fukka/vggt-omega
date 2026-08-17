@@ -68,18 +68,13 @@ import torch
 from PIL import Image
 
 from datasets.adt import ADTFisheyeFrames, find_adt_sequences
-from utils.att_utils import SA_confidence
 from utils.fisheye_cam import aria_intrinsics, fisheye_ray_lut, ray_cos_incidence
-from utils.fisheye_fusion import (build_selfview_confidence,
-                                  fuse_views_to_fisheye,
-                                  harmonize_view_scales,
+from utils.fisheye_fusion import (harmonize_view_scales,
                                   pairwise_scale_stats,
                                   per_view_fisheye_ranges)
-from utils.fisheye_views import fisheye_to_persp, view_generation_fisheye
+from utils.pipeline import VGGT360Config, VGGT360Pipeline
 from finetune.eval.metrics import (aggregate_metrics, align_depth,
                                    depth_metrics, print_depth_summary)
-from vggt_visfeat.models.vggt import VGGT
-from vggt_visfeat.utils.load_fn2 import load_and_preprocess_images
 
 
 def _colorize(x: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
@@ -93,25 +88,21 @@ def _colorize(x: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
         return np.stack([g, g, g], axis=-1)
 
 
-_SECANT_CACHE = {}
+#: The forward pass itself lives in ``utils/pipeline.py`` — this driver, the
+#: ADT-FOV test and the SLAM evaluation all call it, so it is one object rather
+#: than three copies of a method whose whole point is being compared across
+#: those three tables.  What stays here is what is about *ADT*: the depth
+#: convention, the eval mask, and the qualitative strips.
+_PIPE: "VGGT360Pipeline" = None
 
 
 def _view_secant(fov_deg: float, H: int, W: int) -> np.ndarray:
-    """Per-pixel ``sqrt(1 + x^2 + y^2)`` of a view's tangent grid.
+    """Per-pixel view secant, from the loaded pipeline's own cache.
 
-    Converts the depth head's planar z (distance along the VIEW axis) to
-    euclidean range along each pixel ray: ``r = z * secant``.  The point
-    head needs no such conversion (``||world_points||`` is already range),
-    but is empirically noisier — hence the ``--head`` ablation.
+    Used only by the debug dump below, to show planar z per view; the pipeline
+    applies the same conversion internally for ``--head depth``.
     """
-    key = (round(fov_deg, 3), H, W)
-    if key not in _SECANT_CACHE:
-        t = np.tan(np.radians(fov_deg) / 2.0)
-        xs = np.linspace(-t, t, W, dtype=np.float32)
-        ys = np.linspace(-t, t, H, dtype=np.float32)
-        xv, yv = np.meshgrid(xs, ys)
-        _SECANT_CACHE[key] = np.sqrt(1.0 + xv * xv + yv * yv).astype(np.float32)
-    return _SECANT_CACHE[key]
+    return _PIPE.view_secant(fov_deg, H, W)
 
 
 def _to_domain(fused_range: np.ndarray, gt_z: np.ndarray, cos_lut: np.ndarray,
@@ -295,46 +286,18 @@ def _save_qual(path: str, rgb: np.ndarray, pred: np.ndarray, gt: np.ndarray,
 
 @torch.no_grad()
 def run(args: argparse.Namespace) -> dict:
+    global _PIPE
     device = args.device
-    use_attn_fusion = args.fuse == "attn"
-    dtype = {"bf16": torch.bfloat16, "fp16": torch.float16,
-             "fp32": torch.float32}[args.dtype]
-    if dtype is torch.bfloat16 and device == "cuda" \
-            and torch.cuda.get_device_capability()[0] < 8:
-        dtype = torch.float16
-    use_autocast = device == "cuda" and dtype is not torch.float32
-    # fp16 quality is a KNOWN VGGT failure mode (official repo recommends
-    # bf16); make any silent bf16->fp16 fallback loudly visible.
-    print(f"autocast: {'OFF (fp32)' if not use_autocast else str(dtype)}"
-          + ("   <-- fp16 fallback: pre-Ampere GPU; expect noisy depth, "
-             "try --dtype fp32" if use_autocast and dtype is torch.float16
-             and args.dtype == "bf16" else ""))
-
-    print(f"loading {args.model_path} ...")
-    model = VGGT.from_pretrained(args.model_path).to(device).eval()
-
-    # Weight-loading sanity: PyTorchModelHubMixin can load non-strictly, so a
-    # key mismatch (e.g. after code edits to vggt_visfeat) would silently
-    # leave layers at random init -> garbage/bumpy predictions.  Compare the
-    # checkpoint's keys against the model's and shout if anything is off.
-    try:
-        from huggingface_hub import hf_hub_download
-        from safetensors.torch import load_file
-        ckpt = load_file(hf_hub_download(args.model_path, "model.safetensors"))
-        model_keys = set(model.state_dict().keys())
-        missing = sorted(model_keys - set(ckpt.keys()))
-        # ``track_head.*`` is deliberately absent from the model (removed with the
-        # unused tracker); don't flag those checkpoint keys as an error.
-        unexpected = sorted(k for k in set(ckpt.keys()) - model_keys
-                            if not k.startswith("track_head."))
-        if missing or unexpected:
-            print(f"  WEIGHT CHECK FAILED: {len(missing)} model keys not in "
-                  f"checkpoint (random init!), {len(unexpected)} checkpoint "
-                  f"keys unused. First few missing: {missing[:5]}")
-        else:
-            print(f"  weight check OK: all {len(model_keys)} keys matched")
-    except Exception as e:  # local path / no safetensors — non-fatal
-        print(f"  weight check skipped ({type(e).__name__}: {e})")
+    _PIPE = VGGT360Pipeline(
+        VGGT360Config(fov=args.fov, ring_tilt=args.ring_tilt, n_ring=args.n_ring,
+                      adaptive=not args.no_adaptive, max_views=args.max_views,
+                      persp_size=args.persp_size,
+                      crop_supersample=args.crop_supersample,
+                      sa_mask=not args.no_sa_mask, fuse=args.fuse,
+                      erode_valid_px=args.erode_valid_px, head=args.head,
+                      model_path=args.model_path, dtype=args.dtype),
+        device=device).load()
+    pipe = _PIPE
 
     seq_dirs = find_adt_sequences(args.adt_root, args.rgb_subdir,
                                   args.depth_subdir,
@@ -367,57 +330,9 @@ def run(args: argparse.Namespace) -> dict:
             _, cone = fisheye_ray_lut(cam)          # imaged-cone mask
             cos_lut = ray_cos_incidence(cam)        # range -> planar z factor
 
-        # ── module 1: view generation ────────────────────────────────────────
-        view_params = view_generation_fisheye(
-            rgb, cam, fov_deg=args.fov, ring_tilt_deg=args.ring_tilt,
-            n_ring=args.n_ring, adaptive=not args.no_adaptive,
-            max_total=args.max_views, view_hw=(args.persp_size, args.persp_size),
-            supersample=args.crop_supersample)
-
-        persp_imgs, sa_masks, valid_masks = [], [], []
-        for (psi, tilt, fov) in view_params:
-            persp, valid = fisheye_to_persp(rgb, cam, psi, tilt, fov,
-                                            height=args.persp_size,
-                                            width=args.persp_size,
-                                            supersample=args.crop_supersample)
-            sa, vm = SA_confidence(persp, valid_mask=valid > 0.5)
-            persp_imgs.append(persp)
-            sa_masks.append(sa)
-            valid_masks.append(vm)
-
-        # ── module 2: one multi-view VGGT pass with mask-biased attention ────
-        pil_views = [Image.fromarray(np.clip(p, 0, 255).astype(np.uint8))
-                     for p in persp_imgs]
-        images = load_and_preprocess_images(pil_views).to(device)
-        persp_masks = None if args.no_sa_mask else torch.from_numpy(np.array(sa_masks))
-        rgb_masks = None if args.no_sa_mask else torch.from_numpy(np.array(valid_masks))
-
-        with torch.autocast(device_type=device, dtype=dtype, enabled=use_autocast):
-            predictions, attention_maps = model(
-                images=images, persp_masks=persp_masks, rgb_masks=rgb_masks,
-                save_attn=use_attn_fusion)
-
-        # ── module 3: fuse radial distances back onto the fisheye grid ──────
-        if args.head == "depth":
-            # depth head: per-view planar z along the view axis -> range
-            depth_z = predictions["depth"][0, ..., 0].float().cpu().numpy()  # [S,h,w]
-            radial = np.stack([
-                depth_z[i] * _view_secant(view_params[i][2], *depth_z[i].shape)
-                for i in range(depth_z.shape[0])]).astype(np.float32)
-        else:
-            # point head (upstream's choice): ||world_points|| is range directly
-            world_points = predictions["world_points"][0].float().cpu().numpy()
-            radial = np.linalg.norm(world_points, axis=-1).astype(np.float32)
-        pose_enc = (predictions["pose_enc"][0].float().cpu().numpy()
-                    if "pose_enc" in predictions else None)
-
-        weights = None
-        if use_attn_fusion:
-            w = build_selfview_confidence(attention_maps)[:, 0, :, :].cpu().numpy()
-            weights = [w[i] for i in range(w.shape[0])]
-        del predictions, attention_maps
-        if device == "cuda":
-            torch.cuda.empty_cache()
+        # ── modules 1 + 2: view generation, then one multi-view VGGT pass ────
+        vp = pipe.predict_views(rgb, cam)
+        view_params, radial = vp.params, vp.radial
 
         # Cross-view consistency: all views share one optical center, so their
         # ranges must agree on overlapping rays.  Measured at 512 (scale-free).
@@ -426,7 +341,7 @@ def run(args: argparse.Namespace) -> dict:
             dbg_cam = aria_intrinsics(512, 512, rotated=True)
             maps, ok = per_view_fisheye_ranges(
                 [radial[i] for i in range(radial.shape[0])], view_params,
-                dbg_cam, view_valids=valid_masks)
+                dbg_cam, view_valids=vp.valids)
             ratio, n_ov = pairwise_scale_stats(maps, ok)
             fin = np.isfinite(ratio) & ~np.eye(ratio.shape[0], dtype=bool)
             if fin.any():
@@ -435,18 +350,17 @@ def run(args: argparse.Namespace) -> dict:
                       f"{spread:.3f} ({(np.exp(spread) - 1) * 100:.1f}%)")
             if args.harmonize_scales:
                 s = harmonize_view_scales(maps, ok)
-                radial = radial * s[:, None, None]
+                vp.radial = radial = radial * s[:, None, None]
                 print(f"  [{idx}] harmonized view scales: "
                       + " ".join(f"{v:.3f}" for v in s))
 
-        fused_range, coverage = fuse_views_to_fisheye(
-            [radial[i] for i in range(radial.shape[0])], view_params, cam,
-            weights=weights, view_valids=valid_masks, interp="linear",
-            erode_valid_px=args.erode_valid_px)
+        # ── module 3: fuse radial distances back onto the fisheye grid ──────
+        ff = pipe.fuse(vp, cam)
+        fused_range, coverage = ff.range_map, ff.coverage
 
         if args.debug_dir and idx < args.n_qual:
-            _dump_debug(args.debug_dir, idx, view_params, persp_imgs, radial,
-                        maps, ratio, n_ov, weights, pose_enc, fused_range,
+            _dump_debug(args.debug_dir, idx, view_params, vp.images, radial,
+                        maps, ratio, n_ov, vp.weights, vp.pose_enc, fused_range,
                         coverage)
 
         # ONE validity mask, defined on the z-domain GT (as stored), shared by
@@ -508,7 +422,14 @@ def main() -> None:
     p.add_argument("--fisheye-size", type=int, default=None,
                    help="downsample fisheye+GT to this square size (default: native 1408)")
     p.add_argument("--persp-size", type=int, default=512,
-                   help="perspective view size fed to VGGT (518 after its preprocessing)")
+                   help="perspective view size fed to VGGT. 512 is NOT a "
+                        "multiple of the patch size, so load_and_preprocess "
+                        "bicubic-resizes it up to 518 on the way in — a 1.0117x "
+                        "blur on every view that buys nothing. It stays the "
+                        "default here because every published number in "
+                        "outputs/ was made at it; utils/pipeline.py defaults to "
+                        "518, and --persp-size 518 renders straight onto the "
+                        "token grid with no resample at all.")
     p.add_argument("--fov", type=float, default=60.0, help="per-view FOV (deg)")
     p.add_argument("--crop-supersample", type=int, default=3,
                    help="anti-aliasing factor for the tangent-view render "
