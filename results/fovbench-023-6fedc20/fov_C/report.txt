@@ -1,0 +1,60 @@
+========================================================================================
+  ADT-FOV test · adt-fov-v1 · split 601fcb22767e
+========================================================================================
+  300 frames over 6 sequence(s): Apartment_release_clean_seq131_M1292, Apartment_release_clean_seq133_M1292, Apartment_release_clean_seq134_M1292, Apartment_release_clean_seq135_M1292, Apartment_release_clean_seq136_M1292, Apartment_release_decoration_seq132_M1292
+  streams ['synthetic', 'real'] · views ['fisheye'] · protocols ['radial']
+  GT valid <= 10.0 m; predictions beyond 100.0 m excluded from the metrics
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame, over every valid
+  pixel, and then frozen; binning is a masking step applied afterwards. Every
+  cell above — AbsRel, delta1, RMSE, and `pen` — obeys that.
+
+  pen    = AbsRel(outermost bin) / AbsRel(innermost)  — how much worse the
+           periphery is, in the metric a downstream user reads.
+  Absolute AbsRel is comparable only WITHIN an alignment protocol — see the
+  MODELS block: models sharing an `align=` may be read against each other,
+  one scored differently may not. pen is comparable across all of them,
+  being a within-model ratio.
+
+  RADIAL · fisheye · AbsRel   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  vggt360       real         0.133   0.137   0.135   0.123   0.118   0.142    1.07
+  vggt360       synthetic    0.110   0.107   0.106   0.103   0.106   0.132    1.20
+
+  RADIAL · fisheye · delta1   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  vggt360       real         0.891   0.871   0.876   0.885   0.876   0.806    1.07
+  vggt360       synthetic    0.921   0.914   0.919   0.916   0.897   0.831    1.20
+
+  COVERAGE · mean valid samples per incidence bin (radial protocol)
+  ----------------------------------------------------------------------------------
+  view      stream        px     0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye   real         518     4938    16010    29928    47583    67827    36246
+  fisheye   synthetic    518     4938    16010    29928    47583    67827    36246
+  A rectified ~85 deg pinhole has no pixels past 42.3 deg off-axis except
+  in its corners (52.6 deg at most). Empty outer bins there are geometry,
+  not model failure — and are themselves the cost of rectifying.
+
+  RING COVERAGE · how much of each annulus the view images — geometry only
+  ----------------------------------------------------------------------------------
+  view         px  whole to       0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye     518     54.6°       100%     100%     100%     100%     100%      98%
+    mean θ                         6.7     15.6     25.4     35.3     45.2     52.4
+  `whole to` is the last angle at which EVERY azimuth is imaged. Past it a
+  bin is corner wedges, not a ring, so a `pen` spanning it is not the same
+  measurement in both views — compare the two only where both read 100%.
+
+  BIN DEPTH · median GT depth per incidence bin (m) — a confound, not a score
+  ----------------------------------------------------------------------------------
+  view      stream              px     0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye   real+synthetic     518     2.96     2.79     2.59     2.29     1.93     1.65
+  Read the AbsRel tables against this row: a bin that is both farther and
+  worse has not yet been shown to be worse *because of* where it sits.
+
+  MODELS
+  ------------------------------------------------------------
+  vggt360       vggt360 fov60 tilt26 ring8 fuse=attn head=depth adaptive sa-mask 518px bf16 · 1191M · align=scale_shift · views at 518px

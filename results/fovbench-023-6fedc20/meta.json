@@ -15,20 +15,23 @@
   "transformers": "5.15.0",
   "numpy": "1.26.4",
 
-  "status": "PARTIAL — run A only. Run C (the resolution control) was still on the card when this landed; it is required, not optional, and this row is not readable without it. See 'pending'.",
-  "pending": {
-    "fov_C": "python -m fovbench.run ... --models vggt360 --vggt360-source view — running on lambda_63, expected ~55 min like run A's vggt360 stage",
-    "slam_B": "the slambench half, results/slambench-023-*",
-    "slam_B3": "the three-arm version, read only against itself"
-  },
+  "status": "COMPLETE for the fovbench half. Runs A and C both landed, so the vggt360 row is readable: A is the method, C is the resolution control, and neither is publishable without the other. The slambench half is results/slambench-023-*.",
 
   "runs": {
     "fov_A": {
+      "what": "the row itself -- five published models re-run BESIDE vggt360 in one command, so the comparison is within a run rather than across two",
       "command": "python -m fovbench.run --adt-root $ADT --n-frames 50 --models vggt_1b,vggt_omega,dav2_large,da3_large,da3_small,vggt360 --views fisheye --protocols radial --workers 1 --out eval_out/vggt360-023/fov_A",
       "wall_clock_s": 3844,
       "per_model_s": {"vggt_1b": 131, "vggt_omega": 112, "dav2_large": 110,
                       "da3_large": 101, "da3_small": 85, "vggt360": 3298},
       "exit_code": 0
+    },
+    "fov_C": {
+      "what": "the resolution control -- identical to A's vggt360 cell except the nine tangent views are cut from the 518 resize the vanilla models see, instead of from ADT's native 1408 frame",
+      "command": "python -m fovbench.run --adt-root $ADT --n-frames 50 --models vggt360 --views fisheye --protocols radial --workers 1 --vggt360-source view --out eval_out/vggt360-023/fov_C",
+      "wall_clock_s": 3754,
+      "exit_code": 0,
+      "controlled": "same split digest 601fcb22767e, same n_frames 300, same input_size 518, same in_cone_frac 0.7551. The ONLY thing that differs between A and C is where the views were cut from, which is what makes the gap a resolution term and not a bundle of them."
     }
   },
 
@@ -42,7 +45,8 @@
     "workers": {
       "ticket_says": "unspecified; the #019 reference used 16",
       "run_used": 1,
-      "why": "fovbench deadlocks on this box at dav2_large at any thread count above 1: 498 threads at --workers 8, 754 at --workers 16, every one sleeping in futex_wait, GPU 0%, no frame line ever printed. Not starvation (469 GB RAM free, load 2.3/64 cores) and not the HF Hub (dav2_large alone scores a frame in 6 s, online or HF_HUB_OFFLINE=1). _ordered_map pools rows in split order so serial is bit-identical to threaded, and tests/test_end_to_end.py pins that -- confirmed here by the self-check, which is exact against a reference produced with --workers 16."
+      "why": "fovbench deadlocks on this box at dav2_large at any thread count above 1: 498 threads at --workers 8, 754 at --workers 16, every one sleeping in futex_wait, GPU 0%, no frame line ever printed. Not starvation (469 GB RAM free, load 2.3/64 cores) and not the HF Hub (dav2_large alone scores a frame in 6 s, online or HF_HUB_OFFLINE=1). _ordered_map pools rows in split order so serial is bit-identical to threaded, and tests/test_end_to_end.py pins that -- confirmed here by the self-check, which is exact against a reference produced with --workers 16.",
+      "cpu_ticket_worth_filing": "results/fovbench-rectfix-393cab9 ran the same 300 frames and same models at --workers 16 on 2026-08-14 without hanging, so something under the harness moved in three days."
     }
   },
 
@@ -63,13 +67,23 @@
 
   "headline": {
     "overall_AbsRel_real": {"vggt_omega": 0.07556, "da3_large": 0.10898,
-                            "vggt360": 0.11980, "vggt_1b": 0.11983,
+                            "vggt360_native": 0.11980, "vggt_1b": 0.11983,
+                            "vggt360_view": 0.12764,
                             "dav2_large": 0.13792, "da3_small": 0.17469},
-    "read_the_bins_not_the_pool": "vggt360 and vggt_1b are level on pooled AbsRel (0.1198 both) and that hides the entire result. By eccentricity, real stream, centre bin -> rim bin: vggt_1b 0.0957 -> 0.1529 (1.60x), vggt_omega 0.0574 -> 0.1160 (2.02x), da3_large 0.0778 -> 0.1515 (1.95x), vggt360 0.1240 -> 0.1295 (1.04x). vggt360 is WORSE at the centre than the VGGT-1B it wraps and BETTER at the rim, crossing over around 40 deg.",
-    "caveat": "NOT resolution matched, and it favours this row: the nine tangent views are cut from ADT's native 1408 frame (0.62x downsample to 518) while the vanilla models see a 518 resize (from which the same views would be 1.69x up). How much of the rim advantage is the lens treatment rather than the source resolution is exactly what run C measures, and run C is not in this artefact yet."
+
+    "read_the_bins_not_the_pool": "the pooled column hides the entire result. vggt360 and vggt_1b are level on it (0.1198 both, run A) and they are not doing remotely the same thing. AbsRel by incidence bin, real stream, centre (0-10 deg) -> rim (50-55 deg): vggt_1b 0.0957 -> 0.1529 (1.60x), vggt_omega 0.0574 -> 0.1160 (2.02x), da3_large 0.0778 -> 0.1515 (1.95x), da3_small 0.1466 -> 0.2160 (1.47x), dav2_large 0.1379 -> 0.1394 (1.01x), vggt360 0.1240 -> 0.1295 (1.04x). vggt360 is WORSE at the centre than the VGGT-1B it wraps and BETTER at the rim, crossing over around 40 deg.",
+
+    "resolution_control": {
+      "why_it_exists": "run A is not equal-pixel and it leans this row's way: the nine tangent views are cut from ADT's native 1408 frame (0.62x DOWN to 518) while the vanilla models see a 518 resize, from which the same views would be 1.69x UP. `native` says what the method is worth; `view` says what it is worth on the pixels everyone else got.",
+      "cost_of_equal_pixels": {"real": "+6.55% AbsRel", "synthetic": "+14.86% AbsRel"},
+      "what_it_does_NOT_change": "the shape, which is the claim. Centre -> rim on equal pixels is 0.1330 -> 0.1417 = 1.07x (native 1.04x), against vggt_1b's 1.60x. The crossover against vggt_1b stays at ~40 deg in both: at 40-50 deg vggt360 0.1175 beats vggt_1b 0.1258, at 30-40 deg it does not (0.1234 vs 0.1076). So the resolution term moves the LEVEL and not the SHAPE, and the flatness across the field is not a resolution artefact.",
+      "what_it_DOES_change": "the pooled ranking, and this has to be said next to the number. On equal pixels vggt360's pooled real AbsRel is 0.12764, which is BEHIND the vggt_1b it wraps (0.11983) rather than level with it. Quoting run A's pooled column alone overstates this row.",
+      "synthetic_is_the_weaker_case": "the synthetic stream loses more to equal pixels (+14.86%) and its rim bin degrades further (1.08x native -> 1.20x view), so the flatness claim is strongest on the real stream and should be stated there."
+    }
   },
 
   "log_lines_the_tables_cannot_carry": {
-    "constant_fill": "PASS, by silence. fovbench/models.py:_report_holes prints 'N% of the imaged cone had no view covering it and was filled with a constant' only when the worst-seen fraction exceeds 1%. It never printed across all 300 frames, so the ring tiled its cone within 1% throughout — which is what the ticket predicted ('expect well under 1%'). Absence of the line IS the result here; do not read it as the diagnostic not running."
+    "constant_fill": "PASS, by silence. fovbench/models.py:_report_holes prints 'N% of the imaged cone had no view covering it and was filled with a constant' only when the worst-seen fraction exceeds 1%. It never printed across all 300 frames of either run, so the ring tiled its cone within 1% throughout -- which is what the ticket predicted ('expect well under 1%'). Absence of the line IS the result here; do not read it as the diagnostic not running.",
+    "ring_coverage": "'lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim' -- the 60 deg layout over-covers the lens, so no --vggt360-ring-tilt rescue was needed and no rim bin is short of geometry. fov_C's report independently confirms the fisheye view is whole to 54.6 deg with the 50-55 bin at 98% azimuth coverage, so the rim bin is a real ring and not corner wedges."
   }
 }
