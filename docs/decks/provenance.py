@@ -33,7 +33,7 @@ from collections import OrderedDict
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 OUT = os.path.join(HERE, "adt-fov-provenance.md")
-DECK = "adt_fov_experiment_v4.pptx"
+DECK = "adt_fov_experiment_v5.pptx"
 
 #: Every run the deck draws on, by the short name used below.
 #: Path is relative to the root of the ``results`` branch.
@@ -67,8 +67,10 @@ PAGES = [
     (6,  "FOV x depth heatmaps", "PENDING",
          "mk_joint.py — empty until issue #24 part A lands on 6seq"),
     (6,  "GT depth per angle bin", "6seq", "mk_joint.depth_marginal"),
-    (7,  "Multi-frame, raw fisheye", "s131_n1+s131_5s+s131_10s", "mk_ctx.panel"),
-    (8,  "Multi-frame, rectified", "s131_n1+s131_5s+s131_10s", "mk_ctx.panel"),
+    (7,  "Multi-frame, raw fisheye", "PENDING",
+         "mk_ctx.py — empty until issue #24 part B lands on 6seq"),
+    (8,  "Multi-frame, rectified", "PENDING",
+         "mk_ctx.py — empty until issue #24 part B lands on 6seq"),
     (9,  "Synthetic / real frame pair (illustrative)", None,
          "mk_qual.py, one seq131 frame"),
     (9,  "Vignetting: mean luminance -16% from 40 to 54 deg", None,
@@ -83,12 +85,31 @@ GROUPS = [
      "frames as the Result page'", ["6seq", "6seq"]),
     ("p4 Result and p6 depth marginal: p6 explains p4's confound and must be "
      "the same scene", ["6seq", "6seq"]),
-    ("p7/p8 across frame counts: the whole point of the page is 1 vs 5 vs 10 "
-     "on identical frames", ["s131_n1", "s131_5s", "s131_10s"]),
-    ("p4 Result and p7/p8 multi-frame: both plot AbsRel against incidence "
-     "angle and are read for the same rim question",
-     ["6seq", "s131_n1", "s131_5s", "s131_10s"]),
+    # One group, not two: the frame-count contrast on p7/p8 and the rim
+    # comparison against p4 both need the same frames, and `N=1` is p4's own
+    # run. Splitting them is how the second one got missed.
+    ("p7/p8 across frame counts AND against p4 Result: all four curves plot "
+     "AbsRel against incidence angle, `N=1` is the Result run itself, and the "
+     "pages are read for the same rim question",
+     ["6seq", "6seq_3s", "6seq_5s", "6seq_10s"]),
 ]
+
+#: Runs the deck is laid out for but that have not been measured yet. A page
+#: naming one of these draws its axes empty; the group it belongs to is
+#: reported as pending, not as a failure.
+PENDING = {
+    "6seq_3s":  "issue #24 part B — --context-frames 3 --context-stride 10",
+    "6seq_5s":  "issue #24 part B — --context-frames 5 --context-stride 10",
+    "6seq_10s": "issue #24 part B — --context-frames 10 --context-stride 10",
+}
+
+#: Superseded, kept only so a reader who finds these files knows why they are
+#: not on a page any more.
+RETIRED = {
+    "s131_n1":  "results/fovbench-rectfix-393cab9/partA_seq131/results.json",
+    "s131_5s":  "results/fovbench-rectfix-393cab9/partB_5s/results.json",
+    "s131_10s": "results/fovbench-rectfix-393cab9/partB_10s/results.json",
+}
 
 
 def load(path):
@@ -125,22 +146,39 @@ def command(f):
     return " \\\n  ".join(parts)
 
 
+def status(known, names):
+    """OK / PENDING / INCONSISTENT for one comparison group.
+
+    A group with an unmeasured member is PENDING: nothing is on the page yet,
+    so there is nothing to be wrong. It becomes OK or INCONSISTENT the moment
+    the run lands, which is the point of listing it before it exists.
+    """
+    fs = [known[n] for n in names if n in known]
+    waiting = [n for n in names if n in PENDING]
+    digests = sorted({f["digest"] for f in fs})
+    dirs = sorted({f["run_dir"] for f in fs})
+    if len(digests) > 1 or len(dirs) > 1:
+        return "INCONSISTENT", digests, dirs, waiting
+    if waiting:
+        return "PENDING", digests, dirs, waiting
+    return "OK", digests, dirs, waiting
+
+
 def check(known):
     """Every comparison group must agree on both frames and code."""
     bad = []
     for why, names in GROUPS:
-        fs = [known[n] for n in names if n in known]
-        if len(fs) < 2:
-            continue
-        digests = {f["digest"] for f in fs}
-        dirs = {f["run_dir"] for f in fs}
-        if len(digests) > 1 or len(dirs) > 1:
-            bad.append((why, names, sorted(digests), sorted(dirs)))
-    for why, names, digests, dirs in bad:
-        print("INCONSISTENT: %s" % why, file=sys.stderr)
-        print("   runs   : %s" % ", ".join(names), file=sys.stderr)
-        print("   digests: %s" % ", ".join(digests), file=sys.stderr)
-        print("   run dir: %s" % ", ".join(dirs), file=sys.stderr)
+        st, digests, dirs, waiting = status(known, names)
+        if st == "PENDING":
+            print("pending: %s" % why)
+            for n in waiting:
+                print("   %s <- %s" % (n, PENDING[n]))
+        elif st == "INCONSISTENT":
+            bad.append((why, names, digests, dirs))
+            print("INCONSISTENT: %s" % why, file=sys.stderr)
+            print("   runs   : %s" % ", ".join(names), file=sys.stderr)
+            print("   digests: %s" % ", ".join(digests), file=sys.stderr)
+            print("   run dir: %s" % ", ".join(dirs), file=sys.stderr)
     return bad
 
 
@@ -184,32 +222,44 @@ def render(known, bad):
         L.append("| %d | %s | %s | %s |" % (
             pg, what, ("`%s`" % run) if run else "*not a run*", gen))
     L += ["", "## Comparison groups", ""]
+    waiting_any = False
     for why, names in GROUPS:
-        fs = [known[n] for n in names if n in known]
-        digests = sorted({f["digest"] for f in fs})
-        dirs = sorted({f["run_dir"] for f in fs})
-        ok = len(digests) <= 1 and len(dirs) <= 1
-        L += ["- **%s** — %s" % ("OK" if ok else "INCONSISTENT", why),
+        st, digests, dirs, waiting = status(known, names)
+        waiting_any = waiting_any or bool(waiting)
+        L += ["- **%s** — %s" % (st, why),
               "  runs `%s`; digest%s %s; dir%s %s" % (
                   "`, `".join(names), "" if len(digests) == 1 else "s",
-                  ", ".join("`%s`" % d for d in digests),
+                  ", ".join("`%s`" % d for d in digests) or "*none yet*",
                   "" if len(dirs) == 1 else "s",
-                  ", ".join("`%s`" % d for d in dirs))]
-    if bad:
+                  ", ".join("`%s`" % d for d in dirs) or "*none yet*")]
+        for n in waiting:
+            L.append("  not measured yet: `%s` <- %s" % (n, PENDING[n]))
+    if waiting_any:
         L += ["",
-              "### The open one",
+              "### Why pages 7 and 8 are blank",
               "",
-              "Pages 7 and 8 are `50` frames of **seq131 alone**; page 4 is `300`",
-              "frames over **six sequences**. seq131 is not a representative",
-              "sixth: its rim penalty is the lowest of the six in 5 of 6",
-              "model x view cells, and on the rectified view VGGT-Omega's is",
-              "0.97 — the rim marginally *better* than the centre. Going to 200",
-              "frames of seq131 moves it further from the pooled value, so this",
-              "is the sequence, not the sample size.",
+              "They used to be `50` frames of **seq131 alone** while page 4 is",
+              "`300` frames over **six sequences**, and both plot AbsRel against",
+              "incidence angle. seq131 is not a representative sixth: its rim",
+              "penalty is the lowest of the six in 5 of 6 model x view cells,",
+              "and on the rectified view VGGT-Omega's is 0.97 — the rim",
+              "marginally *better* than the centre. Going to 200 frames of",
+              "seq131 moves it further from the pooled value, so this is the",
+              "sequence, not the sample size.",
               "",
-              "Fix: run the context arms on the six-sequence split",
-              "(digest `601fcb22767e`). Filed as ticket 024 part B / issue #24.",
-              "Until then the two pages must not be read against each other."]
+              "Rather than caption around it, the curves came off the pages. The",
+              "axes stay at final geometry so the measured run drops in without",
+              "moving the layout. Ticket 024 part B / issue #24 is the run.",
+              "",
+              "The superseded seq131 payloads:", ""]
+        for n, p in RETIRED.items():
+            L.append("- `%s` — `%s`" % (n, p))
+    if bad:
+        L += ["", "### Failing groups", ""]
+        for why, names, digests, dirs in bad:
+            L.append("- %s — digests %s, dirs %s" % (
+                why, ", ".join("`%s`" % d for d in digests),
+                ", ".join("`%s`" % d for d in dirs)))
     L += ["",
           "## Not covered by the digest rule", "",
           "Three claims in the deck are not benchmark runs and carry their own",
@@ -220,7 +270,7 @@ def render(known, bad):
           "  make no quantitative claim.",
           "- page 9's vignetting number (mean luminance -16 % from 40 to 54 deg)",
           "  *is* quantitative and is measured on the 9 local seq131 syn/real",
-          "  pairs only. It is one sequence, and the page says so.", ""]
+          "  pairs only. The page names the sequence in the sentence itself.", ""]
     return "\n".join(L)
 
 
