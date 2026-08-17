@@ -733,3 +733,151 @@ def test_on_the_sensor_axis_the_rectified_view_is_the_one_that_runs_out_first():
     # ...whereas in each view's own frame it looks the other way round
     assert (G.coverage_span(518, "rect", "radius")[1]
             > G.coverage_span(518, "fisheye", "radius")[1])
+
+
+# --------------------------------------------------------------------------- #
+# The joint table — the depth-controlled read of the same frozen prediction
+# --------------------------------------------------------------------------- #
+
+def _room_frame(out=259, **kw):
+    """The empty room as a 2-D frame: (theta_deg, planar-z GT, cone), all HxW.
+
+    Same closed-form geometry as ``_empty_room``, kept in image shape because
+    ``bin_by`` bins maps rather than lists. This is the real confound: z falls
+    from ~2.6 m on axis to ~1.4 m at the rim with nothing in the scene but four
+    walls, a floor and a ceiling.
+    """
+    theta, _, z = _empty_room(out=out, **kw)
+    cam = G.scaled_cam(aria_cam(1408, 1408), out)
+    _, cone = G.fisheye_rays(cam)
+    th2 = np.zeros(cone.shape, np.float32)
+    z2 = np.zeros(cone.shape, np.float32)
+    th2[cone] = theta
+    z2[cone] = z
+    return th2, z2, cone
+
+
+def test_the_joint_table_dissolves_a_gradient_that_is_only_the_depth():
+    """The reason this table exists, stated as a test it can fail.
+
+    The model here has NO radial behaviour at all: its error is a pure function
+    of the GT depth (a fixed 12 cm absolute offset, so AbsRel = 0.12/z). On the
+    real room geometry that alone produces a rising theta curve, because the rim
+    is nearer. The 1-D table must show that false gradient; every row of the
+    joint table — same depth band, moving outward — must be flat, because within
+    a band nothing about the model changes.
+    """
+    theta, z, cone = _room_frame()
+    gt = z.astype(np.float32)
+    pred = (gt + 0.12).astype(np.float32)            # depth-only error
+    out = G.bin_by(pred, gt, cone, "none", {"theta": (theta, G.THETA_EDGES)},
+                   joint_depth_edges={"theta": G.DEPTH_EDGES})
+    live = [b for b in out["theta"] if b["n_bin"] > 0]
+    span = live[-1]["AbsRel"] / live[0]["AbsRel"]
+    assert span > 1.9                                # the false gradient, 1.94x
+
+    j = G.pool_joint([out["joint"]["theta"]])
+    a = np.asarray(j["AbsRel"], float)
+    n = np.asarray(j["n"])
+    gm = np.asarray(j["gt_mean"], float)
+    rows = 0
+    for k in range(a.shape[1]):                      # one depth band at a time
+        idx = np.where(n[:, k] >= G.MIN_JOINT_CELL_PX)[0]
+        if idx.size < 3:
+            continue
+        rows += 1
+        # A metre-wide band does not abolish the confound, it shrinks it: the
+        # rim cells still sit nearer WITHIN the band. 1.94x collapses to <1.2x.
+        assert a[idx[-1], k] / a[idx[0], k] < 0.65 * span
+        # ...and what survives is that residual and nothing else. The model's
+        # error is a fixed 0.12 m, so AbsRel x the cell's own mean depth must
+        # come back to 0.12 everywhere it is populated.
+        prod = a[idx, k] * gm[idx, k]
+        assert np.allclose(prod, 0.12, rtol=0.05), prod
+    assert rows >= 2, "the room must populate at least two bands widely enough"
+
+
+def test_the_joint_table_keeps_a_gradient_that_is_really_the_field():
+    """The converse, so the test above cannot pass by flattening everything.
+
+    Same room, but the error now scales with theta and not with depth. The rise
+    must survive inside every depth band.
+    """
+    theta, z, cone = _room_frame()
+    gt = z.astype(np.float32)
+    pred = (gt * (1.0 + 0.004 * theta)).astype(np.float32)
+    out = G.bin_by(pred, gt, cone, "none", {"theta": (theta, G.THETA_EDGES)},
+                   joint_depth_edges={"theta": G.DEPTH_EDGES})
+    j = G.pool_joint([out["joint"]["theta"]])
+    a = np.asarray(j["AbsRel"], float)
+    n = np.asarray(j["n"])
+    checked = 0
+    for k in range(a.shape[1]):
+        idx = np.where(n[:, k] >= G.MIN_JOINT_CELL_PX)[0]
+        if idx.size < 3:
+            continue
+        checked += 1
+        assert np.all(np.diff(a[idx, k]) > 0)        # monotone within the band
+        # AbsRel here is 0.004 * theta by construction, so inverting a cell's
+        # value must land back inside that cell's own angular bin — a tighter
+        # statement than "it rises", and one no flattening bug can satisfy.
+        for i in idx:
+            assert G.THETA_EDGES[i] <= a[i, k] / 0.004 < G.THETA_EDGES[i + 1]
+    assert checked >= 2
+
+
+def test_the_joint_rows_add_back_up_to_the_pooled_profile():
+    """The joint table is the theta axis subdivided, so summing a column's
+    cells must return the theta bin itself. Same frozen prediction, same
+    estimator — if these disagree the two tables are measuring different fits.
+    """
+    theta, z, cone = _room_frame()
+    gt = z.astype(np.float32)
+    pred = (gt * 1.05 + 0.05).astype(np.float32)
+    out = G.bin_by(pred, gt, cone, "none", {"theta": (theta, G.THETA_EDGES)},
+                   profile_edges={"theta": G.THETA_EDGES},
+                   joint_depth_edges={"theta": (0.0, 100.0)})
+    prof = G.pool_profiles([out["profiles"]["theta"]])
+    j = G.pool_joint([out["joint"]["theta"]])
+    for i, (pn, pa) in enumerate(zip(prof["n"], prof["AbsRel"])):
+        assert j["n"][i][0] == pn
+        if pn:
+            assert j["AbsRel"][i][0] == pytest.approx(pa, rel=1e-9)
+
+
+def test_a_depth_outside_the_edges_is_dropped_not_folded_into_the_end_band():
+    """Clipping would widen the top band by everything above it. 0-2 m of edges
+    over a frame that is half at 9 m: the far half must vanish, not pile up."""
+    gt = np.where(np.mgrid[0:40, 0:40][1] < 20, 1.5, 9.0).astype(np.float32)
+    pred = (gt + 0.1).astype(np.float32)
+    theta = np.zeros_like(gt)
+    mask = np.ones_like(gt, bool)
+    g = G.joint_grid(pred, gt, mask, theta, (0.0, 1.0), (0.0, 1.0, 2.0))
+    assert g["n"] == [[0, 800]]                      # 800 near, 800 far dropped
+
+
+def test_an_unpopulated_joint_cell_is_nan_not_zero():
+    theta, z, cone = _room_frame()
+    gt = z.astype(np.float32)
+    out = G.bin_by(gt.copy(), gt, cone, "none", {"theta": (theta, G.THETA_EDGES)},
+                   joint_depth_edges={"theta": G.DEPTH_EDGES})
+    j = G.pool_joint([out["joint"]["theta"]])
+    empty = [(i, k) for i, row in enumerate(j["n"])
+             for k, n in enumerate(row) if n == 0]
+    assert empty, "the room must leave some corner of the grid unpopulated"
+    for i, k in empty:
+        assert math.isnan(j["AbsRel"][i][k])
+
+
+def test_the_joint_table_is_absent_unless_asked_for():
+    pred, gt, mask, theta = _profile_inputs()
+    out = G.bin_by(pred, gt, mask, "none", {"theta": (theta, G.THETA_EDGES)})
+    assert "joint" not in out
+
+
+def test_pooling_refuses_to_add_joint_grids_of_different_partitions():
+    a = {"coord_edges": [0.0, 1.0], "depth_edges": [0.0, 2.0], "n": [[4]],
+         "sum_absrel": [[1.0]], "sum_delta1": [[4.0]], "sum_gt": [[8.0]]}
+    b = dict(a, depth_edges=[0.0, 3.0])
+    with pytest.raises(ValueError):
+        G.pool_joint([a, b])

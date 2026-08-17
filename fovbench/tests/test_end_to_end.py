@@ -20,8 +20,11 @@ import os
 import threading
 import time
 
+import pathlib
+
 import numpy as np
 import pytest
+from PIL import Image
 
 from fovbench import geometry as G  # noqa: E402
 from fovbench import models as M  # noqa: E402
@@ -393,3 +396,90 @@ def test_a_monocular_model_refuses_a_context_rather_than_ignoring_it():
         m.predict_stack([np.zeros((4, 4, 3), np.uint8)] * 3, target=2)
     # ... but a stack of one is just the ordinary call, not an error.
     assert m.predict_stack([np.zeros((4, 4, 3), np.uint8)], target=0).shape == (4, 4)
+
+
+# --------------------------------------------------------------------------- #
+# The joint table survives the driver, the pooling and the JSON
+# --------------------------------------------------------------------------- #
+
+def _mini_adt(root, n=6, size=176):
+    """A miniature ADT export: real PNG frames and real .npy depth, on the room.
+
+    Small but not fake — ``run()`` decodes these the way it decodes the box's,
+    so a joint table produced here has been through every stage the GPU run
+    will use, including the rotation and the mm->m scaling.
+    """
+    seq = os.path.join(root, "seqA")
+    cam = G.aria_cam(size, size)
+    rays, cone = G.fisheye_rays(cam)
+    half = np.array([2.0, 1.4, 3.0], np.float64)
+    c = np.array([0.7, 0.4, -0.9], np.float64)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        cand = np.stack([(s * half[i] - c[i]) / rays[..., i]
+                         for i in range(3) for s in (-1.0, 1.0)], axis=-1)
+    cand = np.where(np.isfinite(cand) & (cand > 1e-6), cand, np.inf)
+    z = (cand.min(axis=-1) * rays[..., 2]) * cone
+    # run() undoes a 90 deg CW store with rot90(k=3), so write the rotated form.
+    depth_mm = np.rot90((np.nan_to_num(z) * 1000.0).astype(np.uint16), k=1)
+    rng = np.random.default_rng(3)
+    for sub in ("depth_npy", "videos_synthetic", "videos_rgb"):
+        os.makedirs(os.path.join(seq, sub), exist_ok=True)
+    for i in range(n):
+        stem = f"frame_{i:06d}_{1000 + i}"
+        np.save(os.path.join(seq, "depth_npy", stem + ".npy"), depth_mm)
+        px = (rng.random((size, size, 3)) * 255).astype(np.uint8)
+        for sub in ("videos_synthetic", "videos_rgb"):
+            Image.fromarray(px).save(os.path.join(seq, sub, stem + ".jpg"))
+    return root
+
+
+def _mini_run(tmp_path, extra=()):
+    root = _mini_adt(str(tmp_path / "adt"))
+    out = str(tmp_path / "o")
+    a = RUN.build_parser().parse_args(
+        ["--adt-root", root, "--models", M.ANALYTIC, "--protocols", "radial",
+         "--streams", "synthetic", "--views", "fisheye", "--n-frames", "4",
+         "--workers", "1", "--out", out] + list(extra))
+    return RUN.run(a), out
+
+
+def test_the_joint_table_reaches_results_json_through_the_driver():
+    """Every stage between the per-frame grid and the published file: pooled
+    across frames, reduced, serialised. A grid that only exists inside
+    ``bin_by`` is not something the report can draw."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        payload, out = _mini_run(pathlib.Path(td))
+        with open(os.path.join(out, "results.json")) as fh:
+            on_disk = json.load(fh)
+    assert payload["config"]["depth_edges"] == list(G.DEPTH_EDGES)
+    run = next(r for r in on_disk["runs"] if r["protocol"] == "radial")
+    j = run["joint"]["theta"]
+    assert j["coord_edges"] == list(G.THETA_EDGES)
+    assert j["depth_edges"] == list(G.DEPTH_EDGES)
+    assert len(j["AbsRel"]) == len(G.THETA_EDGES) - 1
+    assert all(len(row) == len(G.DEPTH_EDGES) - 1 for row in j["AbsRel"])
+    # It is a partition of the same pixels, so no cell can hold more than the
+    # theta bin it subdivides.
+    for i, b in enumerate(run["bins"]):
+        assert sum(j["n"][i]) <= b["n_px_mean"] * on_disk["n_frames"] + 1
+
+
+def test_custom_depth_edges_reach_the_grid_and_the_config():
+    """A run that partitions depth differently must say so in the file, beside
+    the numbers it cut — the same rule the theta edges follow."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        payload, _ = _mini_run(pathlib.Path(td), ["--depth-edges", "0,2.5,9"])
+    assert payload["config"]["depth_edges"] == [0.0, 2.5, 9.0]
+    run = next(r for r in payload["runs"] if r["protocol"] == "radial")
+    assert run["joint"]["theta"]["depth_edges"] == [0.0, 2.5, 9.0]
+
+
+def test_the_report_prints_the_joint_table_with_sparse_cells_blanked():
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        payload, _ = _mini_run(pathlib.Path(td))
+    text = R.render_report(payload)
+    assert "JOINT" in text and "depth (m)" in text
+    assert "50-55" in text                      # the outermost angular column

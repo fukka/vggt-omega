@@ -363,6 +363,44 @@ def _bin_depth_note(rad: List[dict]) -> List[str]:
         "  worse has not yet been shown to be worse *because of* where it sits.", ""]
 
 
+def _joint_note(runs: List[dict]) -> List[str]:
+    """AbsRel on the incidence-angle x GT-depth grid, one block per run.
+
+    The confound note above says the rim is nearer; this says what is left of
+    the rim effect once that is held fixed. Read **along a row**: same depth
+    band, moving outward. A row that still rises is a field-position effect the
+    depth cannot explain; a row that goes flat says the 1-D table was reading
+    the scene. Cells under ``MIN_JOINT_CELL_PX`` print as ``·`` — the outer-far
+    and inner-near corners are nearly empty by construction, and an AbsRel over
+    a few hundred pixels is not a number.
+    """
+    have = [r for r in runs
+            if r.get("protocol") == "radial" and (r.get("joint") or {}).get("theta")]
+    if not have:
+        return []
+    lines = ["  JOINT · AbsRel by incidence angle x GT depth — the depth-controlled read",
+             "  " + "-" * 82]
+    for r in sorted(have, key=lambda r: (r["model"], r["view"], r["stream"])):
+        j = r["joint"]["theta"]
+        ce, de = j["coord_edges"], j["depth_edges"]
+        lines += ["", f"  {r['model']} · {r['view']} · {r['stream']}",
+                  "  " + f"{'depth (m)':>11s}"
+                  + "".join(f"{f'{lo:g}-{hi:g}':>9s}"
+                            for lo, hi in zip(ce[:-1], ce[1:]))]
+        for k in range(len(de) - 2, -1, -1):          # far band at the top
+            row = f"{f'{de[k]:g}-{de[k + 1]:g}':>11s}"
+            for i in range(len(ce) - 1):
+                n = j["n"][i][k]
+                v = j["AbsRel"][i][k]
+                row += (f"{v:>9.3f}" if n >= G.MIN_JOINT_CELL_PX and _finite(v)
+                        else f"{'·':>9s}")
+            lines.append("  " + row)
+    return lines + [
+        "", "  Columns are incidence angle in degrees; each cell is pooled over every",
+        "  frame's pixels in that band, off the same per-frame fit as every other table.",
+        ""]
+
+
 def render_report(payload: dict) -> str:
     runs = payload["runs"]
     cfg = payload["config"]
@@ -410,6 +448,7 @@ def render_report(payload: dict) -> str:
             for metric in ("AbsRel", "delta1"):
                 out += _table(runs, protocol, view, metric)
     out += _coverage_note(runs)
+    out += _joint_note(runs)
     out += _window_geometry_note(runs)
 
     models = sorted({r["model"] for r in runs})

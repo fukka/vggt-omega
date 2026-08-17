@@ -107,6 +107,25 @@ PROFILE_THETA_EDGES: Tuple[float, ...] = tuple(float(x) for x in range(0, 56))
 PROFILE_RADIUS_EDGES: Tuple[float, ...] = tuple(
     round(0.025 * i, 4) for i in range(59))
 
+#: GT-depth bin edges (metres) for the JOINT table — the second axis that lets
+#: "the rim is harder" be told apart from "the rim is nearer".
+#:
+#: A one-dimensional theta table cannot separate the two, and on this camera
+#: they move together: measured on the six-sequence real stream, the GT median
+#: falls 2.96 m on axis to 1.64 m in the 50-55 deg band, and every relative
+#: metric here grows with depth. Holding depth fixed *within a row* removes
+#: that, at the cost of leaving the corner cells empty.
+#:
+#: The top edge is 10 m because ``--depth-max-m`` already discards GT beyond it,
+#: so nothing lands above; the bottom edge is 0 rather than the metric's own
+#: 0.01 floor so the first bin is readable as "under a metre".
+DEPTH_EDGES: Tuple[float, ...] = (0.0, 1.0, 2.0, 3.0, 5.0, 10.0)
+
+#: A joint cell thinner than this is reported but not drawn: with 30 cells over
+#: a frame, the outer-near and outer-far corners hold a handful of pixels in a
+#: few frames only, and an AbsRel over 300 of them is noise wearing a number.
+MIN_JOINT_CELL_PX = 500
+
 #: ``finetune/data/rectify.py`` renders the pinhole at ``0.55 * max(H, W)``.
 RECTIFIER_FOCAL_FRAC = 0.55
 
@@ -861,7 +880,8 @@ def radial_profile(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
 def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
            align_mode: str, axes: dict,
            min_depth: float = 0.01, max_depth: float = 100.0,
-           profile_edges: Optional[dict] = None) -> dict:
+           profile_edges: Optional[dict] = None,
+           joint_depth_edges: Optional[dict] = None) -> dict:
     """Score one prediction on several binning axes under **one** alignment fit.
 
     ``axes`` maps a name to ``(coordinate_map, edges)`` — e.g. incidence angle
@@ -879,6 +899,11 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
     continuous profile of that axis under ``profiles`` — off the same frozen
     prediction as everything else, so the curve and the table are two readings
     of one measurement and cannot disagree about the alignment.
+
+    ``joint_depth_edges`` maps an axis name to GT-depth edges, and adds that
+    axis crossed with depth under ``joint`` (see ``joint_grid``). Same frozen
+    prediction again: the joint table is the axis's own bins subdivided, so it
+    cannot disagree with the 1-D table about anything but the estimator.
     """
     aligned = align_depth(pred_z, gt_z, mask, mode=align_mode)
     out = {"align": align_mode, "n_frame_valid": int(mask.sum()),
@@ -904,6 +929,10 @@ def bin_by(pred_z: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
         if profile_edges and name in profile_edges:
             out.setdefault("profiles", {})[name] = fine_profile(
                 aligned, gt_z, mask, coord, profile_edges[name],
+                min_depth, max_depth)
+        if joint_depth_edges and name in joint_depth_edges:
+            out.setdefault("joint", {})[name] = joint_grid(
+                aligned, gt_z, mask, coord, edges, joint_depth_edges[name],
                 min_depth, max_depth)
     return out
 
@@ -957,6 +986,95 @@ def fine_profile(aligned: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
             "sum_delta1": np.bincount(idx, weights=d1, minlength=nb).tolist(),
             "sum_gt": np.bincount(idx, weights=g, minlength=nb).tolist(),
             "sum_gt2": np.bincount(idx, weights=g * g, minlength=nb).tolist()}
+
+
+def joint_grid(aligned: np.ndarray, gt_z: np.ndarray, mask: np.ndarray,
+               coord: np.ndarray, coord_edges: Sequence[float],
+               depth_edges: Sequence[float],
+               min_depth: float = 0.01, max_depth: float = 100.0) -> dict:
+    """Error on a 2-D grid of (field position x GT depth), as SUMS not means.
+
+    The one-dimensional tables cannot tell "the rim is harder" from "the rim is
+    nearer", and on this camera the two move together. Reading *along a row* of
+    this grid holds the GT depth band fixed and varies only the field position,
+    which is the comparison the benchmark actually wants; reading down a column
+    gives the depth response at fixed field position, which is the size of the
+    confound the row was controlling for.
+
+    Off the same frozen prediction as everything else — this is another set of
+    masks over the single per-frame fit, never a fit per cell. Sums, not means,
+    for the reason in ``fine_profile``: the caller pools these across frames and
+    a cell holds wildly different pixel counts frame to frame. Returned as
+    nested lists indexed ``[coord_bin][depth_bin]``.
+
+    Pixels outside either edge range are dropped rather than clipped into the
+    end bins: a GT depth past the top edge is not a member of the top band, and
+    folding it in would quietly widen that band.
+    """
+    coord_edges = [float(e) for e in coord_edges]
+    depth_edges = [float(e) for e in depth_edges]
+    nc, nd = len(coord_edges) - 1, len(depth_edges) - 1
+    zeros = [[0] * nd for _ in range(nc)]
+    empty = {"coord_edges": coord_edges, "depth_edges": depth_edges,
+             "n": zeros,
+             "sum_absrel": [[0.0] * nd for _ in range(nc)],
+             "sum_delta1": [[0.0] * nd for _ in range(nc)],
+             "sum_gt": [[0.0] * nd for _ in range(nc)]}
+    ok = (mask & np.isfinite(gt_z) & (gt_z > min_depth) & (gt_z < max_depth)
+          & np.isfinite(aligned) & (aligned > 0) & (aligned <= max_depth)
+          & (coord >= coord_edges[0]) & (coord < coord_edges[-1])
+          & (gt_z >= depth_edges[0]) & (gt_z < depth_edges[-1]))
+    if not ok.any():
+        return empty
+    p = np.clip(aligned[ok].astype(np.float64), 1e-6, None)
+    g = np.clip(gt_z[ok].astype(np.float64), 1e-6, None)
+    ci = np.searchsorted(np.asarray(coord_edges, np.float64),
+                         coord[ok], side="right") - 1
+    di = np.searchsorted(np.asarray(depth_edges, np.float64),
+                         gt_z[ok].astype(np.float64), side="right") - 1
+    flat = np.clip(ci, 0, nc - 1) * nd + np.clip(di, 0, nd - 1)
+    n = nc * nd
+    d1 = (np.maximum(p / g, g / p) < 1.25).astype(np.float64)
+
+    def grid(w=None):
+        return np.bincount(flat, weights=w, minlength=n).reshape(nc, nd)
+
+    return {"coord_edges": coord_edges, "depth_edges": depth_edges,
+            "n": grid().astype(int).tolist(),
+            "sum_absrel": grid(np.abs(p - g) / g).tolist(),
+            "sum_delta1": grid(d1).tolist(),
+            "sum_gt": grid(g).tolist()}
+
+
+def pool_joint(grids: Sequence[dict]) -> dict:
+    """Add per-frame joint grids into one, and divide. The pooling step.
+
+    ``AbsRel`` and ``delta1`` come back as nested lists with ``nan`` in any cell
+    no frame populated, so an empty cell reads as absent rather than as zero
+    error. ``n`` stays an integer count, which is what decides whether a cell is
+    worth drawing (``MIN_JOINT_CELL_PX``).
+    """
+    live = [g for g in grids if g and g.get("n")]
+    if not live:
+        return {}
+    ce, de = live[0]["coord_edges"], live[0]["depth_edges"]
+    nc, nd = len(ce) - 1, len(de) - 1
+    n = np.zeros((nc, nd), np.int64)
+    acc = {k: np.zeros((nc, nd)) for k in ("sum_absrel", "sum_delta1", "sum_gt")}
+    for g in live:
+        if g["coord_edges"] != ce or g["depth_edges"] != de:
+            raise ValueError("pool_joint: grids have different edges; they "
+                             "describe different partitions and cannot be added")
+        n += np.asarray(g["n"], np.int64)
+        for k in acc:
+            acc[k] += np.asarray(g[k], np.float64)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        div = np.where(n > 0, n, np.nan)
+        return {"coord_edges": ce, "depth_edges": de, "n": n.tolist(),
+                "AbsRel": (acc["sum_absrel"] / div).tolist(),
+                "delta1": (acc["sum_delta1"] / div).tolist(),
+                "gt_mean": (acc["sum_gt"] / div).tolist(),
+                "n_frames": len(live)}
 
 
 def pool_profiles(profiles: Sequence[dict]) -> dict:

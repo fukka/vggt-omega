@@ -151,7 +151,8 @@ def _load_frame(frame, stream: str, depth_scale: float, depth_max_m: float,
 # --------------------------------------------------------------------------- #
 
 def _score_radial(model, view: "G.FrameView", edges, radius_edges,
-                  max_depth, context=None, target=0, lock=None) -> Optional[dict]:
+                  max_depth, context=None, target=0, lock=None,
+                  depth_edges=None) -> Optional[dict]:
     """Whole frame, ONE alignment fit, metrics per bin on two axes.
 
     The two axes — incidence angle and distance from the optical centre — are
@@ -177,7 +178,8 @@ def _score_radial(model, view: "G.FrameView", edges, radius_edges,
                      "radius": (view.radius, radius_edges)},
                     max_depth=max_depth,
                     profile_edges={"theta": G.PROFILE_THETA_EDGES,
-                                   "radius": G.PROFILE_RADIUS_EDGES})
+                                   "radius": G.PROFILE_RADIUS_EDGES},
+                    joint_depth_edges={"theta": depth_edges or G.DEPTH_EDGES})
     prof["bins"], prof["radius_bins"] = prof.pop("theta"), prof.pop("radius")
     prof["in_cone_frac"] = view.in_cone_frac
     return prof
@@ -302,10 +304,14 @@ def _reduce_radial(runs: List[dict], edges, radius_edges) -> dict:
     axes = sorted({k for r in runs for k in r.get("profiles", {})})
     profiles = {ax: G.pool_profiles([r.get("profiles", {}).get(ax) for r in runs])
                 for ax in axes}
+    jaxes = sorted({k for r in runs for k in r.get("joint", {})})
+    joint = {ax: G.pool_joint([r.get("joint", {}).get(ax) for r in runs])
+             for ax in jaxes}
     return {"overall": _mean_metrics([r["overall"] for r in runs], G.METRIC_KEYS),
             "bins": _reduce_axis(runs, "bins", edges),
             "radius_bins": _reduce_axis(runs, "radius_bins", radius_edges),
             "profiles": {k: v for k, v in profiles.items() if v},
+            "joint": {k: v for k, v in joint.items() if v},
             "in_cone_frac": float(np.mean([r["in_cone_frac"] for r in runs]))
             if runs else float("nan")}
 
@@ -338,6 +344,7 @@ def run(a: argparse.Namespace) -> dict:
     keys = [k.strip() for k in a.models.split(",") if k.strip()]
     edges = _edges(a.theta_edges, G.THETA_EDGES)
     radius_edges = _edges(a.radius_edges, G.RADIUS_EDGES)
+    depth_edges = _edges(a.depth_edges, G.DEPTH_EDGES)
     tilts = tuple(float(x) for x in a.tilts.split(","))
     azimuths = tuple(float(x) for x in a.azimuths.split(","))
 
@@ -493,7 +500,8 @@ def run(a: argparse.Namespace) -> dict:
                                                   a.metric_max_depth,
                                                   context=ctx,
                                                   target=frame.target_index,
-                                                  lock=fwd_lock)))
+                                                  lock=fwd_lock,
+                                                  depth_edges=depth_edges)))
                     if "window" in protocols:
                         for tilt in tilts:
                             for az in (azimuths if tilt > 0 else (0.0,)):
@@ -539,6 +547,7 @@ def run(a: argparse.Namespace) -> dict:
                     context_frames=a.context_frames,
                     context_stride=a.context_stride,
                     theta_edges=list(edges), radius_edges=list(radius_edges),
+                    depth_edges=list(depth_edges),
                     tilts=list(tilts),
                     azimuths=list(azimuths), window_fov=a.window_fov,
                     depth_max_m=a.depth_max_m,
@@ -601,6 +610,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="distance-from-optical-centre bin edges, in half-widths "
                         "(1.0 = middle of a frame edge, sqrt(2) = a corner); "
                         "default 0,0.2,0.4,0.6,0.8,1.0,1.45")
+    p.add_argument("--depth-edges", default="",
+                   help="GT-depth edges (m) for the joint incidence-angle x "
+                        "depth table, which separates 'the rim is harder' from "
+                        "'the rim is nearer'; default 0,1,2,3,5,10")
     p.add_argument("--tilts", default=",".join(str(t) for t in DEFAULT_TILTS),
                    help="window eccentricities (deg)")
     p.add_argument("--azimuths", default=",".join(str(t) for t in DEFAULT_AZIMUTHS),

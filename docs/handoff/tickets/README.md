@@ -22,6 +22,7 @@ number forever; numbers are referenced from commit messages and are never reused
 | [020](020-slam-baseline-programme.md) | **The SLAM baseline programme**: both lens strategies, then multi-frame. Successor to #013. **Step 1 is now answered**, so steps 2 and 3 are released. | gpu |
 | [022](022-fov-on-slam-data.md) | **The FOV question on real SLAM points**: the `fovbench` experiment, repeated against ego-synth's MPS points. Code, tests and lane script are on `organized`; the run is the ticket. | gpu |
 | [023](023-vggt360-on-both-benchmarks.md) | **Our VGGT-360-fisheye, as a row in both published tables** — a `fovbench` model and a `slambench` baseline arm, at the 60-degree layout. Code on `organized` @ `e583017`; the run is the ticket. | gpu |
+| [024](024-adt-fov-depth-controlled-and-three-frames.md) | **How much of the rim penalty survives with GT depth held fixed** — the joint incidence-angle x depth table, plus the missing 3-frame context point. Code and tests on `organized`; the two runs are the ticket. | gpu |
 
 **#016 is done: `d` is planar z**, on both staged datasets, decisively — so no
 published number moves and #020's steps 2 and 3 may run. Read #020's step
