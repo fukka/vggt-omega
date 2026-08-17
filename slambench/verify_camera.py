@@ -27,7 +27,8 @@ two differ only by the positive scalar ``|ray|``, and :meth:`Fisheye624.project`
 begins by forming ``x/z, y/z`` — so both hypotheses produce a bit-identical
 pixel and this file cannot tell them apart however small its residual gets. It
 verifies the camera model and its orientation, which is all it claims. What
-``d`` means is ticket 016.
+``d`` means is :mod:`slambench.verify_depth_convention`, which answered it
+(ticket 016, 2026-08-14): **planar z**, on both staged datasets.
 
 **It passes.** On both staged datasets the 90 deg rotation reads NN median
 0.29 px with 96.9 % of points inside 1 px, and the other three quarter turns sit

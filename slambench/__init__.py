@@ -59,22 +59,30 @@ forward pass. Exactly one frame of the window is scored, so the arms measure
 identical points and only the evidence moves; the context is therefore kept out
 of the split digest, which exists to say two runs scored the same points.
 
-What is not verified
---------------------
-One assumption underneath every number here rests on a document rather than a
-measurement: that ego-synth's ``d`` is **planar z** about the camera axis, which
-is the data card's own statement (gotcha 4) and is what the models are scored
-against. If it were euclidean range instead, every score would carry a
+The depth convention, and how it stopped being an assumption
+-----------------------------------------------------------
+Every number here is scored against ego-synth's ``d`` read as **planar z** about
+the camera axis. If it were euclidean range instead, every score would carry a
 ``1/cos(theta)`` error — 1.00 on axis and 1.74 at 55 deg, radial, and so not
 absorbable by the per-frame affine.
 
-It is worth naming because two things in this package *look* like checks of it
-and are structurally incapable of being one: the rectified/fisheye depth
-agreement cited in ``baselines`` (range is equally invariant under a co-axial
-rectification) and ``verify_camera``'s sub-pixel reprojection (projection reads
-only the ray's direction, which both readings share). Believing either one is
-how this ends up unnoticed. Ticket 016 specifies the check that can fail, which
-needs the source MPS points and therefore the box.
+For a while that rested on the data card alone (gotcha 4). It no longer does:
+``verify_depth_convention.py`` (ticket 016, closed 2026-08-14) measured it on
+both staged datasets and read **z**, with the residual at 0.0002 and flat across
+incidence angle — the float16 noise floor of the stored value — and the range
+hypothesis wrong by exactly ``1 - cos(theta)`` in all eight bins. The check can
+also return "range": ``tests/test_depth_convention.py`` builds a synthetic take
+under each convention and requires it to recover the one it was built under,
+because a check that could only ever say "z" would make agreement with the card
+worthless.
+
+What is still worth naming is *why* it needed its own check. Two things in this
+package **look** like checks of the convention and are structurally incapable of
+being one: the rectified/fisheye depth agreement cited in ``baselines`` (range is
+equally invariant under a co-axial rectification) and ``verify_camera``'s
+sub-pixel reprojection (projection reads only the ray's direction, which both
+readings share). Believing either one is how this ends up unnoticed — and it is
+the trap to remember if a fifth dataset is ever added.
 
 Layout
 ------

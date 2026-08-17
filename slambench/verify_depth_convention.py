@@ -1,7 +1,21 @@
 # Copyright (c) 2026.
 """Is ego-synth's ``d`` planar z about the camera axis, or euclidean range?
 
-Ticket 016. Every ``slambench`` number is scored against ``pts.d`` as planar z on
+**Answered: planar z.** Ticket 016, run 2026-08-14 on ``aea`` and ``nymeria``,
+4 clips x 121 frames each. ``|d - z| / z`` came back **0.0002 and flat across
+incidence angle** — the float16 quantisation of the stored value, so the residual
+is not small but absent, and flat is the half that matters, since a convention
+error is radial by construction. The losing hypothesis is wrong by exactly its
+predicted amount: ``|d - range| / range`` matches ``1 - cos(theta)`` to four
+decimal places in all eight bins. So no published number moved.
+
+This file stays because the question returns with every new dataset, and because
+it is the only thing here that *can* answer it — see below. Run it against a new
+release before scoring one.
+
+The question, as it stood
+-------------------------
+Every ``slambench`` number is scored against ``pts.d`` as planar z on
 the data card's word — and the npz's own ``meta`` agrees, "metric camera-frame Z
 (meters)". Neither is a measurement. If ``d`` is range and we score it as z,
 every number carries a ``1/cos(theta)`` error: 1.00 on axis, 1.36 at 43 deg,

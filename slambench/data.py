@@ -152,17 +152,29 @@ def _clip_sort_key(clip: str) -> Tuple[int, str]:
 class FramePoints:
     """The ground truth of one (clip, frame): a point list, never a map."""
 
-    #: ``d`` is **planar z about the camera axis on the data card's authority
-    #: alone** (`docs/data/ego-synth-5b-sparse-depth.md`, "metric camera-frame Z
-    #: in metres — planar z, not range", gotcha 4). Nothing in this repository
-    #: checks it, and two things that look like checks cannot: the rectified /
-    #: fisheye depth agreement in ``baselines`` (range is equally invariant under
-    #: a co-axial rectification) and ``verify_camera``'s reprojection (a
+    #: ``d`` is **planar z about the camera axis — measured, not assumed**
+    #: (ticket 016, closed 2026-08-14, ``slambench/verify_depth_convention.py``).
+    #: The data card says so too (`docs/data/ego-synth-5b-sparse-depth.md`,
+    #: "metric camera-frame Z in metres — planar z, not range", gotcha 4), but
+    #: the card was never the authority this package relied on, because the
+    #: wrong reading costs ``1/cos(theta)`` — 1.00 on axis, 1.74 at 55 deg —
+    #: radial, and so unabsorbable by the affine, which is the same failure
+    #: CONTEXT.md records for the fisheye port.
+    #:
+    #: What the check found, on aea and nymeria, 4 clips x 121 frames each:
+    #: ``|d - z| / z`` is **0.0002 and flat across incidence angle**, which is
+    #: the float16 quantisation of the stored value — the residual is not small,
+    #: it is absent, and *flat* is the load-bearing half, since a convention
+    #: error is radial by construction. The losing hypothesis is wrong by
+    #: exactly its predicted amount: ``|d - range| / range`` matches
+    #: ``1 - cos(theta)`` to four decimal places in all eight bins.
+    #:
+    #: Two things in this package still *look* like checks of this and are
+    #: structurally incapable of being one — worth keeping in mind if the
+    #: question is ever reopened for a new dataset: the rectified / fisheye
+    #: depth agreement in ``baselines`` (range is equally invariant under a
+    #: co-axial rectification) and ``verify_camera``'s reprojection (a
     #: projection reads only the ray's direction, which both readings share).
-    #: The card is a good authority and is probably right. But the wrong reading
-    #: would cost ``1/cos(theta)`` — 1.00 on axis, 1.74 at 55 deg — radial, and
-    #: so unabsorbable by the affine, which is the same failure CONTEXT.md
-    #: records for the fisheye port. Ticket 016 is the check that could fail.
     u: np.ndarray             # (N,) float32, pixel x in the 896 fisheye frame
     v: np.ndarray             # (N,) float32, pixel y
     d: np.ndarray             # (N,) float32 metres — see the note above

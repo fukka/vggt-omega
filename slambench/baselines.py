@@ -63,9 +63,15 @@ distinction cost this repo a result once already (CONTEXT.md: the ERP-era "depth
 is range" assumption is what made the fisheye port score range against z-GT).
 Euclidean range is a property of the *ray*, so it too is unchanged by a co-axial
 rectification: the two streams agreeing is exactly as consistent with ``d`` being
-range as with ``d`` being planar z. Whether ``pts.d`` is one or the other is a
-separate question, it is worth up to 1.74x across this lens, and nothing in this
-package can currently answer it — see ``data.FramePoints.d`` and ticket 016.
+range as with ``d`` being planar z.
+
+Whether ``pts.d`` is one or the other is a separate question, it is worth up to
+1.74x across this lens, and it was **answered elsewhere and not here**:
+``verify_depth_convention.py`` (ticket 016, closed 2026-08-14) puts the residual
+against planar z at 0.0002 and flat, the float16 noise floor of the stored value,
+with the range hypothesis wrong by exactly ``1 - cos(theta)`` in all eight bins
+on both staged datasets. See ``data.FramePoints.d``. It matters here only for
+``vggt360``, the one arm that leaves the camera axis and so has to convert.
 
 Support
 -------
