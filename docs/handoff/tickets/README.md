@@ -21,6 +21,7 @@ number forever; numbers are referenced from commit messages and are never reused
 | [019](019-adt-fov-rect-rerun.md) | **ADT-FOV: re-score on the corrected lens**, with DA3-Small in the same table. Supersedes #014 and #015. | gpu |
 | [020](020-slam-baseline-programme.md) | **The SLAM baseline programme**: both lens strategies, then multi-frame. Successor to #013. **Step 1 is now answered**, so steps 2 and 3 are released. | gpu |
 | [022](022-fov-on-slam-data.md) | **The FOV question on real SLAM points**: the `fovbench` experiment, repeated against ego-synth's MPS points. Code, tests and lane script are on `organized`; the run is the ticket. | gpu |
+| [023](023-vggt360-on-both-benchmarks.md) | **Our VGGT-360-fisheye, as a row in both published tables** — a `fovbench` model and a `slambench` baseline arm, at the 60-degree layout. Code on `organized` @ `e583017`; the run is the ticket. | gpu |
 
 **#016 is done: `d` is planar z**, on both staged datasets, decisively — so no
 published number moves and #020's steps 2 and 3 may run. Read #020's step
@@ -46,6 +47,7 @@ for the same reason.
 | [014](014-fovbench-speedup-verification.md) | Prove threading moved no digits | folded into #019 |
 | [015](015-adt-fov-da3-small.md) | Add DA3-Small | folded into #019 |
 | [019](019-adt-fov-rect-rerun.md) | Re-score on the corrected lens | **open** |
+| [023](023-vggt360-on-both-benchmarks.md) | Add our own port to the table | **open** — code green on CPU, run not started. Both published paths checked bit-identical, so #019 is unaffected |
 
 **SLAM depth on ego-synth 5B** — *how accurate is each model on real egocentric
 footage?*
@@ -57,6 +59,7 @@ footage?*
 | [016](016-egosynth-depth-convention.md) | Is `d` planar z or range? | done · **z**, both staged takes, `d - z` flat at the float16 floor and the range residual matching `1-cos(theta)` to 4 dp |
 | [020](020-slam-baseline-programme.md) | Both baselines → multi-frame | **open** — step 1 cleared |
 | [022](022-fov-on-slam-data.md) | Where in the field does it degrade, on this data | **open** — code green on CPU, run not started. Carries the distance control the dense experiment does not need: an oracle with no field dependence reads a 1.86x rim effect until distance is held fixed |
+| [023](023-vggt360-on-both-benchmarks.md) | Our port as a third lens strategy, beside `raw` and `rect_derect` | **open** — code green on CPU, run not started. `DEFAULT_BASELINES` unchanged, so #020 is unaffected |
 
 ---
 
