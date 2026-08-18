@@ -1,0 +1,87 @@
+ADT-FOV ticket 024 part A -- the depth-controlled rim penalty
+digest 601fcb22767e  n_frames 300  sequences 6  protocol adt-fov-v1
+
+pen_1d   = AbsRel(50-55 deg) / AbsRel(0-10 deg), the 1-D table
+pen_ctl  = the same ratio inside each GT-depth band, pooled (n-weighted)
+survives = log(pen_ctl)/log(pen_1d): share of the 1-D penalty that is NOT
+           a change of subject.  1.0 = none of it was depth composition.
+
+model      stream     view       centre     rim   pen_1d  pen_ctl  survives
+vggt_1b    real       fisheye    0.0957  0.1529    1.598    1.329      0.61
+vggt_1b    real       rect       0.0917  0.1308    1.426    0.974     -0.07
+vggt_1b    synthetic  fisheye    0.0719  0.1329    1.850    1.454      0.61
+vggt_1b    synthetic  rect       0.0677  0.0984    1.452    1.065      0.17
+vggt_omega real       fisheye    0.0574  0.1160    2.022    1.813      0.85
+vggt_omega real       rect       0.0524  0.0767    1.462    0.843     -0.45
+vggt_omega synthetic  fisheye    0.0509  0.1156    2.272    1.957      0.82
+vggt_omega synthetic  rect       0.0432  0.0690    1.597    0.955     -0.10
+dav2_large real       fisheye    0.1379  0.1394    1.011    1.295  flat 1-D
+dav2_large real       rect       0.1115  0.1183    1.061    1.427      6.01
+dav2_large synthetic  fisheye    0.1310  0.1703    1.300    1.677      1.97
+dav2_large synthetic  rect       0.0970  0.1092    1.126    1.493      3.37
+da3_large  real       fisheye    0.0778  0.1515    1.949    1.655      0.76
+da3_large  real       rect       0.0662  0.1113    1.681    1.042      0.08
+da3_large  synthetic  fisheye    0.0593  0.1347    2.271    1.866      0.76
+da3_large  synthetic  rect       0.0447  0.0806    1.802    1.116      0.19
+da3_small  real       fisheye    0.1466  0.2160    1.473    1.246      0.57
+da3_small  real       rect       0.1297  0.1821    1.404    0.906     -0.29
+da3_small  synthetic  fisheye    0.1388  0.2191    1.578    1.317      0.60
+da3_small  synthetic  rect       0.1304  0.1762    1.351    0.861     -0.50
+
+=== the rim penalty band by band (rim/centre AbsRel at fixed GT depth) ===
+model      stream     view           0-1      1-2      2-3      3-5     5-10
+vggt_1b    real       fisheye      1.282    0.965    1.448    1.383    1.900
+vggt_1b    real       rect         1.294    0.882    0.767    0.910    2.142
+vggt_1b    synthetic  fisheye      1.711    1.162    1.487    1.451    2.039
+vggt_1b    synthetic  rect         1.700    1.047    0.755    0.753    1.728
+vggt_omega real       fisheye      1.410    1.364    1.961    2.106    1.869
+vggt_omega real       rect         1.405    0.689    0.663    0.855    1.363
+vggt_omega synthetic  fisheye      1.699    1.734    2.242    2.070    1.552
+vggt_omega synthetic  rect         1.313    0.785    0.955    1.002    1.427
+dav2_large real       fisheye      2.052    1.048    1.180    1.598    0.854
+dav2_large real       rect         1.731    1.550    1.269    1.148    0.786
+dav2_large synthetic  fisheye      2.113    1.020    1.608    2.331    1.374
+dav2_large synthetic  rect         2.087    1.495    1.439    1.189    0.792
+da3_large  real       fisheye      1.573    1.005    1.959    1.832    2.230
+da3_large  real       rect         1.347    0.813    1.169    1.082    2.666
+da3_large  synthetic  fisheye      2.135    1.333    2.070    1.966    2.199
+da3_large  synthetic  rect         2.152    0.784    1.150    1.138    1.798
+da3_small  real       fisheye      0.891    0.763    1.389    1.510    1.718
+da3_small  real       rect         0.839    0.678    1.248    1.383    1.900
+da3_small  synthetic  fisheye      1.101    0.742    1.583    1.552    1.741
+da3_small  synthetic  rect         0.777    0.668    1.331    1.177    1.464
+
+=== is the residual a depth-only error in disguise? ===
+max/min of AbsRel x gt_mean down each depth column. A model whose error is
+a fixed metric offset holds this at ~1.0 (the ticket's closed-form null
+comes back to 0.12 m within 5%); a theta-driven error does not.
+model      stream     view       worst column
+vggt_1b    real       fisheye            1.85
+vggt_1b    real       rect               2.10
+vggt_1b    synthetic  fisheye            1.98
+vggt_1b    synthetic  rect               1.68
+vggt_omega real       fisheye            2.41
+vggt_omega real       rect               1.69
+vggt_omega synthetic  fisheye            2.28
+vggt_omega synthetic  rect               1.50
+dav2_large real       fisheye            1.83
+dav2_large real       rect               1.59
+dav2_large synthetic  fisheye            2.34
+dav2_large synthetic  rect               1.81
+da3_large  real       fisheye            2.57
+da3_large  real       rect               3.33
+da3_large  synthetic  fisheye            2.14
+da3_large  synthetic  rect               1.86
+da3_small  real       fisheye            1.92
+da3_small  real       rect               2.45
+da3_small  synthetic  fisheye            2.00
+da3_small  synthetic  rect               2.05
+
+=== what the rim is actually looking at (GT mean, m, by theta bin) ===
+theta bin   gt_mean   px share
+   0-10        2.93      2.4%
+  10-20        2.82      7.9%
+  20-30        2.63     14.8%
+  30-40        2.39     23.5%
+  40-50        2.12     33.5%
+  50-55        1.91     17.8%

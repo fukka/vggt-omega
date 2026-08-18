@@ -1,0 +1,83 @@
+{
+  "run_id": "fovbench-joint-0b0d1d7",
+  "ticket": "docs/handoff/tickets/024-adt-fov-depth-controlled-and-three-frames.md",
+  "issue": 24,
+  "code_commit": "0b0d1d7",
+  "code_branch": "organized",
+  "protocol": "adt-fov-v1",
+  "split_digest": "601fcb22767e",
+  "date_utc": "2026-08-18",
+
+  "status": "Part A COMPLETE. Part B (the context arms) is running on space-container and lands in this same directory; this file is rewritten when it does.",
+
+  "runs": {
+    "partA_6seq": {
+      "what": "the joint (incidence angle x GT depth) grid on the #019 headline split -- a new key over the same frozen per-frame fit, not a new fit",
+      "command": "python -m fovbench.run --adt-root $ADT --protocols radial --models vggt_1b,vggt_omega,dav2_large,da3_large,da3_small --n-frames 50 --workers 1 --out eval_out/fovbench-joint/partA_6seq",
+      "box": "lambda_63",
+      "gpu": "NVIDIA RTX 6000 Ada Generation (CUDA_VISIBLE_DEVICES=0)",
+      "driver": "570.207",
+      "conda_env": "raytun3r",
+      "torch": "2.11.0+cu128",
+      "workers": 1,
+      "wall_clock_s": 1010,
+      "exit_code": 0,
+      "deadlock_recurred": false,
+      "why_this_box": "part A's done-when is a byte-identical payload against #019, and #019 was produced here. #021 measured the box/dtype step at up to 0.51% AbsRel -- small, but not the zero this checkbox asks for. Part B, whose contract is a digest rather than a bit pattern, went to the pod's four A100s."
+    }
+  },
+
+  "the_additive_claim": {
+    "what_was_checked": "every pre-existing number in partA_6seq/results.json against results/fovbench-rectfix-393cab9/partA_6seq/results.json, with the new `joint` key stripped",
+    "result": "16 of 20 cells bit-identical. The four that moved are vggt_1b's, and they are the KNOWN #021 move, not a joint-grid effect.",
+    "vggt_1b_move": {"real": "AbsRel +0.1430%, RMSE +0.2409%, delta1 -0.0130%",
+                     "synthetic": "AbsRel -0.0867%, RMSE +0.1317%, delta1 +0.0215%"},
+    "why": "the #019 reference predates ticket 021, which opened the bf16 autocast VGGTBackbone is written to expect; its vggt_1b column is fp32. The real-stream +0.1430% is the SAME figure #023's independent self-check reported, which is what a systematic dtype step should look like and is well inside #021's 0.51% bound.",
+    "reading": "the grid is additive as the ticket claims: it adds a key and perturbs nothing. Strictly, the byte-identical box is unticked for vggt_1b -- for a reason published before this ticket was written, not for anything this run did."
+  },
+
+  "headline": {
+    "question": "how much of the rim penalty survives once GT depth is held fixed?",
+    "answer_in_one_line": "on the fisheye view most of it survives (57-85% of the log-penalty); on the rect view almost none of it does, and for dav2_large the 1-D table has the sign of the effect backwards.",
+
+    "fisheye_the_penalty_is_real": {
+      "vggt_omega": {"pen_1d": 2.022, "pen_ctl": 1.813, "survives": 0.85},
+      "da3_large":  {"pen_1d": 1.949, "pen_ctl": 1.655, "survives": 0.76},
+      "vggt_1b":    {"pen_1d": 1.598, "pen_ctl": 1.329, "survives": 0.61},
+      "da3_small":  {"pen_1d": 1.473, "pen_ctl": 1.246, "survives": 0.57},
+      "reading": "real stream. Holding GT depth fixed shrinks the fisheye rim penalty but does not remove it: the ordering of models is unchanged and vggt_omega still degrades ~1.8x from axis to rim on like-for-like depth. The deck's fisheye pen column is measuring the lens, not the furniture."
+    },
+
+    "rect_the_penalty_is_mostly_the_scene": {
+      "vggt_1b":    {"pen_1d": 1.426, "pen_ctl": 0.974},
+      "vggt_omega": {"pen_1d": 1.462, "pen_ctl": 0.843},
+      "da3_large":  {"pen_1d": 1.681, "pen_ctl": 1.042},
+      "da3_small":  {"pen_1d": 1.404, "pen_ctl": 0.906},
+      "reading": "real stream. At fixed GT depth the rect rim is as good as the centre, or better. The rect `pen` in the 1-D table is very largely a change of subject -- the rim of this lens looks at nearer surfaces (GT mean 2.93 m on axis, 1.91 m at 50-55 deg) and every metric here is relative. This is the result that changes how a published column should be read, and it is worth saying on the deck page rather than only in this file."
+    },
+
+    "dav2_large_inverts": {
+      "real_fisheye": {"pen_1d": 1.011, "pen_ctl": 1.295},
+      "real_rect": {"pen_1d": 1.061, "pen_ctl": 1.427},
+      "synthetic_fisheye": {"pen_1d": 1.300, "pen_ctl": 1.677},
+      "reading": "DAv2's famously flat curve across the field is not flatness. Its 1-D penalty is ~1.0 because a real rim penalty is being cancelled by the depth composition; control for depth and a 1.3-1.7x penalty appears. Any sentence of the form 'DAv2 is uniform across the field' that rests on the 1-D table is wrong, and no amount of extra frames would have caught it -- only the grid does.",
+      "note": "`survives` is not printed for the two rows whose pen_1d is within 5% of 1.0: it is log(pen_ctl)/log(pen_1d) and the denominator is going to zero, so the number would be arithmetic noise (24.02 in an earlier draft of the reader). The direction, not the ratio, is the finding."
+    },
+
+    "where_in_depth_the_penalty_lives": "band by band (rim/centre at fixed depth, real fisheye) the penalty is NOT uniform: it concentrates in the far band and the near band and largely vanishes in the middle. vggt_omega real fisheye reads 1.41 (0-1 m), 1.36 (1-2), 1.96 (2-3), 2.11 (3-5), 1.87 (5-10); vggt_1b reads 1.28, 0.97, 1.45, 1.38, 1.90. The 1-2 m band at or below 1.0 for several models is why the pooled controlled figure is well under the 1-D one.",
+
+    "not_a_depth_only_error": "the ticket's own null says a model with a fixed metric offset and no radial behaviour holds AbsRel x gt_mean constant down a depth column (its closed-form check returns 0.12 m within 5%). Measured here the worst column varies by 1.5x to 3.3x for every model, so what is left after the control is genuine theta structure and not a depth offset in disguise."
+  },
+
+  "reading_rules": {
+    "pen_ctl": "rim/centre AbsRel computed INSIDE each GT-depth band and then pooled across bands, weighted by min(n_centre, n_rim) so a band that is thin at either end cannot carry the pool. Cells under MIN_JOINT_CELL_PX = 500 px are dropped, matching what report.txt draws.",
+    "survives": "log(pen_ctl)/log(pen_1d). 1.0 = depth composition explains none of the 1-D penalty; 0.0 = it explains all of it; negative = the controlled rim is BETTER than the controlled centre. Undefined when pen_1d ~ 1.",
+    "the_grid_cannot_move_a_published_number": "it is another set of masks over the same per-frame fit. The 16 bit-identical cells above are the measurement of that, not the assumption."
+  },
+
+  "log_lines_the_tables_cannot_carry": {
+    "no_thin_cells": "the 6 x 5 grid came back dense on all 20 cells of every configuration -- no cell fell under the 500 px floor, so nothing in the joint table is drawn from a corner wedge.",
+    "px_share_by_theta": "0-10 deg carries 2.4% of the scored pixels and 40-50 deg carries 33.5%. The centre column of every joint table is the thinnest one, which is worth knowing before quoting a single cell from it.",
+    "gsplat_and_hf_warnings": "the log carries a gsplat-missing warning (3DGS rendering, not on this path) and an unauthenticated-HF-Hub notice (weights were already cached). Neither touches the benchmark."
+  }
+}
