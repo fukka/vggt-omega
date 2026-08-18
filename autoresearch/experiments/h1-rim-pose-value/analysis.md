@@ -132,3 +132,21 @@ peripheral *features the pose path depends on* — which argues for adaptation
 that leaves early/feature layers alone (or is provably identity at init) and
 corrects late/geometry readout, and it gives the eval a new required metric:
 report pose stability alongside rim depth for any adapter.
+
+## run_005 (2026-08-18, CONFIRMATORY — area-matched control for run_004)
+
+Same 16 pairs, added `random_masked`: random 14 px patches masked at the rim
+mask's pixel fraction (61%), seed 0.
+
+| cond | median rot err (°) |
+|---|---|
+| vanilla | 5.002 |
+| center_masked (39%) | 4.925 |
+| random_masked (61%) | 7.409 |
+| rim_masked (61%) | 12.317 |
+
+**The area confound is closed.** At identical masked area, rim-specific deletion
+costs 3× what random deletion costs (+7.3° vs +2.4° over vanilla), and center
+deletion costs nothing. The frozen model's pose information is concentrated in
+the periphery well beyond its pixel share. H1.2's refutation stands on an
+area-matched footing.

@@ -118,7 +118,7 @@ experiments:
     and per feature-band; (c) center-vs-periphery Pareto pair (AbsRel_c, AbsRel_p).
   baseline_value: null
   best_value: null
-  total_runs: 4
+  total_runs: 5
   trajectory:
     - run_id: run_001
       hypothesis: H1
@@ -136,11 +136,23 @@ experiments:
       hypothesis: H1.2
       outcome: "REFUTED (informative): DA3 pose relies on the rim; center-masked identical to vanilla"
       wall_time_min: 6
+    - run_id: run_005
+      hypothesis: H1.2
+      outcome: "area-matched control: rim deletion 3x the cost of random deletion at equal area"
+      wall_time_min: 8
 
 outer_loop:
-  cycle: 0
-  last_direction: null
-  last_reflection: "Bootstrap 2026-08-18: four hypothesis axes formed from user's novelty priorities + existing repo assets."
+  cycle: 1
+  last_direction: deepen
+  last_reflection: >
+    2026-08-18 evening: H1 family closed in 5 runs (H1 refuted, H1.1 supported,
+    H1.2 refuted-informative + area-matched control). N3's premise is measured;
+    the adapter objective is now concrete (rim depth up, rim-driven pose
+    untouched; three-axis Pareto eval). Direction: DEEPEN — (a) replicate runs
+    003/005 at Aria FOV (theta<=55) and on the local ADT frames to close the
+    lens-generalization caveat, (b) then design H2's center-safe adapter around
+    the new constraint. H4 needs a skeleton ADT sequence (GPU ticket, draft
+    ready after human sees day-1 report).
 
 continuity:
   cron_job: "75190b64 every 20 min (session-only)"
