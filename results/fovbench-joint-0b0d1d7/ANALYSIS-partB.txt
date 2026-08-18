@@ -1,0 +1,64 @@
+ADT-FOV ticket 024 part B -- context arms on the six-sequence split
+digests: 1=601fcb22767e, 3s=601fcb22767e, 5s=601fcb22767e, 10s=601fcb22767e, partA(lambda)=601fcb22767e
+
+=== overall AbsRel by context frames (stride 10; N=1 is stride 1) ===
+model      stream     view           N=1     N=3s     N=5s    N=10s   10s/N1
+vggt_1b    real       fisheye     0.1198   0.1257   0.1228   0.1194    0.997
+vggt_1b    real       rect        0.0952   0.0817   0.0765   0.0734    0.772
+vggt_1b    synthetic  fisheye     0.0985   0.1184   0.1184   0.1169    1.188
+vggt_1b    synthetic  rect        0.0720   0.0673   0.0662   0.0653    0.907
+vggt_omega real       fisheye     0.0756   0.0780   0.0765   0.0735    0.972
+vggt_omega real       rect        0.0625   0.0517   0.0503   0.0486    0.777
+vggt_omega synthetic  fisheye     0.0729   0.0811   0.0798   0.0769    1.055
+vggt_omega synthetic  rect        0.0517   0.0429   0.0428   0.0410    0.793
+da3_large  real       fisheye     0.1090   0.0998   0.0981   0.0952    0.873
+da3_large  real       rect        0.0834   0.0596   0.0564   0.0532    0.638
+da3_large  synthetic  fisheye     0.0916   0.0979   0.0946   0.0901    0.984
+da3_large  synthetic  rect        0.0594   0.0515   0.0512   0.0481    0.809
+da3_small  real       fisheye     0.1747   0.1373   0.1321   0.1298    0.743
+da3_small  real       rect        0.1503   0.1143   0.1056   0.0989    0.658
+da3_small  synthetic  fisheye     0.1708   0.1373   0.1326   0.1294    0.757
+da3_small  synthetic  rect        0.1443   0.1009   0.0925   0.0864    0.599
+
+=== pen (rim/centre AbsRel) by context frames -- does context change the shape? ===
+model      stream     view           N=1     N=3s     N=5s    N=10s
+vggt_1b    real       fisheye      1.599    1.810    1.916    1.947
+vggt_1b    real       rect         1.425    1.545    1.683    1.643
+vggt_1b    synthetic  fisheye      1.853    1.907    1.906    1.942
+vggt_1b    synthetic  rect         1.450    1.610    1.642    1.718
+vggt_omega real       fisheye      2.024    1.973    1.987    2.052
+vggt_omega real       rect         1.464    1.448    1.432    1.565
+vggt_omega synthetic  fisheye      2.278    1.979    2.012    2.109
+vggt_omega synthetic  rect         1.598    1.565    1.594    1.685
+da3_large  real       fisheye      1.950    2.048    2.122    2.154
+da3_large  real       rect         1.683    1.772    1.683    1.734
+da3_large  synthetic  fisheye      2.271    2.108    2.151    2.223
+da3_large  synthetic  rect         1.802    1.831    1.775    1.750
+da3_small  real       fisheye      1.473    1.650    1.681    1.696
+da3_small  real       rect         1.404    1.496    1.503    1.488
+da3_small  synthetic  fisheye      1.578    1.743    1.744    1.813
+da3_small  synthetic  rect         1.351    1.450    1.376    1.451
+
+=== BOX CONTROL: pod N=1 vs lambda part A, same commit and same 300 frames ===
+bounds from #021, per metric: AbsRel 0.51%, delta1 0.2%, RMSE 0.14%. SqRel is unbounded there and is reported unjudged.
+model      stream     view           AbsRel      delta1        RMSE       SqRel  verdict
+vggt_1b    real       fisheye      -0.0545%    +0.0125%    +0.0973%    +0.0267%  ok
+vggt_1b    real       rect         +0.0068%    -0.0057%    +0.0110%    +0.1089%  ok
+vggt_1b    synthetic  fisheye      +0.0786%    -0.0160%    -0.0051%    +0.2192%  ok
+vggt_1b    synthetic  rect         +0.0093%    +0.0006%    -0.0150%    -0.0025%  ok
+vggt_omega real       fisheye      +0.0470%    -0.0144%    +0.0411%    +0.0224%  ok
+vggt_omega real       rect         -0.0879%    +0.0140%    -0.0795%    -0.2192%  ok
+vggt_omega synthetic  fisheye      +0.0243%    +0.0082%    -0.0264%    +0.0586%  ok
+vggt_omega synthetic  rect         -0.0302%    +0.0020%    -0.0040%    +0.0127%  ok
+da3_large  real       fisheye      +0.0226%    +0.0010%    +0.0119%    +0.0263%  ok
+da3_large  real       rect         +0.0774%    -0.0042%    +0.0440%    +0.1149%  ok
+da3_large  synthetic  fisheye      -0.0093%    +0.0024%    -0.0355%    -0.0374%  ok
+da3_large  synthetic  rect         -0.0208%    -0.0000%    -0.0160%    +0.0130%  ok
+da3_small  real       fisheye      +0.0104%    +0.0018%    +0.0104%    +0.0151%  ok
+da3_small  real       rect         +0.0034%    +0.0030%    +0.0292%    +0.0323%  ok
+da3_small  synthetic  fisheye      -0.0000%    +0.0066%    -0.0050%    -0.0017%  ok
+da3_small  synthetic  rect         -0.0335%    +0.0105%    -0.0069%    -0.0651%  ok
+
+cells compared: 16   over bound: 0
+worst |delta| per metric: AbsRel 0.0879% (bound 0.51%), delta1 0.0160% (bound 0.2%), RMSE 0.0973% (bound 0.14%)
+CONTROL: PASS -- the A100 arm is the same measurement as the Ada one to within #021's published box tolerance, so the four-point curve above is not carrying a hardware step.

@@ -8,7 +8,7 @@
   "split_digest": "601fcb22767e",
   "date_utc": "2026-08-18",
 
-  "status": "Part A COMPLETE. Part B (the context arms) is running on space-container and lands in this same directory; this file is rewritten when it does.",
+  "status": "COMPLETE, both halves. Part A is the joint grid on lambda_63; part B is the four context arms on space-container's A100s. Every arm reports 601fcb22767e and the cross-box control between the two halves passes.",
 
   "runs": {
     "partA_6seq": {
@@ -16,68 +16,130 @@
       "command": "python -m fovbench.run --adt-root $ADT --protocols radial --models vggt_1b,vggt_omega,dav2_large,da3_large,da3_small --n-frames 50 --workers 1 --out eval_out/fovbench-joint/partA_6seq",
       "box": "lambda_63",
       "gpu": "NVIDIA RTX 6000 Ada Generation (CUDA_VISIBLE_DEVICES=0)",
-      "driver": "570.207",
-      "conda_env": "raytun3r",
-      "torch": "2.11.0+cu128",
+      "driver": "570.207", "conda_env": "raytun3r", "torch": "2.11.0+cu128",
+      "workers": 1, "wall_clock_s": 1010, "exit_code": 0, "deadlock_recurred": false,
+      "why_this_box": "part A's done-when is a byte-identical payload against #019, and #019 was produced here. #021 measured the box/dtype step at up to 0.51% AbsRel -- small, but not the zero this checkbox asks for."
+    },
+    "partB": {
+      "what": "the context arms on the SIX-SEQUENCE split (the ticket's 2026-08-17 rewrite), one arm per A100, plus an N=1 arm that the ticket says not to run -- see the deviation below",
+      "command": "python -m fovbench.run --adt-root $ADT --protocols radial --models vggt_1b,vggt_omega,da3_large,da3_small --n-frames 50 --workers 1 --context-frames $N --context-stride 10 --out eval_out/fovbench-joint/partB_6seq_${N}s",
+      "box": "space-container",
+      "gpu": "4x NVIDIA A100-SXM4-80GB, one arm per card",
+      "venv": "/group-volume/Fengjia/envs/vggt360-py312", "python": "3.12.3", "torch": "2.11.0+cu128",
       "workers": 1,
-      "wall_clock_s": 1010,
-      "exit_code": 0,
-      "deadlock_recurred": false,
-      "why_this_box": "part A's done-when is a byte-identical payload against #019, and #019 was produced here. #021 measured the box/dtype step at up to 0.51% AbsRel -- small, but not the zero this checkbox asks for. Part B, whose contract is a digest rather than a bit pattern, went to the pod's four A100s."
+      "thread_caps": "OMP_NUM_THREADS=MKL_NUM_THREADS=OPENBLAS_NUM_THREADS=16 -- this box has 247 threads across two NUMA sockets and unpinned BLAS is known to make it far slower than lambda",
+      "arms": {
+        "partB_6seq_1":   {"context_frames": 1,  "context_stride": 1,  "gpu": 3, "wall_clock_s": 1197, "exit_code": 0},
+        "partB_6seq_3s":  {"context_frames": 3,  "context_stride": 10, "gpu": 2, "wall_clock_s": 1860, "exit_code": 0},
+        "partB_6seq_5s":  {"context_frames": 5,  "context_stride": 10, "gpu": 1, "wall_clock_s": 2591, "exit_code": 0},
+        "partB_6seq_10s": {"context_frames": 10, "context_stride": 10, "gpu": 0, "wall_clock_s": 4619, "exit_code": 0}
+      },
+      "wall_clock_all_four_s": 4619,
+      "against_the_estimate": "the ticket budgeted ~6.3 h for three arms on one card. Four arms on four cards finished in 77 minutes of wall clock, so the extra N=1 control cost nothing in time -- it ran on the card that would otherwise have idled."
     }
   },
 
-  "the_additive_claim": {
-    "what_was_checked": "every pre-existing number in partA_6seq/results.json against results/fovbench-rectfix-393cab9/partA_6seq/results.json, with the new `joint` key stripped",
-    "result": "16 of 20 cells bit-identical. The four that moved are vggt_1b's, and they are the KNOWN #021 move, not a joint-grid effect.",
-    "vggt_1b_move": {"real": "AbsRel +0.1430%, RMSE +0.2409%, delta1 -0.0130%",
-                     "synthetic": "AbsRel -0.0867%, RMSE +0.1317%, delta1 +0.0215%"},
-    "why": "the #019 reference predates ticket 021, which opened the bf16 autocast VGGTBackbone is written to expect; its vggt_1b column is fp32. The real-stream +0.1430% is the SAME figure #023's independent self-check reported, which is what a systematic dtype step should look like and is well inside #021's 0.51% bound.",
-    "reading": "the grid is additive as the ticket claims: it adds a key and perturbs nothing. Strictly, the byte-identical box is unticked for vggt_1b -- for a reason published before this ticket was written, not for anything this run did."
+  "deviations_from_the_ticket": {
+    "n_1_arm_was_run": {
+      "ticket_says": "Do not re-run N=1 on this split. #019's partA_6seq already is it, and re-running would risk two N=1 curves that differ.",
+      "what_was_done": "N=1 was run on the pod anyway, as partB_6seq_1.",
+      "why": "that reasoning holds on ONE box. Part B had to move to the pod for its four cards, so plotting lambda's N=1 against A100 N=3/5/10 would have put a box change inside the curve -- and #021 measured that step at up to 0.51% AbsRel, which is small against the 3-40% context effects in fovbench-ctx-d351d94 but the same size as its smallest cells (vggt_1b real rect N=1 -> 5c is +0.2%).",
+      "so_which_N_1_does_the_deck_plot": "partB_6seq_1, the pod's own. The curve is then four points from one box. Lambda's part A is the CONTROL, not a point on the plot. This is stated here so it is not decided by whoever opens the directory.",
+      "and_it_turned_out_not_to_matter": "the control passes with room to spare (worst AbsRel 0.088% against a 0.51% bound), so either N=1 would have drawn the same curve. That is a measurement, though, and it did not exist before this run."
+    },
+    "extra_arm_is_not_an_extra_cost": "16 cells x 4 arms; adding N=1 changed nothing about the other three, which are independent processes on separate cards."
   },
 
-  "headline": {
+  "the_additive_claim_part_A": {
+    "what_was_checked": "every pre-existing number in partA_6seq/results.json against results/fovbench-rectfix-393cab9/partA_6seq/results.json, with the new `joint` key stripped",
+    "result": "16 of 20 cells bit-identical. The four that moved are vggt_1b's, and they are the KNOWN #021 move.",
+    "vggt_1b_move": {"real": "AbsRel +0.1430%, RMSE +0.2409%, delta1 -0.0130%",
+                     "synthetic": "AbsRel -0.0867%, RMSE +0.1317%, delta1 +0.0215%"},
+    "why": "the #019 reference predates ticket 021, which opened the bf16 autocast VGGTBackbone is written to expect; its vggt_1b column is fp32. The real-stream +0.1430% is the SAME figure #023's independent self-check reported.",
+    "reading": "the grid is additive as the ticket claims. Strictly the byte-identical box is unticked for vggt_1b -- for a reason published before this ticket was written, not for anything this run did."
+  },
+
+  "the_box_control": {
+    "what": "pod N=1 (partB_6seq_1) against lambda part A, same commit, same digest, same 300 frames, different GPU architecture",
+    "bounds": {"AbsRel": 0.51, "delta1": 0.20, "RMSE": 0.14},
+    "bounds_are_per_metric": "#021 measured AbsRel 0.51%, delta1 0.20%, RMSE 0.14% and set NO SqRel bound. Applying the AbsRel figure to every metric is the mistake #023 made once; SqRel is reported here and left unjudged.",
+    "result": "PASS on all 16 cells. Worst |delta|: AbsRel 0.0879%, delta1 0.0160%, RMSE 0.0973%.",
+    "and_the_data_identity_behind_it": "the digest only says both boxes chose the same 300 frame KEYS. frame_sha.py hashed what the split actually resolves to -- 300 frames x (depth, real, synthetic) -- and the rollup md5 matched exactly (5d7b488056c33fe371b6422f95e5b372), so all 900 underlying files are byte-identical across the two boxes.",
+    "script": "ctx024_read.py (control table at the foot of ANALYSIS-partB.txt)"
+  },
+
+  "getting_the_pod_onto_this_split": {
+    "why_it_was_work": "the pod's ADT copy is not lambda's. It held depth_npy + videos_rgb for five of the six sequences, no videos_synthetic at all, and no depth for decoration_132 -- and its videos_rgb is a SUPERSET of lambda's (3675 frame ids against 2844 for clean_133).",
+    "what_that_did": "with the synthetic streams staged the pod built a 400-frame pool per sequence where #019 built 399, a different even spread, and digest 2f95f0c6b21d. Neither copy is wrong; they are not the same inventory, and the digest gate caught it before a single model ran.",
+    "the_fix": "filter_rgb_pod.py trims videos_rgb to lambda's intersection pool. That is intersection-preserving by construction -- the intersection is a subset of every stream on both boxes -- and the digest, not the argument, decided: 601fcb22767e.",
+    "the_transfer": "~4.4 GB over `space storage` (not scp: the SSH chain to the pod drops mid-command). decoration_132's 11 GB depth_npy was sent as the subset whose ids appear in its 400 synthetic frames, since a depth frame absent from videos_synthetic can never enter the intersection.",
+    "scripts": ["stage_adt024_to_pod.sh", "assemble_adt024_pod.sh", "filter_rgb_pod.py", "frame_sha.py"]
+  },
+
+  "headline_partA_the_depth_controlled_rim_penalty": {
     "question": "how much of the rim penalty survives once GT depth is held fixed?",
     "answer_in_one_line": "on the fisheye view most of it survives (57-85% of the log-penalty); on the rect view almost none of it does, and for dav2_large the 1-D table has the sign of the effect backwards.",
-
     "fisheye_the_penalty_is_real": {
       "vggt_omega": {"pen_1d": 2.022, "pen_ctl": 1.813, "survives": 0.85},
       "da3_large":  {"pen_1d": 1.949, "pen_ctl": 1.655, "survives": 0.76},
       "vggt_1b":    {"pen_1d": 1.598, "pen_ctl": 1.329, "survives": 0.61},
       "da3_small":  {"pen_1d": 1.473, "pen_ctl": 1.246, "survives": 0.57},
-      "reading": "real stream. Holding GT depth fixed shrinks the fisheye rim penalty but does not remove it: the ordering of models is unchanged and vggt_omega still degrades ~1.8x from axis to rim on like-for-like depth. The deck's fisheye pen column is measuring the lens, not the furniture."
+      "reading": "real stream. Holding GT depth fixed shrinks the fisheye rim penalty but does not remove it, and the model ordering is unchanged. The deck's fisheye pen column is measuring the lens, not the furniture."
     },
-
     "rect_the_penalty_is_mostly_the_scene": {
-      "vggt_1b":    {"pen_1d": 1.426, "pen_ctl": 0.974},
+      "vggt_1b": {"pen_1d": 1.426, "pen_ctl": 0.974},
       "vggt_omega": {"pen_1d": 1.462, "pen_ctl": 0.843},
-      "da3_large":  {"pen_1d": 1.681, "pen_ctl": 1.042},
-      "da3_small":  {"pen_1d": 1.404, "pen_ctl": 0.906},
-      "reading": "real stream. At fixed GT depth the rect rim is as good as the centre, or better. The rect `pen` in the 1-D table is very largely a change of subject -- the rim of this lens looks at nearer surfaces (GT mean 2.93 m on axis, 1.91 m at 50-55 deg) and every metric here is relative. This is the result that changes how a published column should be read, and it is worth saying on the deck page rather than only in this file."
+      "da3_large": {"pen_1d": 1.681, "pen_ctl": 1.042},
+      "da3_small": {"pen_1d": 1.404, "pen_ctl": 0.906},
+      "reading": "real stream. At fixed GT depth the rect rim is as good as the centre or better. The rect `pen` column is very largely a change of subject: GT mean falls 2.93 m on axis to 1.91 m at 50-55 deg and every metric here is relative. This one changes how a published column should be read."
     },
-
     "dav2_large_inverts": {
       "real_fisheye": {"pen_1d": 1.011, "pen_ctl": 1.295},
       "real_rect": {"pen_1d": 1.061, "pen_ctl": 1.427},
       "synthetic_fisheye": {"pen_1d": 1.300, "pen_ctl": 1.677},
-      "reading": "DAv2's famously flat curve across the field is not flatness. Its 1-D penalty is ~1.0 because a real rim penalty is being cancelled by the depth composition; control for depth and a 1.3-1.7x penalty appears. Any sentence of the form 'DAv2 is uniform across the field' that rests on the 1-D table is wrong, and no amount of extra frames would have caught it -- only the grid does.",
-      "note": "`survives` is not printed for the two rows whose pen_1d is within 5% of 1.0: it is log(pen_ctl)/log(pen_1d) and the denominator is going to zero, so the number would be arithmetic noise (24.02 in an earlier draft of the reader). The direction, not the ratio, is the finding."
+      "reading": "DAv2's flat curve across the field is not flatness. Its 1-D penalty is ~1.0 because a real rim penalty is cancelled by the depth composition; control for depth and 1.3-1.7x appears. No number of extra frames would have caught this -- only the grid does.",
+      "note": "`survives` is left blank for rows whose pen_1d is within 5% of 1.0: it is log(pen_ctl)/log(pen_1d) and the denominator goes to zero. The direction, not the ratio, is the finding."
     },
+    "where_in_depth_the_penalty_lives": "band by band the penalty is not uniform -- it concentrates in the far and near bands and largely vanishes in the middle. vggt_omega real fisheye: 1.41 (0-1 m), 1.36 (1-2), 1.96 (2-3), 2.11 (3-5), 1.87 (5-10). vggt_1b: 1.28, 0.97, 1.45, 1.38, 1.90.",
+    "not_a_depth_only_error": "the ticket's null says a fixed metric offset holds AbsRel x gt_mean constant down a depth column (its closed form returns 0.12 m within 5%). Measured, the worst column varies 1.5x to 3.3x for every model, so what survives the control is genuine theta structure."
+  },
 
-    "where_in_depth_the_penalty_lives": "band by band (rim/centre at fixed depth, real fisheye) the penalty is NOT uniform: it concentrates in the far band and the near band and largely vanishes in the middle. vggt_omega real fisheye reads 1.41 (0-1 m), 1.36 (1-2), 1.96 (2-3), 2.11 (3-5), 1.87 (5-10); vggt_1b reads 1.28, 0.97, 1.45, 1.38, 1.90. The 1-2 m band at or below 1.0 for several models is why the pooled controlled figure is well under the 1-D one.",
+  "headline_partB_context_buys_the_centre_not_the_field": {
+    "the_pooled_gain": "N=1 -> N=10 at stride 10, real stream, AbsRel: da3_small rect 0.1503 -> 0.0989 (-34%), da3_large rect 0.0834 -> 0.0532 (-36%), vggt_omega rect 0.0625 -> 0.0486 (-22%), vggt_1b rect 0.0952 -> 0.0734 (-23%). On FISHEYE the same models gain far less or nothing: vggt_1b 0.1198 -> 0.1194 (-0.3%), vggt_omega 0.0756 -> 0.0735 (-3%), da3_large 0.1090 -> 0.0952 (-13%), da3_small 0.1747 -> 0.1298 (-26%).",
+    "context_can_hurt": "on the SYNTHETIC fisheye stream vggt_1b gets worse with context: 0.0985 -> 0.1169 (+18.8%), and vggt_omega 0.0729 -> 0.0769 (+5.5%). Both improve on rect over the same arms, so this is a fisheye-plus-context interaction and not a broken arm.",
+    "the_shape_moves_too_and_that_is_new": "#010 concluded 'context changes the level, not the shape' on seq131. On the six-sequence split that holds for vggt_omega (real fisheye pen 2.024 -> 2.052) and da3_large (1.950 -> 2.154 rect-flat) but NOT for vggt_1b (real fisheye 1.599 -> 1.947, +22%) or da3_small (1.473 -> 1.696, +15%). Where context helps the pooled number it helps the CENTRE more than the rim, so the field gets less uniform as the average gets better.",
+    "why_the_split_rewrite_mattered": "the ticket dropped seq131 for the six-sequence split because seq131 is the mildest of the six. It changed the multi-frame story, not just its level: on seq131 vggt_1b real fisheye went 0.1246 -> 0.1344 with 10 frames (a 7.9% DEGRADATION); pooled over six sequences the same arm is 0.1198 -> 0.1194, flat. A deck page drawn on seq131 would have said multi-frame hurts this model on fisheye. It does not; it does nothing.",
+    "deck_note": "p.8 plots four points per curve, all from partB_6seq_*. Do not mix in #019's N=1."
+  },
 
-    "not_a_depth_only_error": "the ticket's own null says a model with a fixed metric offset and no radial behaviour holds AbsRel x gt_mean constant down a depth column (its closed-form check returns 0.12 m within 5%). Measured here the worst column varies by 1.5x to 3.3x for every model, so what is left after the control is genuine theta structure and not a depth offset in disguise."
+  "the_pod_vanished_before_the_waiter_noticed": {
+    "what_happened": "all four arms exited 0 (last write 2026-08-18 01:14 EDT). Some time after that the pod stopped answering SSH: port 22 is closed on all five of the pod IPs in ~/.ssh/config, while the n6 jump host itself is healthy and lambda_63 is fine. The waiter script kept polling a box that was no longer there and reported nothing, so a finished half looked like a stuck one for about nine hours.",
+    "why_nothing_was_lost": "the repo and its eval_out live on /group-volume, which is a network volume and outlives the pod. Every arm's results.json, report.txt, results.csv, figures and log were already written there.",
+    "how_they_were_recovered": "`space storage download file file://groups/SR-TORAIC-IVU/Fengjia/projects/vggt-omega-024/...` run FROM lambda_63. The group volume is reachable through the SPACE storage API with no SSH to the pod at all -- which is the same path used to stage the data in, in the other direction.",
+    "the_lesson_for_the_next_waiter": "an unreachable box and an unfinished run are indistinguishable to a poller that only greps a log over SSH. A waiter on this box should treat an SSH failure as its own state and say so, rather than folding it into 'not done yet'."
   },
 
   "reading_rules": {
-    "pen_ctl": "rim/centre AbsRel computed INSIDE each GT-depth band and then pooled across bands, weighted by min(n_centre, n_rim) so a band that is thin at either end cannot carry the pool. Cells under MIN_JOINT_CELL_PX = 500 px are dropped, matching what report.txt draws.",
-    "survives": "log(pen_ctl)/log(pen_1d). 1.0 = depth composition explains none of the 1-D penalty; 0.0 = it explains all of it; negative = the controlled rim is BETTER than the controlled centre. Undefined when pen_1d ~ 1.",
-    "the_grid_cannot_move_a_published_number": "it is another set of masks over the same per-frame fit. The 16 bit-identical cells above are the measurement of that, not the assumption."
+    "pen_ctl": "rim/centre AbsRel computed INSIDE each GT-depth band and pooled across bands, weighted by min(n_centre, n_rim) so a band thin at either end cannot carry the pool. Cells under MIN_JOINT_CELL_PX = 500 px are dropped, matching report.txt.",
+    "survives": "log(pen_ctl)/log(pen_1d). 1.0 = depth composition explains none of the 1-D penalty; 0.0 = all of it; negative = the controlled rim is BETTER than the controlled centre. Undefined when pen_1d ~ 1.",
+    "context_arms": "N=1 is stride 1 (a stride is meaningless with one frame); 3/5/10 are stride 10. Context does not enter the digest by design, which is what makes these four directly comparable.",
+    "the_grid_cannot_move_a_published_number": "it is another set of masks over the same per-frame fit. The 16 bit-identical cells are the measurement of that, not the assumption."
   },
 
   "log_lines_the_tables_cannot_carry": {
-    "no_thin_cells": "the 6 x 5 grid came back dense on all 20 cells of every configuration -- no cell fell under the 500 px floor, so nothing in the joint table is drawn from a corner wedge.",
-    "px_share_by_theta": "0-10 deg carries 2.4% of the scored pixels and 40-50 deg carries 33.5%. The centre column of every joint table is the thinnest one, which is worth knowing before quoting a single cell from it.",
-    "gsplat_and_hf_warnings": "the log carries a gsplat-missing warning (3DGS rendering, not on this path) and an unauthenticated-HF-Hub notice (weights were already cached). Neither touches the benchmark."
+    "no_thin_cells": "the 6 x 5 joint grid came back dense on all 30 cells of every configuration -- nothing fell under the 500 px floor, so no joint cell is drawn from a corner wedge.",
+    "px_share_by_theta": "0-10 deg carries 2.4% of the scored pixels and 40-50 deg carries 33.5%. The centre column of every joint table is the thinnest, which is worth knowing before quoting one cell of it.",
+    "context_line_from_the_arms": "each part B log carries 'ADT-FOV split 601fcb22767e: 300 frames across 6 sequence(s), streams=[synthetic, real], context 10x@stride 10' -- the arm's own statement of what it built, and the place to check an arm is the arm it claims to be.",
+    "no_stream_gaps": "split.py falls back to a 1-frame context for any frame whose stream has a hole in the window. No arm logged a fallback, so every scored frame got its full context in both streams.",
+    "deadlock": "did not recur. Part A ran --workers 1 as the ticket requires; part B did too, on a different box, so #023's dav2_large futex deadlock was not re-tested here and remains an open CPU-side question.",
+    "benign_warnings": "gsplat-missing (3DGS rendering, not on this path), unauthenticated HF Hub (weights pre-cached), and a torch.cuda.amp.autocast FutureWarning from VGGT-360-fisheye/vggt_visfeat. None touch the benchmark."
+  },
+
+  "done_when": {
+    "partA_non_joint_payload_byte_identical": "16 of 20 cells yes; vggt_1b's 4 moved by the #021 bf16 step, quantified above. Stated in the issue comment.",
+    "report_txt_carries_JOINT_for_vggt_omega_both_views": "yes -- partA_6seq/report.txt lines 132-163 carry vggt_omega x {fisheye, rect} x {real, synthetic}.",
+    "partB_three_runs_report_601fcb22767e": "yes, and so does the fourth (the N=1 control).",
+    "results_on_the_results_branch_with_meta": "this directory.",
+    "issue_commented_with_sha_and_digests": "held for the account owner -- an issue comment is outward-facing."
   }
 }
