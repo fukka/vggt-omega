@@ -1,0 +1,76 @@
+{
+  "real": {
+    "n_pairs": 19,
+    "dropped": 5,
+    "conds": {
+      "all": {
+        "median_err_deg": 0.8681803941726685,
+        "gain": 0.9741122368983781,
+        "median_theta_deg": NaN
+      },
+      "q0": {
+        "median_err_deg": 2.8825578689575195,
+        "gain": 1.023895612178962,
+        "median_theta_deg": 30.82647705078125
+      },
+      "q1": {
+        "median_err_deg": 2.5284781455993652,
+        "gain": 0.9847316883075666,
+        "median_theta_deg": 40.94697570800781
+      },
+      "q2": {
+        "median_err_deg": 1.9361356496810913,
+        "gain": 1.0267226186387848,
+        "median_theta_deg": 51.02786636352539
+      },
+      "q3": {
+        "median_err_deg": 2.991466522216797,
+        "gain": 1.1356801241644523,
+        "median_theta_deg": 62.71017074584961
+      }
+    }
+  },
+  "synth": {
+    "n_pairs": 22,
+    "dropped": 2,
+    "conds": {
+      "all": {
+        "median_err_deg": 0.19746581465005875,
+        "gain": 1.0009149205769476,
+        "median_theta_deg": NaN
+      },
+      "q0": {
+        "median_err_deg": 0.34833216667175293,
+        "gain": 0.9936465324475151,
+        "median_theta_deg": 30.82647705078125
+      },
+      "q1": {
+        "median_err_deg": 0.36794884502887726,
+        "gain": 0.9933990418053236,
+        "median_theta_deg": 40.94697570800781
+      },
+      "q2": {
+        "median_err_deg": 0.3246258348226547,
+        "gain": 0.9966365163789724,
+        "median_theta_deg": 51.02786636352539
+      },
+      "q3": {
+        "median_err_deg": 0.3868310898542404,
+        "gain": 1.0694171332490379,
+        "median_theta_deg": 62.71017074584961
+      }
+    }
+  },
+  "match_count_median": 258.0,
+  "config": {
+    "path": "/Users/fengjiazhang/Desktop/ADT/scannetpp_example/3f15a9266d",
+    "max_size": 504,
+    "max_gt_rot_deg": 30.0,
+    "max_pairs": 40,
+    "nfeatures": 6000,
+    "ratio": 0.8,
+    "magsac_thresh_deg": 0.5,
+    "seed": 0,
+    "out": "results/run_001.json"
+  }
+}

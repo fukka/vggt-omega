@@ -1,0 +1,86 @@
+{
+  "real": {
+    "n_pairs": 20,
+    "dropped": 5,
+    "conds": {
+      "all": {
+        "median_err_deg": 0.8810618221759796,
+        "gain": 0.9698363499610757,
+        "median_theta_deg": NaN
+      },
+      "q0": {
+        "median_err_deg": 2.893113136291504,
+        "gain": 1.0205501196555662,
+        "median_theta_deg": 31.266544342041016
+      },
+      "q1": {
+        "median_err_deg": 2.39363956451416,
+        "gain": 0.9871720878257982,
+        "median_theta_deg": 41.99678039550781
+      },
+      "q2": {
+        "median_err_deg": 1.9908903241157532,
+        "gain": 1.0130921937421078,
+        "median_theta_deg": 50.58305740356445
+      },
+      "q3": {
+        "median_err_deg": 3.0098726749420166,
+        "gain": 1.1186240490291874,
+        "median_theta_deg": 62.361751556396484
+      }
+    },
+    "paired_rim_minus_center": {
+      "median_diff_deg": 0.465243399143219,
+      "n_rim_better": 9,
+      "n_center_better": 11
+    }
+  },
+  "synth": {
+    "n_pairs": 23,
+    "dropped": 2,
+    "conds": {
+      "all": {
+        "median_err_deg": 0.18557488918304443,
+        "gain": 1.000864506130288,
+        "median_theta_deg": NaN
+      },
+      "q0": {
+        "median_err_deg": 0.30901044607162476,
+        "gain": 0.9950200472612315,
+        "median_theta_deg": 31.266544342041016
+      },
+      "q1": {
+        "median_err_deg": 0.36369451880455017,
+        "gain": 0.9952962283011602,
+        "median_theta_deg": 41.99678039550781
+      },
+      "q2": {
+        "median_err_deg": 0.29870715737342834,
+        "gain": 0.9964381353219595,
+        "median_theta_deg": 50.58305740356445
+      },
+      "q3": {
+        "median_err_deg": 0.37115025520324707,
+        "gain": 1.0576899247728382,
+        "median_theta_deg": 62.361751556396484
+      }
+    },
+    "paired_rim_minus_center": {
+      "median_diff_deg": -0.04734396934509277,
+      "n_rim_better": 14,
+      "n_center_better": 9
+    }
+  },
+  "match_count_median": 260.0,
+  "config": {
+    "path": "/Users/fengjiazhang/Desktop/ADT/scannetpp_example/3f15a9266d",
+    "max_size": 504,
+    "max_gt_rot_deg": 30.0,
+    "max_pairs": 120,
+    "nfeatures": 6000,
+    "ratio": 0.8,
+    "magsac_thresh_deg": 0.5,
+    "seed": 0,
+    "out": "results/run_002.json"
+  }
+}
