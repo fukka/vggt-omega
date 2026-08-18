@@ -1,0 +1,31 @@
+============================================================================================
+  ego-synth SLAM depth · egosynth-slam-v1 · split 61195914f090
+============================================================================================
+  400 frames over 16 take(s), datasets: aea, nymeria
+  GT: sparse MPS SLAM points, fisheye stream, native — the harness rectifies nothing
+  cut at inv_dist_std (1/m, scale-invariant) < 0.01 (the release ships UNFILTERED, so this is part of every number below)
+  baselines ['raw', 'vggt360'] · 8 take(s)/dataset · 25 frame(s)/take
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame over every one
+  of that frame's points, then frozen. Frames combine unweighted. Each
+  model keeps its own alignment space — disparity for Depth-Anything V2,
+  depth for the up-to-scale heads — so ABSOLUTE AbsRel IS NOT COMPARABLE
+  ACROSS MODELS. It is comparable across baselines of one model.
+
+  BASELINE · raw
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  vggt_1b       aea            0.199    0.764    0.902    0.733    0.079    1.00    1.42     200
+  vggt_1b       nymeria        0.143    0.828    0.938    0.501    0.063    1.00    1.59     200
+
+  BASELINE · vggt360
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  vggt_1b       aea            0.189    0.790    0.908    0.723    0.076    0.97    1.42     200
+  vggt_1b       nymeria        0.150    0.830    0.931    0.514    0.062    0.97    1.59     200
+
+  MODELS
+  ------------------------------------------------------------
+  vggt_1b       VGGT 1B · 1191M · align=scale_shift · frames at 518px

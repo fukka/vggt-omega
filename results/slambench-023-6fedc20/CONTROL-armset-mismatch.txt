@@ -1,0 +1,24 @@
+run  /private/tmp/claude-1179736597/-Users-f-zhang2-Desktop-projects-vggt-omega-organized/d14169ad-bd81-4274-9781-f9cb9435c27c/scratchpad/stage/slambench-023-6fedc20/slam_B/results.json
+ref  /private/tmp/claude-1179736597/-Users-f-zhang2-Desktop-projects-vggt-omega-organized/d14169ad-bd81-4274-9781-f9cb9435c27c/scratchpad/reswt/results/slambench-020-143686a/step3-s1/results.json
+digest  run=61195914f090  ref=61195914f090  MATCH
+
+### raw arm, context 1 -- the control
+  vggt_1b     aea       AbsRel 0.198587 -> 0.198591 (+0.0022%)
+      bounded: AbsRel +0.0022%/0.51%, delta1 +0.3242%/0.2%, RMSE +0.8535%/0.14%
+      largest unbounded: SqRel +1.0420% (#021 set no bound for it)
+      *** delta1 +0.3242% OVER 0.2%
+      *** RMSE +0.8535% OVER 0.14%
+      SUPPORT DIFFERS 724894 -> 709768 -- arm sets disagree, pooled metrics are not comparable
+  vggt_1b     nymeria   AbsRel 0.143927 -> 0.143292 (-0.4416%)
+      bounded: AbsRel -0.4416%/0.51%, delta1 +0.1484%/0.2%, RMSE +0.0775%/0.14%
+      largest unbounded: RMSElog -0.9162% (#021 set no bound for it)
+      SUPPORT DIFFERS 587563 -> 577921 -- arm sets disagree, pooled metrics are not comparable
+
+Support differs, so this is not a hardware comparison at all: the
+intersection is taken over the model's arms. Match the arm set first.
+
+### vggt360 vs raw, WITHIN this run (exact -- same box, same run)
+  vggt_1b   aea       raw 0.198591 -> vggt360 0.188603 (-5.03%)
+  vggt_1b   nymeria   raw 0.143292 -> vggt360 0.150491 (+5.02%)
+
+CONTROL FAIL

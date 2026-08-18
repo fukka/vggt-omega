@@ -1,0 +1,16 @@
+run  /private/tmp/claude-1179736597/-Users-f-zhang2-Desktop-projects-vggt-omega-organized/d14169ad-bd81-4274-9781-f9cb9435c27c/scratchpad/stage/slambench-023-6fedc20/slam_CTL/results.json
+ref  /private/tmp/claude-1179736597/-Users-f-zhang2-Desktop-projects-vggt-omega-organized/d14169ad-bd81-4274-9781-f9cb9435c27c/scratchpad/reswt/results/slambench-020-143686a/step3-s1/results.json
+digest  run=61195914f090  ref=61195914f090  MATCH
+
+### raw arm, context 1 -- the control
+  vggt_1b     aea       AbsRel 0.198587 -> 0.198452 (-0.0682%)
+      bounded: AbsRel -0.0682%/0.51%, delta1 +0.0601%/0.2%, RMSE -0.0041%/0.14%
+      largest unbounded: SqRel -0.1060% (#021 set no bound for it)
+  vggt_1b     nymeria   AbsRel 0.143927 -> 0.144561 (+0.4405%)
+      bounded: AbsRel +0.4405%/0.51%, delta1 -0.1998%/0.2%, RMSE +0.0726%/0.14%
+      largest unbounded: SqRel +0.6326% (#021 set no bound for it)
+
+Every metric #021 bounded is inside its bound, on an identical support.
+The change of GPU adds nothing detectable beyond the known dtype fix.
+
+CONTROL PASS

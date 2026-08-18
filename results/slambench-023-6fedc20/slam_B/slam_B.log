@@ -1,0 +1,498 @@
+  [slambench] aea: 8 of 8 takes, 251 clips
+  [slambench] nymeria: 8 of 8 takes, 256 clips
+  [slambench] split 61195914f090: 400 frames over 16 take(s) of 2 dataset(s)
+[vggt360] loading facebook/VGGT-1B (fov60 tilt26 ring8 fuse=attn head=depth adaptive sa-mask 518px bf16)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[vggt360]   weight check OK: 1403 keys matched
+
+[slambench] ══ vggt_1b ══
+[slambench]   VGGT 1B | 1191M | align=scale_shift | frames at 518px
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+/group-volume/Fengjia/projects/vggt-omega-023/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/group-volume/Fengjia/projects/vggt-omega-023/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 5/374 (61s)
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 10/374 (114s)
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 15/374 (165s)
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 20/374 (217s)
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq1_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 25/374 (271s)
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 30/374 (325s)
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 35/374 (377s)
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 40/374 (429s)
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 45/374 (482s)
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq3_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 50/374 (535s)
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 55/374 (593s)
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 60/374 (651s)
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 65/374 (707s)
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq5_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 70/374 (764s)
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 75/374 (816s)
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 80/374 (867s)
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 85/374 (921s)
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq6_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 90/374 (973s)
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 95/374 (1023s)
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 100/374 (1074s)
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 105/374 (1126s)
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 110/374 (1177s)
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   aea/loc1_script1_seq7_rec1: lens cone 55.11 deg | layout reaches 56.0 deg (102%) | ring reaches the rim
+[slambench]   clip 115/374 (1228s)
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 120/374 (1290s)
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 125/374 (1346s)
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 130/374 (1405s)
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec1: lens cone 55.35 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 135/374 (1465s)
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 140/374 (1521s)
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 145/374 (1579s)
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq1_rec2: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 150/374 (1631s)
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 155/374 (1672s)
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 160/374 (1714s)
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 165/374 (1756s)
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 170/374 (1798s)
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   aea/loc1_script2_seq3_rec1: lens cone 55.33 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 175/374 (1839s)
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 180/374 (1880s)
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 185/374 (1923s)
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 190/374 (1964s)
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 195/374 (2008s)
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s0_elizabeth_sandoval_act0_bzf7du: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 200/374 (2060s)
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 205/374 (2111s)
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 210/374 (2166s)
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 215/374 (2220s)
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 220/374 (2271s)
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230614_s1_matthew_harper_act0_e1qur5: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 225/374 (2322s)
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 230/374 (2374s)
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 235/374 (2418s)
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 240/374 (2461s)
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 245/374 (2502s)
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s0_dawn_heath_act1_9s9e13: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 250/374 (2545s)
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 255/374 (2595s)
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 260/374 (2644s)
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 265/374 (2697s)
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 270/374 (2749s)
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230615_s1_vincent_bell_act0_s0kg0n: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 275/374 (2800s)
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 280/374 (2853s)
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 285/374 (2904s)
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 290/374 (2955s)
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 295/374 (3008s)
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s0_kristen_thomas_act0_5edc0f: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 300/374 (3059s)
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 305/374 (3109s)
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 310/374 (3157s)
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 315/374 (3206s)
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 320/374 (3254s)
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230616_s1_michael_griffin_act0_g5u8n8: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 325/374 (3305s)
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 330/374 (3357s)
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 335/374 (3410s)
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 340/374 (3459s)
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 345/374 (3507s)
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230619_s1_eric_martin_act0_oeiu1g: lens cone 55.24 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 350/374 (3557s)
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 355/374 (3607s)
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 360/374 (3659s)
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 365/374 (3710s)
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   clip 370/374 (3764s)
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   nymeria/20230620_s0_marie_vasquez_act0_5vd9yy: lens cone 55.26 deg | layout reaches 56.0 deg (101%) | ring reaches the rim
+[slambench]   done in 3807s
+
+============================================================================================
+  ego-synth SLAM depth · egosynth-slam-v1 · split 61195914f090
+============================================================================================
+  400 frames over 16 take(s), datasets: aea, nymeria
+  GT: sparse MPS SLAM points, fisheye stream, native — the harness rectifies nothing
+  cut at inv_dist_std (1/m, scale-invariant) < 0.01 (the release ships UNFILTERED, so this is part of every number below)
+  baselines ['raw', 'vggt360'] · 8 take(s)/dataset · 25 frame(s)/take
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame over every one
+  of that frame's points, then frozen. Frames combine unweighted. Each
+  model keeps its own alignment space — disparity for Depth-Anything V2,
+  depth for the up-to-scale heads — so ABSOLUTE AbsRel IS NOT COMPARABLE
+  ACROSS MODELS. It is comparable across baselines of one model.
+
+  BASELINE · raw
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  vggt_1b       aea            0.199    0.764    0.902    0.733    0.079    1.00    1.42     200
+  vggt_1b       nymeria        0.143    0.828    0.938    0.501    0.063    1.00    1.59     200
+
+  BASELINE · vggt360
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  vggt_1b       aea            0.189    0.790    0.908    0.723    0.076    0.97    1.42     200
+  vggt_1b       nymeria        0.150    0.830    0.931    0.514    0.062    0.97    1.59     200
+
+  MODELS
+  ------------------------------------------------------------
+  vggt_1b       VGGT 1B · 1191M · align=scale_shift · frames at 518px
+
+
+[slambench] wrote /group-volume/Fengjia/projects/vggt-omega-023/eval_out/vggt360-023/slam_B/results.json (+ csv, report.txt)
+=== [slam_B] exit 0 after 3826s

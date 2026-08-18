@@ -1,0 +1,131 @@
+  [slambench] aea: 8 of 8 takes, 251 clips
+  [slambench] nymeria: 8 of 8 takes, 256 clips
+  [slambench] split 61195914f090: 400 frames over 16 take(s) of 2 dataset(s)
+
+[slambench] ══ vggt_1b ══
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[slambench]   VGGT 1B | 1191M | align=scale_shift | frames at 518px
+/group-volume/Fengjia/projects/vggt-omega-023/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+[slambench]   clip 5/374 (30s)
+[slambench]   clip 10/374 (36s)
+[slambench]   clip 15/374 (43s)
+[slambench]   clip 20/374 (49s)
+[slambench]   clip 25/374 (57s)
+[slambench]   clip 30/374 (64s)
+[slambench]   clip 35/374 (71s)
+[slambench]   clip 40/374 (79s)
+[slambench]   clip 45/374 (86s)
+[slambench]   clip 50/374 (93s)
+[slambench]   clip 55/374 (100s)
+[slambench]   clip 60/374 (107s)
+[slambench]   clip 65/374 (114s)
+[slambench]   clip 70/374 (121s)
+[slambench]   clip 75/374 (128s)
+[slambench]   clip 80/374 (134s)
+[slambench]   clip 85/374 (140s)
+[slambench]   clip 90/374 (146s)
+[slambench]   clip 95/374 (152s)
+[slambench]   clip 100/374 (158s)
+[slambench]   clip 105/374 (163s)
+[slambench]   clip 110/374 (170s)
+[slambench]   clip 115/374 (176s)
+[slambench]   clip 120/374 (183s)
+[slambench]   clip 125/374 (189s)
+[slambench]   clip 130/374 (196s)
+[slambench]   clip 135/374 (203s)
+[slambench]   clip 140/374 (209s)
+[slambench]   clip 145/374 (216s)
+[slambench]   clip 150/374 (223s)
+[slambench]   clip 155/374 (229s)
+[slambench]   clip 160/374 (235s)
+[slambench]   clip 165/374 (241s)
+[slambench]   clip 170/374 (247s)
+[slambench]   clip 175/374 (253s)
+[slambench]   clip 180/374 (259s)
+[slambench]   clip 185/374 (264s)
+[slambench]   clip 190/374 (270s)
+[slambench]   clip 195/374 (276s)
+[slambench]   clip 200/374 (282s)
+[slambench]   clip 205/374 (288s)
+[slambench]   clip 210/374 (293s)
+[slambench]   clip 215/374 (299s)
+[slambench]   clip 220/374 (305s)
+[slambench]   clip 225/374 (311s)
+[slambench]   clip 230/374 (317s)
+[slambench]   clip 235/374 (322s)
+[slambench]   clip 240/374 (328s)
+[slambench]   clip 245/374 (334s)
+[slambench]   clip 250/374 (340s)
+[slambench]   clip 255/374 (346s)
+[slambench]   clip 260/374 (352s)
+[slambench]   clip 265/374 (357s)
+[slambench]   clip 270/374 (363s)
+[slambench]   clip 275/374 (369s)
+[slambench]   clip 280/374 (375s)
+[slambench]   clip 285/374 (381s)
+[slambench]   clip 290/374 (387s)
+[slambench]   clip 295/374 (392s)
+[slambench]   clip 300/374 (398s)
+[slambench]   clip 305/374 (404s)
+[slambench]   clip 310/374 (410s)
+[slambench]   clip 315/374 (416s)
+[slambench]   clip 320/374 (421s)
+[slambench]   clip 325/374 (427s)
+[slambench]   clip 330/374 (433s)
+[slambench]   clip 335/374 (439s)
+[slambench]   clip 340/374 (445s)
+[slambench]   clip 345/374 (451s)
+[slambench]   clip 350/374 (457s)
+[slambench]   clip 355/374 (463s)
+[slambench]   clip 360/374 (468s)
+[slambench]   clip 365/374 (474s)
+[slambench]   clip 370/374 (480s)
+[slambench]   done in 485s
+
+============================================================================================
+  ego-synth SLAM depth · egosynth-slam-v1 · split 61195914f090
+============================================================================================
+  400 frames over 16 take(s), datasets: aea, nymeria
+  GT: sparse MPS SLAM points, fisheye stream, native — the harness rectifies nothing
+  cut at inv_dist_std (1/m, scale-invariant) < 0.01 (the release ships UNFILTERED, so this is part of every number below)
+  baselines ['raw', 'rect_derect'] · 8 take(s)/dataset · 25 frame(s)/take
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame over every one
+  of that frame's points, then frozen. Frames combine unweighted. Each
+  model keeps its own alignment space — disparity for Depth-Anything V2,
+  depth for the up-to-scale heads — so ABSOLUTE AbsRel IS NOT COMPARABLE
+  ACROSS MODELS. It is comparable across baselines of one model.
+
+  BASELINE · raw
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  vggt_1b       aea            0.198    0.762    0.902    0.727    0.079    1.00    1.40     200
+  vggt_1b       nymeria        0.145    0.825    0.937    0.501    0.063    1.00    1.58     200
+
+  BASELINE · rect_derect
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  vggt_1b       aea            0.158    0.834    0.924    0.686    0.063    0.99    1.40     200
+  vggt_1b       nymeria        0.131    0.864    0.949    0.502    0.053    0.99    1.58     200
+
+  RECTIFY OR NOT · rect_derect / raw, within model (<1 means rectifying helped)
+  --------------------------------------------------------------------------------
+  model         dataset      AbsRel raw  rect_derect    ratio  cover raw  cover rd
+  --------------------------------------------------------------------------------
+  vggt_1b       aea              0.1985       0.1577    0.795       1.00      0.99
+  vggt_1b       nymeria          0.1446       0.1311    0.907       1.00      0.99
+  Both arms are scored on the points BOTH could answer for, so the
+  ratio is like-for-like; `cover` is what each gave up to get there and
+  is NOT in the ratio. A rect_derect that wins on 60% coverage has won
+  a different, smaller question.
+
+  MODELS
+  ------------------------------------------------------------
+  vggt_1b       VGGT 1B · 1191M · align=scale_shift · frames at 518px
+
+
+[slambench] wrote /group-volume/Fengjia/projects/vggt-omega-023/eval_out/vggt360-023/slam_CTL/results.json (+ csv, report.txt)
+EXITCODE=0

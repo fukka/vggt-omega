@@ -1,0 +1,71 @@
+{
+  "run_id": "slambench-023-6fedc20",
+  "ticket": "docs/handoff/tickets/023-vggt360-on-both-benchmarks.md",
+  "issue": 25,
+  "code_commit": "6fedc20",
+  "code_branch": "organized",
+  "protocol": "egosynth-slam-v1",
+  "split_digest": "61195914f090",
+  "split": "400 frames over 16 takes, aea + nymeria, 8 takes each, 25 frames each -- IDENTICAL to #020's published split",
+  "date_utc": "2026-08-17",
+
+  "box": "space-container (pod run1154132), NVIDIA A100-SXM4-80GB",
+  "why_not_lambda_63": "both runs were attempted there first and both OOM'd in VGGT-360-fisheye/vggt_visfeat/layers/attention.py:95 -- slam_B at take 6 of 16, slam_B3 after 965 s at the same take. Capacity, not fragmentation: PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True was set and only 128 MiB was reserved-but-unallocated at failure. Ours held 19.9 GB and needed 1.35 GB more; another user's process holds 26.1 GB of card 0's 47.4 GB. #020 never met this because its peak was ~15 GB -- the vggt360 arm is what crosses the line, so this recurs for anyone running that arm there.",
+  "torch": "2.11.0+cu128", "numpy": "1.26.4", "transformers": "5.15.0",
+  "tests_on_this_box": "1 failed, 259 passed, 7 skipped (267 total, same as lambda_63). The one failure is test_the_fisheye_radial_combination_gets_past_the_view_guard, which asserts the run stops at model availability -- true only on a machine with no weights. Both boxes now have caches, so both get past it and stop at the ADT scan instead. Benign, and #023 says touch nothing.",
+
+  "runs": {
+    "slam_B":   {"arms": ["raw", "vggt360"], "gpu": 0, "wall_clock_s": 3826, "exit": 0,
+                 "what": "the ticket's required run -- the vggt360 arm beside raw"},
+    "slam_B3":  {"arms": ["raw", "rect_derect", "vggt360"], "gpu": 1, "wall_clock_s": 4141, "exit": 0,
+                 "what": "all three lens strategies together; the only run in which vggt360 and rect_derect are scored on the same points"},
+    "slam_CTL": {"arms": ["raw", "rect_derect"], "gpu": 2, "exit": 0,
+                 "what": "NOT in the ticket. Added because the cross-run control could not otherwise be read -- see 'the_control'. Reproduces #020's exact arm set so the support matches and the box change can be measured."}
+  },
+
+  "the_control": {
+    "question": "our numbers come off an A100 and #020's off an RTX 6000 Ada -- may a number from here sit beside that table?",
+    "first_attempt_was_mis_specified": "comparing slam_B's raw arm to #020's looked like a 1.04% failure, but the support had moved 724894 -> 709768 points (2.1%), where #020 itself records its per-model support varying by 7 points in 725k. slambench takes the support as the intersection over ONE MODEL'S ARMS, so it is a property of the arm set: slam_B is {raw,vggt360} and #020 is {raw,rect_derect}. The two runs score different point sets and no amount of hardware matching could have fixed it. Kept as CONTROL-armset-mismatch.txt because the failure mode is easy to re-create.",
+    "second_error_was_mine_too": "the check applied #021's 0.51% AbsRel bound to every metric, and SqRel -- a squared metric, far more tail-sensitive -- failed it at 0.63% while every bounded metric was comfortably inside. #021 measured AbsRel 0.51%, delta1 0.20%, RMSE 0.14% and set no SqRel bound. The script now judges per metric and reports the rest without judging them.",
+    "result": "PASS, on an IDENTICAL support (724894 aea, 587563 nymeria, exact on all four cells).",
+    "drift": {"AbsRel": "-0.0682% aea, +0.4405% nymeria (bound 0.51%)",
+              "RMSE": "-0.0041% aea, +0.0726% nymeria (bound 0.14%)",
+              "delta1": "+0.0601% aea, -0.1998% nymeria (bound 0.20% -- razor thin on nymeria)",
+              "SqRel_unbounded": "-0.1060% aea, +0.6326% nymeria; #021 set no bound for it"},
+    "conclusion": "swapping RTX 6000 Ada for A100 adds nothing detectable beyond the fp32->bf16 change #020's own PROVENANCE.md already records. The vggt360 arm may be read beside #020's table -- provided the support is respected, i.e. compare arms within a run, never pooled metrics across runs with different arm sets."
+  },
+
+  "headline": {
+    "slam_B_context_1": {
+      "aea":     {"raw": 0.19859, "vggt360": 0.18860, "delta_pct": -5.03},
+      "nymeria": {"raw": 0.14329, "vggt360": 0.15049, "delta_pct": 5.02}
+    },
+    "the_sign_flips_by_dataset": "vggt360 beats raw on aea by 5.0% AbsRel and loses to it on nymeria by 5.0%. delta1 tells a softer story and improves on BOTH (aea 0.7638 -> 0.7905, nymeria 0.8283 -> 0.8307), so the bulk of the field gets better on both datasets and nymeria grows a heavier tail. Quoting AbsRel alone on one dataset would misrepresent this in either direction.",
+
+    "slam_B3_all_three_arms": {
+      "aea":     {"raw": 0.1985, "rect_derect": 0.1582, "vggt360": 0.1885},
+      "nymeria": {"raw": 0.1432, "rect_derect": 0.1305, "vggt360": 0.1504},
+      "coverage": {"raw": 1.000, "rect_derect": "0.988 aea / 0.990 nymeria", "vggt360": "0.966 aea / 0.972 nymeria"}
+    },
+    "rect_derect_beats_vggt360_on_both_datasets": "and this is the result, stated plainly. Rectify-then-derectify is better than the ring on aea (0.1582 vs 0.1885) and on nymeria (0.1305 vs 0.1504), and it gives up LESS coverage doing it (0.99 vs 0.97). On this benchmark the 60 deg ring is not the best lens strategy; it is the second-best of three, ahead of doing nothing.",
+
+    "and_it_is_not_resolution_matched_in_our_favour": "the ticket records the ring at 7.83 px/deg against raw's 4.37 on a 9x pixel budget. This run does not emit those figures; the nominal geometry of its own config agrees in direction -- 518 px across a 60 deg view is 8.63 px/deg, against 518 px across the 110.22 deg cone at 4.70 px/deg, so ~1.8x the angular sampling on 9 views' worth of pixels. vggt360 loses to rect_derect while spending an order more compute and seeing ~1.8x the angular resolution. The caveat makes this result WORSE for the ring, not better, which is why it belongs next to the number rather than in a footnote."
+  },
+
+  "a_ticket_rationale_that_did_not_survive_measurement": {
+    "the_claim": "#023 omits rect_derect from run B on the grounds that a 110 deg pinhole 'has no answer at the rim', so including it would truncate the whole comparison at ~55 deg -- exactly the field the method exists to cover. That reasoning was carried into vggt360_023_lane.sh.",
+    "what_the_data_says": "it does not hold on ego-synth. rect_derect's coverage is 0.988 (aea) and 0.990 (nymeria), and adding it to the arm set costs 781 points of support out of 709768 -- 0.1%, not a truncation. ego-synth's lens cone is ~55.1-55.4 deg and a 110 deg pinhole just covers it.",
+    "why_it_matters": "run B was shaped to avoid a cost that is 0.1%, and in exchange its support does not match #020's. slam_B3 is therefore the more informative run of the two, not the optional one, and slam_CTL had to be added to recover the cross-run comparison that B's arm set gave away."
+  },
+
+  "log_lines_the_tables_cannot_carry": {
+    "ring_coverage": "'lens cone 55.11-55.35 deg | layout reaches 56.0 deg (101-102%) | ring reaches the rim' on every take of both datasets. The 60 deg layout over-covers the lens throughout, so no rim measurement is short of geometry and no --vggt360-ring-tilt rescue was needed.",
+    "lapack_noise_is_not_from_these_runs": "the test suite on this box emits 'DLASCL parameter number 4 had an illegal value' from deliberately degenerate inputs. Both run logs capture stderr via 2>&1 and contain ZERO occurrences, on both boxes. The scale_shift lstsq fit was never fed a malformed system in any published run here."
+  },
+
+  "reading_rules": {
+    "within_a_run": "exact. slambench fits one support per model spanning its arms and contexts, so arm-vs-arm inside one run is like-for-like.",
+    "across_runs": "only where the ARM SETS AGREE, because the support is their intersection. slam_B (2 arms) and slam_B3 (3 arms) have supports 709768 and 708987 on aea and are not interchangeable at the last digit.",
+    "across_models": "never for absolute AbsRel -- per #020's own comparability note, dav2_large aligns in disparity space and the others in depth space. Not an issue here: this run has one model."
+  }
+}
