@@ -1,0 +1,129 @@
+# Research State — Central Project Tracking
+# Updated by the agent after each experiment and reflection.
+
+project:
+  title: "Peripheral-aware adaptation of depth foundation backbones to Aria fisheye"
+  question: >
+    How can a frozen (or lightly finetuned) depth foundation backbone be adapted so
+    that the high-incidence (peripheral) region of Aria ~110-degree fisheye improves
+    without sacrificing central performance — and what is the periphery actually
+    good for (depth vs cross-frame alignment vs nothing)?
+  status: active
+  started: "2026-08-18"
+  domain: "3D vision / depth foundation models / fisheye adaptation"
+
+constraints:
+  - "This machine is CPU-Claude (Mac, no usable GPU). GPU runs go through GitHub issues labelled gpu; lambda_63 box. See docs/handoff/POLICY.md."
+  - "git add explicit paths only, NEVER -A (two sessions share this working tree)."
+  - "Working venv for CPU torch: recreate python3.9 + torch 2.2.2 + numpy<2 per raytun3r memory; DA3-Small runs on Mac CPU."
+  - "Local data on Mac: ADT sample (see local-adt-sample memory), ScanNet++ 3f15a9266d sample at ~/Desktop/ADT/scannetpp_example/ (licensed — never commit content, only statistics)."
+  - "Known confounds to control in ANY radial claim: depth-vs-eccentricity (fov.py distance control), dead-pixel layout (ring tilt), resampling asymmetry, one-frozen-affine U-shape artifact, denominator/coverage bugs."
+
+literature:
+  survey: "docs/research/fisheye-wide-fov-adaptation.md (2026-07-29, 1283 lines, verified sources) + autoresearch/literature/"
+  key_papers:
+    - id: vggt360
+      title: "VGGT-360 (CVPR26)"
+      relevance: "anchor A: training-free tangent-view + fusion; ported in VGGT-360-fisheye/"
+    - id: raytun3r
+      title: "RayTun3R (arXiv:2607.02711)"
+      relevance: "anchor B: 10.7k-param polar PE residual on frozen backbone; reproduced in raytun3r/ (read raytun3r/PAPER.md)"
+    - id: cam3r
+      title: "CAM3R (arXiv:2603.22631)"
+      relevance: "anchor C: SH ray module + ray-aware global alignment; reports ADT numbers (99.0/95.0 RRA/RTA@15); reproduced in cam3r/"
+    - id: fisheye3r
+      title: "Fisheye3R (ECCV26)"
+      relevance: "calibration tokens; our reproduction is the only implementation"
+    - id: darswin
+      title: "DarSwin (ICCV23, arXiv:2304.09691)"
+      relevance: "distortion-aware radial tokenization — the prior art for axis N2"
+    - id: caltokens_yale
+      title: "Calibration Tokens for fisheye depth (arXiv:2508.04928)"
+      relevance: "independent confirmation of token-based adaptation for depth"
+    - id: widedepth
+      title: "WideDepth benchmark (arXiv:2605.24074)"
+      relevance: "mm-accurate fisheye depth benchmark — candidate external eval"
+    - id: pomato
+      title: "POMATO (arXiv:2504.05692)"
+      relevance: "pointmap matching + temporal motion for dynamic 3D — axis N4 prior art"
+    - id: reviv
+      title: "ReViV (4D egocentric reconstruction)"
+      relevance: "axis N4: joint viewer/view modeling, hands+depth"
+  open_problems:
+    - "No published method targets the center-vs-periphery Pareto front explicitly; adapters report whole-image means."
+    - "Periphery's value for cross-frame alignment (large parallax at outer FOV, SLAM folklore) is unquantified for feed-forward depth FMs."
+    - "Dynamic hand regions in egocentric fisheye: no adapter paper handles them; ADT has GT to measure it."
+    - "Radial metrics in the wild are confounded by depth-vs-eccentricity; this repo has the only control (slambench/fov.py) we know of."
+
+hypotheses:
+  - id: H1
+    statement: >
+      Peripheral pose value: on Aria-like fisheye, restricting correspondences to the
+      peripheral band (theta > ~40deg) yields BETTER relative-pose estimates per
+      correspondence than the central band under rotation-dominant egocentric motion,
+      because angular parallax at the rim disambiguates rotation. Prediction: classical
+      SIFT+MAGSAC++ pose error, count-matched, is lower for rim-only than center-only
+      keypoint sets on the same frame pairs.
+    status: active
+    motivation: >
+      This is the quantitative foundation for novelty axis N3 (periphery is bad for
+      depth but good for alignment). Runs entirely on CPU with the existing
+      raytun3r/experiments/harness_verify.py machinery. If false, axis N3 dies cheaply.
+    parent: null
+    priority: high
+  - id: H2
+    statement: >
+      Center-safe radial adaptation: a zero-init radial adapter (RayTun3R-style PE
+      residual) trained with loss restricted to the peripheral band improves
+      peripheral depth/pose while leaving central metrics within noise of vanilla —
+      because zero-init + radial binning makes the center bins structurally identity.
+    status: pending
+    motivation: "Novelty axis N1. The adapter exists in raytun3r/; the new part is band-restricted training + Pareto (center,periphery) reporting."
+    parent: null
+    priority: high
+  - id: H3
+    statement: >
+      Distortion-adaptive tokenization: resampling patches by the local KB4
+      linearization (RayTun3R's parameter-free piece, akin to DarSwin's radial
+      tokenization) reduces peripheral feature degradation at equal token budget,
+      measurable as improved rim depth/edge-alignment with NO trained parameters.
+    status: pending
+    motivation: "Novelty axis N2, cheapest entry point: parameter-free, partially CPU-testable with DA3-Small."
+    parent: null
+    priority: medium
+  - id: H4
+    statement: >
+      Dynamic-region handling: hand/dynamic pixels in ADT contribute a measurable,
+      disproportionate share of depth error and correspondence outliers; masking them
+      (GT masks first, predicted later) improves both static depth eval and pose.
+    status: pending
+    motivation: "Novelty axis N4. ADT has GT segmentation; quantify the size of the problem before building anything."
+    parent: null
+    priority: medium
+
+experiments:
+  proxy_metric: >
+    Radially-binned metrics under the repo protocol (finetune/eval/metrics.py; one
+    affine per frame frozen before binning; report spread max/min not rim/center):
+    (a) depth AbsRel per theta bin; (b) rotation gain alpha (span-invariant), overall
+    and per feature-band; (c) center-vs-periphery Pareto pair (AbsRel_c, AbsRel_p).
+  baseline_value: null
+  best_value: null
+  total_runs: 0
+  trajectory: []
+
+outer_loop:
+  cycle: 0
+  last_direction: null
+  last_reflection: "Bootstrap 2026-08-18: four hypothesis axes formed from user's novelty priorities + existing repo assets."
+
+continuity:
+  cron_job: "75190b64 every 20 min (session-only)"
+
+workspace:
+  findings: "autoresearch/findings.md"
+  log: "autoresearch/research-log.md"
+  literature_dir: "autoresearch/literature/"
+  experiments_dir: "autoresearch/experiments/"
+  to_human_dir: "autoresearch/to_human/"
+  paper_dir: "autoresearch/paper/"
