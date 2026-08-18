@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Autoresearch progress — 2026-08-18</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", sans-serif; max-width: 1080px;
+         margin: 2rem auto; padding: 0 1.5rem; color: #222; line-height: 1.55; }
+  h1 { font-size: 1.5rem; } h2 { font-size: 1.15rem; margin-top: 2rem; }
+  .verdict { padding: .15rem .5rem; border-radius: 4px; font-weight: 600; font-size: .85rem; }
+  .ref { background: #fdecea; color: #a93226; } .sup { background: #eafaf1; color: #1e8449; }
+  img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; }
+  table { border-collapse: collapse; margin: .8rem 0; }
+  td, th { border: 1px solid #ccc; padding: .35rem .7rem; font-size: .9rem; }
+  .note { color: #666; font-size: .85rem; }
+  code { background: #f4f4f4; padding: .1rem .3rem; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>Peripheral-aware fisheye adaptation — day 1 (2026-08-18)</h1>
+<p><b>Question:</b> adapt depth backbones to Aria ~110° fisheye with limited finetuning —
+improve the high-FOV region without hurting the center; understand what the periphery is
+actually good for (your N1–N4 axes).</p>
+
+<p><b>TLDR of day 1 (5 runs, all CPU, all on the pre-verified classical harness +
+DA3-Small):</b> your N3 intuition — "the rim is hard for depth but good for alignment" —
+is now <i>measured</i>, from three angles, and it came out sharper than the folklore
+version: the rim's alignment value is real but it is <b>span-under-real-noise</b>, not
+per-point quality; and the frozen model <b>already</b> leans on the rim for pose (its
+pose survives deletion of the entire center), while its depth is worst there.</p>
+
+<img src="assets/h1_family.png" alt="H1 family results">
+
+<h2>What was tested and what happened</h2>
+<table>
+<tr><th>Hyp</th><th>Claim</th><th>Verdict</th><th>Evidence</th></tr>
+<tr><td>H1</td><td>Rim correspondences are individually better for rotation
+(count-matched θ-quartile bins)</td>
+<td><span class="verdict ref">REFUTED</span></td>
+<td>Synthetic control flat across bins (0.30–0.39°); real arm non-monotone, rim worst;
+paired rim−center a coin flip (runs 001–002)</td></tr>
+<tr><td>H1.1</td><td>The rim's value is angular SPAN at fixed count</td>
+<td><span class="verdict sup">SUPPORTED</span></td>
+<td>θ≤35°→θ≤85° at N*=67 matches: rotation −2.15° median, wide better on
+<b>17/17 pairs</b>; t-direction 43°→16°. Ideal-noise control shows conditioning alone
+is ~20× smaller → the mechanism is robustness to real feature noise (run 003)</td></tr>
+<tr><td>H1.2</td><td>The frozen FM ignores the rim for alignment</td>
+<td><span class="verdict ref">REFUTED — opposite</span></td>
+<td>DA3-Small: center-masked (39% of pixels) ≡ vanilla (4.93° vs 5.00°); rim-masked
+2.5× worse on every pair (12.32°). The model's pose signal <i>lives</i> in the rim
+(run 004; area-matched random-mask control queued as run 005)</td></tr>
+</table>
+
+<h2>Why this matters for the method we build</h2>
+<ul>
+<li><b>The Pareto goal (N1) gains a third axis:</b> any adapter that touches rim
+features risks the pose path that demonstrably depends on them. Every variant must
+report (center depth, rim depth, <i>pose stability</i>).</li>
+<li><b>Design constraint:</b> prefer zero-init, readout-side corrections (RayTun3R-style
+PE residual, decoder-grid fixes) over rewriting early rim features. "Improve rim depth
+without disturbing rim-driven alignment" is the new, concrete objective.</li>
+<li><b>Negative results that save future work:</b> attention/weighting schemes premised
+on "rim points are individually more informative" have no basis (H1); theory-only
+conditioning analyses underestimate the periphery's value ~20× (H1.1's two arms).</li>
+</ul>
+
+<h2>Caveats (honest)</h2>
+<p class="note">One scene (ScanNet++ 3f15, ~170° DSLR — wider than Aria's 110°);
+16–23 pairs per run; H1.2 not yet area-matched (run 005 in flight); DA3-Small only.
+Aria-FOV replication (θ≤55°) and a second scene are the next robustness steps. Nothing
+here uses GPU numbers; all runs are CPU-local per the two-Claude split.</p>
+
+<h2>Next</h2>
+<ol>
+<li>run 005: area-matched random-mask control (in flight).</li>
+<li>Aria-FOV replication of runs 003–004 (crop to θ≤55°, re-run span + masking).</li>
+<li>Outer-loop reflection, then H2: center-safe radial adapter with the new
+three-axis Pareto eval; H4 (hands) needs a skeleton ADT sequence → GPU ticket
+(will draft, not file, until you've seen this report).</li>
+</ol>
+
+<p class="note">Workspace: <code>autoresearch/</code> on branch <code>organized</code>
+(research-state.yaml, findings.md, per-run protocols locked in git before results).
+Cron loop: every 20 min, session-only.</p>
+</body>
+</html>
