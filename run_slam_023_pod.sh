@@ -72,6 +72,32 @@ case "$TAG" in
   *) echo "unknown tag: $TAG" >&2; exit 2 ;;
 esac
 
+# THREAD LIMITS, AND THEY ARE WORTH MORE HERE THAN ANY OTHER SETTING
+#
+# This pod is a TWO-SOCKET AMD EPYC 7742 with 247 visible threads; lambda_63 is
+# a Threadripper PRO 5975WX with 64. Unlimited, numpy/OpenMP opens a pool across
+# every one of them, across both NUMA sockets, for operations far too small to
+# pay for it. Measured on one take, three frames, vggt360 arm:
+#
+#   default            1m59s wall,  83m09s CPU     <- ~42 cores spinning on sync
+#   OMP_NUM_THREADS=16 1m15s wall,   1m34s CPU
+#
+# 83 minutes of CPU for two minutes of work is not computation. The first
+# attempt at these runs went unlimited and was tracking ~1.1 takes-frames/min
+# against lambda's 8.1 -- a 7x slowdown on the faster GPU, which is what sent me
+# looking. The GPU was idle ~90% of the time, bursting to 60% and dropping back.
+#
+# AND IT DOES NOT MOVE THE NUMBERS -- measured, not assumed. The two runs above
+# were the same config, and their results.json are BIT-IDENTICAL on every metric
+# with the same split digest. This is worth stating because the opposite caution
+# applies on lambda: there I deliberately refused OMP_NUM_THREADS=1 as a fix for
+# the fovbench deadlock, on the grounds that BLAS thread count *can* move a
+# scale_shift fit that goes through lstsq. For slambench that concern is now
+# retired by measurement rather than argument.
+export OMP_NUM_THREADS=16
+export MKL_NUM_THREADS=16
+export OPENBLAS_NUM_THREADS=16
+
 # HF_HOME on the persistent mount, not $HOME: everything outside /group-volume
 # dies with the pod, and VGGT-1B is a 9.4 GB re-download each time otherwise.
 export HF_HOME=/group-volume/Fengjia/hf-cache
