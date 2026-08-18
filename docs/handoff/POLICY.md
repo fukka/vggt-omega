@@ -31,9 +31,12 @@ Does **not** require the box (CPU-Claude):
 * paper↔code fidelity review — this is pure code reading
 * writing and refactoring code
 * running `pytest raytun3r/tests` and `python raytun3r/smoke_test.py` — **the whole
-  suite is CPU-only and finishes in ~10 s** (40 tests + 33 checks, no weights, no
-  data, no GPU). This is the single biggest win: nearly all code work can be
-  written *and verified* without the box.
+  suite is CPU-only and finishes in under a minute** (73 tests + 33 checks, no
+  weights, no data, no GPU; one test skips without `depth_anything_3`). This is the
+  single biggest win: nearly all code work can be written *and verified* without
+  the box. On this Mac the interpreter that has torch is
+  `~/opt/anaconda3/bin/python` (3.8.3 / torch 2.2.2 / cv2 4.4.0) — **not** any
+  `python3` on `PATH`, which is 3.7 with torch 1.0.1.
 * interpreting `results.json` once it is on the `results` branch
 * README, docs, plots, tables
 

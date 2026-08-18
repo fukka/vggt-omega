@@ -10,7 +10,8 @@ Four attachment points, matching Sec. 4.2:
 Attachment           Where it lands
 ===================  ==========================================================
 absolute PE (Eq. 5)  the ViT's positional-embedding table, before it is added
-RoPE (Eq. 6)         every ``RopePositionEmbedding``'s ``(sin, cos)`` output
+RoPE (Eq. 6)         every RoPE module: the ``(sin, cos)`` pair for DINOv3-style
+                     ones, the rotated tokens for VGGT-style ones
 patch tokenization   a resample of the image just before ``patch_embed``, plus
                      mean-token fill of patches outside the lens circle
 DPT grid             the dense head's ``_apply_pos_embed`` coordinate grid
@@ -113,6 +114,12 @@ class Prediction:
         return R_rel, t_rel
 
 
+#: RoPE modules that return a ``(sin, cos)`` pair for the caller to apply.
+_ROPE_SINCOS_MODULES = {"RopePositionEmbedding"}
+#: RoPE modules that return already-rotated tokens.
+_ROPE_TOKEN_MODULES = {"RotaryPositionEmbedding2D", "RoPE2D"}
+
+
 class Backbone(nn.Module):
     """Wraps a frozen model and owns the four attachment points."""
 
@@ -121,6 +128,14 @@ class Backbone(nn.Module):
     embed_dim: int = 1024
     has_abs_pe: bool = False
     has_rope: bool = False
+    #: How many non-patch tokens a token-rotating RoPE module sees ahead of each
+    #: frame's patch block (VGGT: 1 camera + 4 register tokens, per frame).
+    #: Declared, never inferred: the token count alone cannot distinguish one
+    #: frame from S frames concatenated, and guessing it silently leaves S-1
+    #: frames uncorrected in every global-attention block -- see ``_hook_rope``.
+    #: ``None`` means "this backbone has no such module"; finding one anyway is
+    #: an error at install time rather than a silent no-op.
+    n_prefix_tokens: Optional[int] = None
     #: what this model's depth head natively emits, before any conversion.
     #: Every head wrapped here is pinhole-trained and emits planar z.
     native_depth: str = "z"
@@ -143,6 +158,7 @@ class Backbone(nn.Module):
         # fires. The TV regulariser (Eq. 12) is defined on P' = P_A + residual,
         # not on the residual alone, so the pretrained table is needed.
         self._pe_table: Optional[Tensor] = None
+        self._rope_layout_cache: dict = {}
         self.use_patch_undistort = False
         self.use_border_token = False
         self.use_dpt_grid = False
@@ -224,12 +240,88 @@ class Backbone(nn.Module):
         self._undistort_grid = None
         self._valid_patches = None
         self._pe_table = None
+        self._rope_layout_cache = {}
         # Drop the camera too, so a post-remove forward returns the head's native
         # depth exactly as a pre-install one did. "Restores the model exactly as it
         # was" has to cover the output convention, not just the module tree.
         self.camera = None
         self._grid = None
         self.depth_convention = "range"
+
+    def grad_checkpointing(self, enabled: bool = True) -> bool:
+        """Turn the frozen model's gradient checkpointing on for the backward pass.
+
+        Returns whether anything changed, so callers can report it.
+
+        RayTun3R's trainable parameters sit at the *first* layer -- the patch
+        positional encoding -- so unlike VGGT's own fine-tuning recipe (which
+        freezes ``*aggregator*`` and trains only the heads, and therefore never
+        backpropagates through the trunk at all) every activation in the trunk
+        has to be kept for the backward pass. That is the whole memory cost of
+        this method, and checkpointing is what upstream uses to pay it.
+
+        Backbones that gate checkpointing on ``self.training`` can only enable it
+        by leaving eval mode, which is safe *only* if the model has no
+        train/eval-dependent layers. Each subclass decides; the default is to do
+        nothing, so a backbone that has not been checked keeps running in
+        ``eval()`` exactly as before.
+
+        **Do not "helpfully" generalise this to vggt_omega.** Its aggregator has
+        no ``self.training`` checkpoint gate to switch on in the first place, and
+        train mode there is *not* inert: ``vggt_omega/models/vggt_omega.py``
+        drops ``predictions["images"]`` and
+        ``models/layers/vision_transformer.py`` takes a different cls-norm branch.
+        The inherited no-op is the correct behaviour for that backbone, not an
+        oversight.
+        """
+        return False
+
+    @staticmethod
+    def _rope_frame_layout(pos, n: int, g: int):
+        """Recover ``(n_prefix, n_frames)`` from a RoPE module's position argument.
+
+        ``pos`` is ``(B, N, 2)``, one grid coordinate per token, laid out as
+        ``n_frames`` repeats of ``[n_prefix specials, g patches]``. The frame
+        period is therefore the smallest ``p >= g`` that divides ``N`` and under
+        which ``pos`` is periodic -- read off the data, so it needs no assumption
+        about how the model encodes its special tokens.
+
+        **Why the smallest period is the right one, and when.** If two divisors
+        of ``N`` are both periods then so is their gcd, so a spurious period ``d``
+        below the true ``p = K + g`` satisfies ``d <= p/2``. When ``K < g`` that
+        puts ``d < g``, which means indices ``i`` and ``i + d`` both fall inside
+        one frame's patch block and force two patch coordinates to be equal --
+        excluded by the ``g``-distinct requirement below. So the scan cannot
+        under-segment while ``K < g`` (VGGT: 5 vs 1296), and it can never
+        over-segment, because the true period always divides ``N``, is always
+        periodic, and always has a distinct patch block.
+
+        Returns ``None`` when ``pos`` is missing or unusable, leaving the caller
+        to fall back on a declaration. Note this catches a *too wide* installed
+        grid (the slice straddles a frame boundary, distinctness fails) but not a
+        too narrow one, which yields a consistent-looking shifted window.
+        """
+        if pos is None or not torch.is_tensor(pos) or pos.dim() != 3:
+            return None
+        if pos.shape[-1] != 2 or pos.shape[-2] != n or g <= 0 or n < g:
+            return None
+        p0 = pos[0]
+        for per in range(g, n + 1):
+            if n % per:
+                continue
+            s = n // per
+            if s > 1 and not bool((p0.reshape(s, per, 2) == p0[:per]).all()):
+                continue
+            # Periodicity alone is not enough: an all-constant ``pos`` is periodic
+            # at every divisor, so a degenerate tensor would "confirm" whatever
+            # period was tried first. A real frame's patch block holds g *distinct*
+            # grid coordinates, so require that -- it is what makes ``pos``
+            # informative rather than merely consistent.
+            patches = p0[per - g:per]
+            if torch.unique(patches, dim=0).shape[0] != g:
+                return None
+            return per - g, s
+        return None
 
     def pe_table(self) -> Optional[Tensor]:
         """``(H*W, C)`` pretrained absolute PE on the bound grid, or ``None``.
@@ -247,11 +339,22 @@ class Backbone(nn.Module):
         setattr(module, name, types.MethodType(fn, module))
 
     def _install_hooks(self, *, grid_mode: str) -> None:
-        self._hook_tokenizer()
-        self._hook_rope()
-        self._hook_abs_pe()
-        if self.use_dpt_grid:
-            self._hook_dpt_grid(grid_mode)
+        try:
+            self._hook_tokenizer()
+            self._hook_rope()
+            self._hook_abs_pe()
+            if self.use_dpt_grid:
+                self._hook_dpt_grid(grid_mode)
+        except Exception:
+            # Any of these can raise -- _hook_rope now does so deliberately when
+            # a backbone declares has_rope but carries no matching module. The
+            # earlier hooks are already registered and methods already patched by
+            # then, so without this the caller gets an exception *and* a frozen
+            # model left half-instrumented, which no later remove() owns because
+            # install() never finished.
+            self.adapter = None
+            self.remove()
+            raise
 
     # -- shared implementations -------------------------------------------
 
@@ -318,30 +421,117 @@ class Backbone(nn.Module):
         def hook_tokens(_m, _args, out, _self=self):
             """VGGT-style RoPE: the module returns rotated tokens, not (sin, cos).
 
-            VGGT rotates the *whole* sequence, prefix camera/register tokens
-            included (they carry position -1). Those have no image location, so
-            the radial correction applies only to the trailing patch tokens.
+            The prefix camera/register tokens have no image location, so the
+            radial correction applies only to the patch tokens.
+
+            **One RoPE module serves two different token layouts.** VGGT builds a
+            single ``RotaryPositionEmbedding2D`` and hands the same instance to
+            every frame block *and* every global block
+            (``vggt_visfeat/models/aggregator.py``), so this hook fires on both:
+
+                frame attention   (B*S, heads, K + G,     D)   -- one frame
+                global attention  (B,   heads, S*(K + G), D)   -- S frames concatenated
+
+            with ``K`` the prefix size and ``G = gh*gw``. Inferring the prefix as
+            ``N - G`` is only right for the first layout. On the second it yields
+            ``S*K + (S-1)*G``, which is *exactly* the start of the last frame's
+            patch block -- so it lands on a correctly aligned slice and looks
+            fine, while leaving the other ``S-1`` frames (including frame 0, the
+            reference frame that defines the coordinate system) with no Eq. 6
+            correction at all, in every global block.
+
+            So the layout is not guessed from the token count. The module is
+            called as ``rope(q, pos)``, and ``pos`` is ``(B, N, 2)`` carrying one
+            grid coordinate per token -- it is the authority on where the frame
+            boundaries are, for any backbone, with nothing declared.
+            :meth:`_rope_frame_layout` reads it. ``n_prefix_tokens`` is only the
+            fallback for a module called without positions.
+
+            Cost: correcting all ``S`` frames instead of one makes the rotated
+            temporaries ``S`` times larger, and they are retained for backward
+            because the adapter's gradient runs through them. That is the price
+            of the correction being applied at all, not a regression.
             """
             if _self.adapter is None or _self.adapter.rope is None:
                 return None
             if not torch.is_tensor(out) or out.dim() < 3:
                 return None
             gh, gw = _self._grid
-            n_prefix = out.shape[-2] - gh * gw
-            if n_prefix < 0:
-                return None
-            with torch.enable_grad():
-                patch = _self.adapter.rope_tokens(out[..., n_prefix:, :], n_blocks=2)
-                if n_prefix == 0:
-                    return patch
-                return torch.cat((out[..., :n_prefix, :], patch), dim=-2)
+            g = gh * gw
+            n = out.shape[-2]
 
+            # Cached per (n, g): the search is a divisor scan plus a unique(),
+            # and this hook fires twice per attention block (q and k) in all 48
+            # blocks, every iteration.
+            pos = _args[1] if len(_args) > 1 else None
+            key = (n, g)
+            if key in _self._rope_layout_cache:
+                layout = _self._rope_layout_cache[key]
+            else:
+                layout = _self._rope_frame_layout(pos, n, g)
+                _self._rope_layout_cache[key] = layout
+            if layout is None:
+                k = _self.n_prefix_tokens
+                if k is None:
+                    # No positions and no declaration. The single-frame reading is
+                    # only unambiguous when the sequence cannot hold two frames'
+                    # worth of patches; the other case is the one that used to be
+                    # silently wrong, so refuse it.
+                    if n < g:
+                        return None
+                    if n - g >= g:
+                        raise RuntimeError(
+                            f"{type(_self).__name__}: {n} RoPE tokens on a {gh}x{gw} "
+                            f"grid is more than one frame's worth, the module was "
+                            f"called without positions, and the backbone declares no "
+                            f"n_prefix_tokens. Refusing to guess: 'prefix = n - {g}' "
+                            f"aligns on the *last* frame and silently leaves every "
+                            f"earlier frame uncorrected.")
+                    k = n - g
+                if (g + k) <= 0 or n % (g + k):
+                    raise RuntimeError(
+                        f"{type(_self).__name__} declares n_prefix_tokens={k} but "
+                        f"{n} tokens is not a whole number of {g + k}-token frames "
+                        f"on a {gh}x{gw} grid. The declaration or the installed "
+                        f"image size is wrong.")
+                layout = (k, n // (g + k))
+            k, s = layout
+
+            lead = out.shape[:-2]
+            framed = out.reshape(*lead, s, g + k, out.shape[-1])
+            with torch.enable_grad():
+                patch = _self.adapter.rope_tokens(framed[..., k:, :], n_blocks=2)
+                if k == 0:
+                    return patch.reshape(*lead, n, out.shape[-1])
+                joined = torch.cat((framed[..., :k, :], patch), dim=-2)
+                return joined.reshape(*lead, n, out.shape[-1])
+
+        found_rope = False
         for mod in self.model.modules():
             name = type(mod).__name__
-            if name == "RopePositionEmbedding":
+            if name in _ROPE_SINCOS_MODULES:
                 self._handles.append(mod.register_forward_hook(hook))
-            elif name == "RotaryPositionEmbedding2D":
+                found_rope = True
+            elif name in _ROPE_TOKEN_MODULES:
                 self._handles.append(mod.register_forward_hook(hook_tokens))
+                found_rope = True
+
+        if not found_rope and self.adapter is not None and self.adapter.rope is not None:
+            # ``has_rope`` is what makes make_adapter() allocate RadialRoPE. If no
+            # module matched, those parameters are in the optimiser but on no
+            # forward path: they get no gradient, Adam skips them, and the run is
+            # reported as a full adapter while Eq. 6 was never applied. Fail here
+            # rather than ship a partial adapter under the wrong name.
+            names = sorted({type(m).__name__ for m in self.model.modules()
+                            if "rope" in type(m).__name__.lower()
+                            or "rotary" in type(m).__name__.lower()})
+            raise RuntimeError(
+                f"{type(self).__name__} sets has_rope=True but no RoPE module "
+                f"matched {sorted(_ROPE_SINCOS_MODULES | _ROPE_TOKEN_MODULES)}. "
+                f"RoPE-ish classes actually present: {names or 'none'}. Add the "
+                f"class to _ROPE_SINCOS_MODULES (returns (sin, cos)) or to "
+                f"_ROPE_TOKEN_MODULES (returns rotated tokens), or set "
+                f"has_rope=False so no RadialRoPE parameters are allocated.")
 
     def _hook_abs_pe(self) -> None:
         raise NotImplementedError
@@ -416,7 +606,9 @@ class VGGTBackbone(Backbone):
     has_rope = True
 
     @classmethod
-    def load(cls, weights: Optional[str] = None, device="cpu", **kw) -> "VGGTBackbone":
+    def load(cls, weights: Optional[str] = None, device="cpu",
+             drop_point_head: bool = True, **kw) -> "VGGTBackbone":
+        """``drop_point_head`` removes the unused world-point head; see below."""
         import sys
         from pathlib import Path
 
@@ -432,7 +624,58 @@ class VGGTBackbone(Backbone):
             sd = torch.load(weights, map_location="cpu")
             sd = sd.get("model", sd.get("state_dict", sd))
             model.load_state_dict(sd, strict=False)
+
+        # Drop the point head. The vendored fork builds all three heads
+        # unconditionally and runs them on every forward, where upstream gates
+        # them (``enable_point`` defaults to False in
+        # ``vggt/models/vggt.py``). RayTun3R reads ``depth`` and ``pose_enc``
+        # only -- ``world_points`` is never consumed by any loss, metric or
+        # baseline -- but it is a full-resolution DPT head whose activations sit
+        # in the autograd graph until backward, because they descend from the
+        # adapter like everything else. ``VGGT.forward`` already guards on
+        # ``self.point_head is not None``, and ``_hook_dpt_grid`` skips a missing
+        # head, so this is a supported state rather than a hack.
+        if drop_point_head:
+            model.point_head = None
         return cls(model.to(device))
+
+    @property
+    def n_prefix_tokens(self) -> int:
+        """``patch_start_idx``: 1 camera token + ``num_register_tokens``, per frame."""
+        return int(self.model.aggregator.patch_start_idx)
+
+    def grad_checkpointing(self, enabled: bool = True) -> bool:
+        """VGGT gates ``torch.utils.checkpoint`` on ``self.training``.
+
+        Both places that do so -- ``Aggregator._process_{frame,global}_attention``
+        and the DINOv2 ViT's ``forward_features`` -- are plain
+        ``if self.training: checkpoint(...) else: block(...)``, so leaving eval
+        mode is the only way to switch them on. That is safe here because VGGT
+        has nothing else that reads ``training``:
+
+        * ``drop_path_rate`` defaults to 0.0 and neither ``Aggregator`` nor
+          ``vit_large`` overrides it, so ``Block.forward``'s two
+          ``self.training and sample_drop_ratio > ...`` branches are both false
+          and it takes the same ``else`` path in either mode;
+        * ``drop`` and ``attn_drop`` default to 0.0, so every ``nn.Dropout`` is
+          identity in train mode too;
+        * there is no ``BatchNorm`` anywhere in ``vggt_visfeat``;
+        * the heads never read ``self.training``.
+
+        So this trades compute for memory and changes no numbers. Parameters stay
+        ``requires_grad=False`` -- ``train()`` is a mode flag, not an unfreeze.
+
+        **One thing it is not inert for, which is why this is a method and not a
+        blanket ``train()``:** the checkpointed call site passes positional args
+        only, so ``save_attn`` / ``att_mask`` / ``rgb_mask`` never reach the block
+        in train mode. Both ``VGGT.forward`` and ``Aggregator.forward`` default
+        ``save_attn=True``, so a caller that leaves the default and enables this
+        would get a stale or missing attention map. RayTun3R pins
+        ``save_attn=False`` (see :meth:`VGGTBackbone.forward`), which is what
+        makes the switch safe here.
+        """
+        self.model.train(enabled)
+        return True
 
     def _vit(self) -> nn.Module:
         return self.model.aggregator.patch_embed
@@ -448,7 +691,10 @@ class VGGTBackbone(Backbone):
             pos = _orig(x, w, h)                       # (1, 1 + N, C), cls first
             gh, gw = outer._grid
             if pos.shape[1] - 1 == gh * gw and outer._pe_table is None:
-                outer._pe_table = pos[0, 1:].detach()
+                # clone, not a view: in DINOv2's fast path (npatch == N and w == h)
+                # ``pos`` IS ``self.pos_embed``, so a view would make P_A track the
+                # live table instead of pinning the pretrained one.
+                outer._pe_table = pos[0, 1:].detach().clone()
             if outer.adapter is None or outer.adapter.pe is None:
                 return pos
             if pos.shape[1] - 1 != gh * gw:
@@ -720,7 +966,7 @@ class DA3Backbone(Backbone):
             gh, gw = outer._grid
             n_prefix = pos.shape[1] - gh * gw
             if n_prefix >= 0 and outer._pe_table is None:
-                outer._pe_table = pos[0, n_prefix:].detach()
+                outer._pe_table = pos[0, n_prefix:].detach().clone()
             if outer.adapter is None or outer.adapter.pe is None:
                 return pos
             if n_prefix < 0:
@@ -889,7 +1135,10 @@ class Pi3Backbone(Backbone):
             pos = _orig(x, w, h)
             gh, gw = outer._grid
             if pos.shape[1] - 1 == gh * gw and outer._pe_table is None:
-                outer._pe_table = pos[0, 1:].detach()
+                # clone, not a view: in DINOv2's fast path (npatch == N and w == h)
+                # ``pos`` IS ``self.pos_embed``, so a view would make P_A track the
+                # live table instead of pinning the pretrained one.
+                outer._pe_table = pos[0, 1:].detach().clone()
             if outer.adapter is None or outer.adapter.pe is None:
                 return pos
             if pos.shape[1] - 1 != gh * gw:

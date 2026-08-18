@@ -131,6 +131,20 @@ All accept `--dry-run` / `--limit` to print or shorten the plan first.
 | Edge-aware smoothness (Eq. 10) | `losses.py::smoothness_loss` |
 | L2 and TV regularisers (Eq. 11, 12) | `losses.py::l2_penalty`, `tv_penalty` |
 | Total objective, `w_pose=1, w_smooth=10, w_L2=2, w_TV=20` (Eq. 13) | `losses.py::LossWeights`, `total_loss` |
+
+### Run-quality flags and what lands in the log
+
+Three things now travel with every fit, because each one silently changes what
+the objective means:
+
+| Flag / field | Why it exists |
+|---|---|
+| `--allow-sparse-matcher` | Eq. 8 divides by `\|Omega\|`, not by `sum(w)`, so `L_reproj`'s weight against `w_smooth=10 / w_L2=2 / w_TV=20` is set by how much of the disc the matcher is confident about. Below 5% coverage the fit refuses to run; this overrides that. |
+| `--no-grad-checkpointing` | The adapter sits at the first layer, so the whole trunk is on the gradient path. Checkpointing is on by default and is numerically inert on VGGT; turn it off to trade memory back for speed. |
+| `match_coverage`, `matcher` in `train_log.json` and in `results.json`'s `_meta` | The measured coverage and the matcher that produced it. A number without these two cannot be compared against the paper, which assumes UFM. |
+
+A run on OpenCV older than 4.5 also warns that the Eq. 9 pose target fell back
+from MAGSAC++ to RANSAC. Record that too.
 | Adam, lr 1e-3, grad clip 1.0, 504×504, zero-init (Impl. details) | `train.py::fit_adapter` |
 | UFM [44] correspondences | `matching.py::UFMMatcher` |
 | 30 three-frame windows, drop flow < 2 px (Sec. 5) | `data.py::build_windows` |

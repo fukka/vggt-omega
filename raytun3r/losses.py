@@ -70,7 +70,8 @@ def _transform(points: Tensor, R: Tensor, t: Tensor) -> Tensor:
 def reprojection_loss(depth_i: Tensor, R_rel: Tensor, t_rel: Tensor,
                       matches: Matches, camera: Camera, *,
                       convention: str = "range",
-                      valid: Optional[Tensor] = None) -> Tuple[Tensor, Tensor]:
+                      valid: Optional[Tensor] = None,
+                      max_err_px: Optional[float] = None) -> Tuple[Tensor, Tensor]:
     """Eq. 8 -- confidence-weighted L1 reprojection error, in pixels.
 
     Eq. 8 normalises by ``|Omega|`` -- the number of pixels inside the valid
@@ -97,17 +98,41 @@ def reprojection_loss(depth_i: Tensor, R_rel: Tensor, t_rel: Tensor,
     w = matches.weight
     if valid is not None:
         w = w * valid.to(w.dtype)
-    # A point that lands behind the imaged cone has no meaningful pixel; drop it
-    # rather than let a wild coordinate dominate the L1 sum.
-    ok = torch.isfinite(err) & (Xj[..., 2] > -1e6)
-    w = w * ok.to(w.dtype)
+
+    # Clamp, do not drop. A pixel whose predicted reprojection lands outside the
+    # imaged cone still has a real correspondence in image j, so it carries a
+    # genuine (large) error; zeroing it would hand the optimiser a free escape --
+    # push geometry out of frame and the penalty disappears. What has to be
+    # bounded is the *magnitude*: past theta_max the projection polynomial is
+    # extrapolating and its coordinates mean nothing, so one wild pixel could
+    # dominate an L1 sum whose useful signal is a few pixels wide.
+    # Upstream VGGT does the same thing in its own losses
+    # (``check_and_fix_inf_nan`` with ``hard_max``, and ``loss_T.clamp(max=100)``).
+    #
+    # The predecessor of this clamp was ``Xj[..., 2] > -1e6``, which reads as a
+    # behind-the-camera test but excludes nothing except -inf.
+    #
+    # What this does NOT do is rescue the gradient. If ``depth`` itself is NaN the
+    # derivative through ``camera.project`` is already NaN, and no substitution
+    # downstream of it changes that -- ``nan_to_num``'s zero meets a non-finite
+    # local derivative one node up and becomes ``0 * inf``. That case is caught
+    # where it is detectable, on the gradient norm in ``train.fit_adapter``, not
+    # here. The clamp's job is only to stop a large-but-finite error from
+    # dominating an L1 sum whose useful signal is a few pixels wide.
+    #
+    # ``err`` is the L1 (Manhattan) distance, so the largest value two in-frame
+    # points can produce is ``(w-1) + (h-1)``, not the Euclidean diagonal.
+    if max_err_px is None:
+        max_err_px = float(camera.width + camera.height)
+    err = torch.nan_to_num(err, nan=max_err_px, posinf=max_err_px,
+                           neginf=max_err_px).clamp(max=max_err_px)
 
     wsum = w.sum()
     if float(wsum) <= 0:
         return depth_i.sum() * 0.0, wsum
     omega = float(valid.sum()) if valid is not None else float(err.numel())
     omega = max(omega, 1.0)
-    return (w * torch.nan_to_num(err, nan=0.0, posinf=0.0, neginf=0.0)).sum() / omega, wsum
+    return (w * err).sum() / omega, wsum
 
 
 def _safe_norm(x: Tensor, dim: int = -1, eps: float = 1e-12) -> Tensor:

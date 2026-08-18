@@ -832,3 +832,666 @@ def test_scannetpp_convention_reaches_the_loader():
         assert "depth_convention=args.convention" in call, (
             f"{mod.__name__}.main passes depth_convention conditionally; "
             f"ScanNet++ then silently keeps planar z")
+
+
+# --------------------------------------------------------------- training loop
+
+
+def test_fit_adapter_feeds_the_pretrained_pe_table_into_eq12():
+    """Eq. 12 is ``TV(P_A + residual)``, not ``TV(residual)``.
+
+    At iteration 0 the adapter is still exactly zero-initialised, so the residual
+    is the zero tensor and ``tv_penalty`` returns ``TV(P_A)`` when the pretrained
+    table reached it and exactly ``0.0`` when it did not. The first logged ``tv``
+    is therefore an exact discriminator, and it pins the wiring -- not just
+    ``tv_penalty`` itself, which ``test_tv_uses_the_absolute_table_when_available``
+    already covers.
+
+    The bug this replaces: ``fit_adapter`` read ``backbone.pe_table()`` once
+    before the loop, i.e. before any forward had run the absolute-PE hook that
+    captures ``P_A``, so it was ``None`` for the whole fit on every backbone that
+    has an absolute table.
+    """
+    from raytun3r.smoke_test import synthetic_window
+    from raytun3r.testing import tiny_vggt
+    from raytun3r.train import fit_adapter
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    ad = bb.make_adapter()
+    bb.install(ad, cam, hw)
+    assert bb.has_abs_pe
+    assert bb.pe_table() is None, "install() must start from a clean capture"
+
+    win = synthetic_window(cam, hw)
+    stats = fit_adapter(bb, [win], cam, iters=1, verbose=False, min_coverage=0.0)
+
+    assert bb.pe_table() is not None, "the forward should have captured P_A"
+    assert stats["history"][0]["tv"] > 0.0, (
+        "tv at iteration 0 is 0.0 exactly when Eq. 12 saw only the zero residual, "
+        "i.e. when P_A never reached the loss")
+    bb.remove()
+
+
+def test_fit_adapter_tv_is_zero_without_an_absolute_table():
+    """The counterpart: a RoPE-only backbone has no absolute table at all.
+
+    ``adapter.pe`` is ``None`` here, so Eq. 11 and Eq. 12 contribute nothing and
+    ``pe_table()`` stays ``None`` however many forwards run -- the fix above must
+    not turn that into a capture attempt that raises or invents a table.
+    """
+    from raytun3r.smoke_test import synthetic_window
+    from raytun3r.testing import tiny_vggt_omega
+    from raytun3r.train import fit_adapter
+
+    bb, hw = tiny_vggt_omega(), (64, 64)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    ad = bb.make_adapter()
+    bb.install(ad, cam, hw)
+    assert bb.has_abs_pe is False
+
+    win = synthetic_window(cam, hw)
+    stats = fit_adapter(bb, [win], cam, iters=1, verbose=False, min_coverage=0.0)
+
+    assert bb.pe_table() is None
+    assert stats["history"][0]["tv"] == 0.0
+    bb.remove()
+
+
+def test_tv_cross_term_is_present_not_just_the_table():
+    """Eq. 12 is TV(P_A + r), which is neither TV(r) nor TV(P_A).
+
+    The zero-residual probes elsewhere in this file cannot tell TV(P_A + r) from
+    TV(P_A) -- they only ever evaluate at r = 0. Pin the cross term directly: a
+    residual chosen to *cancel* the table's variation must drive Eq. 12 below
+    both TV(P_A) and TV(r), which is impossible for either one alone.
+    """
+    table = torch.randn(64, 4)
+    res = -table + table.mean(0)          # P_A + r is constant -> TV(P') == 0
+
+    both = float(tv_penalty(res, (8, 8), table))
+    table_only = float(tv_penalty(torch.zeros_like(res), (8, 8), table))
+    res_only = float(tv_penalty(res, (8, 8), None))
+
+    assert both < 1e-10
+    assert table_only > 1e-3 and res_only > 1e-3
+
+
+def test_rope_correction_reaches_every_frame_in_the_global_layout():
+    """VGGT hands ONE RoPE module both token layouts; Eq. 6 must cover both.
+
+    Frame attention calls it with ``(B*S, heads, K+G, D)`` -- one frame -- and
+    global attention with ``(B, heads, S*(K+G), D)`` -- S frames concatenated.
+    Inferring the prefix as ``N - G`` lands on the last frame's patch block and
+    is therefore *correctly aligned but only for that frame*, leaving frames
+    0..S-2 (including the reference frame) untouched in all 24 global blocks.
+
+    The probe calls the module directly, before and after ``install``, so it
+    isolates the hook from the rest of the network.
+    """
+    from raytun3r.testing import tiny_vggt
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+
+    rope = [m for m in bb.model.modules()
+            if type(m).__name__ == "RotaryPositionEmbedding2D"]
+    assert rope, "tiny_vggt should carry a token-rotating RoPE"
+    rope = rope[0]
+
+    gh, gw = hw[0] // bb.patch_size, hw[1] // bb.patch_size
+    g, k = gh * gw, int(bb.model.aggregator.patch_start_idx)
+    heads = bb.model.aggregator.frame_blocks[0].attn.num_heads
+    dim = bb.model.aggregator.frame_blocks[0].attn.head_dim
+    s = 3
+
+    # The aggregator's own layout: specials at position 0, patches at 1..
+    grid = torch.cartesian_prod(torch.arange(gh), torch.arange(gw)) + 1
+    one = torch.cat((torch.zeros(k, 2, dtype=grid.dtype), grid), dim=0)
+    pos = one.repeat(s, 1)[None]                      # (1, S*(K+G), 2)
+    tokens = torch.randn(1, heads, s * (g + k), dim)
+
+    base = rope(tokens, pos)
+    ad = bb.make_adapter()
+    with torch.no_grad():
+        ad.rope.delta_r.fill_(0.3)                    # a non-zero Eq. 6 offset
+    bb.install(ad, cam, hw)
+    out = rope(tokens, pos)
+
+    delta = (out - base).abs().reshape(1, heads, s, g + k, dim)
+    for f in range(s):
+        assert float(delta[:, :, f, k:].max()) > 0, (
+            f"frame {f} got no Eq. 6 correction in the global layout")
+        assert float(delta[:, :, f, :k].max()) == 0, (
+            f"frame {f}: the camera/register tokens have no image position and "
+            f"must not be rotated")
+    bb.remove()
+
+
+def test_rope_hook_refuses_an_undeclared_multi_frame_layout(monkeypatch):
+    """A backbone that declares no prefix must fail loudly, not correct one frame."""
+    from raytun3r.backbones import VGGTBackbone
+    from raytun3r.testing import tiny_vggt
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    gh, gw = hw[0] // bb.patch_size, hw[1] // bb.patch_size
+    g = gh * gw
+
+    rope = [m for m in bb.model.modules()
+            if type(m).__name__ == "RotaryPositionEmbedding2D"][0]
+    ad = bb.make_adapter()
+    with torch.no_grad():
+        ad.rope.delta_r.fill_(0.3)
+    bb.install(ad, cam, hw)
+
+    heads = bb.model.aggregator.frame_blocks[0].attn.num_heads
+    dim = bb.model.aggregator.frame_blocks[0].attn.head_dim
+    n = 3 * (g + 5)
+    tokens = torch.randn(1, heads, n, dim)
+    grid = torch.cartesian_prod(torch.arange(5), torch.arange(5)) + 1
+    one = torch.cat((torch.zeros(5, 2, dtype=grid.dtype), grid), dim=0)
+    pos = one.repeat(3, 1)[None]
+
+    # ``positions`` passed as a KEYWORD: a plain forward hook receives positional
+    # args only, so this is exactly the "module called without positions the hook
+    # can see" case that has to fall back on a declaration.
+    #
+    # monkeypatch, not a bare assignment: ``n_prefix_tokens`` is a *property* on
+    # VGGTBackbone, so `del` would drop it for every later test in the session.
+    monkeypatch.setattr(VGGTBackbone, "n_prefix_tokens", None, raising=True)
+    try:
+        with pytest.raises(RuntimeError, match="n_prefix_tokens"):
+            rope(tokens, positions=pos)
+    finally:
+        bb.remove()
+
+
+def test_grad_checkpointing_is_toggled_and_always_restored():
+    """The frozen trunk must end back in eval(), even if the fit raises.
+
+    VGGT gates ``torch.utils.checkpoint`` on ``self.training``, so the only way
+    to switch it on is to leave eval mode -- which is safe here (no dropout, no
+    droppath, no batchnorm) but must not leak into evaluation afterwards.
+    """
+    from raytun3r.smoke_test import synthetic_window
+    from raytun3r.testing import tiny_vggt
+    from raytun3r.train import fit_adapter
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    bb.install(bb.make_adapter(), cam, hw)
+    assert not bb.model.training
+
+    block = bb.model.aggregator.frame_blocks[0]
+    orig = block.forward
+    calls = []
+
+    def spy(*a, **kw):
+        calls.append(bb.model.aggregator.training)
+        return orig(*a, **kw)
+
+    block.forward = spy
+    try:
+        fit_adapter(bb, [synthetic_window(cam, hw)], cam, iters=1, verbose=False,
+                    min_coverage=0.0)
+    finally:
+        del block.forward
+
+    assert calls and calls[0] is True, "the fit ran with checkpointing off"
+    # Two calls per checkpointed block per step: the forward, then the backward's
+    # recomputation. One call would mean the region silently degraded to no
+    # checkpointing (or that use_reentrant flipped to True).
+    assert len(calls) == 2, f"expected forward + recompute, got {len(calls)} calls"
+    assert not bb.model.training, "fit_adapter left the backbone in train mode"
+
+    # frozen means frozen: train mode is a flag, not an unfreeze
+    assert all(not p.requires_grad for p in bb.model.parameters())
+    bb.remove()
+
+
+def test_grad_checkpointing_is_restored_when_the_fit_raises():
+    """The `finally:` is the whole point -- a crashed fit must not leak train mode."""
+    from raytun3r import train as train_mod
+    from raytun3r.smoke_test import synthetic_window
+    from raytun3r.testing import tiny_vggt
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    bb.install(bb.make_adapter(), cam, hw)
+
+    real = train_mod.total_loss
+
+    def boom(*a, **kw):
+        raise ZeroDivisionError("synthetic failure inside the fit")
+
+    train_mod.total_loss = boom
+    try:
+        with pytest.raises(ZeroDivisionError):
+            train_mod.fit_adapter(bb, [synthetic_window(cam, hw)], cam, iters=1,
+                                  verbose=False, min_coverage=0.0)
+    finally:
+        train_mod.total_loss = real
+
+    assert not bb.model.training
+    bb.remove()
+
+
+def test_batch_backward_is_per_window_not_one_big_graph():
+    """--batch-size must not multiply peak memory.
+
+    Accumulating ``acc = acc + loss`` and calling ``backward()`` once after the
+    loop keeps every window's graph alive at the same time. Since the adapter is
+    at the first layer, "graph" here means the whole trunk's activations, so peak
+    memory scaled with the batch size. The probe counts backward passes per
+    optimiser step: one per window, not one per step.
+    """
+    from raytun3r.smoke_test import synthetic_window
+    from raytun3r.testing import tiny_vggt
+    from raytun3r.train import fit_adapter
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    ad = bb.make_adapter()
+    bb.install(ad, cam, hw)
+    wins = [synthetic_window(cam, hw, seed=s) for s in range(2)]
+
+    backwards, steps = [], []
+    hook = ad.pe.t_r.register_hook(lambda g: backwards.append(1) or g)
+    real_step = torch.optim.Adam.step
+
+    def counting_step(self, *a, **kw):
+        steps.append(1)
+        return real_step(self, *a, **kw)
+
+    torch.optim.Adam.step = counting_step
+    try:
+        fit_adapter(bb, wins, cam, iters=1, batch_size=2, verbose=False,
+                    min_coverage=0.0)
+    finally:
+        torch.optim.Adam.step = real_step
+        hook.remove()
+
+    assert steps == [1], "one optimiser step per iteration"
+    assert len(backwards) == 2, (
+        f"expected one backward per window in the batch, got {len(backwards)}")
+    bb.remove()
+
+
+def test_history_holds_no_autograd_graph():
+    """The other half of the per-window backward fix, and the easier one to lose.
+
+    ``total_loss`` returns its parts as Python floats. If any of them ever became
+    a tensor, ``parts_sum`` would hold live graph references for the whole fit and
+    re-create exactly the leak that moving ``backward()`` was meant to remove --
+    without changing the backward count the test above measures.
+    """
+    from raytun3r.smoke_test import synthetic_window
+    from raytun3r.testing import tiny_vggt
+    from raytun3r.train import fit_adapter
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    bb.install(bb.make_adapter(), cam, hw)
+    stats = fit_adapter(bb, [synthetic_window(cam, hw)], cam, iters=2,
+                        verbose=False, min_coverage=0.0)
+
+    for entry in stats["history"]:
+        for key, value in entry.items():
+            assert not torch.is_tensor(value), f"history[{key!r}] is a live tensor"
+    bb.remove()
+
+
+def test_sift_keeps_the_closer_match_when_two_round_to_one_pixel(monkeypatch):
+    """A pixel claimed twice must not end up with an arbitrary correspondence.
+
+    SIFT emits duplicate keypoints at one location for each dominant orientation,
+    and ``int(round(...))`` collapses sub-pixel neighbours. Writing unconditionally
+    left whichever match came last in BFMatcher's order, at weight 1.0 -- a
+    correspondence picked by iteration order and then asserted with full
+    confidence, which is exactly what Eq. 8's w_ij exists to prevent.
+    """
+    cv2 = pytest.importorskip("cv2")
+    import numpy as np
+
+    from raytun3r.matching import SIFTMatcher
+
+    class KP:
+        def __init__(self, pt):
+            self.pt = pt
+
+    class DM:
+        def __init__(self, q, t, d):
+            self.queryIdx, self.trainIdx, self.distance = q, t, d
+
+    # Source: two keypoints 0.2 px apart, so both round to pixel (u=3, v=4).
+    src = [KP((3.0, 4.0)), KP((3.2, 4.1))]
+    dst = [KP((10.0, 20.0)), KP((99.0, 99.0))]
+    desc = np.zeros((2, 128), dtype=np.float32)
+
+    calls = {"n": 0}
+
+    class FakeSift:
+        def detectAndCompute(self, image, mask):
+            calls["n"] += 1
+            return (src, desc) if calls["n"] == 1 else (dst, desc)
+
+    class FakeBF:
+        def knnMatch(self, a, b, k=2):
+            # both pass the 0.8 ratio test; the second is the worse match and is
+            # listed last, so it is the one that used to win
+            return [[DM(0, 0, 1.0), DM(0, 1, 99.0)],
+                    [DM(1, 1, 50.0), DM(1, 0, 99.0)]]
+
+    monkeypatch.setattr(cv2, "BFMatcher", lambda *a, **kw: FakeBF())
+
+    m = SIFTMatcher.__new__(SIFTMatcher)
+    m.cv2, m.ratio, m.device, m.sift = cv2, 0.8, "cpu", FakeSift()
+    monkeypatch.setattr(m, "_gray", lambda img: None, raising=False)
+
+    out = m(torch.zeros(3, 8, 8), torch.zeros(3, 8, 8))
+
+    assert calls["n"] == 2, "source and target must be detected separately"
+    assert float(out.weight[4, 3]) == 1.0
+    assert out.target[4, 3].tolist() == [10.0, 20.0], (
+        "the closer descriptor match (distance 1.0) must survive, not the one "
+        "written last (distance 50.0 -> dst keypoint (99, 99))")
+
+    # every other pixel is untouched: weight 0 and target still the identity grid
+    assert float(out.weight.sum()) == 1.0
+    assert out.target[0, 0].tolist() == [0.0, 0.0]
+
+
+def test_match_coverage_reports_the_eq8_rescaling():
+    """Eq. 8 divides by |Omega|, so a sparse matcher rescales L_reproj.
+
+    ``_match_coverage`` is the number that makes that visible: it is exactly the
+    factor by which ``L_reproj`` shrinks relative to a matcher confident over the
+    whole disc, while ``w_smooth``/``w_L2``/``w_TV`` stay put.
+    """
+    from raytun3r.data import Window
+    from raytun3r.train import _match_coverage
+
+    h = w = 16
+    cam = toy_camera(h, w, fov_deg=180.0)
+    valid = cam.valid_mask(h, w)
+    grid = pixel_grid(h, w)
+
+    dense = Window(images=torch.zeros(2, 3, h, w), indices=[0, 1], camera=cam)
+    dense.matches[(0, 1)] = Matches(target=grid, weight=valid.float())
+    assert _match_coverage([dense], valid) == pytest.approx(1.0)
+
+    sparse_w = torch.zeros(h, w)
+    # index_put through a flat view: ``sparse_w[valid].reshape(-1)[:8] = 1`` would
+    # write into the copy that boolean indexing returns, leaving sparse_w at zero
+    # and the assertions below trivially true.
+    inside = torch.nonzero(valid.reshape(-1)).squeeze(-1)[:8]
+    sparse_w.reshape(-1)[inside] = 1.0             # 8 confident pixels, all inside
+    assert float(sparse_w.sum()) == 8.0
+
+    sparse = Window(images=torch.zeros(2, 3, h, w), indices=[0, 1], camera=cam)
+    sparse.matches[(0, 1)] = Matches(target=grid, weight=sparse_w)
+    got = _match_coverage([sparse], valid)
+    assert got == pytest.approx(float(sparse_w.sum()) / float(valid.sum()))
+    assert got < 0.2                               # the level that triggers the warning
+
+    # It applies ``valid`` itself rather than trusting the matcher to have done
+    # so, which is what makes the reported number the factor Eq. 8 really uses
+    # (reprojection_loss multiplies by the same mask) instead of one that merely
+    # agrees with it by convention.
+    outside = torch.zeros(h, w)
+    outside[~valid] = 1.0
+    assert float(outside.sum()) > 0
+    leaky = Window(images=torch.zeros(2, 3, h, w), indices=[0, 1], camera=cam)
+    leaky.matches[(0, 1)] = Matches(target=grid, weight=outside)
+    assert _match_coverage([leaky], valid) == 0.0, (
+        "weight outside Omega contributes nothing to Eq. 8, so it must not be "
+        "reported as coverage either")
+
+
+def test_matcher_mask_zeroes_weight_outside_omega():
+    """``Matcher._mask`` itself -- the shared helper every matcher routes through."""
+    from raytun3r.matching import Matcher
+
+    valid = torch.zeros(4, 4, dtype=torch.bool)
+    valid[1:3, 1:3] = True
+    masked = Matcher._mask(torch.ones(4, 4), valid)
+    assert float(masked.sum()) == 4.0
+    assert float(masked[0, 0]) == 0.0
+
+
+def test_fit_adapter_warns_on_a_sparse_matcher():
+    from raytun3r.smoke_test import synthetic_window
+    from raytun3r.testing import tiny_vggt
+    from raytun3r.train import fit_adapter
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    bb.install(bb.make_adapter(), cam, hw)
+
+    def thinned(step):
+        win = synthetic_window(cam, hw)
+        for m in win.matches.values():
+            keep = torch.zeros_like(m.weight)
+            keep.reshape(-1)[::step] = 1.0
+            m.weight = m.weight * keep
+        return win
+
+    # in the warning band: L_reproj is heavily down-weighted but still present
+    with pytest.warns(RuntimeWarning, match="covers"):
+        stats = fit_adapter(bb, [thinned(6)], cam, iters=1, verbose=False,
+                            min_coverage=0.0, matcher_name="probe")
+    assert 0.0 < stats["match_coverage"] < 0.2
+    assert stats["matcher"] == "probe"
+
+    # below the floor: refuse outright rather than save an adapter fitted on
+    # nothing but its own regularisers
+    with pytest.raises(RuntimeError, match="not worth recording"):
+        fit_adapter(bb, [thinned(400)], cam, iters=1, verbose=False)
+    bb.remove()
+
+
+# ------------------------------------------------------------------- robustness
+
+
+def test_a_broken_reprojection_is_charged_not_zeroed(scene):
+    """Making a pixel un-projectable must not make it free.
+
+    The predecessor guard read ``Xj[..., 2] > -1e6`` -- which looks like a
+    behind-the-camera test but excludes nothing except -inf -- and non-finite
+    errors were then replaced by **0.0**. Both readings hand the optimiser the
+    same escape: geometry that cannot be projected costs nothing, so pushing
+    depth to NaN/inf is a way to reduce Eq. 8. Such a pixel is now charged the
+    cap instead.
+    """
+    cam, depth, R, t, m, _ = scene
+    omega = float(m.weight.numel())
+    cap = 3.0
+
+    broken = depth.clone()
+    broken[40:60, 40:60] = float("nan")
+    loss, wsum = reprojection_loss(broken, R, t, m, cam, max_err_px=cap)
+
+    clean, _ = reprojection_loss(depth, R, t, m, cam, max_err_px=cap)
+    assert float(wsum) > 0
+    assert math.isfinite(float(loss))
+    assert float(loss) > float(clean), "NaN depth must cost more, not less"
+    assert float(loss) <= cap * float(wsum) / omega + 1e-6
+
+
+def test_reprojection_loss_respects_an_explicit_error_cap(scene):
+    cam, depth, R, t, m, _ = scene
+    wrong = depth * 0.05                       # badly wrong, still projectable
+    a, _ = reprojection_loss(wrong, R, t, m, cam, max_err_px=1.0)
+    b, _ = reprojection_loss(wrong, R, t, m, cam, max_err_px=4.0)
+    assert 0 < float(a) < float(b), "the cap must bind on a badly wrong depth"
+
+
+def test_default_error_cap_is_the_l1_bound_not_the_diagonal(scene):
+    """``err`` is ``.abs().sum(-1)`` -- Manhattan, not Euclidean.
+
+    The largest value two in-frame points can produce is ``(w-1) + (h-1)``, so
+    the Euclidean diagonal is ~30% too small a cap and clips real in-frame error.
+    """
+    cam, depth, R, t, m, _ = scene
+    l1_bound = float(cam.width + cam.height)
+    diag = math.hypot(cam.width, cam.height)
+    assert diag < l1_bound
+
+    a, _ = reprojection_loss(depth * 0.05, R, t, m, cam)
+    b, _ = reprojection_loss(depth * 0.05, R, t, m, cam, max_err_px=l1_bound)
+    assert float(a) == pytest.approx(float(b), rel=1e-6)
+
+    # and the diagonal really would have bitten on this scene
+    c, _ = reprojection_loss(depth * 0.05, R, t, m, cam, max_err_px=diag)
+    assert float(c) < float(a)
+
+
+def test_guarding_a_scalar_loss_cannot_unpoison_the_gradient():
+    """Why the non-finite guard is on the gradient norm, not on the loss.
+
+    An earlier version wrapped each assembled loss term in ``nan_to_num``. Its
+    backward IS a mask, so the substituted entry contributes zero -- but that zero
+    meets a non-finite *local derivative* one node up and becomes ``0 * inf``. The
+    loss reads finite while every gradient is NaN, which is strictly worse than
+    crashing: ``clip_grad_norm_`` then multiplies every parameter's gradient by
+    that NaN, Adam's moments make it permanent, and the fit runs to completion
+    logging plausible numbers and saves a corrupt adapter.
+    """
+    p = torch.nn.Parameter(torch.tensor([1.0, 2.0]))
+    term = (p * torch.tensor([1.0, float("inf")])).sum()
+    guarded = torch.nan_to_num(term, nan=0.0, posinf=0.0, neginf=0.0)
+    guarded.backward()
+
+    assert math.isfinite(float(guarded)), "the scalar guard does make the loss finite"
+    assert not bool(torch.isfinite(p.grad).all()), (
+        "...and that is exactly why it is not a guard: the gradient is still NaN")
+
+    # the norm is the observable that does see it
+    q = torch.nn.Parameter(torch.zeros(2))
+    q.grad = torch.tensor([1.0, float("nan")])
+    assert not math.isfinite(float(torch.nn.utils.clip_grad_norm_([q], 1.0)))
+
+
+def test_fit_adapter_aborts_on_a_non_finite_gradient():
+    """The guard must fire on the gradient even when the loss looks fine."""
+    from raytun3r import train as train_mod
+    from raytun3r.smoke_test import synthetic_window
+    from raytun3r.testing import tiny_vggt
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    ad = bb.make_adapter()
+    bb.install(ad, cam, hw)
+
+    real = train_mod.total_loss
+
+    def poisoned(*a, **kw):
+        loss, parts = real(*a, **kw)
+        # finite value, non-finite gradient -- precisely the case a loss-level
+        # check cannot see
+        loss = loss + (ad.pe.t_r * float("inf")).sum() * 0.0
+        return loss, parts
+
+    train_mod.total_loss = poisoned
+    try:
+        with pytest.raises(RuntimeError, match="gradient went non-finite"):
+            train_mod.fit_adapter(bb, [synthetic_window(cam, hw)], cam, iters=1,
+                                  verbose=False, min_coverage=0.0)
+    finally:
+        train_mod.total_loss = real
+    bb.remove()
+
+
+def test_fit_adapter_visits_every_window_before_repeating():
+    """Shuffled epochs, not draws with replacement.
+
+    With ``randint`` the visit count per window is Binomial, so some windows in
+    the adaptation set are silently weighted several times more than others.
+    """
+    from raytun3r.smoke_test import synthetic_window
+    from raytun3r.testing import tiny_vggt
+    from raytun3r.train import fit_adapter
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    bb.install(bb.make_adapter(), cam, hw)
+    wins = [synthetic_window(cam, hw, seed=s) for s in range(5)]
+
+    seen = []
+    real_forward = bb.forward
+
+    def spy(images):
+        for i, w in enumerate(wins):
+            if images.shape == w.images[None].shape and torch.equal(images[0], w.images):
+                seen.append(i)
+                break
+        return real_forward(images)
+
+    bb.forward = spy
+    try:
+        fit_adapter(bb, wins, cam, iters=10, verbose=False, min_coverage=0.0)
+    finally:
+        del bb.forward
+
+    assert sorted(seen) == sorted(list(range(5)) * 2), (
+        f"two epochs must visit every window exactly twice, got {sorted(seen)}")
+    assert sorted(seen[:5]) == list(range(5)), (
+        f"and the first epoch must already cover all five, got {seen[:5]}")
+    bb.remove()
+
+
+def test_rope_frame_layout_is_read_from_positions_not_guessed():
+    """``pos`` is the authority on where frame boundaries are.
+
+    It is already handed to the RoPE module, so no backbone has to declare its
+    prefix, and an install whose grid disagrees with the forward is caught
+    instead of silently correcting a misaligned partition.
+    """
+    from raytun3r.backbones import Backbone
+
+    g, k = 25, 5
+    grid = torch.cartesian_prod(torch.arange(5), torch.arange(5)) + 1
+    one = torch.cat((torch.zeros(k, 2, dtype=grid.dtype), grid), dim=0)
+
+    for s in (1, 2, 3, 8):
+        pos = one.repeat(s, 1)[None]
+        assert Backbone._rope_frame_layout(pos, s * (g + k), g) == (k, s)
+
+    # no prefix at all
+    pos = grid.repeat(4, 1)[None]
+    assert Backbone._rope_frame_layout(pos, 4 * g, g) == (0, 4)
+
+    # a degenerate pos is periodic at every divisor, so it must NOT be trusted:
+    # the patch block of a real frame holds g distinct coordinates.
+    assert Backbone._rope_frame_layout(torch.zeros(1, 90, 2, dtype=torch.long),
+                                       90, g) is None
+
+    # unusable inputs fall through to the declaration path
+    assert Backbone._rope_frame_layout(None, 30, g) is None
+    assert Backbone._rope_frame_layout(torch.zeros(1, 30), 30, g) is None
+    assert Backbone._rope_frame_layout(one[None], 30, 999) is None
+
+
+def test_has_rope_without_a_matching_module_is_an_error():
+    """A RoPE adapter with no hook is a partial adapter reported as a full one."""
+    from raytun3r.testing import tiny_vggt
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+
+    rope = bb.model.aggregator.rope
+    blocks = list(bb.model.aggregator.frame_blocks) + list(bb.model.aggregator.global_blocks)
+    for blk in blocks:
+        blk.attn.rope = None
+    bb.model.aggregator.rope = None
+    try:
+        with pytest.raises(RuntimeError, match="has_rope=True"):
+            bb.install(bb.make_adapter(), cam, hw)
+        # a failed install must not leave the frozen model half-instrumented
+        assert bb._handles == [] and bb._patched == []
+        assert bb.camera is None
+    finally:
+        bb.model.aggregator.rope = rope
+        for blk in blocks:
+            blk.attn.rope = rope

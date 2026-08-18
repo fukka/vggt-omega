@@ -307,7 +307,15 @@ def main(argv=None) -> None:
             print(f"[eval] WARNING: adapter was fitted on {blob.get('backbone')!r} but "
                   f"evaluating {args.backbone!r}")
 
-    results = {"_meta": {"matcher": matcher.name, "backbone": args.backbone,
+    # The same matcher drives d_reproj here as drove Eq. 8 in training, so a
+    # sparse matcher degrades the metric too. Record the coverage next to the
+    # numbers rather than leaving a results.json that looks unqualified.
+    from .train import _match_coverage
+    _cov = _match_coverage(windows, source.camera.valid_mask(
+        source.h, source.w, device=windows[0].images.device))
+
+    results = {"_meta": {"matcher": matcher.name, "match_coverage": _cov,
+                         "backbone": args.backbone,
                          "dataset": args.dataset, "scene": source.name,
                          "n_windows": len(windows), "convention": args.convention,
                          "gt_pose": windows[0].gt_R is not None,

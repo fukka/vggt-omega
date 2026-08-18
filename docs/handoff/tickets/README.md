@@ -21,6 +21,7 @@ have no run behind them:
 
 | # | | owner | queue |
 |---|---|---|---|
+| [025](025-rope-hook-and-run-preflight.md) | **Five checks before any reproduction number counts.** The paper↔code audit fixed two defects that change every fit (Eq. 12 was `TV(residual)` not `TV(P_A+residual)`; Eq. 6 reached only the last frame in global attention), and three claims cannot be tested off the box: DA3's and π³'s RoPE class names, and whether this OpenCV even has MAGSAC++. Plus a checkpointing A/B and the UFM coverage number. ~20 min, no training. | gpu | **before #4 step 2.** Every `adapter.pt` and `train_log.json` from before `organized@HEAD` is void |
 | [024](024-adt-fov-depth-controlled-and-three-frames.md) | **How much of the rim penalty survives with GT depth held fixed** — the joint incidence-angle x depth table (part A), plus the context arms (3/5/10 @ stride 10) re-run on the **six-sequence** split so they are comparable to the headline (part B). Code and tests on `organized`; the runs are the ticket. | gpu | **first.** Part A is ~30 min and is the only thing between `adt_fov_experiment_v6.pptx` p.7 and a figure; part B is ~6.3 h and is p.8. Run both `--workers 1` — see the ticket |
 | [022](022-fov-on-slam-data.md) | **The FOV question on real SLAM points**: the `fovbench` experiment, repeated against ego-synth's MPS points. Code, tests and lane script are on `organized`; the run is the ticket. | gpu | after 024 |
 
@@ -101,7 +102,7 @@ check a ticket before picking it up.
 |---|---|---|
 | [001](001-readme-first-gpu-results.md) | Fold the first GPU results into the README | not audited |
 | [002](002-depth-convention-audit.md) | Audit Eq. 7's depth convention | not audited |
-| [003](003-full-scannetpp-da3-rerun.md) | The actual reproduction | open |
+| [003](003-full-scannetpp-da3-rerun.md) | The actual reproduction | open · superseded in practice by #4 |
 | [004](004-validate-harness-vanilla.md) | Reproduce VGGT vanilla, validating the harness | done · `vanilla-repro-3f15a9266d` |
 | [005](005-protocol-identify.md) | Settle the protocol with every training-free target | done · `protocol-identify-3f15a9266d` |
 | [006](006-render-scannetpp-depth.md) | Render ScanNet++ DSLR depth from the mesh | open |

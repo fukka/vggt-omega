@@ -64,7 +64,10 @@ class Matches:
         flat_w = self.weight.reshape(-1)
         keep = torch.nonzero(flat_w > 0, as_tuple=False).squeeze(-1)
         if keep.numel() > max_points:
-            idx = torch.randperm(keep.numel(), generator=generator, device=keep.device)[:max_points]
+            # Drawn on the host, then moved: torch.randperm rejects a CPU
+            # generator paired with a CUDA device, and every caller's generator
+            # is a CPU one.
+            idx = torch.randperm(keep.numel(), generator=generator)[:max_points].to(keep.device)
             keep = keep[idx]
         return (src.reshape(-1, 2)[keep], self.target.reshape(-1, 2)[keep], flat_w[keep])
 
@@ -178,9 +181,11 @@ class RAFTMatcher(Matcher):
 class SIFTMatcher(Matcher):
     """Sparse OpenCV SIFT + ratio test, densified by nearest-neighbour scatter.
 
-    CPU-only and dependency-free, for smoke tests and for a first end-to-end run
-    on a machine without a GPU. Sparse coverage makes it a weak signal for the
-    reprojection loss; it is adequate for the MAGSAC++ pose target.
+    Dependency-free apart from OpenCV, for smoke tests and for a first end-to-end
+    run on a machine without a GPU. Detection runs on the host whatever the
+    caller's device is, but the tensors it returns follow ``device``. Sparse
+    coverage makes it a weak signal for the reprojection loss (see
+    ``train._match_coverage``); it is adequate for the MAGSAC++ pose target.
     """
 
     name = "sift"
@@ -191,6 +196,12 @@ class SIFTMatcher(Matcher):
         self.cv2 = cv2
         self.sift = cv2.SIFT_create(nfeatures=n_features)
         self.ratio = ratio
+        # Detection is OpenCV's, so it happens on the host either way -- but the
+        # tensors handed back must live where the caller's do. ``device`` used to
+        # be accepted and dropped, so ``Matcher._mask`` multiplied a CPU weight by
+        # a CUDA valid mask and ``--matcher sift --device cuda`` died in
+        # build_windows before training ever started.
+        self.device = device
 
     def _gray(self, img: Tensor) -> np.ndarray:
         a = (img.detach().cpu().numpy().transpose(1, 2, 0) * 255).clip(0, 255).astype(np.uint8)
@@ -203,13 +214,31 @@ class SIFTMatcher(Matcher):
         ki, di = self.sift.detectAndCompute(gi, None)
         kj, dj = self.sift.detectAndCompute(gj, None)
 
+        # Built on the host, because the scatter below writes one pixel at a
+        # time from OpenCV keypoints, then moved once. ``device`` used to be
+        # accepted and discarded, so ``_mask`` multiplied a CPU weight by a CUDA
+        # valid mask and ``--matcher sift --device cuda`` died inside
+        # build_windows, before training ever started.
         h, w = image_i.shape[-2:]
         target = pixel_grid(h, w, dtype=torch.float32)
         weight = torch.zeros(h, w)
 
         if di is None or dj is None or len(ki) < 2 or len(kj) < 2:
-            return Matches(target=target, weight=self._mask(weight, valid))
+            return Matches(target=target.to(self.device),
+                           weight=self._mask(weight.to(self.device), valid))
 
+        # Two keypoints can round to the same integer pixel -- SIFT alone emits
+        # duplicates there for each dominant orientation. Writing unconditionally
+        # made the survivor whichever came last in BFMatcher's order. Keep the
+        # more distinctive match instead, ranked by Lowe's ratio (already computed
+        # for the test two lines down) rather than by raw descriptor distance,
+        # which would favour low-magnitude descriptors over distinctive ones.
+        #
+        # Note what this does *not* change: a contested pixel still ends up at
+        # ``weight = 1.0``, and the set of nonzero pixels is identical, so
+        # coverage, ``mean_flow_magnitude`` and Eq. 8's normalisation are
+        # bit-identical. Only which correspondence is asserted changes.
+        best = np.full((h, w), np.inf)
         matches = cv2.BFMatcher().knnMatch(di, dj, k=2)
         for pair in matches:
             if len(pair) < 2:
@@ -219,10 +248,13 @@ class SIFTMatcher(Matcher):
                 continue
             u, v = ki[m.queryIdx].pt
             uu, vv = int(round(u)), int(round(v))
-            if 0 <= uu < w and 0 <= vv < h:
+            ratio = m.distance / max(n.distance, 1e-12)
+            if 0 <= uu < w and 0 <= vv < h and ratio < best[vv, uu]:
+                best[vv, uu] = ratio
                 target[vv, uu, 0], target[vv, uu, 1] = kj[m.trainIdx].pt
                 weight[vv, uu] = 1.0
-        return Matches(target=target, weight=self._mask(weight, valid))
+        return Matches(target=target.to(self.device),
+                       weight=self._mask(weight.to(self.device), valid))
 
 
 _MATCHERS = {"ufm": UFMMatcher, "raft": RAFTMatcher, "sift": SIFTMatcher}
@@ -267,6 +299,22 @@ def relative_pose_magsac(matches: Matches, camera: Camera, *,
 
     ``t~`` is a unit translation *direction*: the essential matrix determines
     translation only up to scale, which is all Eq. 9 uses.
+
+    **The threshold is angular, and on a fisheye that takes two stages.** The
+    essential-matrix constraint ``b_j^T E b_i = 0`` needs projective coordinates,
+    so the bearings have to go through the normalised plane ``(x/z, y/z)``, where
+    OpenCV measures its Sampson residual. But that plane stretches angles by
+    ``1/cos^2(theta)``: at 85 deg incidence one degree of angular error becomes
+    ~131 times the displacement it does on axis. A single planar threshold is
+    therefore only angular near the optical axis, and it rejects perfectly good
+    rim correspondences -- exactly the ones a fisheye adaptation exists to use.
+
+    So MAGSAC++ runs with the threshold scaled by the *median* stretch of this
+    match set (angular on average rather than angular only at the centre), and
+    the inlier set it returns is then narrowed by the true angular residual --
+    the angle between ``b_j`` and the epipolar plane of ``b_i`` -- before
+    ``recoverPose``. The robust search stays MAGSAC++; only what counts as an
+    inlier becomes lens-independent.
     """
     import cv2
 
@@ -281,20 +329,63 @@ def relative_pose_magsac(matches: Matches, camera: Camera, *,
     front = (bi[:, 2] > 1e-3) & (bj[:, 2] > 1e-3)
     if int(front.sum()) < min_matches:
         return None
-    pi = (bi[front, :2] / bi[front, 2:3]).detach().cpu().numpy().astype(np.float64)
-    pj = (bj[front, :2] / bj[front, 2:3]).detach().cpu().numpy().astype(np.float64)
+    ui = torch.nn.functional.normalize(bi[front], dim=-1)
+    uj = torch.nn.functional.normalize(bj[front], dim=-1)
+    pi = (ui[:, :2] / ui[:, 2:3]).detach().cpu().numpy().astype(np.float64)
+    pj = (uj[:, :2] / uj[:, 2:3]).detach().cpu().numpy().astype(np.float64)
 
-    # An angular threshold expressed on the normalised plane.
-    thr = math.tan(math.radians(threshold_deg))
-    E, inliers = cv2.findEssentialMat(
-        pi, pj, cameraMatrix=np.eye(3), method=cv2.USAC_MAGSAC,
-        prob=confidence, threshold=thr, maxIters=max_iters,
-    )
+    # Radial stretch of the gnomonic map: d(tan theta)/d(theta) = 1/cos^2(theta),
+    # which is 1/z^2 for a unit bearing. (Tangentially it is only 1/cos theta, so
+    # this is the *largest* of the two -- the MAGSAC stage is therefore loose
+    # rather than tight, which is the safe direction given the angular re-score
+    # below narrows the set again.)
+    stretch = (1.0 / (ui[:, 2] ** 2).clamp_min(1e-6)).detach().cpu().numpy()
+    thr = math.tan(math.radians(threshold_deg)) * float(np.median(stretch))
+    # MAGSAC++ and the ``maxIters`` kwarg both arrived in OpenCV 4.5. On anything
+    # older this degrades to RANSAC with the library's default iteration cap --
+    # loudly, because it changes the quality of the Eq. 9 pose target, which is
+    # exactly the kind of substitution that has to travel with the number.
+    method = getattr(cv2, "USAC_MAGSAC", None)
+    if method is None:
+        method = cv2.RANSAC
+        warnings.warn(
+            f"OpenCV {cv2.__version__} has no USAC_MAGSAC; falling back to RANSAC "
+            f"for the Eq. 9 pose target. The paper specifies MAGSAC++ -- record "
+            f"this when reporting any number from this run.", RuntimeWarning)
+    kw = dict(cameraMatrix=np.eye(3), method=method,
+              prob=confidence, threshold=thr)
+    try:
+        E, inliers = cv2.findEssentialMat(pi, pj, maxIters=max_iters, **kw)
+    except TypeError:
+        E, inliers = cv2.findEssentialMat(pi, pj, **kw)
     if E is None or E.shape[0] < 3:
         return None
     E = E[:3, :3]
 
-    n_in, R, t, _ = cv2.recoverPose(E, pi, pj, cameraMatrix=np.eye(3), mask=inliers)
+    # Re-score with the real angular residual: |sin| of the angle between b_j and
+    # the epipolar plane whose normal is E b_i. Lens-independent, so the same
+    # ``threshold_deg`` means the same thing on axis and at the rim.
+    ui_np = ui.detach().cpu().numpy().astype(np.float64)
+    uj_np = uj.detach().cpu().numpy().astype(np.float64)
+    normals = ui_np @ E.T                                   # (N, 3) epipolar normals
+    norm = np.linalg.norm(normals, axis=1)
+    ok = norm > 1e-12
+    resid = np.full(norm.shape, np.inf)
+    resid[ok] = np.abs(np.sum(normals[ok] * uj_np[ok], axis=1)) / norm[ok]
+    angular = resid <= math.sin(math.radians(threshold_deg))
+    if inliers is not None:
+        angular = angular & (inliers.ravel() > 0)
+    if int(angular.sum()) < min_matches:
+        # Too thin to re-fit on: fall back to OpenCV's own mask rather than
+        # discard a pose the caller could still check.
+        if inliers is None:
+            return None
+        angular = inliers.ravel() > 0
+        if int(angular.sum()) < min_matches:
+            return None
+    mask = angular.astype(np.uint8).reshape(-1, 1)
+
+    n_in, R, t, _ = cv2.recoverPose(E, pi, pj, cameraMatrix=np.eye(3), mask=mask)
     if n_in < min_matches:
         return None
 

@@ -237,7 +237,8 @@ def main() -> int:
     check("total loss finite", bool(torch.isfinite(loss)),
           " ".join(f"{k}={v:.3f}" for k, v in parts.items() if k != "iter"))
 
-    stats = fit_adapter(bb, [win], c, iters=6, log_every=100, verbose=False)
+    stats = fit_adapter(bb, [win], c, iters=6, log_every=100, verbose=False,
+                        min_coverage=0.0, matcher_name="synthetic")
     first, last = stats["history"][0]["total"], stats["history"][-1]["total"]
     check("fitting runs and stays finite", math.isfinite(last),
           f"total {first:.4f} -> {last:.4f} over 6 iters")
