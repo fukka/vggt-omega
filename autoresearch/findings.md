@@ -60,6 +60,12 @@ is inherited from this repo's prior work and the verified literature survey at
   shows the ideal-geometry conditioning effect is ~20× smaller (−0.11°): **span
   pays through robustness to real feature noise, not conditioning.** The 65→85°
   band still contributes.
+- **H1.2 REFUTED, informatively (run 004):** DA3-Small's pose does NOT ignore the
+  periphery — it depends on it. Deleting all central content (θ≤45°, 39% of
+  pixels) leaves rotation error unchanged (4.93° vs 5.00°); deleting the rim
+  (61%) more than doubles it on every pair (12.32°). Not area-matched yet
+  (random-mask control pending), but center-masked ≈ vanilla is already decisive
+  in one direction: **the frozen model's alignment signal lives in the rim.**
 
 ## Patterns and Insights
 
@@ -67,14 +73,19 @@ is inherited from this repo's prior work and the verified literature survey at
   quarter — count/coverage dominates band identity. The wide-FOV pose story is
   **span**, not per-point rim quality — and specifically span-under-real-noise
   (the effect nearly vanishes with ideal features).
-- **The emerging narrative for the paper:** (i) the periphery carries large,
-  classically-recoverable alignment value (H1.1: 2× rotation, 2.7× t-dir), but
-  not because rim points are individually better (H1 refuted); (ii) frozen depth
-  FMs on raw fisheye under-read rotation (repo prior: gain 0.82–0.88) exactly
-  like a span-limited classical estimator (gain 0.89 at θ≤35°) — suggesting they
-  effectively ignore the periphery; (iii) an adapter's measurable job is to
-  recover the classical span curve. H1.2 tests (ii) directly by rim-masking the
-  input to DA3-Small and watching whether its gain even moves.
+- **The emerging narrative (revised after run 004):** (i) the periphery carries
+  large alignment value, delivered by *span under real noise*, not per-point rim
+  superiority (H1 refuted, H1.1 supported); (ii) the frozen FM already extracts
+  it — its pose survives center deletion untouched but collapses without the rim
+  (H1.2 refuted in the informative direction); (iii) meanwhile fisheye *depth* is
+  worst exactly there. So the user's N3 intuition ("rim: bad for depth, good for
+  alignment") is now **measured on both the classical and the learned side**, and
+  the design constraint it imposes is new: an adapter that improves rim depth
+  must NOT perturb the rim features the pose path depends on. That argues for
+  zero-init, late/readout-side corrections (RayTun3R-style PE residual or
+  decoder-grid fixes) over anything that re-writes early rim features, and it
+  adds a required eval metric: pose stability alongside rim depth for every
+  adapter variant (the Pareto front gains a third axis).
 
 ## Lessons and Constraints
 

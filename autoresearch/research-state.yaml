@@ -76,7 +76,7 @@ hypotheses:
       Frozen depth FMs effectively ignore the periphery for alignment: masking the
       rim (theta > ~35-45deg) of the input changes DA3-Small's rotation gain by
       much less than the classical span curve predicts (0.89 -> 0.93+ available).
-    status: active
+    status: refuted   # run 004: the OPPOSITE — center-masked == vanilla, rim-masked 2.5x worse; the model's pose lives in the periphery
     motivation: "Links H1.1's recoverable span value to the adapter's job; CPU-runnable (DA3-Small on Mac)."
     parent: H1
     priority: high
@@ -118,7 +118,7 @@ experiments:
     and per feature-band; (c) center-vs-periphery Pareto pair (AbsRel_c, AbsRel_p).
   baseline_value: null
   best_value: null
-  total_runs: 3
+  total_runs: 4
   trajectory:
     - run_id: run_001
       hypothesis: H1
@@ -132,6 +132,10 @@ experiments:
       hypothesis: H1.1
       outcome: "SUPPORTED: span at fixed count, 17/17 pairs, -2.15deg; robustness not conditioning"
       wall_time_min: 9
+    - run_id: run_004
+      hypothesis: H1.2
+      outcome: "REFUTED (informative): DA3 pose relies on the rim; center-masked identical to vanilla"
+      wall_time_min: 6
 
 outer_loop:
   cycle: 0

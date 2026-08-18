@@ -1,0 +1,28 @@
+{
+  "conds": {
+    "vanilla": {
+      "median_err_deg": 5.002252817153931,
+      "gain": 1.398232400482216
+    },
+    "rim_masked": {
+      "median_err_deg": 12.317404747009277,
+      "gain": 2.1402690118405983
+    },
+    "center_masked": {
+      "median_err_deg": 4.924560546875,
+      "gain": 1.3745996292169114
+    }
+  },
+  "n_pairs": 16,
+  "rim_masked_pixel_frac": 0.6103847622871399,
+  "center_masked_pixel_frac": 0.3896152079105377,
+  "config": {
+    "path": "/Users/fengjiazhang/Desktop/ADT/scannetpp_example/3f15a9266d",
+    "max_size": 504,
+    "mask_deg": 45.0,
+    "max_gt_rot_deg": 30.0,
+    "max_pairs": 16,
+    "variant": "small",
+    "out": "results/run_004.json"
+  }
+}

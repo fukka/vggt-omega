@@ -96,3 +96,39 @@ Caveats: one scene, one lens (~170° DSLR); real-arm t-dir from 12 pairs; the
 θ≤35 disk is small in *pixel* area on this lens (features start ≈31°), so t35
 matches cluster in a thin annulus — the both-endpoint variant and an Aria-FOV
 replication remain open.
+
+## run_004 (2026-08-18, CONFIRMATORY — H1.2, protocol-h1.2.md; prediction REFUTED)
+
+`model_rim_use.py`, DA3-Small CPU, 16 pairs, mask T=45°: rim-mask kills 61.0% of
+pixels, center-mask 39.0%.
+
+| cond | median rot err (°) | gain |
+|---|---|---|
+| vanilla | 5.002 | 1.398 |
+| rim_masked | 12.317 | 2.140 |
+| center_masked | **4.925** | 1.375 |
+
+**H1.2's prediction was exactly backwards — and the refutation is the finding.**
+The frozen model does not ignore the periphery; its pose estimate *lives* there:
+deleting all central content (θ≤45°, 39% of pixels) changes nothing
+(4.93 vs 5.00°, per-pair differences within noise on every pair), while deleting
+the rim more than doubles error on every single pair. So both classical geometry
+(H1.1) and the frozen FM extract their alignment signal from the periphery — the
+same region where fisheye depth is worst.
+
+Caveats: (i) not area-matched (61% vs 39% masked) — but the striking arm is
+center-masked ≈ vanilla, where *less* information than rim-masked still loses
+nothing; a random-mask-61% control would complete the argument. (ii) gains > 1
+here are contaminated by six catastrophic pairs (~18–20° err at GT 8–15°,
+present in all conditions — likely low-overlap pairs); medians are the robust
+read. The prior repo alpha of 0.816 for DA3 on this scene came from a different
+pair protocol; do not mix the two numbers. (iii) mean-color masking could have
+artifacts, though the model tolerating 61% masked argues against brittleness.
+
+**Synthesis for the research question (updates N3 and N1):** the periphery is
+already the alignment workhorse for both classical and frozen-FM pose. The
+Pareto goal sharpens to: improve peripheral *depth* without perturbing the
+peripheral *features the pose path depends on* — which argues for adaptation
+that leaves early/feature layers alone (or is provably identity at init) and
+corrects late/geometry readout, and it gives the eval a new required metric:
+report pose stability alongside rim depth for any adapter.
