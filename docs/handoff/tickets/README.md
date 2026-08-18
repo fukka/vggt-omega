@@ -21,7 +21,7 @@ have no run behind them:
 
 | # | | owner | queue |
 |---|---|---|---|
-| [025](025-rope-hook-and-run-preflight.md) (#25) | **Five checks before any reproduction number counts.** The paper↔code audit fixed two defects that change every fit (Eq. 12 was `TV(residual)` not `TV(P_A+residual)`; Eq. 6 reached only the last frame in global attention), and three claims cannot be tested off the box: DA3's and π³'s RoPE class names, and whether this OpenCV even has MAGSAC++. Plus a checkpointing A/B and the UFM coverage number. ~20 min, no training. | gpu | **before #4 step 2.** Every `adapter.pt` and `train_log.json` from before `organized@HEAD` is void |
+| [026](026-da3-rope-n-prefix-and-checkpointing-drift.md) | **Two leftovers from #25's run**: DA3's RayTun3R hook `install()` raises (`n_prefix_tokens` undeclared, DA3 calls RoPE with `positions=` as a keyword) — one-line fix, blocks DA3's row only, not vanilla/Center-PH. Plus the checkpointing A/B came back **not** bit-identical on VGGT-1B (peak-memory savings are real, the numerics aren't) — diagnose or document. | cpu | before DA3 can run `raytun3r` in #4 step 2 |
 | [024](024-adt-fov-depth-controlled-and-three-frames.md) | **How much of the rim penalty survives with GT depth held fixed** — the joint incidence-angle x depth table (part A), plus the context arms (3/5/10 @ stride 10) re-run on the **six-sequence** split so they are comparable to the headline (part B). Code and tests on `organized`; the runs are the ticket. | gpu | **first.** Part A is ~30 min and is the only thing between `adt_fov_experiment_v6.pptx` p.7 and a figure; part B is ~6.3 h and is p.8. Run both `--workers 1` — see the ticket |
 | [022](022-fov-on-slam-data.md) | **The FOV question on real SLAM points**: the `fovbench` experiment, repeated against ego-synth's MPS points. Code, tests and lane script are on `organized`; the run is the ticket. | gpu | after 024 |
 
@@ -32,6 +32,13 @@ Three more are **run and pushed, and left open only for the issue comment** —
 `slambench-023-6fedc20`). No GPU time is owed on any of them. #023 never had a
 GitHub issue at all: both its `meta.json` files say `"issue": 25` and issues stop
 at #24.
+
+**#025 is done** — all five checks ran on `lambda_63`, commented on
+[#25](https://github.com/fukka/vggt-omega/issues/25#issuecomment-5335209060),
+relabeled `cpu`. π³'s RoPE class, OpenCV/MAGSAC++, and UFM coverage were clean;
+DA3's hook and the checkpointing A/B were not, and became #026. VGGT and π³ are
+unblocked for #4 step 2 as of `organized@222d4a3`; DA3 is unblocked for
+`vanilla`/`center_ph` only.
 
 **#016 is done: `d` is planar z**, on both staged datasets, decisively — so no
 published number moves and #020's steps 2 and 3 may run. Read #020's step

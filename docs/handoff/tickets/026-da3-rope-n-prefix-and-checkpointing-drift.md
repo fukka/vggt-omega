@@ -1,0 +1,103 @@
+# Two leftovers from #25: DA3's RoPE hook won't install, and checkpointing isn't bit-identical
+
+**Owner:** cpu
+**Files I may touch:** `raytun3r/backbones.py`, `raytun3r/train.py`, `raytun3r/tests/test_raytun3r.py`
+**Blocked by:** none. **Blocks:** DA3's row in #4 step 2 (item 1 only; item 2 doesn't block a run, it blocks trusting the numbers).
+
+## Goal
+
+Two independent findings from running #25 on `lambda_63` at `organized@222d4a3`,
+env `raytun3r` (torch 2.11.0+cu128, cv2 4.11.0). Full data in the
+[#25 comment](https://github.com/fukka/vggt-omega/issues/25#issuecomment-5335209060).
+Neither needs a GPU to diagnose or fix; both need a GPU to re-verify afterwards.
+
+## Item 1 — DA3's RayTun3R hook install() raises, hard stop
+
+`RoPE classes present: ['RotaryPositionEmbedding2D']` — the class name #25 was
+checking for is right. But the real-package test fails anyway:
+
+```
+$ python -m pytest raytun3r/tests -q -k "da3 or rope"
+FAILED raytun3r/tests/test_raytun3r.py::test_da3_hooks_fire_on_the_real_package
+
+RuntimeError: DA3Backbone: 52 RoPE tokens on a 5x5 grid is more than one frame's
+worth, the module was called without positions, and the backbone declares no
+n_prefix_tokens. Refusing to guess: 'prefix = n - 25' aligns on the *last* frame
+and silently leaves every earlier frame uncorrected.
+```
+
+DA3 calls its RoPE module with `positions` as a keyword argument, so the returned-
+value hook never sees it, and `DA3Backbone` declares no `n_prefix_tokens` for the
+multi-frame case. `install()` now raises rather than silently under-correcting
+(that's #25's point 1 working as intended) — but it means DA3 cannot run the
+`raytun3r` method at all right now. Per #25's own diagnosis this is a one-line fix
+in `_ROPE_TOKEN_MODULES` in `raytun3r/backbones.py`; likely `DA3Backbone` just
+needs to declare `n_prefix_tokens` (or the hook needs to read DA3's `positions`
+kwarg the way #25's Eq. 6 fix already does for VGGT's positional call).
+
+**Scope note:** DA3's `vanilla` and `center_ph` methods are unaffected — neither
+installs this hook, and both ran cleanly in `raytun3r.eval` on `3f15a9266d`
+(`runs/rt3r/3f15a9266d-da3/results_vanilla_centerph.json` on lambda_63, not yet
+pushed to `results`). Only DA3 + `raytun3r` method is blocked.
+
+## Item 2 — gradient-checkpointing A/B is not bit-identical on VGGT-1B
+
+Same scene, `--backbone vggt --windows 2 --iters 3 --seed 0`, checkpointing on vs
+`--no-grad-checkpointing`, otherwise identical:
+
+```
+diff <(jq -c '.history[].total' /tmp/ckpt-on/train_log.json) \
+     <(jq -c '.history[].total' /tmp/ckpt-off/train_log.json)
+1,3c1,3
+< 6.319521903991699   6.189236640930176   5.866147518157959
+---
+> 6.347949981689453   6.216237068176270   5.862402915954590
+```
+
+Differences are ~0.01–0.03 on `total` at every one of the 3 iterations, and
+`pose`/`|g|` diverge more (iter 0 `pose` 1.2049 vs 1.2333; iter 2 `|g|` 17.338 vs
+14.541). That's larger and more consistent than float accumulation noise on truly
+identical ops. The structural argument in #25's commit — no dropout, no droppath,
+no BatchNorm anywhere in `vggt_visfeat`, heads never read `self.training` — is
+still correct as far as it goes; something else is moving. Candidates worth
+checking before assuming a repo bug: cuDNN algorithm selection differing between
+the original and recomputed forward pass under `torch.utils.checkpoint`, or a
+non-deterministic reduction (e.g. `atomicAdd`-based ops) whose result depends on
+recomputation. Peak memory did behave as expected (checkpointing on: ~10.4 GB for
+the process; off: ~20.4 GB — measured by polling `nvidia-smi` during the run,
+delta over the other job's 26841 MiB baseline on that GPU), so the memory side of
+the claim is fine; only the "numerically inert" half is in question.
+
+## Steps
+
+1. Read `raytun3r/backbones.py`'s `_ROPE_TOKEN_MODULES` / `DA3Backbone` and
+   `install()` to see exactly how the hook infers prefix tokens and how DA3 calls
+   its RoPE module (positional vs. `positions=`).
+2. Fix item 1 — declare `n_prefix_tokens` for DA3 (matching how VGGT's Eq. 6 fix
+   reads the layout off the `pos` tensor) or teach the hook to see DA3's keyword
+   call. Add a case to `test_da3_hooks_fire_on_the_real_package` or a CPU-side
+   fake-module test that pins the calling convention, so this can't regress
+   silently again.
+3. For item 2, read `raytun3r/train.py`'s checkpointing wiring and whatever
+   `torch.utils.checkpoint` call it makes. Decide whether `use_reentrant=False`
+   (or an equivalent determinism knob) closes the gap, or whether the
+   non-determinism is upstream in `vggt_visfeat` and worth documenting rather
+   than chasing.
+4. `python -m pytest raytun3r/tests -q` and `python raytun3r/smoke_test.py`.
+
+## Done when
+
+- [ ] `test_da3_hooks_fire_on_the_real_package`-equivalent passes without a GPU
+      (fake module) and the real-package version is described as fixed for GPU
+      to re-check
+- [ ] item 2 has a stated conclusion — either a fix, or a one-paragraph
+      explanation of the remaining source of non-determinism and whether it's
+      safe to ignore
+- [ ] pushed to `organized`, issue commented with the sha
+
+## Needs a GPU run afterwards?
+
+yes → relabel `gpu` and ask for: (a) `pytest -k "da3 or rope"` green on the real
+package on `lambda_63`, confirming `install()` no longer raises; (b) re-run the
+checkpointing A/B command from #25 and confirm `diff ... && echo IDENTICAL`, or
+report the new (hopefully smaller) discrepancy.
