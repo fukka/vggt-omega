@@ -51,6 +51,8 @@ def main(argv=None) -> None:
     p.add_argument("--max-gt-rot-deg", type=float, default=30.0)
     p.add_argument("--max-pairs", type=int, default=16)
     p.add_argument("--variant", default="small")
+    p.add_argument("--random-control", action="store_true")
+    p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", default=None)
     args = p.parse_args(argv)
 
@@ -74,6 +76,20 @@ def main(argv=None) -> None:
     print(f"[h1.2] mask T={args.mask_deg} deg: rim-masked kills "
           f"{fr_rim_masked:.1%} of pixels, center-masked kills {fr_cen_masked:.1%}")
 
+    rnd_keep = None
+    if args.random_control:
+        # Area-matched control: mask random 14 px patches (the ViT's granularity)
+        # until the masked-pixel fraction matches the rim mask's.
+        g = torch.Generator().manual_seed(args.seed)
+        ph, pw = (src.h + 13) // 14, (src.w + 13) // 14
+        n_mask = int(round(fr_rim_masked * ph * pw))
+        idx = torch.randperm(ph * pw, generator=g)[:n_mask]
+        pm = torch.zeros(ph * pw, dtype=torch.bool)
+        pm[idx] = True
+        pm = pm.view(ph, pw).repeat_interleave(14, 0).repeat_interleave(14, 1)
+        rnd_keep = ~pm[:src.h, :src.w]
+        print(f"[h1.2] random patch mask kills {float((~rnd_keep).float().mean()):.1%}")
+
     cand: List[Tuple[int, int, float]] = []
     for i in range(len(src)):
         for j in range(i + 1, len(src)):
@@ -89,7 +105,8 @@ def main(argv=None) -> None:
     cand = cand[::step][:args.max_pairs]
     print(f"[h1.2] {len(cand)} pairs, GT rot {cand[0][2]:.2f}..{cand[-1][2]:.2f} deg")
 
-    conds = ["vanilla", "rim_masked", "center_masked"]
+    conds = ["vanilla", "rim_masked", "center_masked"] + (
+        ["random_masked"] if args.random_control else [])
     per: Dict[str, List[float]] = {c: [] for c in conds}
     prd: Dict[str, List[float]] = {c: [] for c in conds}
     gts: List[float] = []
@@ -105,9 +122,12 @@ def main(argv=None) -> None:
         t0 = time.time()
         row = {}
         with torch.no_grad():
-            for c, im in (("vanilla", imgs),
-                          ("rim_masked", masked(imgs, theta, rim_keep)),
-                          ("center_masked", masked(imgs, theta, cen_keep))):
+            variants = [("vanilla", imgs),
+                        ("rim_masked", masked(imgs, theta, rim_keep)),
+                        ("center_masked", masked(imgs, theta, cen_keep))]
+            if rnd_keep is not None:
+                variants.append(("random_masked", masked(imgs, theta, rnd_keep)))
+            for c, im in variants:
                 R_hat = bb.forward(im[None]).relative(0, 1)[0].to(R_gt)
                 row[c] = (rotation_error_deg(R_hat, R_gt),
                           rotation_error_deg(eye, R_hat))
