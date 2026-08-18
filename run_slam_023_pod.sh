@@ -64,6 +64,8 @@ TAG="${1:?usage: run_slam_023_pod.sh <slam_B|slam_B3> <gpu>}"
 GPU="${2:?usage: run_slam_023_pod.sh <slam_B|slam_B3> <gpu>}"
 
 REPO=/group-volume/Fengjia/projects/vggt-omega-023
+EGOSYNTH=/group-volume/Fengjia/data/ego-synth-5b
+CALIB=/group-volume/Fengjia/data/ego-synth-5b-calib
 OUT="$REPO/eval_out/vggt360-023"
 
 case "$TAG" in
@@ -109,11 +111,39 @@ export CUDA_VISIBLE_DEVICES="$GPU"
 mkdir -p "$OUT"
 cd "$REPO"
 
+# PREFLIGHT -- fail in a second, not in thirty-three minutes.
+#
+# This exists because a run died at 1965s on a missing `camera_rgb.json`, after
+# grinding through all 8 aea takes and the first nymeria one. Every file it
+# needed was knowable at startup. The pod had 144 of the 397 calibrations
+# (all of aea, one of nymeria) because stage_egosynth_to_pod.sh staged the DATA
+# and never the CALIBRATION -- and slambench only opens a take's calibration
+# when it reaches that take.
+#
+# Check the takes this run will actually touch: `sorted(os.listdir)` filtered on
+# sparse_depth then `[:8]` per dataset, which on this pod is all 8 staged takes.
+preflight() {
+  local miss=0 t
+  for t in "$EGOSYNTH"/*/*; do
+    [ -d "$t" ] || continue
+    local rel="${t#$EGOSYNTH/}"
+    [ -f "$CALIB/$rel/camera_rgb.json" ] || { echo "PREFLIGHT missing calib: $rel"; miss=$((miss+1)); }
+    [ -d "$t/sparse_depth" ]             || { echo "PREFLIGHT missing depth: $rel"; miss=$((miss+1)); }
+    [ -f "$t/meta.json" ]                || { echo "PREFLIGHT missing meta:  $rel"; miss=$((miss+1)); }
+  done
+  if [ "$miss" -ne 0 ]; then
+    echo "PREFLIGHT FAILED: $miss missing. Stage them before burning an hour." >&2
+    exit 3
+  fi
+  echo "preflight ok: every staged take has calibration, sparse_depth and meta"
+}
+preflight
+
 echo "=== [$TAG] start $(date -Is) on GPU $GPU: $(nvidia-smi -i "$GPU" --query-gpu=name --format=csv,noheader)"
 t0=$SECONDS
 python -m slambench.run \
-  --egosynth-root /group-volume/Fengjia/data/ego-synth-5b \
-  --calib-root /group-volume/Fengjia/data/ego-synth-5b-calib \
+  --egosynth-root "$EGOSYNTH" \
+  --calib-root "$CALIB" \
   --datasets aea,nymeria --models vggt_1b \
   --baselines "$BASELINES" \
   --context-frames 1 --n-frames 25 --takes 8 \

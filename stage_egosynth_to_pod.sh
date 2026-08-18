@@ -26,6 +26,14 @@
 #
 # 7.2 GB total. The full release is 381 GB, which is why this is a take list and
 # not an rsync.
+#
+# STAGE THE CALIBRATION TOO -- the first version of this script did not, and it
+# cost a 1965 s run. The pod already had 143 aea calibrations and exactly ONE of
+# nymeria's 254, so every aea take passed and the run died on the second nymeria
+# take, 33 minutes in. slambench opens a take's `camera_rgb.json` only when it
+# reaches that take, so a missing one is invisible until then. The whole calib
+# tree is 4.4 MB against the data's 7.2 GB -- there is no reason to be selective,
+# and it ships a SHA256SUMS.txt so the copy can be verified rather than trusted.
 set -uo pipefail
 
 SRC=/data/f.zhang2/ego-synth-5b
@@ -53,6 +61,14 @@ TAKES=(
 # One invocation per take. Startup is ~1 s, so this is cheap, and it buys
 # per-take resumability -- a drop costs one take, not the whole 7.2 GB. Same
 # lesson as the 2026-08-11 380 GiB pull.
+# Calibration first: it is 4.4 MB and it is what a missing file costs an hour of.
+CALIB_SRC=/data/f.zhang2/ego-synth-5b-calib
+CALIB_DST="file://groups/SR-TORAIC-IVU/Fengjia/data/ego-synth-5b-calib"
+echo "=== calibration ($(du -sh "$CALIB_SRC" | cut -f1), $(find "$CALIB_SRC" -name camera_rgb.json | wc -l) camera models)"
+space storage upload file "$CALIB_SRC" "$CALIB_DST" \
+  --max-request-processes 16 --attempts 23 \
+  || echo "!!! calibration upload FAILED -- runs will die partway through a dataset" >&2
+
 ok=0; fail=0
 for t in "${TAKES[@]}"; do
   n_local=$(find "$SRC/$t" -type f 2>/dev/null | wc -l)
@@ -81,5 +97,11 @@ for t in "${TAKES[@]}"; do
     echo "  MISMATCH $t: local $want, remote $got"; bad=$((bad+1))
   fi
 done
-[ "$bad" = 0 ] && echo "  all $((${#TAKES[@]})) takes match" || echo "  $bad take(s) short -- re-run this script"
+# And assert every take has a camera model, which is the specific gap that bit.
+# Counting files is not enough: aea was complete and nymeria was one of 254.
+for t in "${TAKES[@]}"; do
+  space storage list file "$CALIB_DST/$t/camera_rgb.json" >/dev/null 2>&1 \
+    || { echo "  NO CALIBRATION for $t"; bad=$((bad+1)); }
+done
+[ "$bad" = 0 ] && echo "  all $((${#TAKES[@]})) takes match, and each has a camera model" || echo "  $bad problem(s) -- re-run this script"
 echo "=== STAGE DONE"
