@@ -80,9 +80,6 @@ hypotheses:
     motivation: "Links H1.1's recoverable span value to the adapter's job; CPU-runnable (DA3-Small on Mac)."
     parent: H1
     priority: high
-    motivation: "The refined form H1's refutation points to; separates conditioning from count."
-    parent: H1
-    priority: high
   - id: H2
     statement: >
       Center-safe radial adaptation: a zero-init radial adapter (RayTun3R-style PE
