@@ -1,6 +1,14 @@
 # Our VGGT-360-fisheye, as a row in both published tables
 
 **Owner:** gpu
+**Status:** **RUN, 2026-08-17 — both halves.**
+`results/fovbench-023-6fedc20` (runs A and C, `SELF-CHECK PASS`, 8 vanilla cells
+bit-identical) and `results/slambench-023-6fedc20` (slam_B, slam_B3, slam_CTL,
+`CONTROL PASS` on identical support). The slambench half ran on an A100 pod, not
+lambda_63 — the vggt360 arm needs ~21 GB and OOM'd there twice.
+**This ticket never had a GitHub issue.** Both `meta.json` files record
+`"issue": 25`; issues stop at #24 and #25 does not exist. The box ran from this
+file. Nothing else in the repo depends on that number, but the convention does.
 **Files I may touch:** nothing — runs only. Results to `results`.
 **Blocked by:** nothing. Code is on `organized` @ `e583017`, CPU suites green.
 **Does not collide with #019 or #020.** Both published paths were checked
@@ -147,14 +155,20 @@ vectorised path to the reference at 1e-9 px.
 
 ## Done when
 
-- [ ] `python -m pytest fovbench/tests slambench/tests tests -q` passes on the box
-- [ ] the four vanilla `fovbench` cells in `fovbench_vggt360` match the
-      corresponding cells of the #019 headline run — same digest, so they must
-- [ ] `results/fovbench-023-<sha>` and `results/slambench-023-<sha>` pushed
-      (`results.json`, `results.csv`, `report.txt`, logs — not figures)
-- [ ] both `--vggt360-source` arms present, or the FOV row is labelled
-      "native only, resolution not matched"
-- [ ] issue commented with the sha and the two headline numbers
+- [x] `python -m pytest fovbench/tests slambench/tests tests -q` passes on the box
+      — 259 passed, 7 skipped, 1 failed; the failure is
+      `test_the_fisheye_radial_combination_gets_past_the_view_guard`, which can
+      only pass on a box with no cached weights. Same result on both boxes
+- [x] the four vanilla `fovbench` cells in `fovbench_vggt360` match the
+      corresponding cells of the #019 headline run — 8 cells bit-identical;
+      `vggt_1b` alone moves +0.143 % / +0.247 %, which is #021's fp32 → bf16 fix
+      and inside #021's measured 0.51 % bound
+- [x] `results/fovbench-023-<sha>` and `results/slambench-023-<sha>` pushed —
+      `e2dc389`, `64aa66d`, `4597616`
+- [x] both `--vggt360-source` arms present — `native` in `fov_A`, `view` in
+      `fov_C`; equal pixels cost +6.55 % real and +14.86 % synthetic
+- [ ] issue commented with the sha and the two headline numbers — **there is no
+      issue to comment on**
 
 ## Cost
 

@@ -1,11 +1,19 @@
 # ADT-FOV: the depth-controlled table, and the context arms on the right split
 
 **Owner:** gpu
-**Status:** **open** — part A unchanged; **part B rewritten 2026-08-17**, it is
-now the six-sequence split and not seq131. Code is on `organized`; the runs are
-the ticket.
+**Status:** **open — neither half has run.** Nothing matching
+`results/fovbench-joint-*` is on the `results` branch as of 2026-08-17 23:30 EDT.
+Part A unchanged; **part B rewritten 2026-08-17**, it is now the six-sequence
+split and not seq131. Code is on `organized`; the runs are the ticket.
 **Files I may touch:** nothing under `fovbench/` — runs only. Results to `results`.
 **Blocked by:** none. `organized` @ the commit that adds `geometry.joint_grid`.
+**Issue:** https://github.com/fukka/vggt-omega/issues/24 — that, not this file,
+is what reaches the box. Its body carried the superseded Part B until
+2026-08-17; it now matches this file.
+**What is waiting on it:** two deck pages that ship today with no data on them.
+`adt_fov_experiment_v6.pptx` p.7 (*FOV–Depth table*) is Part A, and p.8
+(*Multi-frame against single-frame*) is Part B. Both currently carry an axis and
+a sentence saying the run has not happened.
 
 ## The question
 
@@ -48,6 +56,30 @@ same per-frame fit, added as a new key. Verified two ways:
 
 So Part A is a re-run for the new key, not a correction of anything.
 
+## Before either part — run single-threaded
+
+**Use `--workers 1`.** #023 hit a hard deadlock on lambda_63: `fovbench` hangs at
+`dav2_large` at any thread count above 1 — 498 threads at `--workers 8`, 754 at
+16, every one sleeping in `futex_wait`, GPU 0 %, not one frame line ever printed.
+Not starvation (469 GB free, load 2.3 across 64 cores) and not the HF Hub
+(`dav2_large` alone scores a frame in 6 s, online or `HF_HUB_OFFLINE=1`). The
+diagnosis is in `results/fovbench-023-6fedc20/meta.json`.
+
+It is not a correctness risk. `_ordered_map` pools rows in split order, so serial
+is bit-identical to threaded; `tests/test_end_to_end.py` pins that, and #023's
+self-check confirmed it against a reference produced at `--workers 16`.
+
+**Part A carries `dav2_large`, so Part A must be `--workers 1`.** Part B's model
+list does not, so it is worth one attempt at `--workers 16` — but if no frame
+line appears within a few minutes, kill it and drop to 1. Every cost figure in
+this ticket is a single-threaded figure already, so nothing here assumes
+threading.
+
+This is a CPU-side regression, not this ticket's job:
+`results/fovbench-rectfix-393cab9` ran these same 300 frames and these same
+models at `--workers 16` on 2026-08-14 without hanging, so something under the
+harness moved in three days. **Do not wait for a fix.**
+
 ## Part A — the joint table on the headline split
 
 Same split as #019, digest `601fcb22767e`, rebuilt from `--adt-root` and **not**
@@ -57,7 +89,7 @@ from `--manifest`:
 git -C <repo> pull --ff-only origin organized
 python -m fovbench.run --adt-root "$ADT" --protocols radial \
   --models vggt_1b,vggt_omega,dav2_large,da3_large,da3_small \
-  --n-frames 50 --out eval_out/fovbench-joint/partA_6seq \
+  --n-frames 50 --workers 1 --out eval_out/fovbench-joint/partA_6seq \
   2>&1 | tee eval_out/fovbench-joint/partA.log
 ```
 
@@ -80,10 +112,16 @@ print("identical:", json.dumps(strip(a), sort_keys=True)
 EOF
 ```
 
-**If the full grid is too long to queue, the minimum that unblocks the deck is
-`--models vggt_omega`** — the figure is VGGT-Omega on `fisheye` and `rect`,
-real stream. Run the rest when there is room; the joint key is free for every
-model once the forward pass is happening anyway.
+**Cost: about half an hour — run all five.** The hedge this ticket used to carry
+("if it is too long to queue, the minimum is `--models vggt_omega`") was written
+before the timing was known, and it is moot. `fovbench-ctx-d351d94`'s ITEM 5
+measured this exact run — six sequences, both views, N=1, single-threaded — as
+`fovA6`: `vggt_1b` 517 s, `vggt_omega` 307, `dav2_large` 404, `da3_large` 386,
+plus ~300 for `da3_small`. That is ~1900 s of forward pass, and the joint grid
+adds none: it is another set of masks over the same frozen fit.
+
+**Part A is the cheap half of this ticket and it unblocks a whole deck page.
+Queue it first.**
 
 ## Part B — the context arms on the **six-sequence** split
 
@@ -128,7 +166,9 @@ split. `dav2_large` is out on purpose: monocular, no context path.
 
 **Cost.** Scaling the seq131 timings in `ANALYSIS.txt` item 5 by the measured
 6x frame ratio: roughly 3.9 h for `vggt_1b` across the three arms and ~0.8 h
-each for the other three, **~6.3 h total**. If that is too much in one queue,
+each for the other three, **~6.3 h total**. `d351d94` predates `--workers`, so
+those timings are already single-threaded and the `--workers 1` constraint above
+does not inflate this number. If that is too much in one queue,
 **drop the 3-frame arm first** (~1.5 h) — it is a nice-to-have; 5 and 10 are
 what the deck pages plot. Dropping a *model* instead is worse: all four are on
 the page.
@@ -144,8 +184,13 @@ re-running would risk two `N=1` curves that differ.
 - [ ] Part B's three runs all report digest `601fcb22767e` — **stop and report if
       any does not**, that is the whole point of the ticket
 - [ ] all `results.json` on the `results` branch under
-      `results/fovbench-joint-<sha>/`
+      `results/fovbench-joint-<sha>/`, with a `meta.json` recording the
+      `--workers` actually used and whether the deadlock recurred
 - [ ] issue commented with the sha and the digests
+
+**Partial is useful here, and the halves are independent.** Part A alone
+unblocks deck p.7 and costs half an hour; do not hold it behind Part B's six.
+Push and comment as each half lands rather than waiting for both.
 
 ## Needs a GPU run afterwards?
 

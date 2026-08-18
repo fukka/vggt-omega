@@ -1,7 +1,12 @@
 # ADT-FOV: re-score on the corrected lens, with DA3-Small in the same table
 
 **Owner:** gpu
-**Status:** **open** — this is the FOV experiment's live ticket. Supersedes #014 and #015.
+**Status:** **RUN, 2026-08-14** — `results/fovbench-rectfix-393cab9` @ `393cab9`,
+both digests reproduced, and the fisheye arm came back **bit-identical** (8336
+leaves compared, 0 differing). It is the FOV experiment's headline run and
+`fovbench/README.md:237` points at it. Supersedes #014 and #015.
+**Left open only for the issue comment** — issue
+[#19](https://github.com/fukka/vggt-omega/issues/19) has never been commented.
 **Files I may touch:** nothing under `fovbench/` — runs only. Results to `results`.
 **Blocked by:** none. `organized` @ `0b4efb7` or later.
 
@@ -85,11 +90,13 @@ different worker count, the threading is clean. Record `--workers` in the report
 
 ## Done when
 
-- [ ] both digests reproduce
-- [ ] the fisheye arm is bit-identical to `fovbench-ctx-d351d94`
-- [ ] `fovbench/README.md`'s headline run pointer is updated to the new run id,
+- [x] both digests reproduce — `meta.json` `digests_reproduced: true`
+- [x] the fisheye arm is bit-identical to `fovbench-ctx-d351d94` — 8336 leaves,
+      0 differing, and at serial → 16 threads rather than the 8 → 16 #014 asked for
+- [x] `fovbench/README.md`'s headline run pointer is updated to the new run id,
       with a line recording that the previous run's rect arm predates #018
-- [ ] pushed to `results`, issue commented with the sha
+- [x] pushed to `results` — `48e4d90`
+- [ ] issue commented with the sha — **not done**
 
 ## Not in scope
 
