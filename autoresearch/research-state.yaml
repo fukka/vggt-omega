@@ -64,12 +64,24 @@ hypotheses:
       because angular parallax at the rim disambiguates rotation. Prediction: classical
       SIFT+MAGSAC++ pose error, count-matched, is lower for rim-only than center-only
       keypoint sets on the same frame pairs.
+    status: refuted   # runs 001-002: flat synth control, coin-flip paired diff; see experiments/h1-rim-pose-value/analysis.md
+  - id: H1.1
+    statement: >
+      The periphery's pose value is angular SPAN at fixed count: cumulative disks
+      theta<=T with count matched show rotation/translation error falling
+      monotonically with T; the 65->85deg band still contributes.
+    status: supported   # run 003: 17/17 pairs, median -2.15deg; synth control shows conditioning alone is ~20x smaller
+  - id: H1.2
+    statement: >
+      Frozen depth FMs effectively ignore the periphery for alignment: masking the
+      rim (theta > ~35-45deg) of the input changes DA3-Small's rotation gain by
+      much less than the classical span curve predicts (0.89 -> 0.93+ available).
     status: active
-    motivation: >
-      This is the quantitative foundation for novelty axis N3 (periphery is bad for
-      depth but good for alignment). Runs entirely on CPU with the existing
-      raytun3r/experiments/harness_verify.py machinery. If false, axis N3 dies cheaply.
-    parent: null
+    motivation: "Links H1.1's recoverable span value to the adapter's job; CPU-runnable (DA3-Small on Mac)."
+    parent: H1
+    priority: high
+    motivation: "The refined form H1's refutation points to; separates conditioning from count."
+    parent: H1
     priority: high
   - id: H2
     statement: >
@@ -109,8 +121,20 @@ experiments:
     and per feature-band; (c) center-vs-periphery Pareto pair (AbsRel_c, AbsRel_p).
   baseline_value: null
   best_value: null
-  total_runs: 0
-  trajectory: []
+  total_runs: 3
+  trajectory:
+    - run_id: run_001
+      hypothesis: H1
+      outcome: "prediction not supported; synth control flat across theta bins"
+      wall_time_min: 4
+    - run_id: run_002
+      hypothesis: H1
+      outcome: "H1 refuted; paired rim-minus-center coin flip (9/20 real, 14/23 synth)"
+      wall_time_min: 5
+    - run_id: run_003
+      hypothesis: H1.1
+      outcome: "SUPPORTED: span at fixed count, 17/17 pairs, -2.15deg; robustness not conditioning"
+      wall_time_min: 9
 
 outer_loop:
   cycle: 0

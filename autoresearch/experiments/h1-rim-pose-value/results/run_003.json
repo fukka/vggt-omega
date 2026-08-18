@@ -1,0 +1,97 @@
+{
+  "real": {
+    "n_pairs": 17,
+    "dropped": 8,
+    "conds": {
+      "t35": {
+        "median_rot_err_deg": 3.5404415130615234,
+        "gain": 0.8901454746683972,
+        "median_t_err_deg": 43.4439811706543,
+        "n_t_pairs": 12
+      },
+      "t45": {
+        "median_rot_err_deg": 3.232163190841675,
+        "gain": 0.9729008579437444,
+        "median_t_err_deg": 35.60112762451172,
+        "n_t_pairs": 12
+      },
+      "t55": {
+        "median_rot_err_deg": 2.0677218437194824,
+        "gain": 0.9540359339052734,
+        "median_t_err_deg": 16.973071098327637,
+        "n_t_pairs": 12
+      },
+      "t65": {
+        "median_rot_err_deg": 1.8971296548843384,
+        "gain": 0.9894099373559968,
+        "median_t_err_deg": 19.03435754776001,
+        "n_t_pairs": 12
+      },
+      "t85": {
+        "median_rot_err_deg": 1.6723161339759827,
+        "gain": 0.9245427919572351,
+        "median_t_err_deg": 16.1145658493042,
+        "n_t_pairs": 12
+      }
+    },
+    "paired_widest_minus_narrowest": {
+      "median_diff_deg": -2.1517022848129272,
+      "n_wide_better": 17,
+      "n_narrow_better": 0
+    }
+  },
+  "synth": {
+    "n_pairs": 22,
+    "dropped": 3,
+    "conds": {
+      "t35": {
+        "median_rot_err_deg": 0.3772183209657669,
+        "gain": 0.9924800454790967,
+        "median_t_err_deg": 3.315462589263916,
+        "n_t_pairs": 14
+      },
+      "t45": {
+        "median_rot_err_deg": 0.4025013595819473,
+        "gain": 0.9975794396436447,
+        "median_t_err_deg": 3.368782639503479,
+        "n_t_pairs": 14
+      },
+      "t55": {
+        "median_rot_err_deg": 0.30501480400562286,
+        "gain": 0.9979599533069385,
+        "median_t_err_deg": 3.423948884010315,
+        "n_t_pairs": 14
+      },
+      "t65": {
+        "median_rot_err_deg": 0.3102717250585556,
+        "gain": 0.9965312985105905,
+        "median_t_err_deg": 2.71859073638916,
+        "n_t_pairs": 14
+      },
+      "t85": {
+        "median_rot_err_deg": 0.2852920889854431,
+        "gain": 0.9971637801134112,
+        "median_t_err_deg": 2.60921573638916,
+        "n_t_pairs": 14
+      }
+    },
+    "paired_widest_minus_narrowest": {
+      "median_diff_deg": -0.11175487190485,
+      "n_wide_better": 15,
+      "n_narrow_better": 7
+    }
+  },
+  "n_star_median": 67.0,
+  "config": {
+    "path": "/Users/fengjiazhang/Desktop/ADT/scannetpp_example/3f15a9266d",
+    "max_size": 504,
+    "max_gt_rot_deg": 30.0,
+    "max_pairs": 120,
+    "nfeatures": 6000,
+    "ratio": 0.8,
+    "magsac_thresh_deg": 0.5,
+    "min_gt_trans_m": 0.1,
+    "seed": 0,
+    "out": "results/run_003.json"
+  }
+}

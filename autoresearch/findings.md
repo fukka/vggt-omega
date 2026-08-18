@@ -43,11 +43,38 @@ is inherited from this repo's prior work and the verified literature survey at
 
 ## Key Results
 
-None yet (bootstrap).
+- **H1 REFUTED (runs 001–002, 2026-08-18):** on ScanNet++ 3f15 (~170° DSLR
+  fisheye, the pre-verified classical harness), incidence-angle quartile bins of
+  SIFT matches at equal count show **no per-correspondence rim advantage for
+  rotation**: the synthetic control (same pixels, GT-consistent targets, 1 px
+  noise) is flat across bins (0.30–0.39°), the real arm is non-monotone with the
+  rim bin worst, and paired rim-minus-center is a coin flip in both arms.
+  Rules out: methods premised on "rim correspondences are individually better for
+  rotation". Reproducible band signature: rim-annulus estimates *overshoot*
+  rotation (gain 1.06–1.14) even in the noise-only control.
+  Details: `experiments/h1-rim-pose-value/analysis.md`.
+
+- **H1.1 SUPPORTED (run 003):** at fixed correspondence count, widening the
+  admitted disk θ≤T from 35° to 85° improves rotation on **17/17 pairs** (median
+  −2.15°) and cuts translation-direction error 43°→16°. The synthetic control
+  shows the ideal-geometry conditioning effect is ~20× smaller (−0.11°): **span
+  pays through robustness to real feature noise, not conditioning.** The 65→85°
+  band still contributes.
 
 ## Patterns and Insights
 
-None yet.
+- Using a quarter of the matches costs ~2–3× rotation error regardless of which
+  quarter — count/coverage dominates band identity. The wide-FOV pose story is
+  **span**, not per-point rim quality — and specifically span-under-real-noise
+  (the effect nearly vanishes with ideal features).
+- **The emerging narrative for the paper:** (i) the periphery carries large,
+  classically-recoverable alignment value (H1.1: 2× rotation, 2.7× t-dir), but
+  not because rim points are individually better (H1 refuted); (ii) frozen depth
+  FMs on raw fisheye under-read rotation (repo prior: gain 0.82–0.88) exactly
+  like a span-limited classical estimator (gain 0.89 at θ≤35°) — suggesting they
+  effectively ignore the periphery; (iii) an adapter's measurable job is to
+  recover the classical span curve. H1.2 tests (ii) directly by rim-masking the
+  input to DA3-Small and watching whether its gain even moves.
 
 ## Lessons and Constraints
 

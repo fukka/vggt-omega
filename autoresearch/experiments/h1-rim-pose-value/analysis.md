@@ -54,3 +54,45 @@ none of which this run isolates. → H1.1 (span at fixed count), H1.2 (translati
 The reproducible band-specific signature is the rim bin's gain overshoot
 (1.12–1.14 real, 1.06–1.07 synth) — present in the noise-only control, so it is a
 property of estimating from a high-θ annulus, not of SIFT.
+
+## run_003 (2026-08-18, CONFIRMATORY — H1.1, protocol-h1.1.md locked in b326e1b)
+
+`span_pose_value.py --path ... --out results/run_003.json`, cumulative disks
+θ≤{35,45,55,65,85}°, count-matched per pair (N* median 67), 5 seeded resamples,
+17 real / 22 synth pairs.
+
+| cond | real rot (°) | real gain | real t-dir (°) | synth rot (°) | synth t-dir (°) |
+|---|---|---|---|---|---|
+| t35 | 3.540 | 0.890 | 43.4 | 0.377 | 3.32 |
+| t45 | 3.232 | 0.973 | 35.6 | 0.403 | 3.37 |
+| t55 | 2.068 | 0.954 | 17.0 | 0.305 | 3.42 |
+| t65 | 1.897 | 0.989 | 19.0 | 0.310 | 2.72 |
+| t85 | 1.672 | 0.925 | 16.1 | 0.285 | 2.61 |
+
+Paired t85−t35 rotation: real **−2.15° median, wide better on 17/17 pairs**;
+synth −0.11°, 15/22.
+
+**H1.1 SUPPORTED, with a mechanism split the protocol's two arms were built to
+expose.** At fixed correspondence count, angular span monotonically improves
+rotation and (dramatically) translation direction in the real arm; the 65→85°
+band still contributes. But the ideal-noise control shows the *conditioning*
+effect alone is ~20× smaller (−0.11° vs −2.15°). So span pays mostly by making
+the estimate **robust to real feature noise/outliers** — decorrelating errors and
+sharpening outlier rejection — not by ideal-geometry conditioning. A theory-only
+analysis would have dismissed the periphery; the real-data arm is where its value
+lives.
+
+**Bridge to the backbone question (basis for H1.2):** the span-limited classical
+estimator at θ≤35° has rotation gain 0.890 — under-reading rotation by 11%. The
+repo's prior finding: frozen depth FMs on raw fisheye sit at gain 0.82–0.88.
+That similarity suggests the frozen models behave like span-limited estimators —
+i.e. **they fail to extract the periphery's (demonstrably recoverable) alignment
+value**. H1.2: mask the rim of the input to DA3-Small (CPU-runnable) and compare
+its rotation gain masked vs unmasked. If unchanged, the model wasn't using the
+rim — and "make the frozen model actually use the rim for alignment" becomes the
+adapter's measurable job, with the classical span curve as the attainable target.
+
+Caveats: one scene, one lens (~170° DSLR); real-arm t-dir from 12 pairs; the
+θ≤35 disk is small in *pixel* area on this lens (features start ≈31°), so t35
+matches cluster in a thin annulus — the both-endpoint variant and an Aria-FOV
+replication remain open.
