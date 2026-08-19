@@ -571,3 +571,7 @@
 - Geometry per-sequence, cross-camera announced not asserted; smoke passed
   (in-sample seq131, near_rim -67.9% consistent). #40/#41 can now run the
   head cross-lens without code danger.
+
+## 2026-08-19 (tick 15) — per-frame zone output in eval_lora (error-bar policy)
+- Regression-identical zones; bootstrap demonstrated (r4 pilot near_rim 90%
+  CI [0.65, 1.11]). #35 asked to pull once more before evals.
