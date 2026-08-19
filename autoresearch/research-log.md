@@ -531,3 +531,9 @@
 - Equisolid remap: +31% near-rim, +16% center at same token count. Radial
   failure is not sampling density. Probe B cancelled. Pattern recorded:
   input-space geometry surgery hurts; effective fixes are behind the encoder.
+
+## 2026-08-19 (tick 7) — paper skeleton v2
+- outline.md rewritten around the post-pivot story (asymmetry → where-to-
+  intervene → ladder → radially-honest benchmark); numbers.md audited
+  through today incl. quarantines. Dashboard rebuilt earlier per human
+  request (method diagrams + results gallery). Awaiting 3 GPU eval batches.

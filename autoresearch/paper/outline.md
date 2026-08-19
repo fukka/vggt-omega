@@ -1,68 +1,94 @@
-# Paper outline (draft skeleton, 2026-08-22 — drafting starts when #32/#33/#34 land)
+# Paper outline v2 (post-pivot, 2026-08-19 — CVPR target)
 
-Working title: *The Near-Field Rim: Diagnosing and Repairing Fisheye Depth in
-Frozen 3D Foundation Models Without Touching What Pose Needs*
+One-sentence contribution: **frozen 3D foundation models treat every viewing
+angle alike; on egocentric fisheye we measure exactly how that breaks (the
+periphery funds pose and is denied depth), prove that the popular fixes at
+the input aggravate it, and repair it behind the encoder — a diagnosis-driven
+ladder (48-param table → 25k head → LoRA with measured-field losses →
+rim-only cross-frame attention at 0.48× FLOPs) that improves near-field rim
+depth up to ~60-75% with center and pose provably intact.**
 
-Venue shape: ML/vision conference (8 pages); the story is measurement-driven
-method design on egocentric fisheye (Aria/ADT).
+Title direction: "Peripheral Vision for 3D Foundation Models" (working).
 
 ## 1. Introduction
-- Egocentric fisheye is the deployment reality; frozen depth FMs degrade at
-  the rim; adapters report whole-image means — the center/periphery Pareto
-  question is unasked (survey gap).
-- Contributions: (i) a diagnosis: the failure is precise, radially-modulated
-  range compression, not noise; (ii) an asymmetry: the rim powers cross-frame
-  alignment but receives none of multi-frame fusion's depth gains; (iii) a
-  readout-only feature head (25k params, minutes on CPU) that fixes the
-  near-field rim with pose untouched by construction — validated on six
-  sequences [+ cross-scene #32, + VGGT-Ω #33]; (iv) negative results with
-  mechanisms: per-point rim advantage (no), output-indexed recalibration
-  (cannot invert compression), patch-content undistortion (≤0.2 px to fix),
-  hands-as-corruption (plain occlusion [pending #34]).
+- Egocentric large-FOV is where AR/robotics products live; the near-field
+  rim (hands, workspace) is precisely the worst-calibrated region (hand
+  stats: 80%+ beyond 41°, median 0.26-0.94 m).
+- The asymmetry thesis: rim = pose asset (H1.2 masking; externally echoed by
+  RayTun3R's Center-PH gap) + depth liability (compression field).
+- Contribution bullets: (1) the asymmetry measurements with distance
+  control; (2) the where-to-intervene result (four measured refutations);
+  (3) the ladder methods incl. peripheral cross-frame attention; (4) the
+  radially-honest benchmark protocol (three axes + adaptation-data column).
 
 ## 2. Related work
-- Adapter families (RayTun3R, Fisheye3R/CalTokens, DepthFisheye/LoRA,
-  OmniVGGT); positioning: all touch backbone computation or input tokens; we
-  are readout-only. DrivingDepth (prompt-driven output correction) needs
-  sparse depth at test. Diagnosis lineage: UniK3D contraction, DAC/fovbench
-  distance control.
+- Adapting geometry FMs to new cameras: RayTun3R (PE TTA), UniDAC (trained
+  scale field — their premise IS our measured field), Wid3R (retrain with
+  camera token), CalTok, DAC/UniK3D. Our lane: supervised cross-scene,
+  tiny-budget, diagnosis-driven.
+- Fisheye-specific architectures (PFDepth, OmniDS, DarSwin) vs backbone
+  adaptation. Token efficiency (Spark3R saliency-driven pruning) vs our
+  geometry-driven rim *enrichment* — stackable, not competing.
+- Cross-frame/video depth (ViGeo, NVDS+, PPVD): full-model lanes; ours is a
+  bolt-on for frozen FMs, gated at zero-init.
 
-## 3. What the periphery is for (measurement I)
-- H1 family: quartile bins (no per-point advantage; ideal-noise control),
-  span at fixed count (17/17; robustness-not-conditioning via the two arms),
-  model masking with area-matched random control (rim load-bearing on 170°
-  and Aria; Fig: h1_family + aria_h13).
-- The hand-eye bootstrap sidebar (0.77–0.96° gate; 2.33° from factory calib).
+## 3. The asymmetry, measured (analysis I)
+- Rim pose value = span-under-real-noise (H1/H1.1, synth control).
+- Frozen FMs run pose on the rim (H1.2 center/rim/random-matched masking;
+  Aria replication milder but same ordering).
+- The depth failure is a radially-modulated range compression (runs
+  008b/009: dispersion 2-10%, bias to 3.3×), survives the distance control
+  (024A), and context buys the center, not the field (024B).
+- Hands: plain occlusion at the near rim (H4/#31), a hygiene item not a module.
 
-## 4. What is actually broken (measurement II)
-- Joint (θ×depth) tables with the GT-depth control (Fig: depth_baseline_h20);
-  alignment-free bias/dispersion split → compression, precise (run_009).
-- Cross-lane: penalty survives control on raw fisheye across 5 models;
-  context buys the centre (ticket 024 A/B) → the give/receive asymmetry.
-- Hands live at the near-field rim (#28 θ-part; depth numbers per #34).
+## 4. Where to intervene (analysis II — the four refutations)
+- Input surgery hurts: Center-PH (+62% near-center on identical pixels,
+  49.6% rim coverage), equal-area resampling (+16..+31% everywhere, H8),
+  patch undistortion (no-op, ≤0.21px within-patch, H3).
+- Geometry-conditioning the adapter is redundant: θ-gated LoRA ties uniform
+  at r=8 AND r=4; the free gate stays flat (H7). PE already conditions.
+- Output-only recalibration can't invert a many-to-one compression (H2.1).
+- ⇒ intervene behind the encoder: features, objectives, or added evidence.
 
-## 5. The minimal safe repair (method)
-- Ladder with each rung justified by the previous failure: 48-param table
-  (transfers at rim, near-center collateral, cannot invert compression) →
-  feature head (input-conditioned, zero-init, readout-only ⇒ pose invariant
-  by construction). Architecture + training (minutes, CPU).
-- Loss hygiene: skip dynamic cells (#31/#34).
+## 5. Method: the ladder (each rung licensed by a measurement)
+- Rung 0: 48-param (θ×d̂) table — the floor any method must beat.
+- Rung 1: 25k frozen-feature readout head — pose-safe by construction.
+- Rung 2: LoRA (last-4 MLPs) + compression-weighted depth loss +
+  rim-feature distillation + multi-frame rim consistency. H7 as the
+  conditioning ablation.
+- Rung 3: peripheral cross-frame attention — rim queries only, zero-init
+  gate, depth-head-only feature copy (pose path bit-identical), 0.48× FLOPs
+  vs all-token (efficiency.json); all-token control = the H6 ablation.
 
 ## 6. Experiments
-- Main table: six sequences × two splits, joint tables + three-axis zones
-  (Fig: sixseq_h22 → paper table). Comparisons: uncorrected, 48-param table,
-  head. [Cross-scene folds #32 → "one head or six". VGGT-Ω #33 →
-  backbone-agnostic column.]
-- Why-not sections: H3's ≤0.2 px measurement; H1's refutations.
-- Caveats table from paper/numbers.md travels into supplementary.
+- Datasets: ADT 6-seq family (within/cross-scene) + 2 held-out scenes
+  (seq136, decoration_132) + [ScanNet++ pose anchor if renders stay blocked].
+- IMPORTANT benchmark honesty note: held-out scenes carry almost no
+  near-field-rim mass (measured; decoration has zero <1m pixels) — they
+  certify "no collateral, whole-image parity"; the near-rim claims are
+  carried by the six-seq + cross-scene tables. State this openly; it is a
+  finding about benchmark design (whole-image means hide the regime).
+- Main table rows: frozen (DA3-S/L, VGGT-Ω, UniK3D, DAv2; DAC cited),
+  Center-PH, RayTun3R (per-scene TTA, adaptation-data column "test-scene
+  RGB"), rung 0/1 (ours, "other-scene GT"), rung 2 full + plain-LoRA
+  control, rung 3 rim + all-token control. Three axes each: center depth /
+  near-rim depth / pose.
+- Efficiency table: params (48 / 25k / 0.49M / 2.96M) + FLOPs (0.48×).
+- PENDING GPU: #35 evals (8 JSON), #36 evals (4), #38 v2 rows (4).
 
 ## 7. Limitations
-- One lens class (110° KB4); metric scale freed per frame; head granularity
-  is the patch grid; per-scene vs cross-scene claim depends on #32; classical
-  span saturation at 45° (rim's pose value beyond 45° unproven, n=11).
+- Single lens family at full strength (Aria KB4; ScanNet++ cross-lens only
+  partially, renders blocked); decoration boundary = style-transfer limit;
+  VGGT-Ω rung-1 collateral (probe-earlier-layers = future work); pose
+  improvement (vs preservation) unproven until dense-pair evals.
 
 ## Assets status
 - Figures ready: h1_family, aria_h13, depth_baseline_h20, feature_head_h22,
-  sixseq_h22, h3_resample_example (why-not illustration).
-- Numbers audited: paper/numbers.md (all re-derived 2026-08-21).
-- Blocking: #32 (claim strength), #33 (generality), #34 (H4 wording).
+  sixseq_h22, trajectory, fig_intervene (paper Fig. 1 candidate),
+  fig_centerph, fig_h7h8, fig_baselines, h6 efficiency numbers.
+- numbers.md audit current through 2026-08-19 (incl. quarantined #38 v1).
+- refs.bib verified 13 + 2 placeholders; ADD: Wid3R 2602.05321, UniDAC
+  2603.27105, Spark3R 2605.06270, DAPETR 2606.08680, GIFT 2608.02068,
+  ViGeo 2605.30060 (verify via API at insert time).
+- main.tex: pre-pivot draft parked; rewrite starts when the three GPU eval
+  batches land.

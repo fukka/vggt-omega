@@ -32,3 +32,17 @@ ScanNet++ results are one scene; run_006 span n=11; H2.* absolute AbsRel
 levels on seq131 are ~2× the six-seq split's (near-field-heavy scene, flagged
 in analysis); zone aggregates must always be accompanied by the full joint
 table.
+
+## Added 2026-08-19
+
+| number | value | source (file → producer) | caveat |
+|---|---|---|---|
+| Center-PH near-center on identical px | 0.428→0.695 (+62%) | bench/results/centerph_seq131_odd*.json → centerph_row.py + scratch vanilla_covered.py | seq131 odd, 504px, single scene, EXPLORATORY until held-out repro |
+| Center-PH rim coverage | 49.6% of near_rim zone; 75.2% of cone px | centerph_seq131_odd.json | pixel (not solid-angle) coverage |
+| H7 verdict | gated==uniform: 0.572/0.567 (r8), 0.754/0.753 (r4); gate |g-1|~0.06 flat | h7-theta-gated-lora/results/*.json + ckpt gate_curve | 252px pilot, seq131 even/odd |
+| H8 verdict | equal-area remap: near-rim 1.061→1.394 (+31%), center +16% | h8-equal-area/results/probe_a_seq131.json | 28 frames, 504px, zero-training probe |
+| Solid-angle ratio | center patch = 1.73× rim patch; equal-area = 651 vs 973 cone tokens (-33%) | src/solid_angle_probe.py (spherical excess, true KB4) | geometry fact; the EFFICIENCY use died with H8 |
+| #37 frozen rows | e.g. DA3-S seq136 whole 0.1376 / near-rim 0.1490 | data/bench/*.json + meta.json → eval_baseline_joint.py on lambda_63 | held-out scenes have ~no <1m rim mass (decoration: zero <1m px) — near-rim numbers there are regime-absent, not model-good |
+| #38 v1 rows | ALL QUARANTINED | data/bench/rt3r/*.json | double depth conversion in raytun3r_row.py (fixed 8b5c13d); v2 re-run requested; cite NOTHING from v1 |
+| rt3r harness fix check | seq131 vanilla near rows rise to 2.0-2.2 at rim | bench/results/rt3r_seq131_vanilla_fixed.json | consistent with diagnosis-era signature |
+| H5/H6 training curves | full 1.19→0.40; plain 0.67→0.19; rim 0.95→0.50; alltok 0.67→0.15 | data/h5-train/*, data/h6-train/* (train_log.json, meta.json) | losses, not eval numbers; evals pending |
