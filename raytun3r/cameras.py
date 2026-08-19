@@ -269,18 +269,45 @@ class KannalaBrandt(Camera):
         return theta * (1.0 + t2 * (k1 + t2 * (k2 + t2 * (k3 + t2 * k4))))
 
     def theta_of_r(self, r: Tensor) -> Tensor:
-        # Newton on f(th) = r_of_theta(th) - r. Monotonic below the turnover, and
-        # theta_max is always set at or below it (see repo CONTEXT.md), so this
-        # converges from theta = r in a handful of steps.
-        theta = r.clone()
-        for _ in range(12):
-            f = self.r_of_theta(theta) - r
-            k1, k2, k3, k4 = self.k
+        # Bisection-safeguarded Newton on f(th) = r_of_theta(th) - r,
+        # bracketed inside [0, turnover] where the polynomial is monotone.
+        #
+        # The previous plain-Newton version initialised at theta = r; with
+        # Aria's k1 > 0 that overshoots into the flat region near the
+        # turnover, where df -> 0 makes the step explode and the iteration
+        # lands up to ~1 px wrong for rays in the outermost ~5 deg of the
+        # cone (caught 2026-08-23 by an identity-warp test in the H5 losses;
+        # theta-binned aggregates were too coarse to notice — a 1 px slip is
+        # ~0.2 deg against 6.9 deg bins — but differentiable warping is not).
+        k1, k2, k3, k4 = self.k
+
+        def df_of(theta: Tensor) -> Tensor:
             t2 = theta * theta
-            df = 1.0 + t2 * (3 * k1 + t2 * (5 * k2 + t2 * (7 * k3 + t2 * 9 * k4)))
-            theta = theta - f / df.clamp_min(1e-8)
-            theta = theta.clamp(0.0, math.pi)
-        return theta
+            return 1.0 + t2 * (3 * k1 + t2 * (5 * k2 + t2 * (7 * k3 + t2 * 9 * k4)))
+
+        # Upper bracket: the turnover (df == 0) if one exists below pi, found
+        # once by coarse scan + refinement on the scalar polynomial.
+        hi_val = math.pi / 2 + 0.35
+        import numpy as _np
+        ts = _np.linspace(1e-6, hi_val, 4097)
+        dfs = 1.0 + ts**2 * (3 * k1 + ts**2 * (5 * k2 + ts**2 * (7 * k3 + ts**2 * 9 * k4)))
+        neg = _np.nonzero(dfs <= 0)[0]
+        if len(neg):
+            hi_val = float(ts[neg[0]])
+        lo = torch.zeros_like(r)
+        hi = torch.full_like(r, hi_val)
+        r_hi = self.r_of_theta(hi)
+        # Radii beyond the monotone range clamp to the turnover angle.
+        theta = (r / r_hi.clamp_min(1e-8) * hi_val).clamp(0.0, hi_val)
+        for _ in range(30):
+            f = self.r_of_theta(theta) - r
+            lo = torch.where(f < 0, theta, lo)
+            hi = torch.where(f >= 0, theta, hi)
+            step = f / df_of(theta).clamp_min(1e-8)
+            cand = theta - step
+            inside = (cand > lo) & (cand < hi)
+            theta = torch.where(inside, cand, 0.5 * (lo + hi))
+        return theta.clamp(0.0, hi_val)
 
     def _params(self) -> dict:
         return {**super()._params(), "k": self.k}

@@ -259,3 +259,19 @@
   matrix — RayTun3R/Fisheye3R/CAM3R reproductions in-repo are the moat).
 - The diagnosis assets are not wasted: every H5/H6 component is dictated by
   a measured finding, which is exactly the story CVPR method papers want.
+
+## 2026-08-23 (tick 16) — H5 protocol + losses; a shared-library bug found and fixed
+
+- H5 protocol locked (three losses, scene-level holdout, plain-LoRA control,
+  success gates); losses.py implemented as pure tensor functions with a
+  5-part CPU test suite.
+- The identity-warp test caught a REAL bug in raytun3r's KB4 inversion:
+  plain Newton from theta=r overshoots past the turnover for Aria's k1>0,
+  landing ~1 px wrong in the outermost ~5 deg of the cone (float64 too).
+  Impact review of prior results: theta-binned tables (6.9 deg bins) and
+  gate-checked pose runs are insensitive at this magnitude — no conclusion
+  changes — but differentiable warping cannot tolerate it. Fixed with
+  bisection-safeguarded Newton (max round-trip error 0.97 px -> 5e-5 px),
+  regression test added, full raytun3r suite (78) + smoke pass.
+- Next: LoRA injection + 2-step training smoke on real frames, then the GPU
+  training ticket.
