@@ -49,6 +49,29 @@ Joint table (AbsRel; rows = GT range bands, cols = θ bin midpoints):
    pooled) is ~2× the GPU lane's — plausibly seq131's heavy near-field content;
    unresolved, flagged.
 
+## run_009 (2026-08-19, CONFIRMATORY — H2.0b alignment-free maps)
+
+Bias (per-cell median log residual vs frame level) and dispersion (MAD around
+the cell's own median), no alignment anywhere:
+
+- **Dispersion is small EVERYWHERE** — 0.02–0.10 in log depth (2–10% depth
+  noise), including the near rim. The model *sees* the near rim fine.
+- **Bias is large and structured**: 0–1 m content is placed e^0.53–e^1.20 =
+  1.7–3.3× too far (worsening toward the rim: −0.53 at 3° → −1.20 at 51°);
+  5–10 m content 1.4–1.8× too near (shrinking toward the rim: +0.49 → +0.34).
+
+**Verdict: the run_008b structure is real and it is (mis)calibration, not
+noise.** The model applies a **depth-range compression** around the frame
+level, radially modulated. The far-rim "inversion" of run_008b is the far
+bias shrinking at the rim, not better perception. This matches two prior
+signatures: the RayTun3R repro's depth gain 0.406 ("right ordering, range
+compressed") and UniK3D's wide-FOV "contraction" the angular loss exists to
+prevent. Prediction 1 of H2.0b: bias half confirmed, dispersion half refuted
+(near-rim dispersion is NOT elevated) — i.e. per the protocol's refutation
+clause, claims of "the model can't see the near rim" are withdrawn in favor
+of "**the model mis-scales the near rim, systematically and precisely**",
+which is exactly what a recalibration table (H2.1) can fix if it transfers.
+
 ## Cross-lane synthesis (ticket 024 A+B × H1 family)
 
 - Part A: raw-fisheye rim depth penalty survives the depth control (0.57–0.85);

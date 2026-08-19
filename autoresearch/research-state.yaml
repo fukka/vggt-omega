@@ -93,7 +93,7 @@ hypotheses:
     statement: >
       Depth baseline: DA3-Small's radial error curve on Aria seq131 survives the
       GT-depth control.
-    status: supported   # run_008b: survives at 0-3m (rows rise with theta, up to 5.7x) but INVERTS at 3-10m — the failure is radial x depth, target = near-field rim. Caveat: single-affine seesaw risk; alignment-free arm queued.
+    status: supported   # run_008b + run_009: real, and it is precise miscalibration (depth-range compression, radially modulated), not noise — dispersion is 2-10% everywhere.
     parent: H2
     priority: high
   - id: H2
@@ -135,7 +135,7 @@ experiments:
     and per feature-band; (c) center-vs-periphery Pareto pair (AbsRel_c, AbsRel_p).
   baseline_value: null
   best_value: null
-  total_runs: 9
+  total_runs: 10
   trajectory:
     - run_id: run_001
       hypothesis: H1
@@ -172,6 +172,10 @@ experiments:
     - run_id: run_008b
       hypothesis: H2.0
       outcome: "radial penalty survives control at 0-3m (up to 5.7x) but INVERTS at 3-10m; target = near-field rim"
+      wall_time_min: 4
+    - run_id: run_009
+      hypothesis: H2.0b
+      outcome: "dispersion tiny everywhere; bias huge and structured — depth-range compression, radially modulated. Miscalibration, not noise."
       wall_time_min: 4
 
 outer_loop:
