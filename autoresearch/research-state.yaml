@@ -93,6 +93,28 @@ hypotheses:
     parent: null
     priority: high
     # status detail: frozen-row machinery smoke-tested; 6 models x 2 held-out scenes = ticket #37, queued; RayTun3R comparison row ticket held until the GPU queue drains
+    # 2026-08-19 gap analysis (paper/comparison-protocol.md): to "compare the same way" as RayTun3R we still need (a) a Center-PH baseline — their strong depth baseline and our perfect anti-rim foil, buildable on this Mac's CPU; (b) at least one public dense-GT dataset — ScanNet++ 3f15 first (raytun3r/ already loads it, audit done, AND it is RayTun3R's named sequence = external published anchor); (c) an explicit adaptation-data column (none / test-scene TTA / other-scene GT) since their protocol is unsupervised TTA and ours is supervised cross-scene.
+  - id: H7
+    statement: >
+      Theta-conditioned LoRA: gating the low-rank update by incidence angle,
+      dW(x) = B diag(g(theta)) A, matches or beats uniform LoRA (H5) at equal
+      or smaller rank, because the measured failure field (run_009) is a
+      smooth function of theta and uniform LoRA wastes capacity spending it
+      isotropically.
+    status: pending   # brainstorm C1 (literature/2026-08-19-novelty-brainstorm.md); CPU pilot on seq131 next; no GPU ticket until pilot shows direction
+    motivation: "Model-level novelty per human directive; input-geometry-conditioned PEFT is unclaimed in the 2026-08-19 survey; inference-free (g(theta) precomputable per token)."
+    parent: H5
+    priority: high
+  - id: H8
+    statement: >
+      Equal-solid-angle tokenization: resampling KB4 input to an equal-area
+      patch grid removes the center-oversampling gradient at source and cuts
+      tokens ~35-40% at 110 deg FOV; probe question first — does a remap-only
+      forward (no training) already move the radial bias field?
+    status: pending   # brainstorm C2; probe is CPU-sized (solid-angle ratio + remap-only bias probe); commit to training only if the probe moves the field
+    motivation: "Efficiency-headline candidate; complements H6 (fewer tokens) and attacks K2's gradient at its cause."
+    parent: null
+    priority: medium
   - id: H1
     statement: >
       Peripheral pose value: on Aria-like fisheye, restricting correspondences to the
@@ -261,7 +283,19 @@ experiments:
       wall_time_min: 6
 
 outer_loop:
-  cycle: 3
+  cycle: 4
+  cycle4_reflection: >
+    2026-08-19 (human-directed use of the GPU wait): literature deep-dive
+    (literature/2026-08-19-distortion-crossframe-survey.md) — Wid3R, UniDAC,
+    Spark3R are the closest lanes; none does diagnosis-driven adaptation or
+    asymmetric periphery treatment, both stay ours. Comparison-protocol study
+    (paper/comparison-protocol.md) — RayTun3R's own tables concede the rim
+    depth problem (Center-PH beats it 2.5x on ScanNet++ AbsRel by discarding
+    the rim, but pays 3x in rotation): our thesis in their data. Gaps to
+    "compare the same way": Center-PH baseline, ScanNet++ 3f15 row,
+    adaptation-data column. New hypotheses H7 (theta-gated LoRA) and H8
+    (equal-solid-angle tokenization probe) from the brainstorm; both CPU-
+    pilotable without touching the GPU queue.
   last_direction: pivot   # HUMAN-DIRECTED 2026-08-23: diagnosis+head insufficient for CVPR. Method novelty required (architecture for fisheye single-image/video + backbone finetuning) plus public-dataset benchmarks with baselines on BOTH pose and depth. Diagnosis phase becomes the motivation/analysis section; paper drafting paused.
   last_reflection: >
     2026-08-18 evening: H1 family closed in 5 runs (H1 refuted, H1.1 supported,

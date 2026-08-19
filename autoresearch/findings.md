@@ -72,6 +72,33 @@ scale_shift, range domain, full joint tables (zone pools hide collateral).
 - **BENCH:** frozen-row machinery smoke-tested (#37); RayTun3R comparison row
   runnable (#38). In flight: #35–#38.
 
+## External positioning (2026-08-19 survey + comparison study)
+
+- **Closest lanes** (literature/2026-08-19-distortion-crossframe-survey.md):
+  Wid3R (camera-model token, trains a new wide-FOV model), UniDAC (trained
+  spatially-varying scale map + latitude-aware RoPE — their premise is our
+  run_009 measurement, solved with dataset-scale training where we use 48
+  params on a frozen model), Spark3R (saliency-driven token reduction on the
+  same backbones, incl. VGGT-Ω — ours is geometry-driven and adds rim
+  capacity instead of pruning; stackable). **Unclaimed and still ours:**
+  diagnosis-driven adaptation (probe the frozen FM's error field, aim the
+  parameters at it) and asymmetric periphery treatment (rim = pose asset +
+  depth liability, exploited rather than averaged over).
+- **RayTun3R's own tables state our thesis** (paper/comparison-protocol.md):
+  Center-PH wins ScanNet++ depth 2.5× *by discarding the rim* and loses
+  rotation 3× for it; RayTun3R wins pose but concedes depth on 4/5 datasets.
+  Nobody holds both — that is the N1 lane.
+- **To compare the same way as RayTun3R** we still need: a Center-PH
+  baseline (CPU-buildable), a ScanNet++ 3f15 row (their named sequence =
+  external published anchor; raytun3r/ already loads the dataset), and an
+  explicit adaptation-data column (their protocol is unsupervised test-scene
+  TTA; ours is supervised cross-scene — different rows, never the same row).
+- **New method candidates** (literature/2026-08-19-novelty-brainstorm.md):
+  H7 θ-gated LoRA (input-geometry-conditioned PEFT, unclaimed, licensed by
+  the smoothness of the measured field), H8 equal-solid-angle tokenization
+  (~35-40% fewer tokens at 110°, attacks the sampling gradient at source;
+  probe first). Killed ideas stay killed by K1-K4.
+
 ## Key Results
 
 - **H1 REFUTED (runs 001–002, 2026-08-18):** on ScanNet++ 3f15 (~170° DSLR

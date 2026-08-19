@@ -477,3 +477,14 @@
 - Blocker made explicit to the human on the dashboard: the box session has
   not been started since the #32-#34 batch; all four tickets are ready and
   waiting on that single action.
+
+## 2026-08-19 — human-directed literature + comparison + brainstorm (GPU wait)
+- Survey (7 arXiv queries, 12 abstracts read): Wid3R / UniDAC / Spark3R are the
+  closest lanes; diagnosis-driven adaptation and asymmetric periphery treatment
+  remain unclaimed. → literature/2026-08-19-distortion-crossframe-survey.md
+- RayTun3R comparison recipe extracted; gaps to compare-the-same-way: Center-PH
+  baseline, ScanNet++ 3f15 row (their named sequence = external anchor),
+  adaptation-data column. → paper/comparison-protocol.md
+- New hypotheses H7 (theta-gated LoRA) and H8 (equal-solid-angle tokenization,
+  probe-first) added to state. → literature/2026-08-19-novelty-brainstorm.md
+- Next CPU work: Center-PH baseline, H7 pilot, H8 probe (no GPU queue impact).
