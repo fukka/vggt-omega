@@ -1,0 +1,48 @@
+{
+  "seq": "Apartment_release_meal_skeleton_seq131_M1292",
+  "pose": {
+    "n_pairs": 40,
+    "conds": {
+      "vanilla": {
+        "median_rot_err_deg": 12.590405464172363,
+        "gain": 0.29534786865862167
+      },
+      "gt_dyn_masked": {
+        "median_rot_err_deg": 12.931708812713623,
+        "gain": 0.2956883117599416
+      },
+      "random_matched": {
+        "median_rot_err_deg": 8.687841415405273,
+        "gain": 0.29970651127138975
+      }
+    },
+    "random_minus_gtmask_all": {
+      "median_deg": 0.0033975839614868164,
+      "n_gtmask_better": 20,
+      "n_pairs": 40
+    },
+    "random_minus_gtmask_high_dynfrac": {
+      "median_deg": -0.13189876079559326,
+      "n_gtmask_better": 7,
+      "n_pairs": 14
+    }
+  },
+  "depth": {
+    "n_frames_dyn_frac_gt_2pct": 15,
+    "static_absrel_vanilla_median": 0.23017381131649017,
+    "static_absrel_dyn_masked_median": 0.2314872145652771
+  },
+  "config": {
+    "seq_dirs": [
+      "/user/f.zhang2/Documents/projectaria_tools_adt_data_original/Apartment_release_golden_skeleton_seq100_M1292",
+      "/user/f.zhang2/Documents/projectaria_tools_adt_data_original/Apartment_release_meal_skeleton_seq131_M1292",
+      "/user/f.zhang2/Documents/projectaria_tools_adt_data_original/Apartment_release_multiskeleton_party_seq101_M1292"
+    ],
+    "calib": "/user/f.zhang2/projects/vggt-omega-organized/cam3r/data/adt_camera_rgb_calibration.json",
+    "n_anchors": 41,
+    "size": 504,
+    "depth_max_m": 10.0,
+    "seed": 0,
+    "out_dir": "/tmp/h29_out"
+  }
+}
