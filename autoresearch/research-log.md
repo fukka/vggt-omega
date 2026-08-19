@@ -231,3 +231,17 @@
 - All hypotheses dispositioned. Outer loop: CONCLUDE. Drafting begins next
   tick via the ml-paper-writing skill, from paper/outline.md +
   paper/numbers.md + findings.md.
+
+## 2026-08-23 (tick 14) — paper drafting begins
+
+- ml-paper-writing skill invoked; NeurIPS preprint template staged at
+  autoresearch/paper/draft/ with the five figures.
+- Full first draft of main.tex written: abstract (5-sentence form), intro
+  with 4 contribution bullets, related work positioned on "readout-only vs
+  touches-the-computation", the two measurement sections, the two-rung
+  method, six-seq + cross-scene + backbone-transfer experiments, honest
+  limitations. Every number traced to paper/numbers.md.
+- Citations: assembled from the repo's verified survey, NOT yet fetched
+  programmatically — 3 entries marked PLACEHOLDER; full fetch pass required
+  (paper/CITATIONS-TODO.md). No LaTeX on this Mac; compile via
+  tectonic/Overleaf next.
