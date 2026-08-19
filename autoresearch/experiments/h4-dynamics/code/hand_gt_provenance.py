@@ -158,10 +158,10 @@ def process_sequence(seq_dir: str, out_dir: str, da3_bb, device: str) -> dict:
         with torch.no_grad():
             pr_real = da3_bb.forward(rgb_real_t[None, None])
             pr_real.require_convention("range")
-            d_real = pr_real.depth[0].numpy()
+            d_real = pr_real.depth[0].cpu().numpy()
             pr_syn = da3_bb.forward(rgb_syn_t[None, None])
             pr_syn.require_convention("range")
-            d_syn = pr_syn.depth[0].numpy()
+            d_syn = pr_syn.depth[0].cpu().numpy()
 
         row = {"frame_id": str(t), "photometric_diff_static": d_stat,
               "photometric_diff_dynamic": d_dyn}
