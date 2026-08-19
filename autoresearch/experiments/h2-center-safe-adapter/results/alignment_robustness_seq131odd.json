@@ -1,0 +1,29 @@
+{
+  "seq": "h5_pilot_test",
+  "modes": {
+    "scale_shift_all": {
+      "near_rim(<=2m,>=38deg)": 1.0324464055125846,
+      "near_center(<=2m,<=11deg)": 0.40131392329043697,
+      "center(<=11deg)": 0.32209971759135436,
+      "far(>=3m)": 0.2239916927572948
+    },
+    "scale_only_all": {
+      "near_rim(<=2m,>=38deg)": 1.1256304662091692,
+      "near_center(<=2m,<=11deg)": 0.6877298987210098,
+      "center(<=11deg)": 0.36204133955908857,
+      "far(>=3m)": 0.23917577463389714
+    },
+    "scale_shift_near": {
+      "near_rim(<=2m,>=38deg)": 0.2573902609382114,
+      "near_center(<=2m,<=11deg)": 0.16742081257275007,
+      "center(<=11deg)": 0.48350751727650376,
+      "far(>=3m)": 0.6434546748523005
+    }
+  },
+  "config": {
+    "seq": "/private/tmp/claude-501/-Users-fengjiazhang-Desktop-ADT-vggt-omega/c1591315-71f0-4ca2-9183-9f58fff82acc/scratchpad/h5_pilot_test",
+    "size": 504,
+    "max_frames": 60,
+    "out": "results/alignment_robustness_seq131odd.json"
+  }
+}

@@ -147,3 +147,24 @@ alignment that multi-frame fusion depends on, yet the fusion's depth gains are
 spent almost entirely in the center. The rim gives and does not receive.**
 The H2 adapter's sharpest formulation: route multi-frame evidence back into
 near-field rim depth without perturbing the rim features that alignment uses.
+
+## Alignment-robustness rows (2026-08-19, review change #4, RECORD harness)
+
+Same vanilla DA3-S predictions, seq131 odd, 504px, three alignments
+(results/alignment_robustness_seq131odd.json):
+
+| mode | near_rim | near_center | center | far |
+|---|---|---|---|---|
+| scale_shift all-valid (record) | 1.032 | 0.401 | 0.322 | 0.224 |
+| scale_only all-valid | 1.126 | 0.688 | 0.362 | 0.239 |
+| scale_shift near-fit (<=2m) | 0.257 | 0.167 | 0.484 | 0.643 |
+
+Confirms and sharpens the external review: the record-alignment rim penalty
+is mostly the global affine serving the mid/far pixel mass — fitting near
+drops near_rim -75% while far degrades 2.9x. NO single affine serves both,
+which is the range-compression field seen from the alignment side (run_009
+alignment-free measurement remains the causal home). Paper phrasing: zone
+AbsRel numbers are rim-under-this-alignment; the method's before/after
+deltas stay internally fair (both arms share the record alignment), and the
+proper "how broken is the rim really" statement cites run_009's bias field
++ this three-row table together.

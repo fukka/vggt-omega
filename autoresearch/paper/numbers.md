@@ -59,3 +59,6 @@ table.
   device). Rename in every use.
 - seq136 near-rim mass discrepancy (run_012 1.359 vs #37 0.149) unresolved —
   neither citable until the frame-window question closes.
+- Alignment-robustness (record harness, seq131 odd): near_rim 1.032 (record)
+  / 1.126 (scale_only) / 0.257 (near-fit, but far 0.224->0.643). Source:
+  h2 results/alignment_robustness_seq131odd.json.

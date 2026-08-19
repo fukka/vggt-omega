@@ -556,3 +556,7 @@
   placement), item 3 refuted our-way (features not geometry; control
   imported). Camera guard added. seq136 mass question REOPENED (frame-window
   artifact suspected: 1.359 vs 0.149). All records corrected same-tick.
+
+## 2026-08-19 (tick 12) — alignment-robustness rows on the record harness
+- near-fit affine: near_rim -75%, far +2.9x — no single affine serves both;
+  compression field confirmed from the alignment side. Records updated.
