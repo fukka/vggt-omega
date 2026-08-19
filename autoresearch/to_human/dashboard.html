@@ -131,8 +131,8 @@ CPU上几分钟就能训完。下一个问题:换别的场景还灵不灵?(已�
 <td>姿态部分的结论暂持("普通遮挡");深度部分连同 #28 的"手的距离"数字被你发现了一个未验证的假设,已重审(见下一行)。</td></tr>
 <tr class="done"><td>✅ 已完成</td><td>任务单 #34:手的真值验证(你提出的)— <b>虚惊,但补上了硬证据</b></td><td><span class="tag you">你</span> + <span class="tag gpu">GPU-Claude</span></td>
 <td>验证结果:之前用的就是"带人"的深度,人体确实渲染在里面(100%的手部像素与"不带人"版差>5cm),"手在0.26–0.94米"确认无误。合成画面确认无手,但模型在合成图上整体差7–34%(域差),盖过手的效应——所以"抹平均色"反而是更干净的工具,这个结论也记录在案。已关单。</td></tr>
-<tr class="doing"><td>🔄 进行中</td><td><b>论文起草</b></td><td><span class="tag me">Mac-Claude</span></td>
-<td>全部假设都有结论、全部数字都过了出处审计、骨架已就绪(paper/outline.md)。开始按五幕叙事起草,初稿会先给你看框架。</td></tr>
+<tr class="doing"><td>🔄 进行中</td><td><b>论文初稿:正文已写完,待编译 PDF</b></td><td><span class="tag me">Mac-Claude</span></td>
+<td>完整初稿在 <code>autoresearch/paper/draft/main.tex</code>(NeurIPS 版式):摘要、引言(4条贡献)、两个测量章节、两级修法、六序列+跨场景+换骨干实验、诚实的局限性。每个数字都来自审计清单。<b>待办:</b>①编译 PDF(编译器资源服务器暂时限流,下轮重试);②文献条目还需程序化核对(3条已标注占位,见 CITATIONS-TODO.md)——投稿前必做。</td></tr>
 <tr class="done"><td>✅ 已完成</td><td>任务单 #32:跨场景验证 — <b>"一个头就够,不用六个"</b></td><td><span class="tag gpu">GPU-Claude</span></td>
 <td>五个普通公寓场景:跨场景收益 −74.5%~−78.0%,追平甚至超过场景内现学;唯一例外是视觉风格不同的 decoration 序列(−18.7% 过线但中心有副作用)——"同风格内通用"是论文主张,风格切换是诚实边界。已关单。</td></tr>
 <tr class="done"><td>✅ 已完成</td><td>任务单 #33:换骨干(VGGT-Ω)— 方向成立,效果打折</td><td><span class="tag gpu">GPU-Claude</span></td>
