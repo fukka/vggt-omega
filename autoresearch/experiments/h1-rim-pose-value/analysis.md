@@ -186,3 +186,36 @@ restriction; (ii) the outermost band (45→54.8°) adds nothing here (1.555→1.
 n=11) where ScanNet++'s last band still helped — either saturation at Aria's
 narrower cone, vignetting-thinned rim features, or small n. Unresolved; matters
 for how much of the Aria rim an adapter should protect for pose.
+
+## run_007 (2026-08-19, CONFIRMATORY — H1.3 mask stage, DA3-Small on Aria)
+
+`adt_pose_value.py --stages handeye,mask`, all 59 pairs, mask boundary 35°,
+random control area-matched to the rim annulus's within-cone fraction.
+
+| cond | median rot err (°) | gain |
+|---|---|---|
+| vanilla | 14.761 | 1.100 |
+| center_masked | 20.018 | 0.878 |
+| random_masked (=rim area) | 25.301 | 0.912 |
+| rim_masked | 38.518 | 1.801 |
+
+**The rim-dependence finding replicates on Aria, in a softer form.** Ordering:
+rim deletion is by far the worst (+23.8° over vanilla), well beyond the
+area-matched random control (+10.5°); center deletion hurts least (+5.3°). So
+the rim remains the model's most load-bearing region per unit area on the
+target lens. The ScanNet++-strength version ("center contributes literally
+nothing") does NOT transfer: on Aria's narrower cone the center carries some
+signal — unsurprising, since Aria's θ≤35° "center" is a much larger fraction of
+its usable field than θ≤45° was of the DSLR's.
+
+Context numbers: vanilla itself is poor here (14.8° median on GT 2.5–30°,
+frames 3.3 s apart) — consistent with the repo's standing finding that frozen
+FMs degrade on raw fisheye; classical solved only 15 of these 59 pairs at all,
+so many pairs are genuinely hard (low overlap).
+
+**H1.3 verdict: SUPPORTED overall.** Both day-1 findings transfer to the target
+lens with quantitative softening: span value saturates by ~45° (run_006), and
+rim-dependence is strong but the center is not disposable (run_007). Adapter
+design consequence unchanged — protect rim features, correct depth at readout —
+plus one new number: on Aria, the pose-relevant rim is roughly the 35–45°+
+annulus, and the 45–54.8° ring's pose value is unproven at this n.

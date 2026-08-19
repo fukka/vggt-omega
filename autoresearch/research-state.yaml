@@ -85,7 +85,7 @@ hypotheses:
       The span (H1.1) and rim-dependence (H1.2) findings transfer from the ~170deg
       DSLR scene to real Aria 110deg KB4 fisheye (local ADT seq131), with GT
       obtained via a gate-verified hand-eye extrinsics bootstrap.
-    status: active   # run 006: gate passed (0.77/0.96 deg), span replicates (8/11, big medians), last-band value unresolved; mask stage = run 007 in flight
+    status: supported   # runs 006-007: span replicates (saturates ~45deg); rim-dependence replicates softer (rim >> area-matched random > center); see analysis.md
     motivation: "Closes the lens-generalization caveat on the target domain."
     parent: H1
     priority: high
@@ -127,7 +127,7 @@ experiments:
     and per feature-band; (c) center-vs-periphery Pareto pair (AbsRel_c, AbsRel_p).
   baseline_value: null
   best_value: null
-  total_runs: 6
+  total_runs: 7
   trajectory:
     - run_id: run_001
       hypothesis: H1
@@ -153,6 +153,10 @@ experiments:
       hypothesis: H1.3
       outcome: "hand-eye gate passed (0.774/0.956 deg, angle(C) 40.6); Aria span replicates 8/11; 45->54.8 band flat"
       wall_time_min: 12
+    - run_id: run_007
+      hypothesis: H1.3
+      outcome: "Aria masking: rim 38.5 > random(=area) 25.3 > center 20.0 > vanilla 14.8 — rim-dependence transfers, softer"
+      wall_time_min: 8
 
 outer_loop:
   cycle: 1

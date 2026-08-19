@@ -1,0 +1,66 @@
+{
+  "config": {
+    "seq": "/Users/fengjiazhang/Documents/projectaria_tools_adt_data/Apartment_release_clean_seq131_M1292",
+    "size": 504,
+    "stages": "handeye,mask",
+    "max_gt_rot_deg": 30.0,
+    "min_gt_rot_deg": 0.5,
+    "nfeatures": 6000,
+    "ratio": 0.8,
+    "magsac_thresh_deg": 0.5,
+    "mask_deg": 35.0,
+    "gap_filter_deg": 1.5,
+    "seed": 0,
+    "out": "results/run_007.json"
+  },
+  "n_candidates": 59,
+  "handeye": {
+    "n_pairs": 15,
+    "angle_gap_median_deg": 0.5252683309942441,
+    "err_device_frame_median_deg": 5.6328566051535205,
+    "err_calibrated_median_deg": 0.9556847559712659,
+    "err_calibrated_trusted_median_deg": 0.7738511679094026,
+    "n_trusted": 9,
+    "angle_C_deg": 40.54818224534313,
+    "C": [
+      [
+        0.9904894789337735,
+        0.1273277691537962,
+        -0.052136660075412906
+      ],
+      [
+        -0.06444772134706121,
+        0.7641455300368929,
+        0.6418162510702016
+      ],
+      [
+        0.1215610272031013,
+        -0.6323521551532454,
+        0.7650840924619807
+      ]
+    ],
+    "gate_passed": true
+  },
+  "mask": {
+    "n_pairs": 59,
+    "rim_frac_of_cone": 0.6087926030158997,
+    "conds": {
+      "vanilla": {
+        "median_err_deg": 14.760869592057178,
+        "gain": 1.1000038698854364
+      },
+      "rim_masked": {
+        "median_err_deg": 38.517542561133396,
+        "gain": 1.8012621373827056
+      },
+      "center_masked": {
+        "median_err_deg": 20.01788127969503,
+        "gain": 0.8781829300932176
+      },
+      "random_masked": {
+        "median_err_deg": 25.300569364317635,
+        "gain": 0.9122820526306807
+      }
+    }
+  }
+}

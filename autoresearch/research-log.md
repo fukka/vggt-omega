@@ -37,3 +37,19 @@
 - Next queued: (a) area-matched random-mask control for run_004; (b) Aria-FOV
   (θ≤55°) replication of runs 003–004; (c) outer-loop reflection + to_human
   report with figures; then H2 design.
+
+## 2026-08-19 — H1.3 closed; tickets filed; Chinese dashboard
+
+- run_006/007: both day-1 findings transfer to real Aria (seq131, hand-eye
+  bootstrap gate-verified at 0.77-0.96 deg, angle(C)=40.6 vs box's ~38).
+  Quantitative softening: span value saturates ~45 deg; center not disposable
+  on the narrower cone, but rim still ~2.3x an area-matched random deletion.
+- Human feedback (recorded in memory reporting-in-plain-chinese): reports in
+  plain Chinese; single refreshable dashboard.html; GPU tickets English but
+  explained to the human in Chinese. Dashboard created and shipped.
+- GPU tickets FILED with human's permission: #27 (calibration JSON), #28
+  (hand-pixel statistics on skeleton sequences). Ticket files 026/027 in
+  docs/handoff/tickets/, bodies mirrored, pushed to origin.
+- H1 family now fully closed. Next: H2 (center-safe adapter) design under the
+  new constraint; H3 zero-parameter tokenization probe; depth-side radial curve
+  with the distance control.
