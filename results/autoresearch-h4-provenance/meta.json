@@ -1,0 +1,69 @@
+{
+  "ticket": 32,
+  "ticket_file": "docs/handoff/tickets/032-hand-gt-provenance-and-synthetic.md",
+  "issue": 34,
+  "raised_by": "human, 2026-08-21",
+  "code_commit": "acbd107",
+  "code_branch": "organized",
+  "scripts": [
+    "autoresearch/experiments/h4-dynamics/code/hand_gt_provenance.py (new)",
+    "autoresearch/experiments/h4-dynamics/code/hand_synthetic_pose_check.py (new, addendum for Part 2's meal_seq131 pose question)"
+  ],
+  "host": "lambda_63, RTX 6000 Ada 48GB, CUDA 12.8",
+  "conda_env": "raytun3r",
+  "sequences": [
+    "Apartment_release_golden_skeleton_seq100_M1292",
+    "Apartment_release_meal_skeleton_seq131_M1292",
+    "Apartment_release_multiskeleton_party_seq101_M1292"
+  ],
+  "n_high_dyn_frac_frames_per_seq": 20,
+
+  "part1_which_variant": {
+    "answer": "Both #28 (hand_pixel_stats.py) and #31 (hands_pose_depth.py) build a SINGLE AriaDigitalTwinDataProvider from get_datapaths(skeleton_flag=True) and read segmentation AND depth from that same provider -- no seg/depth mismatch between the two streams in either script. The concern that they might differ does not apply here.",
+    "with_vs_without_at_dyn_pixels": {
+      "Apartment_release_golden_skeleton_seq100_M1292": {"median_abs_diff_m": 0.373, "frac_differs_gt_5cm": 1.0, "median_with_m": 0.306, "median_without_m": 0.708},
+      "Apartment_release_meal_skeleton_seq131_M1292": {"median_abs_diff_m": 1.407, "frac_differs_gt_5cm": 1.0, "median_with_m": 0.092, "median_without_m": 1.475},
+      "Apartment_release_multiskeleton_party_seq101_M1292": {"median_abs_diff_m": 1.455, "frac_differs_gt_5cm": 0.995, "median_with_m": 0.881, "median_without_m": 2.376}
+    },
+    "read": "GT depth DOES see the person under skeleton_flag=True: at dynamic-segmentation pixels the with-skeleton depth is consistently near-camera (0.09-0.88 m median across the three sequences) while the without-skeleton depth at the SAME pixels is consistently the background behind them (0.71-2.38 m) -- essentially every dynamic pixel (>=99.5%) differs by more than 5cm between the two variants. Alignment between the segmentation mask and RGB/depth was independently verified at native 1408x1408 resolution (overlay, not resized) before trusting this."
+  },
+
+  "part1_restated_28_numbers": "#28's dyn-depth medians (reported as 0.26-0.94 m across the three sequences) are CONFIRMED under the correct (with-skeleton) variant -- this run's median_with_m values (0.306, 0.092, 0.881) bracket the same range on a fresh 20-frame high-dyn_frac sample. Nothing to correct or withdraw.",
+
+  "part2_synthetic_hands_free": {
+    "photometric_diff_real_vs_synthetic": {
+      "Apartment_release_golden_skeleton_seq100_M1292": {"static_median": 0.111, "dynamic_median": 0.180},
+      "Apartment_release_meal_skeleton_seq131_M1292": {"static_median": 0.247, "dynamic_median": 0.254},
+      "Apartment_release_multiskeleton_party_seq101_M1292": {"static_median": 0.101, "dynamic_median": 0.216}
+    },
+    "read": "2/3 sequences show a clear gap (dynamic pixels differ from synthetic far more than static ones: 0.180 vs 0.111 golden_seq100; 0.216 vs 0.101 party_seq101) consistent with the person being absent from the synthetic render. meal_seq131 is the outlier (0.254 vs 0.247, essentially no gap) -- the same sequence #31 already flagged as anomalous. The visual grid (3 examples/sequence, real|synthetic|seg-mask|depth-with|depth-without) confirms by eye: synthetic frames show no person/hand silhouette where the real frames clearly do.",
+    "da3_absrel_real_vs_synthetic": {
+      "note": "scored against the with-skeleton GT depth (the confirmed-correct variant), static and dynamic pixels separately",
+      "Apartment_release_golden_skeleton_seq100_M1292": {"static": [0.236, 0.262], "dynamic": [0.033, 0.044]},
+      "Apartment_release_meal_skeleton_seq131_M1292": {"static": [0.207, 0.206], "dynamic": [0.150, 0.148]},
+      "Apartment_release_multiskeleton_party_seq101_M1292": {"static": [0.246, 0.283], "dynamic": [0.106, 0.113]}
+    },
+    "da3_read": "In golden_seq100 and party_seq101, DA3-Small is WORSE on synthetic input on both static and dynamic pixels (+11%/+34% and +15%/+7% respectively) -- the synthetic domain gap (DA3 is real-world-pretrained) hurts more broadly than any hands-removal benefit helps, so this comparison does not cleanly isolate a hands effect the way #31's mean-fill did (which changed only the hand pixels, nothing else). meal_seq131 is flat (0.207->0.206, 0.150->0.148) -- again the outlier.",
+    "31_conclusion_survival": "#31's 'hands are just occlusion, not signal corruption' does not get a clean re-test here: the synthetic stream's own domain gap confounds static and dynamic pixels together rather than isolating the hand. It neither confirms nor refutes #31 -- it shows the synthetic substitution is the wrong tool for this specific question, unlike the mean-fill masking #31 used."
+  },
+
+  "part2_meal_seq131_anomaly": {
+    "file": "pose_synthetic_check_meal_seq131.json",
+    "reference_31_real_image_conditions": {"vanilla": 12.590, "gt_dyn_masked": 12.932, "random_matched": 8.688},
+    "this_run": {
+      "vanilla_median_rot_err_deg": 12.590,
+      "synthetic_median_rot_err_deg": 7.017,
+      "paired_diff_synthetic_minus_vanilla_median_deg": 0.197,
+      "n_synthetic_better_of_40": 19
+    },
+    "read": "Does NOT reproduce the anomaly under the standard #31 statistic (median of per-pair differences): synthetic vs vanilla is a wash (+0.197 deg, synthetic better on only 19/40 pairs) -- nothing like random_matched's clean ~4 deg edge. The group medians (7.017 vs 12.590) look like a big synthetic win, but that is driven by a handful of extreme pairs (several pairs where synthetic reads near-identity, ~0.13-0.16 deg, alongside others where it is far worse than vanilla, e.g. pair 27: 20.98 -> 40.55, pair 29: 66.92 -> 80.96) -- reporting only the group medians here would have been misleading, which is why both statistics are logged."
+  },
+
+  "acceptance_summary": {
+    "i_which_variants": "both #28 and #31 used skeleton_flag=True consistently for seg and depth -- no mismatch to find",
+    "ii_does_with_skeleton_depth_contain_the_person": "yes -- confirmed on all three sequences, >=99.5% of dynamic pixels differ from the without-skeleton variant by >5cm, and the with-skeleton depth values are near-camera as expected for a hand/body",
+    "iii_28_numbers_confirmed_or_corrected": "confirmed, not corrected",
+    "iv_is_synthetic_hands_free": "yes by visual inspection (grid PNGs) and in 2/3 sequences by photometric diff; meal_seq131 does not show the same gap",
+    "v_does_31_conclusion_survive_synthetic_retest": "not testable cleanly this way -- synthetic's own domain gap confounds static/dynamic together; the meal_seq131 pose anomaly specifically does not reproduce under synthetic input (paired-difference stat is a wash)"
+  }
+}

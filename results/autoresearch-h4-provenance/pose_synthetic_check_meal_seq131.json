@@ -1,0 +1,16 @@
+{
+  "seq": "Apartment_release_meal_skeleton_seq131_M1292",
+  "n_pairs": 40,
+  "conds": {
+    "vanilla": {
+      "median_rot_err_deg": 12.590405464172363
+    },
+    "synthetic": {
+      "median_rot_err_deg": 7.016757011413574
+    }
+  },
+  "synthetic_minus_vanilla": {
+    "median_deg": 0.19735968112945557,
+    "n_synthetic_better": 19
+  }
+}
