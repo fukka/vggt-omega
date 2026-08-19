@@ -17,12 +17,15 @@ precede `research(results)` throughout).
 | H2.2 head near-rim (even/odd) | 1.023 → 0.333 (−67.4%) | `run_011_even_odd.json` | 25k params; halves −50.8% |
 | Six-sequence validation (halves) | −21.2% … −71.3% near-rim, 6/6 improve | `autoresearch/data/h22-sixseq/run_011_*_halves.json` | GPU ticket #29, `results` @ 65bb0aa |
 | Hands placement (θ distribution) | 0.8–4% of cone; 80%+ θ>41° | `autoresearch/data/h4-stats/*.json` | GPU ticket #28; θ part from segmentation, solid |
-| Hands depth (0.26–0.94 m) | **UNDER VERIFICATION (#34)** | same | human flagged 2026-08-21: ADT renders depth with/without the person; must confirm which variant these numbers came from |
-| H4.1 hands ≈ occlusion | Δ(random−gtmask) = −0.13…+1.03° on 10–25° baselines | `results` @ 793e10f (`autoresearch-h4-pose/`) | GPU ticket #31; **depth arm under verification (#34)**; synthetic-stream re-test pending; meal_seq131 anomaly open |
+| Hands depth (0.26–0.94 m) | **VERIFIED (#34)** — fresh-sample medians 0.306/0.092/0.881 m | `results` @ 1327748 (`autoresearch-h4-provenance/`) | with-skeleton depth contains the person (100% of dyn px differ >5cm from without-variant); #28/#31 used consistent seg+depth provider |
+| H4.1 hands ≈ occlusion | Δ(random−gtmask) = −0.13…+1.03° on 10–25° baselines | `results` @ 793e10f (`autoresearch-h4-pose/`) | verified by #34; synthetic-stream counterfactual unsuitable (DA3 domain gap +7…34% swamps hand effect); meal anomaly does not reproduce under synthetic, remains open |
 | Cross-lane controlled rim penalty | VGGT-Ω 1.81×, DA3-S 1.25× (raw fisheye) | `results` @ 601fcb22767e (`fovbench-joint-0b0d1d7/ANALYSIS-partA.txt`) | GPU ticket 024, 6 seqs, 300 frames |
 | Context buys the centre | pen flat/up with N=3/5/10 frames | same, `ANALYSIS-partB.txt` | ticket 024B |
 
-Pending (will be added when they land): #32 cross-scene folds, #33 VGGT-Ω head.
+| Cross-scene (one head) | five clean folds −74.5…−78.0% (≥ within-scene); decoration −18.7% + center collateral | `autoresearch/data/h23-crossscene/run_012_fold_*.json` | GPU #32; genre boundary; 48-param cross-scene control not run (optional) |
+| VGGT-Ω head | 12/12 improve, −19.3…−40.6%; halves center collateral up to +49.8% | `autoresearch/data/h24-omega/run_013_*.json` | GPU #33; weaker than DA3; earlier-block probe = future work |
+
+All pending items resolved 2026-08-23; nothing blocks drafting.
 
 Known caveats that must travel with these numbers: one lens per dataset;
 ScanNet++ results are one scene; run_006 span n=11; H2.* absolute AbsRel

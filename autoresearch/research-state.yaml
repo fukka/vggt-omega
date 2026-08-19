@@ -151,7 +151,7 @@ hypotheses:
       Dynamic-region handling: hand/dynamic pixels in ADT contribute a measurable,
       disproportionate share of depth error and correspondence outliers; masking them
       (GT masks first, predicted later) improves both static depth eval and pose.
-    status: active   # REOPENED 2026-08-21 by the human: must verify whether ADT GT depth at hand pixels is the hand or the background (two render variants exist), and re-test with the synthetic-RGB stream as the natural hands-free control. Ticket #34. Theta-placement claim unaffected (from segmentation); depth claims and #31's depth arm on hold.
+    status: refuted   # corruption hypothesis dead, twice-verified: #31 (hands ~ occlusion) and #34 (GT provenance confirmed: with-skeleton depth contains the person, #28 numbers stand; synthetic stream unsuitable as counterfactual — domain gap swamps the effect). Yield: placement measurement + loss hygiene. meal anomaly isolated, open.
     motivation: "Novelty axis N4 — now measured to overlap the compression zone and the pose-critical band; the four axes unify at the near-field rim."
     parent: null
     priority: high
@@ -225,7 +225,7 @@ experiments:
 
 outer_loop:
   cycle: 3
-  last_direction: conclude-pending   # only #34 (hand GT provenance) blocks drafting
+  last_direction: conclude   # all hypotheses dispositioned; drafting begins
   last_reflection: >
     2026-08-18 evening: H1 family closed in 5 runs (H1 refuted, H1.1 supported,
     H1.2 refuted-informative + area-matched control). N3's premise is measured;

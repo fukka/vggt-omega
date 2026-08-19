@@ -215,3 +215,19 @@
   center-depth safety is empirical and backbone-dependent.
 - Direction: CONCLUDE once #34 answers the hand-GT question. Paper skeleton
   ready (paper/outline.md); all other numbers audited.
+
+## 2026-08-23 — #34 lands: provenance confirmed; outer loop -> CONCLUDE
+
+- #34: (i) #28/#31 used consistent with-skeleton seg+depth; (ii) with-skeleton
+  depth contains the person (100% of dyn px differ >5cm from the without
+  variant); (iii) #28's hand depths CONFIRMED on a fresh sample; (iv)
+  synthetic stream is hands-free but (v) unusable as the hands counterfactual
+  — DA3's synthetic-domain gap (+7..34% AbsRel) swamps the effect; mean-fill
+  masking remains the right tool. Meal anomaly does not reproduce under
+  synthetic; isolated, open.
+- The human's provenance challenge is resolved in the best way: the numbers
+  were right, and now they are PROVEN right — the verification goes in the
+  paper's supplementary.
+- All hypotheses dispositioned. Outer loop: CONCLUDE. Drafting begins next
+  tick via the ml-paper-writing skill, from paper/outline.md +
+  paper/numbers.md + findings.md.
