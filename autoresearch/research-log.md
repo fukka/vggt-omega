@@ -115,3 +115,16 @@
   feature head (#29 pending) + H4.1; the paper narrative is now fixed:
   diagnosis -> asymmetry -> collision at the near-field rim -> minimal safe
   fix -> validation.
+
+## 2026-08-20 (tick 6) — novelty check + cross-scene code ready; GPU quiet
+
+- #29 / #31 still pending on the box (normal cadence).
+- Novelty search: nearest neighbors are DepthFisheye (LoRA in blocks — touches
+  backbone computation), Calibration Tokens (input-side), DrivingDepth
+  (prompt-driven output scale correction). Nobody has the compression
+  diagnosis, the give/receive asymmetry, pose-safety-by-construction, or the
+  hands-at-the-near-rim collision. Recorded in
+  literature/2026-08-20-novelty-check.md.
+- H2.3 (cross-scene, leave-one-scene-out) protocol locked and cross_scene.py
+  written + smoke-tested locally (self-fit only, no result claimed). Ready to
+  ticket the moment #29 confirms the per-scene picture.
