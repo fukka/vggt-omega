@@ -155,21 +155,23 @@ def main(argv=None) -> None:
     for sd in train_sd + eval_sd:
         sd.ensure_cached()
 
-    # One camera is assumed for every sequence (theta grid, cone, bins all
-    # come from the first). Correct for ADT (one device); silently WRONG for
-    # mixed-camera runs — guard added after the 2026-08-19 external review.
-    ref = train_sd[0].src.camera
-    for sd in train_sd:
-        c = sd.src.camera
-        assert (c.fx, c.fy, c.cx, c.cy, tuple(getattr(c, "k", ())),
-                c.width, c.height) == \
-               (ref.fx, ref.fy, ref.cx, ref.cy, tuple(getattr(ref, "k", ())),
-                ref.width, ref.height), \
-            f"cross_scene assumes ONE camera; {sd.src} differs from {train_sd[0].src}"
-    cone, t_idx, t_edges, gh, gw, theta_p = geometry(train_sd[0].src)
+    # Per-sequence geometry (2026-08-19 refactor, cross-lens precondition):
+    # every sequence carries its OWN cone/theta grid/bins. Cameras may now
+    # legitimately differ — announce loudly instead of asserting.
+    for sd in train_sd + eval_sd:
+        sd.geo = geometry(sd.src)
+    cams = {(sd.src.camera.fx, sd.src.camera.cx,
+             tuple(getattr(sd.src.camera, "k", ())),
+             round(float(sd.src.camera.theta_max), 4))
+            for sd in train_sd + eval_sd}
+    if len(cams) > 1:
+        print(f"[h2.3] CROSS-CAMERA run: {len(cams)} distinct cameras; "
+              "theta features extrapolate beyond the training lens — "
+              "label every output cross-lens.")
 
     X, A, Y = [], [], []
     for sd in train_sd:
+        cone, t_idx, t_edges, gh, gw, theta_p = sd.geo
         for n in sd.frames:
             gr, gz = sd.gt_range(n)
             d = sd.pred(n)
@@ -199,12 +201,14 @@ def main(argv=None) -> None:
             print(f"  epoch {ep:3d} L1 {loss.item():.4f}", flush=True)
 
     nb_d = len(GT_DEPTH_EDGES) - 1
-    t_mid = [math.degrees(0.5 * (t_edges[i] + t_edges[i + 1]))
-             for i in range(THETA_BINS)]
     summary: Dict = {"train_seqs": [sd.name for sd in train_sd],
                      "eval": {}, "config": vars(args),
-                     "theta_bin_mid_deg": t_mid}
+                     "theta_bin_mid_deg_per_seq": {}}
     for sd in eval_sd:
+        cone, t_idx, t_edges, gh, gw, theta_p = sd.geo
+        t_mid = [math.degrees(0.5 * (t_edges[i] + t_edges[i + 1]))
+                 for i in range(THETA_BINS)]
+        summary["theta_bin_mid_deg_per_seq"][sd.name] = t_mid
         s_b = np.zeros((THETA_BINS, nb_d)); s_a = np.zeros((THETA_BINS, nb_d))
         n_ = np.zeros((THETA_BINS, nb_d), dtype=np.int64)
         for n in sd.frames:
