@@ -305,3 +305,15 @@
   and come back via results.
 - Next: eval_lora.py (joint-table depth + RRA/RTA pose on held-out scenes,
   loading the LoRA checkpoints) so it is ready when #35 lands.
+
+## 2026-08-24 (tick 19) — eval_lora ready; #35 amended with the eval half
+
+- eval_lora.py: one model, LoRA toggled — before/after share every other bit;
+  depth joint table + zones + pose (median rot, RRA@15, tdir, RTA@15) against
+  official-calibration GT. Smoke-tested with the trainer's smoke checkpoint.
+- Logistics reality: held-out scenes live only on the box, so evaluation goes
+  back into #35 as an addendum comment (script committed, still runs-only).
+  Pose note recorded: adjacent pairs at 100-frame spacing are ~60deg
+  rotations — the box must pair closer frames for a meaningful RRA.
+- While #35 runs: next up is the H6 (peripheral cross-frame attention)
+  protocol and the BENCH protocol skeletons.
