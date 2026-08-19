@@ -111,7 +111,7 @@ hypotheses:
       patch grid removes the center-oversampling gradient at source and cuts
       tokens ~35-40% at 110 deg FOV; probe question first — does a remap-only
       forward (no training) already move the radial bias field?
-    status: pending   # brainstorm C2; probe is CPU-sized (solid-angle ratio + remap-only bias probe); commit to training only if the probe moves the field
+    status: refuted   # Probe A 2026-08-19: equisolid remap degrades EVERY zone (+16..+31%) at equal tokens — radial failure is not sampling density; efficiency parity dead a fortiori. Part of the input-surgery-hurts pattern (H3/Center-PH/H8 vs feature/loss-side fixes).
     motivation: "Efficiency-headline candidate; complements H6 (fewer tokens) and attacks K2's gradient at its cause."
     parent: null
     priority: medium

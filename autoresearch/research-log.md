@@ -526,3 +526,8 @@
   requested; local seq131 vanilla cross-check running. v1 numbers quarantined.
 - Lesson: eval scripts must assert GT domain against the loader's declared
   convention (the variable was even named gt_z while holding range).
+
+## 2026-08-19 (tick 6) — H8 refuted by probe A
+- Equisolid remap: +31% near-rim, +16% center at same token count. Radial
+  failure is not sampling density. Probe B cancelled. Pattern recorded:
+  input-space geometry surgery hurts; effective fixes are behind the encoder.
