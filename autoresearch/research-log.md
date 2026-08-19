@@ -360,3 +360,14 @@
   in the ticket as a health check for real training.
 - Ticket 034 (H6 rim vs all-token control) filed; eval_module.py to follow
   as addendum. #35 still training.
+
+## 2026-08-25 (tick 23) — H6 eval ready; both training tickets amended and complete on our side
+
+- eval_module.py: video-mode eval (module needs the previous frame), with a
+  like-for-like second pass so before/after pool identical frames. Smoke ok.
+- #36 amended with the eval addendum (same pattern as #35). Both method
+  tracks are now fully specified and runnable end-to-end on the box; the
+  Mac side has no blocking work left until checkpoints or evals land.
+- Idle-tick plan while training runs: BENCH cell prep (frozen UniK3D/DAC on
+  ADT machinery exists in finetune/eval/baselines) and the paper's method
+  section can be pre-drafted against the locked protocols.
