@@ -54,6 +54,24 @@ rim penalty (1.81×) and no camera-input channel — the highest-headroom, and
 hardest, adapter target; the eval of record is `finetune/eval/metrics.py`
 scale_shift, range domain, full joint tables (zone pools hide collateral).
 
+## Method-phase status (post-pivot, 2026-08-27)
+
+- **H5 (rim-targeted LoRA):** mechanics verified end to end on CPU (five-part
+  loss tests — which caught and fixed a ~1 px KB4-inversion bug in the shared
+  camera code; LoRA-disabled path bit-identical). CPU pilot (exploratory,
+  frame-split): ALL zones improve on held-out frames (near rim −60%, center
+  −27%), no collateral, defaults sane. Protocol claims await #35 (scene-level
+  holdout + pose + plain-LoRA control).
+- **H6 (peripheral cross-frame attention):** module verified (zero-init
+  identity; pose path structurally untouched). CPU pilot did NOT confirm —
+  and diagnosed itself: sparse "adjacent" frames (3.3 s) violate the module's
+  premise, and the same uniform-subsampling trap sat in the trainer for the
+  box run; dense-window sampling landed before #36 started. Center-safety
+  wording corrected to token-level. Efficiency measured: rim queries = 0.48×
+  FLOPs of all-token. Real test = #36 dense.
+- **BENCH:** frozen-row machinery smoke-tested (#37); RayTun3R comparison row
+  runnable (#38). In flight: #35–#38.
+
 ## Key Results
 
 - **H1 REFUTED (runs 001–002, 2026-08-18):** on ScanNet++ 3f15 (~170° DSLR

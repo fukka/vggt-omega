@@ -458,3 +458,12 @@
 - Contrast worth keeping: the H5 pilot (single-frame losses) worked at
   sparse spacing; the H6 pilot (multi-frame core) could not — consistent
   with the mechanism story rather than against it. Real test = #36 dense.
+
+## 2026-08-27 (tick 32) — findings/dashboard absorb the pilots; H6 novelty contrast recorded
+
+- findings.md gains the method-phase status block; dashboard updated.
+- H6 novelty search: foveated token selection (FDT) concentrates compute at
+  the CENTER — ours is the measured inversion; StableDPT is the nearest
+  video-depth mechanism (all-token, no camera geometry). Recorded in
+  literature/2026-08-27-h6-novelty.md.
+- GPU: 0 deliveries; queue unchanged.
