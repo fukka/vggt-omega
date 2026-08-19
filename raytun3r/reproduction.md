@@ -137,12 +137,34 @@ primary) and `vggt`. Per-backbone parameter counts and hook details are in
 
 **ScanNet++ FOV.** The paper states 115° for ScanNet++ DSLR. The actual frames we
 have are full-frame **~170°** fisheye: the released calibration puts the frame
-corner at ~85° incidence, the corners carry real image content, and
-`project ∘ unproject` round-trips there to 1.5e-5 px — so the corners are inside
-the lens model, not extrapolation. This is a disagreement between the paper's text
-and the data, not a loader bug. It matters because 170° is far outside anything
-these backbones saw in training, and because `Ω` changes every loss and metric at
-once. `experiments/fov_sweep.py` and `--max-fov 115` exist to test it.
+corner at 84.84° incidence — diagonal 169.68° on `3f15a9266d` and 174.20° on a
+second scene — and the corners carry real image content (grey ≈ 80 ± 11 against
+≈ 0 ± 0 for a vignetted lens). Re-derived 2026-08-19 from scratch, without this
+repo's code, by three independent inversions agreeing to <1e-6°. This is a
+disagreement between the paper's text and the data, not a loader bug. It matters
+because 170° is far outside anything these backbones saw in training, and because
+`Ω` changes every loss and metric at once. `experiments/fov_sweep.py` and
+`--max-fov 115` exist to test it.
+
+**Where the paper's 115° probably comes from.** ScanNet++ also ships an
+*undistorted* (pinhole) image set, rectified by the official toolbox with
+`cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(..., balance=0.0)` at
+unchanged resolution. Its diagonal measures 132.3° / 118.6° on those two scenes —
+the only family 115° falls inside; the fisheye family (169.7° / 174.2°) is
+nowhere near. Supported hypothesis, not settled: confirming it means tabulating
+the undistorted intrinsics across many scenes.
+
+**Correction to an earlier version of this section.** It argued that
+`project ∘ unproject` round-tripping to 1.5e-5 px at the corner showed the corner
+was "inside the lens model, not extrapolation". **That inference is invalid** — a
+round trip only demonstrates that the forward map and its numerical inverse
+agree, which holds for *any* polynomial, including one that has left physical
+reality. What actually supports "not extrapolation" is the corner texture, the
+turnover sitting far beyond (124.2°), and agreement across a second scene and two
+third-party repos. The conclusion is unchanged; the argument for it was wrong.
+
+Full camera reference, the Aria/ADT domain-gap numbers, and six further traps:
+[docs/research/scannetpp-camera-reference.md](../docs/research/scannetpp-camera-reference.md).
 
 ---
 

@@ -58,6 +58,21 @@ images anything. Using it as the imaged cone (as this port originally did) admit
 dead vignette pixels: ~5–12% of every ring view, and 10.9% of the eval mask.
 `theta_max()` returns the min of the two.
 
+**Full-frame vs circular fisheye** — the two lenses in this repo need *opposite*
+rules for the imaged cone, and copying one to the other is a silent bug.
+
+* **Aria 214-1 is circular**: the image circle is inscribed in the frame, so the
+  cone is the smallest principal-point-to-border margin (54.83°) and the corners
+  are dead vignette.
+* **ScanNet++'s DSLR is full-frame**: the image circle covers the sensor, so the
+  cone is the *corner* radius (84.84°) and the whole rectangle is valid content.
+
+Using the inscribed circle on ScanNet++ discards 47% of a 504×336 frame from Ω;
+using the corner on Aria admits ~10.9% dead pixels. Authority:
+`raytun3r/cameras.py:_default_theta_max` and
+`finetune/eval/baselines/aria_fisheye.py:usable_max_incidence`. Full ScanNet++
+reference: [docs/research/scannetpp-camera-reference.md](docs/research/scannetpp-camera-reference.md).
+
 **Tangent view** — a gnomonic (perspective) crop rendered from a fisheye or
 ERP frame about some view direction. Straight 3D lines stay straight in a
 tangent view; this is the input format VGGT expects.

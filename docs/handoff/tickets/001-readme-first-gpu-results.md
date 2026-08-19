@@ -61,6 +61,13 @@ median rotation disagreement 0.17°. Worth recording so nobody re-litigates it.
 3. Note in *Data* that ScanNet++'s DSLR is a **full-frame** fisheye whose
    calibration implies ~170° diagonal, not the 115° the paper states — corners
    carry real content and `project∘unproject` round-trips to 1.5e-5 px there.
+   > ⚠️ **Superseded 2026-08-19.** The conclusion holds (169.68° on
+   > `3f15a9266d`, re-derived from scratch), but the round-trip argument in this
+   > step is **invalid** — a round trip only shows a polynomial agrees with its
+   > own numerical inverse, which is true even where the fit has left physical
+   > reality. Do not repeat it. Use
+   > [docs/research/scannetpp-camera-reference.md](../../research/scannetpp-camera-reference.md)
+   > instead; this step is already done in `raytun3r/README.md`.
 4. Update the ADT caveat: `T_device_camera` now resolves exactly from `video.vrs`
    via `projectaria_tools`, so ADT pose metrics work. The "poses left unset"
    paragraph is stale whenever that package is installed.

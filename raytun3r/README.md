@@ -457,14 +457,22 @@ Poses are converted from nerfstudio/OpenGL to the OpenCV camera-from-world
 convention used everywhere else here (validated against MAGSAC++ to 0.17°).
 
 > **The DSLR is a full-frame ~170° fisheye, not the 115° the paper states.** Its
-> released calibration puts the frame corner at ~85° incidence, the corners carry
-> real image content, and `project ∘ unproject` round-trips there to 1.5e-5 px —
-> so the corners are inside the lens model, not extrapolation. This matters twice:
-> Ω is the whole rectangle rather than the inscribed circle (which would discard
-> 47% of a 504×336 frame), and 170° is far outside what any of these backbones
-> saw in training. `--max-fov 115` scores on the paper's stated cone; the sweep in
-> `experiments/fov_sweep.py` exists to find out whether that is the explanation
-> for the inverted baseline ordering.
+> released calibration puts the frame corner at 84.84° incidence (diagonal FOV
+> 169.68° on `3f15a9266d`, 174.20° on a second scene), and the corners carry real
+> image content — grey ≈ 80 ± 11, where a vignetted circular fisheye would read
+> ≈ 0 ± 0. This matters twice: Ω is the whole rectangle rather than the inscribed
+> circle (which would discard 47% of a 504×336 frame), and 170° is far outside
+> what any of these backbones saw in training. `--max-fov 115` scores on the
+> paper's stated cone; `experiments/fov_sweep.py` exists to find out whether that
+> is the explanation for the inverted baseline ordering.
+>
+> The paper's 115° most likely refers to ScanNet++'s **undistorted** image set,
+> whose diagonal measures 132.3° / 118.6° on those same two scenes — the only
+> family the number falls inside.
+>
+> **Full camera reference, including six more traps that have each cost time
+> here (planar-z depth, OpenCV's broken fisheye inverse, the anonymisation masks,
+> `is_bad` frames): [docs/research/scannetpp-camera-reference.md](../docs/research/scannetpp-camera-reference.md).**
 
 `render_depth/` is optional and was **absent** in the run on the `results`
 branch, so `AbsRel`/`δ₁.₂₅` (Tab. 3) have never been measured on ScanNet++.
