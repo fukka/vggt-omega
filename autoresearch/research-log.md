@@ -401,3 +401,15 @@
   1912.05909). refs.bib generated from fetched metadata only. Two
   non-arXiv items remain flagged (DepthFisheye/ICCVM, Lowe/CrossRef).
 - #35/#36/#37 still in the box queue.
+
+## 2026-08-26 (tick 27) — RayTun3R comparison row prepared; ticket 036 filed
+
+- raytun3r_row.py: joint-table row for a RayTun3R-adapted backbone; vanilla
+  path smoke-tested locally (ADTSequence -> backbone -> table end to end);
+  adapter loading mirrors raytun3r/eval.py's own pattern.
+- Ticket 036 (issue #38) filed as fourth in queue — the most GPU-hungry row
+  (2-3h/scene per the paper), per-scene adaptation on each held-out scene
+  (fair-to-favorable setting for the baseline).
+- Main-table inventory now complete on our side: frozen rows (#37), our
+  three rungs (#35/#36 + run_011 in hand), the strongest adapter baseline
+  (#38). Everything else is analysis when numbers land.
