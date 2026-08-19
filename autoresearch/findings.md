@@ -16,30 +16,43 @@ The four novelty axes (from the human, 2026-08-18):
 
 ## Current Understanding
 
-(Bootstrap state, 2026-08-18. No autoresearch experiments run yet; everything below
-is inherited from this repo's prior work and the verified literature survey at
-`docs/research/fisheye-wide-fov-adaptation.md`.)
+(Rewritten 2026-08-20 after 12 runs + 3 GPU tickets. The bootstrap-era survey
+context lives in `docs/research/fisheye-wide-fov-adaptation.md`.)
 
-1. **The field's converged recipe** is geometry-aware tokenization on a frozen
-   pretrained backbone (survey §2): leave weights alone, fix the interface. The three
-   anchors are all reproduced in this repo: VGGT-360 (training-free tangent views,
-   `VGGT-360-fisheye/`), RayTun3R (10.7k-param polar PE residual, `raytun3r/`),
-   CAM3R (SH ray module + ray-aware alignment, reports ADT RRA@15 99.0, `cam3r/`).
-2. **Nobody reports the center/periphery Pareto front.** Adapter papers quote
-   whole-image means; the question "did the center get worse" is unasked. N1 is open.
-3. **Radial error claims are confounded** — error-vs-eccentricity is partly
-   depth-vs-eccentricity (an oracle with no field effect reads 1.86x on ego-synth).
-   The distance control in `slambench/fov.py` is mandatory for any N1/N3 claim.
-4. **Periphery-for-pose is SLAM folklore with no FM-era measurement**: features at
-   outer FOV carry large parallax and stabilize rotation (LF-VISLAM etc.), and this
-   repo already measured that raw-fisheye backbones under-read rotation by 12–18%
-   (alpha 0.82–0.88) while rectified-input restores alpha≈1. Whether the *rim
-   specifically* carries the pose value is testable on CPU with the existing
-   SIFT+MAGSAC++ harness (`raytun3r/experiments/harness_verify.py`).
-5. **VGGT-Ω cannot be told the camera** (forward takes images only; RoPE normalized
-   to [-1,1] carries no angular scale), so on unfamiliar content its FoV estimate
-   regresses to the training prior and depth bends through it. Any adapter for it
-   must inject geometry (rays/PE/tokens), not just override a number.
+The story, in five measured acts:
+
+1. **The periphery's alignment value is span-under-noise, not per-point
+   quality.** Rim correspondences are not individually better for rotation
+   (H1 refuted, ideal-noise control flat), but at fixed count, widening the
+   admitted field wins on essentially every real pair while the ideal-noise
+   effect is ~20× smaller (H1.1) — the value is robustness to real feature
+   noise. Replicates on real Aria; saturates by ~45° there (H1.3).
+2. **Frozen FMs already run their pose on the rim.** Center deletion barely
+   moves DA3's rotation; rim deletion costs far more than area-matched random
+   deletion, on both a 170° DSLR and Aria (H1.2, runs 004–007). So adapters
+   must not perturb rim features — pose stability is a mandatory third eval
+   axis.
+3. **The fisheye depth failure is a precise, radially-modulated range
+   compression** — dispersion 2–10% everywhere, bias up to 3.3× at the
+   near rim (runs 008b–009); the rim penalty survives the GT-depth control on
+   raw fisheye across 5 models (ticket 024A), and multi-frame context buys
+   the center, not the field (024B). **The rim gives alignment and does not
+   receive fusion.**
+4. **Output-indexed recalibration cannot invert the compression** (48-param
+   table: near-rim transfers −18…−25% but near-center collateral, run 010);
+   **frozen features can** — a 25k-param readout head trained in minutes on
+   CPU cuts held-out near-rim AbsRel 51–67% with every other zone improving
+   and pose untouched by construction (run 011). Transfer beyond one scene:
+   ticket #29 pending.
+5. **The four novelty axes collide at one object: the near-field rim.**
+   Hand/body pixels are 0.8–4% of the cone, 80%+ beyond θ=41°, at median
+   0.26–0.94 m (ticket #28) — inside both the worst-calibrated cells and the
+   pose-critical band. Whether they actively corrupt pose is ticket #31.
+
+Standing facts that shape any next step: VGGT-Ω has the largest controlled
+rim penalty (1.81×) and no camera-input channel — the highest-headroom, and
+hardest, adapter target; the eval of record is `finetune/eval/metrics.py`
+scale_shift, range domain, full joint tables (zone pools hide collateral).
 
 ## Key Results
 
