@@ -90,10 +90,12 @@ In this order, and do not skip to 3:
    flapped. Note `lambda_63` can reach the jump host itself but **only on port
    3307** — `ssh -J` without `-p 3307` fails with the same banner-exchange
    message as case 1, which has already cost one round of misdiagnosis.
-3. **A stale address needs the user, not a retry loop.** The pod is recreated on
-   its own schedule with a new name *and* address (`run1150238` 2026-08-06,
-   `run1151839` 2026-08-11, `run1154132` 2026-08-17, `run1155074` 2026-08-19 —
-   roughly weekly, so assume it has happened since this line was written). The
+3. **A stale address needs the user, not a retry loop.** The pod is recreated
+   with a new name *and* address on some schedule (`run1150238` 2026-08-06,
+   `run1151839` 2026-08-11, `run1154132` 2026-08-17, `run1155074` 2026-08-19
+   morning, `run1155098` 2026-08-19 evening — that last gap was **hours, not
+   weeks**: see the idle-kill warning below). Assume it has recycled since this
+   line was written. The
    `space-container` entry in `~/.ssh/config` is kept pointing at the live one;
    `_1`…`_4` are the dead history. Recovering the new address
    needs `space login --region n6`, which is interactive and whose token expires
@@ -105,6 +107,30 @@ In this order, and do not skip to 3:
 2026-08-17 to the connection closing *while the `tmux` command was being sent*,
 leaving no session and no error anyone would notice. `scp` a launcher to
 `/group-volume` first, then `ssh` a one-word invocation of it.
+
+### The pod gets killed for sitting idle — this is now confirmed, not theoretical
+
+2026-08-19: a pod (`run1155074`) that had been connected to and left with **0%
+GPU utilization while its session spent turns on diagnostics** was gone within
+hours — replaced by `run1155098`, same day. That is not the "roughly weekly"
+recreation cadence case 3 above describes; it is a direct, fast consequence of
+connecting without promptly putting real work on the GPUs. **Once connected,
+treat "GPUs at 0%" as a clock running out**, not as room to explore:
+run the health check, then go straight to launching an actual ticket's job —
+do not spend multiple turns re-deriving environment facts that are already
+answered in §2 below, and do not leave a connection open "to look around."
+If you catch yourself running read-only diagnostics for more than a couple of
+minutes with both GPUs idle, stop and launch something.
+
+One unresolved, lower-confidence observation from the same day: several
+`ssh -o BatchMode=yes -o ConnectTimeout=N space-container '...'` attempts in a
+row all failed with `Connection timed out during banner exchange` against a pod
+whose port 22 was confirmed open from the jump host (case 2 above), and a bare
+`ssh space-container '...'` with no extra flags succeeded immediately
+afterward. It is not established whether `BatchMode=yes` itself is the problem
+(vs. coincidental timing of the chain recovering) — but if flagged connection
+attempts keep failing banner exchange while the port is confirmed open, try the
+plain form before concluding the pod is down.
 
 ---
 
@@ -207,6 +233,15 @@ Mechanics that `--help` does not usefully explain:
 ---
 
 ## 4. Run experiments
+
+**Run benchmark work from `/group-volume/Fengjia/projects/vggt-omega-023`, not
+`vggt-omega-organized`.** See "Two repo hazards on the pod" at the end of this
+file for why the latter is unsafe to `reset`/rebase against — this is worth
+knowing before you `cd` anywhere, not just at the end. `vggt-omega-023` is a
+clean checkout kept in sync with `organized`; `git fetch && git merge
+origin/organized` there is safe (watch for untracked local copies of scripts
+that later got committed upstream — `git status --short` first, move any
+conflicting untracked files aside with `mv`, never `git checkout -f`/`clean`).
 
 **Always set `OMP_NUM_THREADS=16` (plus `MKL_`/`OPENBLAS_`). This is worth more
 than any other setting here.** The pod is a two-socket AMD EPYC 7742 with **247
