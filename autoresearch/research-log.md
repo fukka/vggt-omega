@@ -68,3 +68,18 @@
   H1: the rim powers alignment but does not receive the fusion gains. This
   asymmetry is now the core thesis candidate.
 - H2 restated accordingly (see research-state.yaml).
+
+## 2026-08-19 (tick 3) — the compression story: H2.0b + H2.1
+
+- run_009 (alignment-free): the near-rim "disaster" is PRECISE miscalibration
+  — dispersion 2-10% everywhere, bias up to e^1.2 too far at near-rim, e^0.5
+  too near at far — a depth-range compression, radially modulated. Matches the
+  raytun3r depth-gain-0.406 signature and UniK3D's contraction.
+- run_010 (48-param table, 2 splits + fixed-affine variant): near-rim fix
+  transfers (-18..-25% held-out); near-center collateral in every variant.
+  Mechanism: compression makes predicted depth many-to-one in GT, so an
+  output-indexed table pushes the majority's fix onto minorities. Post-hoc
+  recalibration cannot invert a compression — the measured case for an
+  input-conditioned adapter (H2.2), and the table becomes the baseline any
+  adapter must beat. Also: zone aggregates hid the collateral; report full
+  joint tables from now on.

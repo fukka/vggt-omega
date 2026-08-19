@@ -71,6 +71,10 @@ def main(argv=None) -> None:
     p.add_argument("--size", type=int, default=504)
     p.add_argument("--depth-max-m", type=float, default=10.0)
     p.add_argument("--split", default="even_odd", choices=["even_odd", "halves"])
+    p.add_argument("--fixed-affine", action="store_true",
+                   help="fit the eval affine on the UNCORRECTED prediction and "
+                        "apply it to both arms — isolates the table's local "
+                        "effect from the re-alignment coupling")
     p.add_argument("--out", default=None)
     args = p.parse_args(argv)
 
@@ -143,7 +147,14 @@ def main(argv=None) -> None:
                 pi = np.clip(np.digitize(d, PRED_EDGES_M) - 1, 0, nb_p - 1)
                 d = d * np.exp(c[t_idx, pi])
             valid = cone & (gz > 0) & (gr <= args.depth_max_m) & (d > 1e-6)
-            aligned = align_depth(d, gr, valid, mode="scale_shift")
+            if args.fixed_affine:
+                d0 = preds[n]
+                a0 = align_depth(d0, gr, valid, mode="scale_shift")
+                m = valid & (d0 > 1e-6)
+                A = np.polyfit(d0[m], a0[m], 1)     # recover (a,b) of the fit
+                aligned = A[0] * d + A[1]
+            else:
+                aligned = align_depth(d, gr, valid, mode="scale_shift")
             absrel = (np.abs(aligned - gr) / gr)[valid]
             ti = t_idx[valid]
             di = np.clip(np.digitize(gr[valid], GT_DEPTH_EDGES) - 1, 0, nb_d - 1)

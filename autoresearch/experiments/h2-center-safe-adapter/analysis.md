@@ -72,6 +72,38 @@ clause, claims of "the model can't see the near rim" are withdrawn in favor
 of "**the model mis-scales the near rim, systematically and precisely**",
 which is exactly what a recalibration table (H2.1) can fix if it transfers.
 
+## run_010 (2026-08-19, CONFIRMATORY — H2.1 recalibration table, both splits + fixed-affine variant)
+
+48-param table (16/48 cells had ≥2000 train px; |c|max 0.24), fit on train
+frames, applied to held-out frames, protocol-of-record eval:
+
+| zone (held-out) | even/odd | halves | even/odd, fixed affine |
+|---|---|---|---|
+| near rim (≤2 m, ≥38°) | 1.023→0.765 (**−25%**) | 0.639→0.502 (**−21%**) | −18% |
+| center (≤11°, pooled) | −1.8% | −15.4% | +6.5% |
+| far (≥3 m) | −12.4% | −5.5% | −11.3% |
+
+But the row detail shows **near-CENTER cells worsen consistently** (0–1 m at
+3.4°: 0.124→0.477; 1–2 m rows at low θ likewise), in every variant — including
+with the eval affine frozen from the uncorrected prediction. So the damage is
+not the re-alignment coupling; it is the table. **Diagnosis:** the correction
+is indexed by *predicted* depth, and the model's compression makes prediction
+many-to-one in GT depth — a 0.5 m object predicted at 1.4 m lands in the same
+bin as a true 1.4 m object, and the cell's median fix (fit on the majority)
+is wrong for the minority. **A post-hoc, output-indexed recalibration cannot
+invert a compression; disambiguation needs input evidence** (appearance,
+context, or multi-frame parallax).
+
+**H2.1 verdict: partially supported, with the failure mode being the finding.**
+The transferable-miscalibration component is real (−18…−25% near-rim on
+held-out frames, far zone also improves), so any learned adapter must beat
+this table. But the near-center collateral establishes, on measurement, why
+the next rung must condition on the image, not the output — and the
+ticket-024B multi-frame result says parallax evidence exists and is currently
+spent on the center. The learned-adapter protocol (H2.2) should therefore be
+input-conditioned and report the full joint table, not zone aggregates
+(zone pooling hid this failure until the rows were read).
+
 ## Cross-lane synthesis (ticket 024 A+B × H1 family)
 
 - Part A: raw-fisheye rim depth penalty survives the depth control (0.57–0.85);

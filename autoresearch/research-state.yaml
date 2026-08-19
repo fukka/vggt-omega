@@ -96,13 +96,20 @@ hypotheses:
     status: supported   # run_008b + run_009: real, and it is precise miscalibration (depth-range compression, radially modulated), not noise — dispersion is 2-10% everywhere.
     parent: H2
     priority: high
+  - id: H2.1
+    statement: >
+      The near-field-rim failure is a fixed, transferable miscalibration a
+      48-param (theta x predicted-depth) table can fix on held-out frames.
+    status: refuted   # partially: near-rim -18..-25% transfers (the table is now the mandatory baseline), but near-center collateral shows output-indexed correction cannot invert the compression
+    parent: H2
+    priority: high
   - id: H2
     statement: >
-      Center-safe adaptation: a zero-init adapter trained toward NEAR-FIELD RIM
-      depth (the measured failure zone) improves it while leaving central metrics
-      and pose stability within noise of vanilla. Sharpest form: route multi-frame
-      evidence into rim depth (ticket-024B shows context buys the centre, not the
-      field, while H1 shows the rim powers the alignment).
+      Center-safe adaptation: an INPUT-CONDITIONED zero-init adapter (image
+      evidence, not output-indexed) improves near-field-rim depth beyond the
+      H2.1 table without near-center collateral and without moving pose.
+      Sharpest form routes multi-frame parallax into rim depth (024B: context
+      buys the centre; H1: the rim powers the alignment).
     status: pending
     motivation: "Novelty axis N1. The adapter exists in raytun3r/; the new part is band-restricted training + Pareto (center,periphery) reporting."
     parent: null
@@ -135,7 +142,7 @@ experiments:
     and per feature-band; (c) center-vs-periphery Pareto pair (AbsRel_c, AbsRel_p).
   baseline_value: null
   best_value: null
-  total_runs: 10
+  total_runs: 11
   trajectory:
     - run_id: run_001
       hypothesis: H1
@@ -177,6 +184,10 @@ experiments:
       hypothesis: H2.0b
       outcome: "dispersion tiny everywhere; bias huge and structured — depth-range compression, radially modulated. Miscalibration, not noise."
       wall_time_min: 4
+    - run_id: run_010
+      hypothesis: H2.1
+      outcome: "near-rim -18..-25% transfers; near-center damaged — output-indexed recalibration cannot invert a compression; next rung must be input-conditioned"
+      wall_time_min: 10
 
 outer_loop:
   cycle: 1
