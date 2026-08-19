@@ -1,0 +1,53 @@
+{
+  "seq": "Apartment_release_clean_seq131_M1292",
+  "module": "/private/tmp/claude-501/-Users-fengjiazhang-Desktop-ADT-vggt-omega/c1591315-71f0-4ca2-9183-9f58fff82acc/scratchpad/h6_rim_module.pt",
+  "kv_sizes": {
+    "full": 1296,
+    "cone": 975,
+    "rim": 627,
+    "center": 348
+  },
+  "report": {
+    "full": {
+      "zones": {
+        "near_rim(<=2m,>=38deg)": 0.6850446760759333,
+        "center(<=11deg)": 0.38000105486227387,
+        "far(>=3m)": 0.21091457533999705
+      },
+      "mean_drift_m": 0.0
+    },
+    "cone": {
+      "zones": {
+        "near_rim(<=2m,>=38deg)": 0.6948505753598164,
+        "center(<=11deg)": 0.3716256851252178,
+        "far(>=3m)": 0.21448285973274117
+      },
+      "mean_drift_m": 0.2593350959451575
+    },
+    "rim": {
+      "zones": {
+        "near_rim(<=2m,>=38deg)": 0.6839071855679066,
+        "center(<=11deg)": 0.37389587420765036,
+        "far(>=3m)": 0.21218664245603824
+      },
+      "mean_drift_m": 0.21444923548321976
+    },
+    "center": {
+      "zones": {
+        "near_rim(<=2m,>=38deg)": 0.8081575170114046,
+        "center(<=11deg)": 0.366902476899606,
+        "far(>=3m)": 0.22500853851987207
+      },
+      "mean_drift_m": 0.4318968371341103
+    }
+  },
+  "config": {
+    "seq": "/Users/fengjiazhang/Documents/projectaria_tools_adt_data/Apartment_release_clean_seq131_M1292",
+    "module": "/private/tmp/claude-501/-Users-fengjiazhang-Desktop-ADT-vggt-omega/c1591315-71f0-4ca2-9183-9f58fff82acc/scratchpad/h6_rim_module.pt",
+    "size": 504,
+    "max_frames": 20,
+    "depth_max_m": 10.0,
+    "device": "cpu",
+    "out": "results/probe_kv_seq131.json"
+  }
+}

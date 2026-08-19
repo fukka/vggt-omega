@@ -26,3 +26,29 @@ Two honest reads, both consequential:
 
 The GPU run (#36, dense windows) is the real test; the pilot's job was to
 catch exactly this kind of setup error before burning box time — it did.
+
+## H6.1 KV-compression probe (2026-08-19, EXPLORATORY — seq131 is a training scene)
+
+Delivered #36 rim checkpoint, 20 dense frames, 504px, training-free KV
+restriction at eval (results/probe_kv_seq131.json):
+
+| KV set | tokens | near_rim | center | far |
+|---|---|---|---|---|
+| full (as trained) | 1296 | 0.685 | 0.380 | 0.211 |
+| cone only | 975 | 0.695 | 0.372 | 0.214 |
+| **rim only** | **627** | **0.684** | 0.374 | 0.212 |
+| center only | 348 | 0.808 | 0.367 | 0.225 |
+
+P1 confirmed: dead-corner KV droppable (+1.5% rel near_rim, inside the
+locked <2% bar). P2 confirmed sharply: rim-only KV matches full exactly
+(0.684 vs 0.685) while center-only costs +18% — the cross-frame evidence
+rim queries consume lives in the previous frame's rim band (ring-to-ring
+content overlap under egocentric motion). Attention cost: all-token
+1296x1296 -> rim-query 627x1296 (0.48x) -> rim-query+rim-KV 627x627
+(**0.23x, ~4.3x cheaper than all-token**), training-free.
+
+Caveats: training scene; small inter-frame motion (dense windows); zone
+metrics are alignment-normalized (mean drift up to 0.26 m for cone-KV shows
+raw outputs do move — the affine absorbs it). Held-out confirmation added
+as an addendum to #36. H6.2 (temporal KV pyramid) design note in
+protocol.md — now licensed by this measurement.

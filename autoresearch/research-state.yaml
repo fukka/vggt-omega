@@ -76,7 +76,7 @@ hypotheses:
       band) injects multi-frame evidence into rim depth at a fraction of full
       temporal attention's cost, breaking the "context buys the center" wall
       that ticket-024B measured.
-    status: active   # TRAINING DELIVERED 2026-08-19 (#36: rim+alltok, mv-loss healthy all 20 epochs); EVALS still owed (4 JSONs re-requested)
+    status: active   # TRAINING DELIVERED (#36); EVALS owed (4 JSONs + probe_kv addendum). H6.1 KV probe (exploratory, train scene): rim-KV == full-KV near_rim (0.684 vs 0.685) at HALF the KV -> module 0.23x all-token attention cost; center-KV +18%. Spark3R asymmetry confirmed on our module from the geometric side.
     motivation: "Human-directed method track 2 (efficient fisheye video model). Efficiency angle is principled: rim tokens are ~40% of the cone; the center provably doesn't need temporal help."
     parent: null
     priority: high
