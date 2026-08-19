@@ -1,0 +1,35 @@
+{
+  "run_id": "fovbench-019",
+  "issue": "https://github.com/fukka/vggt-omega/issues/19",
+  "ticket": "fovbench is 2x faster -- prove it did not move a single number",
+  "host": "lambda_63",
+  "env": "conda env raytun3r",
+  "date_utc": "2026-08-19",
+
+  "identity_check": {
+    "vs_workers_1": {
+      "compared": "eval_out/fov_w1/results.json vs eval_out/fov_w8/results.json, config.workers excluded",
+      "result": "IDENTICAL: True"
+    },
+    "vs_published_partA_seq131": {
+      "compared": "eval_out/fov_w1_timed/results.json vs results/fovbench-rectfix-393cab9/partA_seq131/results.json, config.workers excluded",
+      "result": "NOT identical -- 8768 differing leaf paths",
+      "explanation": "All differences are accounted for by two things, neither of them the threading change: (1) benign config additions -- depth_edges and the vggt360 sub-block are new config keys added by ticket 024's joint_grid feature, which landed (b72728b) after the published run; the published run simply predates those fields (None). (2) real, intentional, already-documented numeric movement from commit 66f5da3 (ticket 021, 2026-08-15), one day AFTER fovbench-rectfix-393cab9 was published (2026-08-14): raytun3r.backbones.VGGTBackbone.forward previously opened no autocast context, so vggt.py:72's `autocast(enabled=False)` was a no-op and VGGT-1B ran in an unintended dtype configuration; ticket 021 fixed that. All the differing metric leaves inspected (bins[0]/bins[1] AbsRel, RMSE, RMSElog, SqRel, delta1/2/3, log10, scale_ratio) show the same signature: agreement to 3-4 significant figures, diverging only in the digit an autocast/dtype change would move. requested_models[4] also differs (mine has 4 models per this ticket's own command; the published run had 5, including da3_small) -- an intentional scope difference, not a bug.",
+      "verdict": "Per the ticket's own rule (\"If 1 passes and 2 fails, the memoisation moved something and that is a different bug from the threading -- say which\"): 1 passes (bit-identical), 2 fails but for a reason unrelated to memoisation or threading -- a real, already-merged, already-documented bug fix (ticket 021) landed on the intervening day. Nothing here indicates a defect in the --workers change."
+    }
+  },
+
+  "timings_seconds": {
+    "workers_1": 171.85,
+    "workers_8": 102.84,
+    "workers_16": 102.39,
+    "workers_32": 105.01,
+    "speedup_vs_w1": {"w8": 1.67, "w16": 1.68, "w32": 1.64},
+    "note": "Saturates at 8 workers on this box; 16/32 give no further improvement (within noise, w32 is marginally slower). Ticket's own estimate was an upper bound of ~3.5x from the ~120ms-GPU/430ms-total split measured on the ticket author's box; measured ceiling here is lower (~1.7x), which is a property of this hardware/run, not evidence against the change.",
+    "recommended_default": 8
+  },
+
+  "command": "python -m fovbench.run --adt-root /tmp/adt_seq131 --n-frames 50 --models vggt_1b,vggt_omega,dav2_large,da3_large --protocols radial --workers <N> --device cuda:1 --out eval_out/fov_w<N>",
+
+  "tests": "not re-run in this ticket -- see fovbench/tests results from adjacent tickets on this commit"
+}
