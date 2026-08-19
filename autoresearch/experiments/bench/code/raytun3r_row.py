@@ -83,13 +83,17 @@ def main(argv=None) -> None:
         gtd = src.depth(k)
         if gtd is None:
             continue
-        gt_z, valid_gt = gtd
+        gt_range, valid_gt = gtd
         t0 = time.time()
         with torch.no_grad():
             pred = bb.forward(src.image(k)[None, None].to(args.device))
         pred.require_convention("range")
         d = pred.depth[0].cpu().numpy()
-        gr = (gt_z.numpy() / np.clip(cos_t, 1e-6, None))
+        # ADTSequence.depth() already returns euclidean range (converted on
+        # load, data.py:389-392). Dividing by cos again double-converts and
+        # inflates rim GT by up to 1/cos(theta_max)=1.73x — the bug behind
+        # issue #38's first delivery (found 2026-08-19 reconciling #37 vs #38).
+        gr = gt_range.numpy()
         valid = (cone & valid_gt.numpy().astype(bool) & (gr > 0)
                  & (gr <= args.depth_max_m) & (d > 1e-6))
         if valid.sum() < 1000:
