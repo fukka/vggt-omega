@@ -1,0 +1,3576 @@
+{
+  "seq": "Apartment_release_golden_skeleton_seq100_M1292",
+  "n_frames_total": 5365,
+  "n_frames_sampled": 100,
+  "categories_found": [
+    "accessory",
+    "air purifier",
+    "armchair",
+    "baking pan",
+    "bar stool",
+    "bed frame",
+    "blender",
+    "book",
+    "bookcase",
+    "bottle",
+    "bowl",
+    "box",
+    "built in",
+    "cabinet",
+    "cabinets and shelves",
+    "candle",
+    "chair",
+    "cleaning utensil",
+    "clothes basket",
+    "coaster",
+    "coffee maker",
+    "coffee table",
+    "computer keyboard",
+    "computer mouse",
+    "console table",
+    "consumer electronic device",
+    "container",
+    "cooktop",
+    "couch",
+    "cup",
+    "curtain",
+    "cutting board",
+    "decorative accessory",
+    "dehumidifier",
+    "desk clock",
+    "desk lamp",
+    "dining chair",
+    "dining table",
+    "dishrack",
+    "door",
+    "dressing table",
+    "electronic device control",
+    "figurine",
+    "food object",
+    "food processor",
+    "fork",
+    "freestanding accessory",
+    "frying pan",
+    "hat",
+    "hook",
+    "house plant",
+    "keys",
+    "kitchen utensil",
+    "laptop computer",
+    "light",
+    "liquid soap dispenser",
+    "magazine",
+    "mattress",
+    "mouse pad",
+    "musical instrument",
+    "napkin",
+    "notebook",
+    "part of a cabinet/wardrobe",
+    "person",
+    "pet bowl",
+    "picture",
+    "pillow",
+    "plate",
+    "play set",
+    "pot",
+    "rack",
+    "refrigerator",
+    "remote control",
+    "router",
+    "safety sign",
+    "scissors",
+    "shelf",
+    "shelter",
+    "shoe rack",
+    "side table",
+    "smart home speaker",
+    "smart home video",
+    "speaker",
+    "spice rack",
+    "spoon",
+    "spray bottle",
+    "step ladder",
+    "step stool",
+    "surveillance camera",
+    "table",
+    "tea kettle",
+    "television",
+    "thermostat",
+    "tissue box",
+    "toaster",
+    "toy",
+    "trash can",
+    "tray",
+    "tv stand",
+    "vase",
+    "video game controller",
+    "wall artwork",
+    "wall clock",
+    "wall-mounted coat rack",
+    "wallet",
+    "wine rack"
+  ],
+  "human_instances_found": [
+    {
+      "id": 6810803442292599,
+      "name": "Skeleton_T",
+      "category": "person",
+      "motion_type": "MotionType.DYNAMIC"
+    }
+  ],
+  "mean_dyn_frac": 0.007968491054340072,
+  "max_dyn_frac": 0.07065218480473334,
+  "frac_frames_with_any_dynamic_pixel": 0.3,
+  "frames": [
+    {
+      "frame_id": "87507177856387",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87508977574050",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87510777278850",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87512610319100",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87514410030300",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87516209745175",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87518009455050",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87519809166350",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87521608877100",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87523441918925",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87525241631012",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87527041336475",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87528841062675",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87530640762850",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87532473809262",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87534273523550",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87536139891100",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87537939604012",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87539739316925",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87541539027300",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87543372068475",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.079,
+        "p10": 0.778,
+        "p90": 3.111,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87545171780012",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 1.981,
+        "p10": 0.598,
+        "p90": 2.894,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87546971488137",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0036961748298042756,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5533
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.394,
+        "p10": 0.368,
+        "p90": 0.455,
+        "n_pixels": 5533
+      },
+      "static_depth_stats_m": {
+        "median": 1.883,
+        "p10": 0.635,
+        "p90": 2.732,
+        "n_pixels": 1491420
+      }
+    },
+    {
+      "frame_id": "87548771196475",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.041773522615606504,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        366,
+        8688,
+        15771,
+        12322,
+        25386
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.339,
+        "p10": 0.272,
+        "p90": 0.373,
+        "n_pixels": 62533
+      },
+      "static_depth_stats_m": {
+        "median": 2.001,
+        "p10": 0.611,
+        "p90": 2.7640000000000002,
+        "n_pixels": 1434420
+      }
+    },
+    {
+      "frame_id": "87550570907425",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.04257314691910835,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        173,
+        9784,
+        21058,
+        32715
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.293,
+        "p10": 0.249,
+        "p90": 0.33,
+        "n_pixels": 63730
+      },
+      "static_depth_stats_m": {
+        "median": 1.975,
+        "p10": 0.552,
+        "p90": 2.601,
+        "n_pixels": 1433223
+      }
+    },
+    {
+      "frame_id": "87552403946425",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.05332031132573969,
+      "dyn_theta_hist": [
+        0,
+        0,
+        122,
+        6174,
+        12196,
+        13545,
+        26507,
+        21274
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.375,
+        "p10": 0.266,
+        "p90": 0.43,
+        "n_pixels": 79818
+      },
+      "static_depth_stats_m": {
+        "median": 1.95,
+        "p10": 0.661,
+        "p90": 2.778,
+        "n_pixels": 1417135
+      }
+    },
+    {
+      "frame_id": "87554203664225",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.045078903612872284,
+      "dyn_theta_hist": [
+        0,
+        0,
+        965,
+        7226,
+        13281,
+        13412,
+        12274,
+        20323
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.326,
+        "p10": 0.252,
+        "p90": 0.41300000000000003,
+        "n_pixels": 67481
+      },
+      "static_depth_stats_m": {
+        "median": 1.97,
+        "p10": 0.603,
+        "p90": 2.587,
+        "n_pixels": 1429472
+      }
+    },
+    {
+      "frame_id": "87556003381300",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 5.344189162919611e-06,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.385,
+        "p10": 0.384,
+        "p90": 0.387,
+        "n_pixels": 8
+      },
+      "static_depth_stats_m": {
+        "median": 2.062,
+        "p10": 0.554,
+        "p90": 2.723,
+        "n_pixels": 1496945
+      }
+    },
+    {
+      "frame_id": "87557803089925",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.033216139718481474,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        2022,
+        13015,
+        13974,
+        20712
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.35000000000000003,
+        "p10": 0.263,
+        "p90": 0.47500000000000003,
+        "n_pixels": 49723
+      },
+      "static_depth_stats_m": {
+        "median": 2.203,
+        "p10": 0.597,
+        "p90": 2.676,
+        "n_pixels": 1447230
+      }
+    },
+    {
+      "frame_id": "87559602797225",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.07065218480473334,
+      "dyn_theta_hist": [
+        0,
+        0,
+        2225,
+        6339,
+        12015,
+        19301,
+        28920,
+        36963
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.262,
+        "p10": 0.201,
+        "p90": 0.417,
+        "n_pixels": 105763
+      },
+      "static_depth_stats_m": {
+        "median": 2.297,
+        "p10": 0.605,
+        "p90": 2.709,
+        "n_pixels": 1391190
+      }
+    },
+    {
+      "frame_id": "87561402512350",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.025493786378062638,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        77,
+        4974,
+        8031,
+        8509,
+        16572
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.33,
+        "p10": 0.25,
+        "p90": 0.40800000000000003,
+        "n_pixels": 38163
+      },
+      "static_depth_stats_m": {
+        "median": 2.217,
+        "p10": 0.604,
+        "p90": 2.684,
+        "n_pixels": 1458790
+      }
+    },
+    {
+      "frame_id": "87563235552600",
+      "n_cone_pixels": 1496074,
+      "dyn_frac": 0.03726219424974968,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        1848,
+        8154,
+        20546,
+        13898,
+        11301
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.246,
+        "p10": 0.20700000000000002,
+        "p90": 0.299,
+        "n_pixels": 55747
+      },
+      "static_depth_stats_m": {
+        "median": 2.548,
+        "p10": 0.905,
+        "p90": 3.519,
+        "n_pixels": 1440327
+      }
+    },
+    {
+      "frame_id": "87565035266975",
+      "n_cone_pixels": 1495468,
+      "dyn_frac": 0.032159163552814236,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        1548,
+        9346,
+        13654,
+        12016,
+        11529
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.263,
+        "p10": 0.22,
+        "p90": 0.318,
+        "n_pixels": 48093
+      },
+      "static_depth_stats_m": {
+        "median": 2.101,
+        "p10": 0.994,
+        "p90": 4.352,
+        "n_pixels": 1447375
+      }
+    },
+    {
+      "frame_id": "87566834968725",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0075466631216878554,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3227,
+        8070
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.34900000000000003,
+        "p10": 0.312,
+        "p90": 0.41500000000000004,
+        "n_pixels": 11297
+      },
+      "static_depth_stats_m": {
+        "median": 1.958,
+        "p10": 0.645,
+        "p90": 3.589,
+        "n_pixels": 1485656
+      }
+    },
+    {
+      "frame_id": "87568634688475",
+      "n_cone_pixels": 1496033,
+      "dyn_frac": 0.002808093136982941,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4201
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.389,
+        "p10": 0.352,
+        "p90": 0.895,
+        "n_pixels": 4201
+      },
+      "static_depth_stats_m": {
+        "median": 1.825,
+        "p10": 0.633,
+        "p90": 3.122,
+        "n_pixels": 1491832
+      }
+    },
+    {
+      "frame_id": "87570434397350",
+      "n_cone_pixels": 1496182,
+      "dyn_frac": 0.01500084882721487,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2814,
+        7952,
+        11678
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.365,
+        "p10": 0.28400000000000003,
+        "p90": 0.517,
+        "n_pixels": 22444
+      },
+      "static_depth_stats_m": {
+        "median": 1.699,
+        "p10": 0.603,
+        "p90": 2.92,
+        "n_pixels": 1473738
+      }
+    },
+    {
+      "frame_id": "87572267441475",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.019748783027924058,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        940,
+        6299,
+        7276,
+        15048
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.36,
+        "p10": 0.267,
+        "p90": 0.491,
+        "n_pixels": 29563
+      },
+      "static_depth_stats_m": {
+        "median": 2.047,
+        "p10": 0.611,
+        "p90": 3.537,
+        "n_pixels": 1467390
+      }
+    },
+    {
+      "frame_id": "87574067151175",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0599223890128815,
+      "dyn_theta_hist": [
+        0,
+        0,
+        14,
+        5424,
+        12268,
+        17812,
+        21785,
+        32398
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.27,
+        "p10": 0.213,
+        "p90": 0.352,
+        "n_pixels": 89701
+      },
+      "static_depth_stats_m": {
+        "median": 2.228,
+        "p10": 0.61,
+        "p90": 4.877,
+        "n_pixels": 1407252
+      }
+    },
+    {
+      "frame_id": "87575866858800",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.01723166993218892,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        694,
+        9224,
+        15877
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.325,
+        "p10": 0.266,
+        "p90": 0.47400000000000003,
+        "n_pixels": 25795
+      },
+      "static_depth_stats_m": {
+        "median": 2.128,
+        "p10": 0.628,
+        "p90": 3.73,
+        "n_pixels": 1471158
+      }
+    },
+    {
+      "frame_id": "87577666578175",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.23,
+        "p10": 0.725,
+        "p90": 4.7,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87579466290550",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.242,
+        "p10": 1.3840000000000001,
+        "p90": 4.551,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87581265998600",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.451,
+        "p10": 1.229,
+        "p90": 4.493,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87583099038850",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 1.8960000000000001,
+        "p10": 1.097,
+        "p90": 3.001,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87584898748050",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 1.762,
+        "p10": 1.0230000000000001,
+        "p90": 2.583,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87586698460975",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.004096320993377881,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6132
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.41200000000000003,
+        "p10": 0.383,
+        "p90": 0.456,
+        "n_pixels": 6132
+      },
+      "static_depth_stats_m": {
+        "median": 2.181,
+        "p10": 0.723,
+        "p90": 2.9250000000000003,
+        "n_pixels": 1490821
+      }
+    },
+    {
+      "frame_id": "87588498173887",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.02539291480761253,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10661,
+        27351
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.297,
+        "p10": 0.264,
+        "p90": 0.336,
+        "n_pixels": 38012
+      },
+      "static_depth_stats_m": {
+        "median": 2.404,
+        "p10": 0.639,
+        "p90": 4.0,
+        "n_pixels": 1458941
+      }
+    },
+    {
+      "frame_id": "87590297886762",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.03764580451089647,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        10164,
+        27608,
+        18581
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.3,
+        "p10": 0.253,
+        "p90": 0.34600000000000003,
+        "n_pixels": 56354
+      },
+      "static_depth_stats_m": {
+        "median": 2.321,
+        "p10": 0.643,
+        "p90": 2.977,
+        "n_pixels": 1440599
+      }
+    },
+    {
+      "frame_id": "87592130927012",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.04176617435550749,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        168,
+        15988,
+        25644,
+        20722
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.28300000000000003,
+        "p10": 0.23800000000000002,
+        "p90": 0.367,
+        "n_pixels": 62522
+      },
+      "static_depth_stats_m": {
+        "median": 2.3000000000000003,
+        "p10": 0.7020000000000001,
+        "p90": 2.973,
+        "n_pixels": 1434431
+      }
+    },
+    {
+      "frame_id": "87593930636225",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.009800574901149202,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3572,
+        11099
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.432,
+        "p10": 0.359,
+        "p90": 0.502,
+        "n_pixels": 14671
+      },
+      "static_depth_stats_m": {
+        "median": 1.94,
+        "p10": 0.63,
+        "p90": 2.664,
+        "n_pixels": 1482282
+      }
+    },
+    {
+      "frame_id": "87595730349137",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.024692158003624697,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        4031,
+        17593,
+        15339
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.404,
+        "p10": 0.309,
+        "p90": 0.484,
+        "n_pixels": 36963
+      },
+      "static_depth_stats_m": {
+        "median": 1.702,
+        "p10": 0.638,
+        "p90": 2.5100000000000002,
+        "n_pixels": 1459990
+      }
+    },
+    {
+      "frame_id": "87597530062050",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.03522822693832071,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        934,
+        14112,
+        19356,
+        18333
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.307,
+        "p10": 0.248,
+        "p90": 0.357,
+        "n_pixels": 52735
+      },
+      "static_depth_stats_m": {
+        "median": 2.309,
+        "p10": 0.34400000000000003,
+        "p90": 3.017,
+        "n_pixels": 1444218
+      }
+    },
+    {
+      "frame_id": "87599329774925",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.03416005712938215,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        9046,
+        25095,
+        16995
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.321,
+        "p10": 0.276,
+        "p90": 0.394,
+        "n_pixels": 51136
+      },
+      "static_depth_stats_m": {
+        "median": 2.201,
+        "p10": 0.616,
+        "p90": 2.898,
+        "n_pixels": 1445817
+      }
+    },
+    {
+      "frame_id": "87601129484137",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0439292349191992,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        2397,
+        15749,
+        25284,
+        22330
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.307,
+        "p10": 0.256,
+        "p90": 0.384,
+        "n_pixels": 65760
+      },
+      "static_depth_stats_m": {
+        "median": 2.037,
+        "p10": 0.336,
+        "p90": 2.742,
+        "n_pixels": 1431193
+      }
+    },
+    {
+      "frame_id": "87602962524387",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.012580221289512764,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        7032,
+        11800
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.354,
+        "p10": 0.277,
+        "p90": 0.453,
+        "n_pixels": 18832
+      },
+      "static_depth_stats_m": {
+        "median": 1.941,
+        "p10": 0.678,
+        "p90": 2.641,
+        "n_pixels": 1478121
+      }
+    },
+    {
+      "frame_id": "87604762237300",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0006833881892083452,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1023
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.394,
+        "p10": 0.373,
+        "p90": 0.417,
+        "n_pixels": 1023
+      },
+      "static_depth_stats_m": {
+        "median": 1.944,
+        "p10": 0.631,
+        "p90": 2.589,
+        "n_pixels": 1495930
+      }
+    },
+    {
+      "frame_id": "87606561953012",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.782,
+        "p10": 1.185,
+        "p90": 6.664,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87608361667512",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 3.134,
+        "p10": 1.459,
+        "p90": 5.456,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87610161379262",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.3890000000000002,
+        "p10": 1.147,
+        "p90": 3.993,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87611994418425",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.364,
+        "p10": 0.704,
+        "p90": 2.806,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87613794132300",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.722,
+        "p10": 1.23,
+        "p90": 5.3740000000000006,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87615593842800",
+      "n_cone_pixels": 1496496,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 3.274,
+        "p10": 1.294,
+        "p90": 4.964,
+        "n_pixels": 1496496
+      }
+    },
+    {
+      "frame_id": "87617393555675",
+      "n_cone_pixels": 1496691,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 3.228,
+        "p10": 1.075,
+        "p90": 3.898,
+        "n_pixels": 1496691
+      }
+    },
+    {
+      "frame_id": "87619193257225",
+      "n_cone_pixels": 1495817,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.498,
+        "p10": 1.2570000000000001,
+        "p90": 3.335,
+        "n_pixels": 1495817
+      }
+    },
+    {
+      "frame_id": "87620992970050",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.67,
+        "p10": 0.858,
+        "p90": 5.737,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87622826018387",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.531,
+        "p10": 0.932,
+        "p90": 4.651,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87624625726225",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.888,
+        "p10": 1.679,
+        "p90": 5.9830000000000005,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87626425433762",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.605,
+        "p10": 1.461,
+        "p90": 5.344,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87628225148637",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.46,
+        "p10": 1.314,
+        "p90": 3.878,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87630024861550",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.209,
+        "p10": 1.101,
+        "p90": 2.718,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87631857917637",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.383,
+        "p10": 1.5310000000000001,
+        "p90": 4.546,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87633657618925",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.781,
+        "p10": 1.5130000000000001,
+        "p90": 7.596,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87635457329225",
+      "n_cone_pixels": 1496299,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 3.374,
+        "p10": 1.461,
+        "p90": 8.128,
+        "n_pixels": 1496299
+      }
+    },
+    {
+      "frame_id": "87637257035725",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 3.295,
+        "p10": 1.36,
+        "p90": 6.248,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87639056751887",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.411,
+        "p10": 0.755,
+        "p90": 3.492,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87640856469887",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.002934627874088231,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4393
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.41000000000000003,
+        "p10": 0.384,
+        "p90": 0.466,
+        "n_pixels": 4393
+      },
+      "static_depth_stats_m": {
+        "median": 0.6960000000000001,
+        "p10": 0.337,
+        "p90": 3.04,
+        "n_pixels": 1492560
+      }
+    },
+    {
+      "frame_id": "87642689510300",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.016450082267111928,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2809,
+        9166,
+        12650
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": {
+        "median": 0.319,
+        "p10": 0.247,
+        "p90": 0.505,
+        "n_pixels": 24625
+      },
+      "static_depth_stats_m": {
+        "median": 0.387,
+        "p10": 0.23800000000000002,
+        "p90": 2.297,
+        "n_pixels": 1472328
+      }
+    },
+    {
+      "frame_id": "87644489221925",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 1.752,
+        "p10": 0.796,
+        "p90": 2.657,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87646288932425",
+      "n_cone_pixels": 1496266,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.613,
+        "p10": 1.121,
+        "p90": 5.252,
+        "n_pixels": 1496266
+      }
+    },
+    {
+      "frame_id": "87648088454387",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.54,
+        "p10": 0.742,
+        "p90": 3.1990000000000003,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87649888350637",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.346,
+        "p10": 0.75,
+        "p90": 2.809,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87651721393550",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.56,
+        "p10": 1.6360000000000001,
+        "p90": 6.104,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87653521099850",
+      "n_cone_pixels": 1496678,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 3.569,
+        "p10": 1.141,
+        "p90": 3.9570000000000003,
+        "n_pixels": 1496678
+      }
+    },
+    {
+      "frame_id": "87655320813100",
+      "n_cone_pixels": 1496164,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.965,
+        "p10": 1.3880000000000001,
+        "p90": 4.526,
+        "n_pixels": 1496164
+      }
+    },
+    {
+      "frame_id": "87657120524975",
+      "n_cone_pixels": 1495446,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.407,
+        "p10": 1.2,
+        "p90": 4.94,
+        "n_pixels": 1495446
+      }
+    },
+    {
+      "frame_id": "87658920242800",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.612,
+        "p10": 0.86,
+        "p90": 5.611,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87660719988387",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.7560000000000002,
+        "p10": 1.242,
+        "p90": 4.325,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87662552993350",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.656,
+        "p10": 1.637,
+        "p90": 5.862,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87664352701300",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.539,
+        "p10": 1.262,
+        "p90": 4.713,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87666152414225",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.293,
+        "p10": 1.143,
+        "p90": 3.235,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87667952127137",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 1.9140000000000001,
+        "p10": 1.278,
+        "p90": 2.907,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87669751836350",
+      "n_cone_pixels": 1496953,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.32,
+        "p10": 1.508,
+        "p90": 4.444,
+        "n_pixels": 1496953
+      }
+    },
+    {
+      "frame_id": "87671584874512",
+      "n_cone_pixels": 1496465,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.811,
+        "p10": 1.437,
+        "p90": 7.928,
+        "n_pixels": 1496465
+      }
+    },
+    {
+      "frame_id": "87673384587425",
+      "n_cone_pixels": 1496459,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.936,
+        "p10": 1.443,
+        "p90": 7.949,
+        "n_pixels": 1496459
+      }
+    },
+    {
+      "frame_id": "87675184303387",
+      "n_cone_pixels": 1496459,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.936,
+        "p10": 1.443,
+        "p90": 7.949,
+        "n_pixels": 1496459
+      }
+    },
+    {
+      "frame_id": "87676984022637",
+      "n_cone_pixels": 1496459,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.936,
+        "p10": 1.443,
+        "p90": 7.949,
+        "n_pixels": 1496459
+      }
+    },
+    {
+      "frame_id": "87678783731512",
+      "n_cone_pixels": 1496459,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.936,
+        "p10": 1.443,
+        "p90": 7.949,
+        "n_pixels": 1496459
+      }
+    },
+    {
+      "frame_id": "87680583443262",
+      "n_cone_pixels": 1496459,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.936,
+        "p10": 1.443,
+        "p90": 7.949,
+        "n_pixels": 1496459
+      }
+    },
+    {
+      "frame_id": "87682416474350",
+      "n_cone_pixels": 1496459,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.936,
+        "p10": 1.443,
+        "p90": 7.949,
+        "n_pixels": 1496459
+      }
+    },
+    {
+      "frame_id": "87684216189012",
+      "n_cone_pixels": 1496459,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.936,
+        "p10": 1.443,
+        "p90": 7.949,
+        "n_pixels": 1496459
+      }
+    },
+    {
+      "frame_id": "87686015904850",
+      "n_cone_pixels": 1496459,
+      "dyn_frac": 0.0,
+      "dyn_theta_hist": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "theta_bin_edges_deg": [
+        0.0,
+        6.85375,
+        13.7075,
+        20.56125,
+        27.415,
+        34.26875,
+        41.1225,
+        47.97625,
+        54.83
+      ],
+      "dyn_depth_stats_m": null,
+      "static_depth_stats_m": {
+        "median": 2.936,
+        "p10": 1.443,
+        "p90": 7.949,
+        "n_pixels": 1496459
+      }
+    }
+  ]
+}
