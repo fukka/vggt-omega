@@ -1,0 +1,7 @@
+{
+  "measured": "2026-08-26, Mac CPU, dim=768, grid 36x36 at 504^2, KB4 Aria",
+  "tokens": {"grid": 1296, "in_cone": 975, "rim_gt35deg_in_cone": 627},
+  "module_flops_G": {"rim_query": 5.45, "all_token": 11.28, "ratio": 0.48},
+  "module_latency_ms_cpu": {"rim_query": 30.2, "all_token": 49.0},
+  "note": "analytic FLOPs = 4*Q*K*C + 8*Q*C^2; latency = 20-iter mean after warmup; ratio is the paper number, absolute ms are Mac-CPU-specific"
+}

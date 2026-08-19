@@ -413,3 +413,16 @@
 - Main-table inventory now complete on our side: frozen rows (#37), our
   three rungs (#35/#36 + run_011 in hand), the strongest adapter baseline
   (#38). Everything else is analysis when numbers land.
+
+## 2026-08-26 (tick 28) — H6 rim-mask cone bug caught by the efficiency pass
+
+- Status ping posted on #35 (queue quiet for several ticks; keeping the
+  blocker visible per handoff convention).
+- Measuring H6's efficiency table exposed a real bug: rim_mask_for did not
+  intersect the imaged cone, so the square grid's dead corners (25% of
+  tokens) were attention queries. Fixed (rim = theta in (35deg, theta_max]),
+  threaded through trainer/eval/smoke, regression smoke PASSED, #36 notified
+  to pull before running.
+- Corrected efficiency numbers (paper table): rim 627/1296 grid tokens (64%
+  of cone); module FLOPs 0.48x of all-token (5.45G vs 11.28G); CPU latency
+  30.2 vs 49.0 ms. Saved to h6 results/efficiency.json.
