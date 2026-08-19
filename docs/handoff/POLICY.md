@@ -12,6 +12,13 @@ This splits the work across two accounts that share nothing but a GitHub repo.
 
 Repo: `github.com/fukka/vggt-omega`. Both accounts need `gh auth login`.
 
+There is a second GPU box, the A100-80GB **`space-container` pod**, reached
+through `lambda_63`. It is the only box that fits some arms and the wrong box for
+others, and connecting to it, rebuilding its environment and moving data to it
+all have non-obvious failure modes. **Read
+[`SPACE_CONTAINER.md`](SPACE_CONTAINER.md) before touching it** — do not
+rediscover any of it from scratch.
+
 ---
 
 ## The rule

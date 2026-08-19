@@ -3,6 +3,12 @@
 Commands only. Run from the repo root on the GPU box. Every flag below was checked
 against the scripts' argparse — nothing here is invented.
 
+Running on the **`space-container` A100 pod** rather than `lambda_63`? Read
+[`docs/handoff/SPACE_CONTAINER.md`](docs/handoff/SPACE_CONTAINER.md) first — how
+to connect, how to rebuild its environment (its default torch is the wrong CUDA
+build), how to stage data, and the `OMP_NUM_THREADS=16` setting that is worth a
+7x speedup there.
+
 Edit these two lines to match the box, then paste the blocks in order.
 
 ```bash
