@@ -88,6 +88,12 @@ scale_shift, range domain, full joint tables (zone pools hide collateral).
   Center-PH wins ScanNet++ depth 2.5× *by discarding the rim* and loses
   rotation 3× for it; RayTun3R wins pose but concedes depth on 4/5 datasets.
   Nobody holds both — that is the N1 lane.
+- **Center-PH measured on ADT (2026-08-19, local anchor, exploratory)**: its
+  ScanNet++ depth win does NOT transfer — on identical pixels the rectified
+  input leaves the center flat and makes the near-field center (egocentric
+  workspace, ≤2m) **62% worse**, while covering only 49.6% of the near-rim
+  zone. "Crop the problem away" fails exactly where egocentric products
+  live. (bench/analysis.md; held-out-scene reproduction queued behind #35-38.)
 - **To compare the same way as RayTun3R** we still need: a Center-PH
   baseline (CPU-buildable), a ScanNet++ 3f15 row (their named sequence =
   external published anchor; raytun3r/ already loads the dataset), and an
