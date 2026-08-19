@@ -136,10 +136,10 @@ hypotheses:
       Dynamic-region handling: hand/dynamic pixels in ADT contribute a measurable,
       disproportionate share of depth error and correspondence outliers; masking them
       (GT masks first, predicted later) improves both static depth eval and pose.
-    status: pending
-    motivation: "Novelty axis N4. ADT has GT segmentation; quantify the size of the problem before building anything."
+    status: active   # ticket #28 delivered: dyn pixels are 0.8-4% of cone, 80%+ at theta>41deg, median depth 0.26-0.94m — exactly the near-field-rim failure zone. H4.1 pose/depth test = ticket 029 (issue #30)
+    motivation: "Novelty axis N4 — now measured to overlap the compression zone and the pose-critical band; the four axes unify at the near-field rim."
     parent: null
-    priority: medium
+    priority: high
 
 experiments:
   proxy_metric: >

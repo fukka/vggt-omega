@@ -97,3 +97,21 @@
 - Direction: deepen H2 (transfer), then VGGT-Omega variant, then multi-frame
   routing. Paper skeleton is forming: diagnosis (compression) -> asymmetry
   (rim gives, doesn't receive) -> minimal fix (feature head) -> transfer.
+
+## 2026-08-20 (tick 5) — the four axes collide at the near-field rim
+
+- run_011 flagged cell de-flagged: 392 px of 2.45M (0.016%) — noise.
+- Ticket #28 delivered (GPU downloaded 3 skeleton sequences; none existed on
+  the box before — the "clean" release never contains humans). Dynamic
+  (person) pixels: 0.8-4% of cone pixels; 80%+ beyond theta=41deg in
+  single-skeleton sequences; median depth 0.26-0.94 m. **The hand/body zone
+  IS the near-field rim** — the same cells where compression is worst
+  (run_008b/009) and inside the band pose relies on (runs 004-007). All four
+  of the user's novelty axes now point at one measured object.
+- Filed ticket 029 (H4.1): does masking GT-dynamic pixels improve pose beyond
+  an area-matched random mask; does removing hands from the input improve
+  static depth. Uses the #27 calibration (no hand-eye needed on the box).
+- Outer loop cycle 2 (informal): direction stays DEEPEN — transfer of the
+  feature head (#29 pending) + H4.1; the paper narrative is now fixed:
+  diagnosis -> asymmetry -> collision at the near-field rim -> minimal safe
+  fix -> validation.
