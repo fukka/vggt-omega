@@ -392,3 +392,12 @@
   rung justified by a measured finding, with the two "deliberately not done"
   paragraphs (patch undistortion <=0.21 px; hands = occlusion). Open table/
   figure slots enumerated so numbers drop straight in when tickets land.
+
+## 2026-08-26 (tick 26) — citation verification pass done; GPU still training
+
+- All 13 arXiv citations fetched programmatically (titles/authors/years
+  verified), including the two previously-unverified web finds (DrivingDepth
+  confirmed real) and the two found by search (ADT 2306.06362, MAGSAC++
+  1912.05909). refs.bib generated from fetched metadata only. Two
+  non-arXiv items remain flagged (DepthFisheye/ICCVM, Lowe/CrossRef).
+- #35/#36/#37 still in the box queue.
