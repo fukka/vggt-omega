@@ -45,6 +45,21 @@ THETA_BINS = 8
 GT_DEPTH_EDGES = (0.0, 1.0, 2.0, 3.0, 5.0, 10.0)
 
 
+def _frame_zones(fs_, fn_, t_edges, frame):
+    """Per-frame zone AbsRel for bootstrap error bars (review change #3)."""
+    nb_d = len(GT_DEPTH_EDGES) - 1
+    t_mid = [math.degrees(0.5 * (t_edges[i] + t_edges[i + 1]))
+             for i in range(THETA_BINS)]
+    def _z(cells):
+        wg = sum(fn_[i, j] for i, j in cells)
+        return float(sum(fs_[i, j] for i, j in cells) / wg) if wg else None
+    nr = [(i, j) for i in range(THETA_BINS) for j in range(nb_d)
+          if t_mid[i] >= 38 and GT_DEPTH_EDGES[j + 1] <= 2.0]
+    ce = [(i, j) for i in range(THETA_BINS) for j in range(nb_d)
+          if t_mid[i] <= 11]
+    return {"frame": frame, "near_rim": _z(nr), "center": _z(ce)}
+
+
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--seq", required=True)
@@ -100,6 +115,8 @@ def main(argv=None) -> None:
     acc = {arm: [np.zeros((THETA_BINS, nb_d)),
                  np.zeros((THETA_BINS, nb_d), dtype=np.int64)]
            for arm in ("before", "after")}
+    per_frame = {"before_ctx": [], "after": []}
+    _nr_cells = None
     prev_feats = None
     for n in s.frames:
         with torch.no_grad():
@@ -121,11 +138,16 @@ def main(argv=None) -> None:
             ti = t_idx[valid]
             di = np.clip(np.digitize(gr[valid], GT_DEPTH_EDGES) - 1, 0, nb_d - 1)
             flat = ti * nb_d + di
-            acc[arm][0] += np.bincount(flat, weights=absrel,
-                                       minlength=THETA_BINS * nb_d
-                                       ).reshape(THETA_BINS, nb_d)
-            acc[arm][1] += np.bincount(flat, minlength=THETA_BINS * nb_d
-                                       ).reshape(THETA_BINS, nb_d)
+            fs_ = np.bincount(flat, weights=absrel,
+                              minlength=THETA_BINS * nb_d
+                              ).reshape(THETA_BINS, nb_d)
+            fn_ = np.bincount(flat, minlength=THETA_BINS * nb_d
+                              ).reshape(THETA_BINS, nb_d)
+            if arm == "after":
+                per_frame["after"].append(
+                    _frame_zones(fs_, fn_, t_edges, int(n)))
+            acc[arm][0] += fs_
+            acc[arm][1] += fn_
         prev_feats = feats
 
     # NOTE: "before" pools ALL frames, "after" pools frames 2..N (needs a
@@ -148,11 +170,15 @@ def main(argv=None) -> None:
             ti = t_idx[valid]
             di = np.clip(np.digitize(gr[valid], GT_DEPTH_EDGES) - 1, 0, nb_d - 1)
             flat = ti * nb_d + di
-            acc_b2[0] += np.bincount(flat, weights=absrel,
-                                     minlength=THETA_BINS * nb_d
-                                     ).reshape(THETA_BINS, nb_d)
-            acc_b2[1] += np.bincount(flat, minlength=THETA_BINS * nb_d
-                                     ).reshape(THETA_BINS, nb_d)
+            fs_ = np.bincount(flat, weights=absrel,
+                              minlength=THETA_BINS * nb_d
+                              ).reshape(THETA_BINS, nb_d)
+            fn_ = np.bincount(flat, minlength=THETA_BINS * nb_d
+                              ).reshape(THETA_BINS, nb_d)
+            per_frame["before_ctx"].append(
+                _frame_zones(fs_, fn_, t_edges, int(n)))
+            acc_b2[0] += fs_
+            acc_b2[1] += fn_
         prev = n
 
     t_mid = [math.degrees(0.5 * (t_edges[i] + t_edges[i + 1]))
@@ -196,7 +222,8 @@ def main(argv=None) -> None:
             json.dump({"seq": s.name, "module": args.module,
                        "before": before.tolist(), "after": after.tolist(),
                        "counts": counts.tolist(), "zones": zones,
-                       "theta_bin_mid_deg": t_mid, "config": vars(args)},
+                       "theta_bin_mid_deg": t_mid, "per_frame": per_frame,
+                       "config": vars(args)},
                       f, indent=2)
         print(f"\n[eval] wrote {dst}")
 
