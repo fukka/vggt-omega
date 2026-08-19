@@ -497,3 +497,20 @@
   rectification — Center-PH's ScanNet++ depth win does not transfer to
   egocentric near-field ADT. Exploratory until reproduced on held-out scene.
 - Next: H7 pilot, H8 remap probe.
+
+## 2026-08-19 (tick 3-4) — ALL FOUR GPU TICKETS DELIVERED; H7 pilot read
+- #35/#36 training delivered (curves healthy, mv-loss check passed); evals
+  still owed, re-requested with the device-bug fixes landed (53c06c4).
+- #37 frozen rows: 5 models x 2 scenes (DAC skipped, ERP-native, documented).
+  KEY: held-out scenes have almost no near-field rim mass (seq136 ~50k px in
+  0-1m rim cells; decoration_seq132 zero 0-1m px anywhere) — near_rim numbers
+  there are small because the regime is absent, not because the failure is.
+- #38 RayTun3R rows: adaptation HURTS on both held-out ADT scenes (whole
+  0.172->0.229, 0.079->0.126; near-rim worse too; coverage >=0.974 so not
+  matcher starvation). Strongest published competitor, negative on our data.
+- Loader gap flagged: #38 vanilla vs #37 da3_small near_rim differ 3.6x on
+  the same scene — reconcile before any shared table.
+- H7 r=8: ties uniform on every zone; gate curve flat (|g-1|~0.06) — the
+  backbone's PE already lets LoRA condition spatially. r=4 arms running.
+- Fixed GPU-reported device bugs (losses.py x4, lora.py, raytun3r_row.py);
+  5/5 loss tests pass. #37/#38 closed with consuming comments.

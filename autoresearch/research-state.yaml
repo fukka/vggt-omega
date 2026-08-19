@@ -65,7 +65,7 @@ hypotheses:
       multi-frame consistency term that routes parallax evidence into rim
       depth, closes >=half of the distance-controlled rim penalty on held-out
       scenes, IMPROVES pose (RRA/RTA), and beats the readout head.
-    status: active   # mechanics CPU-verified (losses 5-part test suite caught+fixed the KB4 inversion bug; LoRA teacher bit-identical); training + eval = ticket #35, running
+    status: active   # TRAINING DELIVERED 2026-08-19 (#35: full+plain, 20ep@504, curves healthy; two device bugs found by GPU, fixed on organized 53c06c4); EVALS still owed by the box (8 JSONs, addendum re-requested)
     motivation: "Human-directed method track 1 (improving backbones). Every component is dictated by a measured finding: compression map (runs 008b/009), rim-feature dependence (runs 004-007), context-buys-the-center (024B)."
     parent: null
     priority: high
@@ -76,7 +76,7 @@ hypotheses:
       band) injects multi-frame evidence into rim depth at a fraction of full
       temporal attention's cost, breaking the "context buys the center" wall
       that ticket-024B measured.
-    status: pending
+    status: active   # TRAINING DELIVERED 2026-08-19 (#36: rim+alltok, mv-loss healthy all 20 epochs); EVALS still owed (4 JSONs re-requested)
     motivation: "Human-directed method track 2 (efficient fisheye video model). Efficiency angle is principled: rim tokens are ~40% of the cone; the center provably doesn't need temporal help."
     parent: null
     priority: high
@@ -101,7 +101,7 @@ hypotheses:
       or smaller rank, because the measured failure field (run_009) is a
       smooth function of theta and uniform LoRA wastes capacity spending it
       isotropically.
-    status: pending   # brainstorm C1 (literature/2026-08-19-novelty-brainstorm.md); CPU pilot on seq131 next; no GPU ticket until pilot shows direction
+    status: active   # pilot r=8: TIES uniform LoRA on every zone (0.572 vs 0.567 near-rim) AND the learned gate is flat in theta (|g-1|~0.06 everywhere) — PE already gives LoRA spatial conditioning; r=4 arms (gated + uniform control) running to test the capacity angle before verdict
     motivation: "Model-level novelty per human directive; input-geometry-conditioned PEFT is unclaimed in the 2026-08-19 survey; inference-free (g(theta) precomputable per token)."
     parent: H5
     priority: high
