@@ -467,3 +467,13 @@
   video-depth mechanism (all-token, no camera geometry). Recorded in
   literature/2026-08-27-h6-novelty.md.
 - GPU: 0 deliveries; queue unchanged.
+
+## 2026-08-27 (tick 33) — collator ready; the blocker is named
+
+- collate_main_table.py: one command renders the paper's main-table draft
+  from whatever JSONs exist — already fills 6 rows (frozen anchor, rung 0/1
+  within-scene, 6-seq mean -63%, cross-scene -73%, omega -24%); the six
+  pending rows fill themselves as #35-#38 land.
+- Blocker made explicit to the human on the dashboard: the box session has
+  not been started since the #32-#34 batch; all four tickets are ready and
+  waiting on that single action.

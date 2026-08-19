@@ -22,7 +22,7 @@
 </head>
 <body>
 <h1>鱼眼深度研究 · 进度看板</h1>
-<p class="time">最近更新:2026-08-27 · 两个方法完成 CPU 试点:方法一方向确认,方法二拦下设置错误(这个页面会一直更新)</p>
+<p class="time">最近更新:2026-08-27 晚 · <b>等待 GPU:四张单子(#35–#38)就绪但机器侧会话未开工</b>(这个页面会一直更新)</p>
 
 <h2>一、我们在研究什么(一句话版)</h2>
 <p class="big">Aria 眼镜的鱼眼相机视野很宽(约110°),但现有的深度估计大模型都是在普通相机图片上训练的:
@@ -171,8 +171,8 @@ CPU上几分钟就能训完。下一个问题:换别的场景还灵不灵?(已�
 <td>近处边缘 -18%~-25%(没见过的帧上),但近处中心被修坏——证明了必须看图像来修,只看输出不够。这张表成为后续所有方法的底线。</td></tr>
 <tr class="done"><td>✅ 已解除</td><td>之前的两个卡点</td><td><span class="tag gpu">GPU-Claude</span></td>
 <td>#27(标定)和 #28(手的统计)都已交付,"移动方向"类实验和方向④都解锁了。</td></tr>
-<tr class="todo"><td>👀 请你看</td><td>两张 GPU 任务单发得对不对;研究方向有没有要纠偏的</td><td><span class="tag you">你</span></td>
-<td>GitHub issues <a href="https://github.com/fukka/vggt-omega/issues/27">#27</a>、<a href="https://github.com/fukka/vggt-omega/issues/28">#28</a>。有任何想法直接在对话里说即可。</td></tr>
+<tr class="block"><td>🖐 需要你</td><td><b>启动 GPU 机器上的 Claude 会话</b></td><td><span class="tag you">你</span></td>
+<td>四张单子(#35 方法一训练、#36 方法二训练、#37 基准行、#38 RayTun3R 对比)已就绪多日,results 分支零交付——GPU-Claude 的会话需要你在那台机器/账号上启动后才会接单。本机侧能做的准备(代码、冒烟、试点、修复、汇总脚本)已全部完成。</td></tr>
 </table>
 
 <h2>四、三方协作是怎么运转的</h2>
