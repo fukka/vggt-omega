@@ -107,7 +107,7 @@ hypotheses:
     statement: >
       Frozen-feature head (25k params, readout-side, pose untouched) beats the
       H2.1 table at the near rim without near-center collateral.
-    status: supported   # run_011: -51..-67% near-rim held-out, near-center improved; single most-central 0-1m cell in even/odd regressed (flagged)
+    status: supported   # run_011 + ticket #29: ALL SIX sequences confirm (-21..-75% near-rim, near-center within noise); flagged cell was 392px noise
     parent: H2
     priority: high
   - id: H2
@@ -136,7 +136,7 @@ hypotheses:
       Dynamic-region handling: hand/dynamic pixels in ADT contribute a measurable,
       disproportionate share of depth error and correspondence outliers; masking them
       (GT masks first, predicted later) improves both static depth eval and pose.
-    status: active   # ticket #28 delivered: dyn pixels are 0.8-4% of cone, 80%+ at theta>41deg, median depth 0.26-0.94m — exactly the near-field-rim failure zone. H4.1 pose/depth test = ticket 029 (issue #30)
+    status: refuted   # H4.1 (ticket #31): dynamic masking ~ area-matched random; hands are plain occlusion, not signal corruption. H4's yield = the placement measurement + loss hygiene. meal_seq131 anomaly open.
     motivation: "Novelty axis N4 — now measured to overlap the compression zone and the pose-critical band; the four axes unify at the near-field rim."
     parent: null
     priority: high
@@ -201,7 +201,7 @@ experiments:
       wall_time_min: 12
 
 outer_loop:
-  cycle: 1
+  cycle: 2
   last_direction: deepen
   last_reflection: >
     2026-08-18 evening: H1 family closed in 5 runs (H1 refuted, H1.1 supported,

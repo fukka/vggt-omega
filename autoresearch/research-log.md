@@ -128,3 +128,17 @@
 - H2.3 (cross-scene, leave-one-scene-out) protocol locked and cross_scene.py
   written + smoke-tested locally (self-fit only, no result claimed). Ready to
   ticket the moment #29 confirms the per-scene picture.
+
+## 2026-08-21 — outer loop cycle 2: both GPU tickets land; the method holds on six scenes
+
+- #29: run_011 holds on ALL SIX sequences (-21..-75% near-rim, both splits;
+  near-center worst case +5.8%, noise-order). The paper's main table exists.
+- #31: H4.1 prediction NOT supported — GT-dynamic masking ~ area-matched
+  random (0.35-1.0 deg on 10-25 deg baselines); depth arm inconsistent. Hands
+  are plain occlusion. H4 resolves to the placement measurement + loss
+  hygiene. One anomaly (meal_seq131 random-beats-vanilla) recorded, open.
+- Filed #32 (H2.3 cross-scene, leave-one-scene-out) — decides "one head or
+  six". Closed #29, #31.
+- Remaining before drafting: H2.3 result; VGGT-Omega variant (next CPU task:
+  find the feature hook; its checkpoint lives on the box, so the run itself
+  is a ticket); pose-stability statement (by construction, document it).
