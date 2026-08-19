@@ -17,3 +17,11 @@ Required pass before submission:
    references intentionally left out of the draft until fetched.
 4. Verify each cited claim against the papers (esp. the UniK3D contraction
    sentence and RayTun3R's ablation characterization).
+
+## 2026-08-25 verification pass (DONE for arXiv entries)
+
+All 13 arXiv citations fetched programmatically via the arXiv API — titles,
+authors, years match; `refs.bib` generated from the fetched metadata.
+Remaining manual items (2): DepthFisheye (ICCVM 2025, no arXiv) and Lowe's
+SIFT (CrossRef fetch) — both flagged as PLACEHOLDER entries in refs.bib.
+The draft's `thebibliography` should be replaced by refs.bib at next edit.
