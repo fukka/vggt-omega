@@ -89,12 +89,20 @@ hypotheses:
     motivation: "Closes the lens-generalization caveat on the target domain."
     parent: H1
     priority: high
+  - id: H2.0
+    statement: >
+      Depth baseline: DA3-Small's radial error curve on Aria seq131 survives the
+      GT-depth control.
+    status: supported   # run_008b: survives at 0-3m (rows rise with theta, up to 5.7x) but INVERTS at 3-10m — the failure is radial x depth, target = near-field rim. Caveat: single-affine seesaw risk; alignment-free arm queued.
+    parent: H2
+    priority: high
   - id: H2
     statement: >
-      Center-safe radial adaptation: a zero-init radial adapter (RayTun3R-style PE
-      residual) trained with loss restricted to the peripheral band improves
-      peripheral depth/pose while leaving central metrics within noise of vanilla —
-      because zero-init + radial binning makes the center bins structurally identity.
+      Center-safe adaptation: a zero-init adapter trained toward NEAR-FIELD RIM
+      depth (the measured failure zone) improves it while leaving central metrics
+      and pose stability within noise of vanilla. Sharpest form: route multi-frame
+      evidence into rim depth (ticket-024B shows context buys the centre, not the
+      field, while H1 shows the rim powers the alignment).
     status: pending
     motivation: "Novelty axis N1. The adapter exists in raytun3r/; the new part is band-restricted training + Pareto (center,periphery) reporting."
     parent: null
@@ -127,7 +135,7 @@ experiments:
     and per feature-band; (c) center-vs-periphery Pareto pair (AbsRel_c, AbsRel_p).
   baseline_value: null
   best_value: null
-  total_runs: 7
+  total_runs: 9
   trajectory:
     - run_id: run_001
       hypothesis: H1
@@ -157,6 +165,14 @@ experiments:
       hypothesis: H1.3
       outcome: "Aria masking: rim 38.5 > random(=area) 25.3 > center 20.0 > vanilla 14.8 — rim-dependence transfers, softer"
       wall_time_min: 8
+    - run_id: run_008
+      hypothesis: H2.0
+      outcome: "superseded — scale_only misaligned vs protocol of record; kept for the record"
+      wall_time_min: 4
+    - run_id: run_008b
+      hypothesis: H2.0
+      outcome: "radial penalty survives control at 0-3m (up to 5.7x) but INVERTS at 3-10m; target = near-field rim"
+      wall_time_min: 4
 
 outer_loop:
   cycle: 1

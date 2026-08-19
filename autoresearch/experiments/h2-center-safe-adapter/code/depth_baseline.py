@@ -99,7 +99,7 @@ def main(argv=None) -> None:
         rel_cnt += np.bincount(flat,
                                minlength=THETA_BINS * nb_d).reshape(THETA_BINS, nb_d)
         print(f"  frame {n + 1}/{len(src.paths)} ({time.time() - t0:4.1f}s) "
-              f"scale {s:.3f} valid {int(valid.sum())}", flush=True)
+              f"scale {scales[-1]:.3f} valid {int(valid.sum())}", flush=True)
 
     with np.errstate(invalid="ignore"):
         cell = abs_sum / np.maximum(rel_cnt, 1)

@@ -53,3 +53,18 @@
 - H1 family now fully closed. Next: H2 (center-safe adapter) design under the
   new constraint; H3 zero-parameter tokenization probe; depth-side radial curve
   with the distance control.
+
+## 2026-08-19 (tick 2) — H2.0 depth baseline; the project's defining asymmetry
+
+- run_008 (scale_only) disagreed with the GPU lane 2x -> diagnosed as alignment
+  protocol mismatch; run_008b reruns under the protocol of record (scale_shift
+  via finetune/eval/metrics.py). Lesson re-learned: check the eval-of-record
+  BEFORE locking a protocol detail it contradicts.
+- run_008b: the radial depth penalty survives the distance control at 0-3m
+  (near-field rim up to 5.7x row spread) but INVERTS at 3-10m. The adapter
+  target is the near-field rim (= the egocentric manipulation zone; ties N4).
+- Cross-lane synthesis with tickets 024 A+B: rim depth penalty is real on raw
+  fisheye across 5 models; context frames buy the CENTER, not the field. With
+  H1: the rim powers alignment but does not receive the fusion gains. This
+  asymmetry is now the core thesis candidate.
+- H2 restated accordingly (see research-state.yaml).
