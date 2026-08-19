@@ -83,3 +83,17 @@
   input-conditioned adapter (H2.2), and the table becomes the baseline any
   adapter must beat. Also: zone aggregates hid the collateral; report full
   joint tables from now on.
+
+## 2026-08-20 — H2.2: frozen features are enough (on this scene); #27 closed
+
+- Official calibration arrived (GPU #27): rotation 38.44 deg vs hand-eye 40.55
+  — 2.33 deg apart; bootstrap validated; #27 closed with cross-check comment.
+- run_011: the 25k-param frozen-feature head, both splits — near-rim -51..-67%
+  held-out, near-center IMPROVED (the table had damaged it), far improved,
+  center improved. Beats the mandatory table 2-3x everywhere it matters. One
+  flagged cell (most-central 0-1m, even/odd split) regressed.
+- Filed ticket 028 (issue #29): the same script on the six-sequence split,
+  per-scene, both splits — one scene is not a result.
+- Direction: deepen H2 (transfer), then VGGT-Omega variant, then multi-frame
+  routing. Paper skeleton is forming: diagnosis (compression) -> asymmetry
+  (rim gives, doesn't receive) -> minimal fix (feature head) -> transfer.

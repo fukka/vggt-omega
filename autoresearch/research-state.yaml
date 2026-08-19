@@ -103,14 +103,21 @@ hypotheses:
     status: refuted   # partially: near-rim -18..-25% transfers (the table is now the mandatory baseline), but near-center collateral shows output-indexed correction cannot invert the compression
     parent: H2
     priority: high
+  - id: H2.2
+    statement: >
+      Frozen-feature head (25k params, readout-side, pose untouched) beats the
+      H2.1 table at the near rim without near-center collateral.
+    status: supported   # run_011: -51..-67% near-rim held-out, near-center improved; single most-central 0-1m cell in even/odd regressed (flagged)
+    parent: H2
+    priority: high
   - id: H2
     statement: >
       Center-safe adaptation: an INPUT-CONDITIONED zero-init adapter (image
       evidence, not output-indexed) improves near-field-rim depth beyond the
       H2.1 table without near-center collateral and without moving pose.
-      Sharpest form routes multi-frame parallax into rim depth (024B: context
-      buys the centre; H1: the rim powers the alignment).
-    status: pending
+      Remaining to establish: per-scene transfer (ticket 028/#29), cross-scene
+      generalization, VGGT-Omega variant, and the multi-frame routing rung.
+    status: active
     motivation: "Novelty axis N1. The adapter exists in raytun3r/; the new part is band-restricted training + Pareto (center,periphery) reporting."
     parent: null
     priority: high
@@ -142,7 +149,7 @@ experiments:
     and per feature-band; (c) center-vs-periphery Pareto pair (AbsRel_c, AbsRel_p).
   baseline_value: null
   best_value: null
-  total_runs: 11
+  total_runs: 12
   trajectory:
     - run_id: run_001
       hypothesis: H1
@@ -188,6 +195,10 @@ experiments:
       hypothesis: H2.1
       outcome: "near-rim -18..-25% transfers; near-center damaged — output-indexed recalibration cannot invert a compression; next rung must be input-conditioned"
       wall_time_min: 10
+    - run_id: run_011
+      hypothesis: H2.2
+      outcome: "SUPPORTED both splits: near-rim -51..-67%, near-center improved, beats the table 2-3x; frozen features carry the signal"
+      wall_time_min: 12
 
 outer_loop:
   cycle: 1

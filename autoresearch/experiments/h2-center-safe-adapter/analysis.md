@@ -104,6 +104,34 @@ spent on the center. The learned-adapter protocol (H2.2) should therefore be
 input-conditioned and report the full joint table, not zone aggregates
 (zone pooling hid this failure until the rows were read).
 
+## run_011 (2026-08-20, CONFIRMATORY — H2.2 feature head, both splits)
+
+~25k-param head on frozen DA3-Small final patch tokens (+sinθ, cosθ, log
+pred-depth), zero-init output, trained on train-split patch residuals (300
+epochs, L1 0.35→0.13), held-out eval under protocol of record:
+
+| zone (held-out) | even/odd | halves | H2.1 table (even/odd) |
+|---|---|---|---|
+| near rim (≤2 m, ≥38°) | 1.023→0.333 (**−67%**) | 0.639→0.314 (**−51%**) | −25% |
+| near center (≤2 m, ≤11°) | 0.412→0.354 (**−14%**) | 0.283→0.259 (−9%) | **damaged** |
+| center pooled (≤11°) | −38% | −28% | −2% |
+| far (≥3 m) | −38% | −19% | −12% |
+
+**Both success criteria met**: the head beats the table 2–3× at the near rim
+and removes the near-center collateral — frozen features DO carry the
+disambiguating signal the output lacks. Residual weak spot: the single most
+central 0–1 m cell in even/odd regresses (0.124→0.398; that cell's "before"
+was unusually good and its pixel count is the smallest — flagged, not
+explained). Pose is untouched by construction (readout-side only).
+
+**What this establishes:** on this scene, the entire practical fix for the
+radially-modulated compression is available from the frozen model's own
+features via a head that fits in minutes on CPU — the RayTun3R online-
+adaptation setting (hours, input-side surgery) is not needed for the *depth*
+half on Aria. The open question is transfer: per-scene fit on other sequences
+(ticket filed), then cross-scene generalization, then VGGT-Ω (highest
+headroom).
+
 ## Cross-lane synthesis (ticket 024 A+B × H1 family)
 
 - Part A: raw-fisheye rim depth penalty survives the depth control (0.57–0.85);
