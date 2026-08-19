@@ -560,3 +560,9 @@
 ## 2026-08-19 (tick 12) — alignment-robustness rows on the record harness
 - near-fit affine: near_rim -75%, far +2.9x — no single affine serves both;
   compression field confirmed from the alignment side. Records updated.
+
+## 2026-08-19 (tick 13) — external-validity plan (human-directed)
+- Assessment: ideas+internal validity solid; external validity is the gap.
+- Found in-repo published protocols: DAC cross-dataset splits, CAM3R ADT
+  pose. Same-camera cross-scene has NO published protocol -> ours on ADT
+  non-Apartment scenes. #40/#41 posted (behind eval batches).

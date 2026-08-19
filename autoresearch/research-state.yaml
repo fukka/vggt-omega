@@ -296,7 +296,23 @@ review_2026_08_19:
     - "does the head encode 'ADT apartment appearance'? cross-dataset (ScanNet++ via d_reproj, no dense GT needed) is the test"
 
 outer_loop:
-  cycle: 4
+  cycle: 5
+  cycle5_reflection: >
+    2026-08-19 late (post-review, human-directed): novelty ideas hold
+    (three literature sweeps), internal validity holds (protocol-first,
+    controls, review passed on mechanism), EXTERNAL validity is the paper's
+    critical gap — evidence currently one apartment, one device. Published
+    protocols found in-repo to fix it: DAC's zero-shot cross-dataset splits
+    (ScanNet++ DSLR render_depth + KITTI-360 fisheye with grids,
+    third_party/depth_any_camera/splits/) and CAM3R's ADT two-view pose
+    protocol (cam3r/eval_adt.py, published RRA 99.0/RTA 95.0). No published
+    same-camera cross-scene protocol exists -> we build it on ADT's
+    non-Apartment scenes (zero-shot transfer of Apartment-trained head/LoRA)
+    — itself a protocol contribution. Tickets #40 (second scene) and #41
+    (DAC-protocol cross-dataset) posted behind the eval batches. slambench
+    checked: no TUM-VI loader; its synthetic harness stays a controlled
+    supplement, not a public benchmark. CPU next: per-camera theta grids in
+    the head/eval path (cross-lens precondition).
   cycle4_reflection: >
     2026-08-19 (human-directed use of the GPU wait): literature deep-dive
     (literature/2026-08-19-distortion-crossframe-survey.md) — Wid3R, UniDAC,
