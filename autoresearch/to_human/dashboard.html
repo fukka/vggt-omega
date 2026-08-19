@@ -22,7 +22,7 @@
 </head>
 <body>
 <h1>鱼眼深度研究 · 进度看板</h1>
-<p class="time">最近更新:2026-08-20 晚(这个页面会一直更新,刷新即可看到最新进度)</p>
+<p class="time">最近更新:2026-08-21(这个页面会一直更新,刷新即可看到最新进度)</p>
 
 <h2>一、我们在研究什么(一句话版)</h2>
 <p class="big">Aria 眼镜的鱼眼相机视野很宽(约110°),但现有的深度估计大模型都是在普通相机图片上训练的:
@@ -122,6 +122,10 @@ CPU上几分钟就能训完。下一个问题:换别的场景还灵不灵?(已�
 <td>刚发出。在带人体的序列上做抹除对照:把手抹掉后,姿态和周围的深度会不会变好(和"随机抹同样面积"比)。<b>作用:</b>决定方向④的做法——如果手真在捣乱,修正头就要学会跳过它们;如果只是普通遮挡,处理可以更简单。</td></tr>
 <tr class="doing"><td>🔄 进行中</td><td>设计"中心不受伤"的边缘适配器(方向①的核心)</td><td><span class="tag me">Mac-Claude</span> → <span class="tag gpu">GPU-Claude</span></td>
 <td>基于 RayTun3R 的思路(总共约1万个参数、初始为零),但训练目标只针对边缘、并新增"姿态稳定性"指标。代码和测试在 Mac 写好,训练用 GPU 任务单发出。</td></tr>
+<tr class="done"><td>✅ 已完成</td><td>查新:确认我们的做法没被人做过</td><td><span class="tag me">Mac-Claude</span></td>
+<td>最接近的三篇论文都要么动模型本体、要么动输入、要么需要额外传感器提示;我们的"诊断链+只动输出端+姿态零风险+手的合流"这条线没有人做过。已记录到文献笔记。</td></tr>
+<tr class="done"><td>✅ 代码就绪</td><td>跨场景版修正头(在5个场景训、第6个场景测)</td><td><span class="tag me">Mac-Claude</span> → <span class="tag gpu">GPU-Claude</span></td>
+<td>方案已写死、代码已冒烟测试。等 #29(单场景验证)回来后立即发 GPU 任务单跑六折交叉验证——这是"方法是通用的"还是"每个场景要现学"的分水岭。</td></tr>
 <tr class="todo"><td>📋 计划中</td><td>方向②:按畸变程度分配计算(DarSwin 式的径向分块)</td><td><span class="tag me">Mac-Claude</span></td>
 <td>先做零参数版本(按镜头模型重新采样图块),CPU 可验证一部分。</td></tr>
 <tr class="done"><td>✅ 已完成</td><td>边缘深度到底差多少(带"距离混淆"控制)</td><td><span class="tag me">Mac-Claude</span></td>
