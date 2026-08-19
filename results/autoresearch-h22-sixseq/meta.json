@@ -1,0 +1,27 @@
+{
+  "ticket": 28,
+  "ticket_file": "docs/handoff/tickets/028-feature-head-six-sequences.md",
+  "issue": 29,
+  "code_commit": "c367fa4",
+  "script": "autoresearch/experiments/h2-center-safe-adapter/code/feature_head.py (untouched, run only)",
+  "split_source": "ticket 024's fovbench-joint split, digest 601fcb22767e, confirmed on lambda_63 against /user/f.zhang2/Documents/projectaria_tools_adt_data_clean",
+  "sequences": [
+    "Apartment_release_clean_seq131_M1292",
+    "Apartment_release_clean_seq133_M1292",
+    "Apartment_release_clean_seq134_M1292",
+    "Apartment_release_clean_seq135_M1292",
+    "Apartment_release_clean_seq136_M1292",
+    "Apartment_release_decoration_seq132_M1292"
+  ],
+  "run_notes": [
+    "feature_head.py globs and processes every videos_rgb/*.jpg it finds with no subsampling of its own; each of these six sequences has ~2700-2940 frames (vs. seq131's original 28-frame staged sample), so each sequence was subsampled to 40 evenly-spaced frames that have both an RGB frame and a depth_npy match, via a symlink tree built by a scratch-only helper (not committed, not under raytun3r/ or autoresearch/experiments/) -- feature_head.py itself was not modified per the ticket's 'files I may touch: none'.",
+    "the six-sequence ADT-FOV tree on lambda_63 stores RGB frames as videos_rgb/*.png, not *.jpg as AriaLocalPairs (h1-rim-pose-value/code/adt_pose_value.py) globs for -- the subsample symlinks are named *.jpg regardless of source extension (PIL reads by content, not name), so this is purely a lambda_63 data-layout accommodation, not a behavior change.",
+    "the ticket's note to 'set H2_CACHE=/tmp/h2cache_<seq>' assumes feature_head.py reads that env var; the committed script does not (SCRATCH/PRED_CACHE/FEAT_CACHE are hardcoded module constants pointing at a CPU-Claude-machine-specific path). A small runner (not committed) imports the module and monkeypatches those three constants from $H2_CACHE before calling main(), achieving the ticket's intent without editing the script."
+  ],
+  "wall_time_s_total": 148,
+  "read": {
+    "near_rim(<=2m,>=38deg)_pct_change": "holds on all 6 sequences: -21.2%/-32.7% (decoration_seq132, weakest) up to -71.3%/-75.2% (seq135, strongest); 5/6 sequences clear -30% on BOTH splits, the 6th (decoration_seq132) clears it on one split (even_odd -32.7%) and falls short on the other (halves -21.2%).",
+    "near_center(<=2m,<=11deg)_damage": "improves in 8/12 runs; in the other 4 (seq131/133/136 halves, seq133 even_odd) it regresses by +1.4% to +5.8% -- small, same order as run_011's single flagged 0-1m cell (0.016% of pixels, called noise), not the H2.1-table-scale collateral (ticket 010) this head was built to avoid.",
+    "verdict": "run_011's finding holds beyond seq131: near-rim -21% to -75% across all six sequences and both splits, near-center not meaningfully damaged."
+  }
+}
