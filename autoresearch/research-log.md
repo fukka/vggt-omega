@@ -154,3 +154,11 @@
   the full fit/eval path now runs end to end with finite dummies.
 - Ticket 031 filed for the six-sequence weighted run. #32 (cross-scene)
   still pending on the box.
+
+## 2026-08-21 (tick 9) — provenance audit ahead of drafting
+
+- #32 / #33 still pending on the box.
+- Every headline number re-derived programmatically from its source JSON —
+  all match. Chain recorded in autoresearch/paper/numbers.md (with the
+  caveats that must travel with each number). The paper can now be drafted
+  without a single unverified quote.
