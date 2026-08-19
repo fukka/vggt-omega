@@ -79,7 +79,7 @@ def main(argv=None) -> None:
     rim_deg = ck["config"].get("rim_deg", 35.0)
     all_tok = ck["config"].get("all_token_control", False)
     rim = (torch.ones_like(theta_p, dtype=torch.bool) if all_tok
-           else rim_mask_for(theta_p, rim_deg))
+           else rim_mask_for(theta_p, rim_deg, float(cam.theta_max)))
     # probe dim, build, load
     with torch.no_grad():
         f0, _ = net.backbone(s.src.image(s.frames[0])[None, None]

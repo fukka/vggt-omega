@@ -37,7 +37,7 @@ def main() -> None:
     theta = src.camera.incidence_grid(SIZE, SIZE)
     gh = SIZE // 14
     theta_p = theta.reshape(gh, 14, gh, 14).mean((1, 3)).ravel()
-    rim = rim_mask_for(theta_p)
+    rim = rim_mask_for(theta_p, theta_max=float(src.camera.theta_max))
     print(f"[h6] {int(rim.sum())}/{len(rim)} rim patches "
           f"({float(rim.float().mean()) * 100:.0f}%)")
 

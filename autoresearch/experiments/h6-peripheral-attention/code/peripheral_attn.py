@@ -57,5 +57,13 @@ def apply_to_final_level(module: PeripheralCrossFrameAttention,
     return out
 
 
-def rim_mask_for(theta_patch: torch.Tensor, rim_deg: float = 35.0) -> torch.Tensor:
-    return theta_patch > math.radians(rim_deg)
+def rim_mask_for(theta_patch: torch.Tensor, rim_deg: float = 35.0,
+                 theta_max: float | None = None) -> torch.Tensor:
+    """Rim = inside the imaged cone AND beyond rim_deg. Without the cone
+    intersection the square grid's dead corners (theta > theta_max) became
+    queries — caught 2026-08-26 by the efficiency measurement (73% of the
+    grid instead of the intended rim band)."""
+    m = theta_patch > math.radians(rim_deg)
+    if theta_max is not None:
+        m &= theta_patch <= theta_max
+    return m

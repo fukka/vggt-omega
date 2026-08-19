@@ -96,7 +96,7 @@ def main(argv=None) -> None:
     gh, gw = h // 14, w // 14
     theta_p = theta.reshape(gh, 14, gw, 14).mean((1, 3)).ravel()
     rim = (torch.ones_like(theta_p, dtype=torch.bool)
-           if args.all_token_control else rim_mask_for(theta_p, args.rim_deg))
+           if args.all_token_control else rim_mask_for(theta_p, args.rim_deg, float(cam.theta_max)))
     print(f"[h6] queries: {int(rim.sum())}/{len(rim)} patches "
           f"({'ALL-TOKEN CONTROL' if args.all_token_control else 'rim only'})")
 
