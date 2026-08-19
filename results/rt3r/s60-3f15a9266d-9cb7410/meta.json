@@ -1,0 +1,30 @@
+{
+  "ticket": 28,
+  "ticket_file": "docs/handoff/tickets/028-da3-row-and-the-papers-span.md",
+  "issue": 30,
+  "run_id": "s60-3f15a9266d-9cb7410",
+  "what": "All three backbones (vggt, pi3, da3) re-evaluated at stride 60 -- the span ticket 10 identified as the paper's own protocol (vanilla reproduces Tab.2 on vggt and pi3 at this stride). Eval only: no new fits except DA3's (see s10-snpp-3f15a9266d-da3-raytun3r-9cb7410/, same session). vggt/pi3 adapters reused unchanged from runs/rt3r/3f15a9266d-{vggt,pi3}/adapter.pt (fit at results/rt3r/s10-snpp-3f15a9266d-{,pi3-}222d4a3/).",
+  "code_commit": "9cb7410",
+  "code_branch": "organized",
+  "host": "lambda_63, RTX 6000 Ada 48GB (GPU0), CUDA 12.8",
+  "conda_env": "raytun3r (python 3.11, torch 2.11.0+cu128)",
+  "matcher": "ufm",
+  "protocol": "eval only: full sequence, stride 60, 100 windows, methods vanilla+center_ph+raytun3r, same adapters as the stride-10 rows",
+  "commands": [
+    "python -m raytun3r.eval --backbone vggt --weights pretrained --dataset scannetpp --path <scannetpp>/3f15a9266d --adapter runs/rt3r/3f15a9266d-vggt/adapter.pt --stride 60 --device cuda:0 --methods vanilla,center_ph,raytun3r --out vggt-s60.json",
+    "python -m raytun3r.eval --backbone pi3 --weights pretrained --dataset scannetpp --path <scannetpp>/3f15a9266d --adapter runs/rt3r/3f15a9266d-pi3/adapter.pt --stride 60 --device cuda:0 --methods vanilla,center_ph,raytun3r --out pi3-s60.json",
+    "python -m raytun3r.eval --backbone da3 --variant small --weights pretrained --dataset scannetpp --path <scannetpp>/3f15a9266d --adapter runs/rt3r/3f15-da3-fit/adapter.pt --stride 60 --device cuda:0 --methods vanilla,center_ph,raytun3r --out da3-s60.json"
+  ],
+  "read_vs_paper_tab2": {
+    "note": "DA3 has no per-scene paper row; only vggt/pi3 are compared against Tab.2's absolute numbers. Reading rule from #4: no tuning toward the targets.",
+    "table": {
+      "vggt": {"paper_vanilla": 7.21, "paper_center_ph": 2.45, "paper_raytun3r": 0.93,
+                "ours_vanilla": 8.527, "ours_center_ph": 0.621, "ours_raytun3r": 5.460},
+      "pi3":  {"paper_vanilla": 6.17, "paper_center_ph": 2.28, "paper_raytun3r": 0.78,
+                "ours_vanilla": 7.775, "ours_center_ph": 0.267, "ours_raytun3r": 4.532},
+      "da3":  {"paper_vanilla": null, "paper_center_ph": null, "paper_raytun3r": null,
+                "ours_vanilla": 8.858, "ours_center_ph": 8.604, "ours_raytun3r": 6.249}
+    },
+    "finding": "Vanilla lands in the same neighborhood as the paper at this span (ours ~18-26% high, not exact but far closer than any stride-10 cell). center_ph and raytun3r do NOT reproduce the paper's ordering: on vggt and pi3, center_ph (0.62/0.27 deg) is dramatically BETTER than raytun3r (5.46/4.53 deg) here -- the opposite of the paper's Tab.2 (raytun3r 0.93/0.78 beating center_ph 2.45/2.28). On DA3 (no paper comparison), raytun3r does beat both vanilla and center_ph, so the ordering flips backbone to backbone -- not a fixed method-quality ranking. Not tuned toward paper targets; reported as measured."
+  }
+}

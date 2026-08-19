@@ -1,0 +1,25 @@
+{
+  "ticket": 28,
+  "ticket_file": "docs/handoff/tickets/028-da3-row-and-the-papers-span.md",
+  "issue": 30,
+  "run_id": "s10-snpp-3f15a9266d-da3-raytun3r-9cb7410",
+  "what": "DA3's raytun3r row -- fit + eval, all three methods (vanilla/center_ph/raytun3r), ScanNet++ 3f15a9266d. Supersedes the eval-only vanilla/center_ph run at s10-snpp-3f15a9266d-da3-222d4a3 (raytun3r blocked there by issue #26). #26's fix (organized@72c9f0d) unblocked this; re-check (pytest green + controlled checkpointing A/B) commented on #26 before this ran.",
+  "code_commit": "9cb7410",
+  "code_branch": "organized",
+  "host": "lambda_63, RTX 6000 Ada 48GB (GPU0), CUDA 12.8",
+  "conda_env": "raytun3r (python 3.11, torch 2.11.0+cu128)",
+  "backbone": "da3 (variant small, frozen)",
+  "matcher": "ufm",
+  "protocol": "fit: 30 three-frame windows, stride 10, 3000 iters, Adam lr 1e-3, clip 1.0, seed 0 (same protocol as the vggt/pi3 rows in *-222d4a3). eval: full sequence, stride 10, 100 windows, methods vanilla+center_ph+raytun3r",
+  "fit_wall_time_s": 236.6,
+  "commands": [
+    "python -m raytun3r.train --backbone da3 --variant small --weights pretrained --dataset scannetpp --path <scannetpp>/3f15a9266d --stride 10 --windows 30 --iters 3000 --seed 0 --device cuda:0 --out runs/rt3r/3f15-da3-fit",
+    "python -m raytun3r.eval --backbone da3 --variant small --weights pretrained --dataset scannetpp --path <scannetpp>/3f15a9266d --adapter runs/rt3r/3f15-da3-fit/adapter.pt --stride 10 --device cuda:0 --methods vanilla,center_ph,raytun3r --out runs/rt3r/3f15-da3-s10.json"
+  ],
+  "results_summary": {
+    "vanilla": {"R_deg": 2.630, "AbsRel": 0.2951, "t_deg": 40.66, "delta_1.25": 0.618},
+    "center_ph": {"R_deg": 1.786, "AbsRel": 0.2320, "t_deg": 39.64, "delta_1.25": 0.713},
+    "raytun3r": {"R_deg": 1.843, "AbsRel": 0.2088, "t_deg": 24.93, "delta_1.25": 0.721}
+  },
+  "read": "raytun3r improves AbsRel, delta_1.25 and t_deg over both vanilla and center_ph, but its R_deg (1.843) is marginally worse than center_ph's (1.786) on this backbone -- the row does not uniformly rank raytun3r first the way the paper's DA3-analog backbones do. See the stride-60 table (s60-3f15a9266d-9cb7410/) for the paper-protocol comparison on VGGT/pi3."
+}
