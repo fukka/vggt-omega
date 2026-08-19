@@ -566,3 +566,8 @@
 - Found in-repo published protocols: DAC cross-dataset splits, CAM3R ADT
   pose. Same-camera cross-scene has NO published protocol -> ours on ADT
   non-Apartment scenes. #40/#41 posted (behind eval batches).
+
+## 2026-08-19 (tick 14) — cross_scene per-camera refactor landed
+- Geometry per-sequence, cross-camera announced not asserted; smoke passed
+  (in-sample seq131, near_rim -67.9% consistent). #40/#41 can now run the
+  head cross-lens without code danger.
