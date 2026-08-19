@@ -110,13 +110,28 @@ hypotheses:
     status: supported   # run_011 + ticket #29: ALL SIX sequences confirm (-21..-75% near-rim, near-center within noise); flagged cell was 392px noise
     parent: H2
     priority: high
+  - id: H2.3
+    statement: >
+      One feature head trained on five scenes transfers to the held-out sixth
+      at >= half the within-scene gain.
+    status: supported   # ticket #32: five clean folds -74.5..-78.0% (>= within-scene!); decoration fold -18.7% (over the bar) but with real center collateral — genre shift is the boundary. 48-param cross-scene control not run (flagged).
+    parent: H2
+    priority: high
+  - id: H2.4
+    statement: >
+      The head recipe transfers to VGGT-Omega (highest-headroom backbone) with
+      gains comparable to DA3-Small's.
+    status: supported-with-caveats   # ticket #33: near-rim improves on all 12 runs (-19..-41%) but never DA3's -60/-70%, and halves-split center collateral up to +50% — final-block tokens carry less signal; earlier-block probe = future work.
+    parent: H2
+    priority: high
   - id: H2
     statement: >
       Center-safe adaptation: an INPUT-CONDITIONED zero-init adapter (image
       evidence, not output-indexed) improves near-field-rim depth beyond the
       H2.1 table without near-center collateral and without moving pose.
-      Remaining to establish: per-scene transfer (ticket 028/#29), cross-scene
-      generalization, VGGT-Omega variant, and the multi-frame routing rung.
+      Established per-scene (6 seqs), cross-scene within genre, and
+      directionally across backbones. Open: genre shift, VGGT-Omega collateral,
+      multi-frame routing rung.
     status: active
     motivation: "Novelty axis N1. The adapter exists in raytun3r/; the new part is band-restricted training + Pareto (center,periphery) reporting."
     parent: null
@@ -209,8 +224,8 @@ experiments:
       wall_time_min: 6
 
 outer_loop:
-  cycle: 2
-  last_direction: deepen
+  cycle: 3
+  last_direction: conclude-pending   # only #34 (hand GT provenance) blocks drafting
   last_reflection: >
     2026-08-18 evening: H1 family closed in 5 runs (H1 refuted, H1.1 supported,
     H1.2 refuted-informative + area-matched control). N3's premise is measured;

@@ -200,3 +200,18 @@
 - paper/outline.md drafted: 7 sections, contribution list, figure inventory,
   and the three claims that wait on the pending tickets. Drafting proper
   starts when they land (ml-paper-writing skill at that point).
+
+## 2026-08-22/23 — outer loop cycle 3: #32 and #33 land; only #34 left
+
+- #32 cross-scene: ONE HEAD, NOT SIX — five clean folds -74.5..-78.0%
+  (matching or exceeding within-scene); decoration fold -18.7% with real
+  center collateral (+66.5% near-center) — genre shift is the honest boundary.
+  48-param cross-scene control not run (GPU time budget; flagged, optional).
+- #33 VGGT-Omega: improves on all 12 runs (-19..-41%) — backbone-agnostic
+  directionally — but weaker than DA3 and with halves-split center collateral
+  up to +50%. Final-block tokens carry less disambiguating signal; probing
+  earlier blocks is future work. The three-axis eval caught exactly what it
+  was designed to catch: readout-only is pose-safe by construction, but
+  center-depth safety is empirical and backbone-dependent.
+- Direction: CONCLUDE once #34 answers the hand-GT question. Paper skeleton
+  ready (paper/outline.md); all other numbers audited.
