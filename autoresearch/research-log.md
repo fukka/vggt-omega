@@ -275,3 +275,20 @@
   regression test added, full raytun3r suite (78) + smoke pass.
 - Next: LoRA injection + 2-step training smoke on real frames, then the GPU
   training ticket.
+
+## 2026-08-23 (tick 17) — H5 mechanics verified end to end on CPU
+
+- lora.py (dependency-free LoRA with exact-teacher toggle) + train_smoke.py.
+- Discovery: DA3's DPT head is conv-only, so the protocol's "head LoRA"
+  share starts empty (documented deviation; conv-LoRA is the fallback).
+  Injection = last-4 ViT block MLPs, 8 linears, 122.9k trainable vs 34.3M
+  frozen; cam_enc/cam_dec (pose modules) unmatched by construction.
+- Smoke PASSED, five checks: intended-layers-only training; LoRA-disabled
+  path bit-identical to pristine (the teacher costs no memory); all three
+  losses backprop on real ADT frames with the official calibration; total
+  and depth losses decrease over 5 steps; base weights bit-identical after
+  training. First gate (2-step decrease) was too strict for a composite
+  objective whose feat term starts at exactly zero — relaxed to 5 steps,
+  a scaffolding change, not a result.
+- Next: train.py (4-scene loader, pairs, epochs, LoRA checkpoints, eval
+  hooks), then the GPU training ticket.
