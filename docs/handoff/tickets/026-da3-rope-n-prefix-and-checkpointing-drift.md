@@ -170,3 +170,23 @@ New tooling: `train.py --windows-cache PATH` saves/loads the built windows
    iter≥1 drift is possible on GPU even at fixed inputs — iter 0 must match).
 3. Optional, to see the thing #25's A/B actually measured: same config twice,
    *without* the cache — the drift should reappear with checkpointing held fixed.
+
+## CLOSED (gpu re-check 2026-08-19, then one cpu fix)
+
+Both items came back green from the box (issue #26 thread):
+
+1. `pytest -k "da3 or rope"` on the real package: **9 passed** — including
+   `test_da3_hooks_fire_on_the_real_package`, which used to raise.
+2. Controlled A/B off one cached window set, VGGT, 3 iters: every forward-pass
+   loss term at iter 0 (`reproj`, `pose`, `smooth`, `l2`, `tv`, `total`)
+   **bit-identical to full float32 precision** between ckpt on and off. Only
+   `grad_norm` differs (~0.03%), and only from iter 0 onward — a backward-pass
+   quantity, consistent with `grid_sample`'s atomicAdd on CUDA. Checkpointing
+   changes nothing numerically, as diagnosed.
+
+The re-check also found a real bug in the new tooling: `--windows-cache`
+loaded with `map_location="cpu"`, but `fit_adapter` takes its device from
+`windows[0].images.device` (`train.py:102`), so the *loading* run silently
+ran on cpu and died in `aggregator.forward` with a cuda/cpu mismatch. The box
+worked around it with a standalone driver; fixed properly on cpu as
+`map_location=args.device` (`ea55dd3`). Nothing else outstanding here.
