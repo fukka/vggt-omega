@@ -22,7 +22,7 @@
 </head>
 <body>
 <h1>鱼眼深度研究 · 进度看板</h1>
-<p class="time">最近更新:2026-08-21 下午(这个页面会一直更新,刷新即可看到最新进度)</p>
+<p class="time">最近更新:2026-08-21 晚(这个页面会一直更新,刷新即可看到最新进度)</p>
 
 <h2>一、我们在研究什么(一句话版)</h2>
 <p class="big">Aria 眼镜的鱼眼相机视野很宽(约110°),但现有的深度估计大模型都是在普通相机图片上训练的:
@@ -129,6 +129,8 @@ CPU上几分钟就能训完。下一个问题:换别的场景还灵不灵?(已�
 <td>GPU 还专门下载了3条带人体的序列(机器上原来一条都没有)。结论:手占 0.8%–4%,八成以上在边缘、离相机不到1米——方向④确定要做,而且和主线合流。已关单。</td></tr>
 <tr class="done"><td>✅ 已完成</td><td>任务单 #31:手是"捣乱"还是普通遮挡</td><td><span class="tag gpu">GPU-Claude</span></td>
 <td>结论:普通遮挡。方向④简化为训练时跳过动态像素。已关单。</td></tr>
+<tr class="doing"><td>🔄 进行中</td><td>任务单 #33:换骨干验证(VGGT-Ω,收益空间最大的模型)</td><td><span class="tag me">Mac-Claude</span> → <span class="tag gpu">GPU-Claude</span></td>
+<td>刚发出。同样的小头配方套在 VGGT-Ω 上(它的量尺压缩是五个模型里最严重的 1.81 倍,也是本 repo 自家的模型)。代码在本机用随机权重验证过通路(真权重只在 GPU 机器上)。<b>作用:</b>成立则"方法与骨干无关"的主张齐了;不成立也能定位它的特征缺了什么。</td></tr>
 <tr class="doing"><td>🔄 进行中</td><td>任务单 #32:跨场景验证(5个场景学,第6个直接用)</td><td><span class="tag gpu">GPU-Claude</span></td>
 <td>刚发出,六折轮流留一验证。<b>作用:</b>分水岭——通过就是"通用适配器"(论文主张更强),不通过就退回"每场景几分钟现学"(仍有用)。</td></tr>
 <tr class="doing"><td>🔄 进行中</td><td>设计"中心不受伤"的边缘适配器(方向①的核心)</td><td><span class="tag me">Mac-Claude</span> → <span class="tag gpu">GPU-Claude</span></td>
