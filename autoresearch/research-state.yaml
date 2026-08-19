@@ -127,7 +127,7 @@ hypotheses:
       linearization (RayTun3R's parameter-free piece, akin to DarSwin's radial
       tokenization) reduces peripheral feature degradation at equal token budget,
       measurable as improved rim depth/edge-alignment with NO trained parameters.
-    status: pending
+    status: refuted   # run_014b: tables unchanged to 3rd decimal; mechanism measured — within-patch distortion on Aria KB4 is <=0.2px even at the rim; distortion lives BETWEEN patches. N2 patch-content branch closed with a number.
     motivation: "Novelty axis N2, cheapest entry point: parameter-free, partially CPU-testable with DA3-Small."
     parent: null
     priority: medium
@@ -149,7 +149,7 @@ experiments:
     and per feature-band; (c) center-vs-periphery Pareto pair (AbsRel_c, AbsRel_p).
   baseline_value: null
   best_value: null
-  total_runs: 12
+  total_runs: 14
   trajectory:
     - run_id: run_001
       hypothesis: H1
@@ -199,6 +199,14 @@ experiments:
       hypothesis: H2.2
       outcome: "SUPPORTED both splits: near-rim -51..-67%, near-center improved, beats the table 2-3x; frozen features carry the signal"
       wall_time_min: 12
+    - run_id: run_014
+      hypothesis: H3
+      outcome: "INVALID — tangent-basis rotation bug, caught by the protocol's visual sanity check"
+      wall_time_min: 6
+    - run_id: run_014b
+      hypothesis: H3
+      outcome: "REFUTED with mechanism: within-patch distortion <=0.2px at the rim on Aria KB4 — nothing to undistort at patch level"
+      wall_time_min: 6
 
 outer_loop:
   cycle: 2

@@ -50,29 +50,33 @@ def resample_grid(camera, h: int, w: int) -> torch.Tensor:
             theta0 = math.acos(float(d0[2].clamp(-1, 1)))
             if theta0 > float(camera.theta_max):
                 continue                       # outside the cone: leave as-is
-            # tangent-plane basis at d0
+            # Local linearization of the projection: find tangent directions
+            # that the projection's differential maps to the PIXEL axes, so the
+            # resampling is identity to first order at the patch center — same
+            # orientation, correct anisotropic scale (the first implementation
+            # used an arbitrary tangent basis and rotated every patch by its
+            # azimuth; caught by the protocol's visual sanity check, run_014).
             up = torch.tensor([0.0, 0.0, 1.0], dtype=torch.float64)
-            e1 = torch.linalg.cross(up, d0)
-            if e1.norm() < 1e-8:
-                e1 = torch.tensor([1.0, 0.0, 0.0], dtype=torch.float64)
-            e1 = e1 / e1.norm()
-            e2 = torch.linalg.cross(d0, e1)
-            # per-pixel angular scale at the center: match the local fisheye
-            # sampling density along the radial direction (identity at center)
-            eps = 1e-4
-            d_eps = (d0 + eps * e1)
-            d_eps = d_eps / d_eps.norm()
-            uv_eps = camera.project(torch.stack([d0, d_eps]))
-            px_per_rad = float((uv_eps[1] - uv_eps[0]).norm() / eps)
-            # local pinhole grid for this patch
+            a1 = torch.linalg.cross(up, d0)
+            if a1.norm() < 1e-8:
+                a1 = torch.tensor([1.0, 0.0, 0.0], dtype=torch.float64)
+            a1 = a1 / a1.norm()
+            a2 = torch.linalg.cross(d0, a1)
+            eps = 1e-5
+            base = camera.project(d0[None])[0]
+            J = torch.empty(2, 2, dtype=torch.float64)
+            for k, ak in enumerate((a1, a2)):
+                dk = d0 + eps * ak
+                dk = dk / dk.norm()
+                J[:, k] = (camera.project(dk[None])[0] - base) / eps
+            Jinv = torch.linalg.inv(J)          # pixel offset -> tangent coords
             ys_l = (torch.arange(PATCH, dtype=torch.float64) - (PATCH - 1) / 2.0)
-            xs_l = ys_l.clone()
-            gy, gx = torch.meshgrid(ys_l, xs_l, indexing="ij")
-            ang_x = gx / px_per_rad
-            ang_y = gy / px_per_rad
+            gy, gx = torch.meshgrid(ys_l, ys_l.clone(), indexing="ij")
+            pix = torch.stack([gx, gy], dim=-1)          # (P, P, 2) pixel offsets
+            tc = pix @ Jinv.T                            # tangent coords (rad)
             dirs = (d0[None, None, :]
-                    + ang_x[..., None] * e1[None, None, :]
-                    + ang_y[..., None] * e2[None, None, :])
+                    + tc[..., 0:1] * a1[None, None, :]
+                    + tc[..., 1:2] * a2[None, None, :])
             dirs = dirs / dirs.norm(dim=-1, keepdim=True)
             uv = camera.project(dirs.reshape(-1, 3)).reshape(PATCH, PATCH, 2)
             sl_v = slice(pi * PATCH, (pi + 1) * PATCH)

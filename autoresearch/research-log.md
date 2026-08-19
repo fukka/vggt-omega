@@ -176,3 +176,19 @@
   under-verification; numbers.md rows marked. Theta-placement (from
   segmentation) unaffected; the six-sequence H2 results unaffected (no
   humans in those sequences).
+
+## 2026-08-22 — H3 closed with a number; a bug caught by its own protocol
+
+- run_014 invalid: arbitrary tangent basis rotated every patch by its azimuth
+  (pinwheel shattering) — caught by the visual sanity check the protocol
+  mandated. Fixed with true Jacobian linearization (identity to first order,
+  correct orientation/anisotropy).
+- run_014b: effect is null to the 3rd decimal — and the warp's own magnitude
+  explains why: within-patch distortion on Aria KB4 at patch 14 is <=0.21 px
+  even at the rim. The distortion lives BETWEEN patches, not inside them.
+  N2's patch-content branch (incl. DarSwin-style content resampling at this
+  granularity) is closed with a measured reason; also explains RayTun3R's
+  "patch undistortion minimal" ablation row quantitatively.
+- All four axes now have measured dispositions: N1+N2(inter-patch)+N3 unified
+  in the compression/head story; N2(patch-content) closed; N4 under
+  verification (#34). Still pending: #32, #33, #34 on the box.
