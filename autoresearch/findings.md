@@ -106,11 +106,17 @@ scale_shift, range domain, full joint tables (zone pools hide collateral).
   external published anchor; raytun3r/ already loads the dataset), and an
   explicit adaptation-data column (their protocol is unsupervised test-scene
   TTA; ours is supervised cross-scene — different rows, never the same row).
-- **New method candidates** (literature/2026-08-19-novelty-brainstorm.md):
-  H7 θ-gated LoRA (input-geometry-conditioned PEFT, unclaimed, licensed by
-  the smoothness of the measured field), H8 equal-solid-angle tokenization
-  (~35-40% fewer tokens at 110°, attacks the sampling gradient at source;
-  probe first). Killed ideas stay killed by K1-K4.
+- **H7 and H8 both REFUTED same-day by CPU pilots (2026-08-19)** — and the
+  refutations draw one line: θ-gating LoRA is redundant (gate stays flat;
+  PE already conditions the adapter spatially) and equal-solid-angle
+  resampling degrades every zone (+16..+31% at equal tokens; the radial
+  failure is NOT sampling density). Together with H3 (patch undistortion
+  no-op) and Center-PH (near-field +62%), the pattern is: **input-space
+  geometric surgery hurts a frozen FM, geometry-conditioning the adapter is
+  redundant — the interventions that work live behind the encoder (rung-1
+  readout), in the objective (rung-2 weighted losses), or add evidence
+  (rung-3 cross-frame attention).** This "where to intervene" gradient,
+  each step measured, is itself a paper-level organizing result.
 
 ## Key Results
 
