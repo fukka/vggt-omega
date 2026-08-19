@@ -444,3 +444,17 @@
   (no-collapse signal only).
 - No hyperparameter changes for #35; the pilot's job was direction + sanity
   and it delivered both. Protocol claims stay GPU-gated.
+
+## 2026-08-27 (tick 31) — H6 pilot fails informatively; dense-window fix lands before the box runs
+
+- H6 CPU pilot (same reduced split as H5's): near rim +2.1% — direction NOT
+  confirmed. Diagnosis: 3.3s "adjacent" frames violate the module's premise,
+  AND the same uniform-subsampling trap was waiting inside the trainer for
+  the box run. Seq gains dense=True (contiguous block); H6 trainer/eval use
+  it; #36 amended (second pre-run pull).
+- Also corrected: H6's center-safety is token-level only (DPT head mixes
+  spatially) — structural claims now restricted to the pose path; center
+  depth is empirical for H6, same as H5.
+- Contrast worth keeping: the H5 pilot (single-frame losses) worked at
+  sparse spacing; the H6 pilot (multi-frame core) could not — consistent
+  with the mechanism story rather than against it. Real test = #36 dense.
