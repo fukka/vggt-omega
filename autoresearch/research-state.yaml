@@ -101,7 +101,7 @@ hypotheses:
       or smaller rank, because the measured failure field (run_009) is a
       smooth function of theta and uniform LoRA wastes capacity spending it
       isotropically.
-    status: active   # pilot r=8: TIES uniform LoRA on every zone (0.572 vs 0.567 near-rim) AND the learned gate is flat in theta (|g-1|~0.06 everywhere) — PE already gives LoRA spatial conditioning; r=4 arms (gated + uniform control) running to test the capacity angle before verdict
+    status: refuted   # all three predictions failed: gated==uniform at r=8 AND r=4 (0.572/0.567, 0.754/0.753); gate curve flat (|g-1|~0.06). Mechanism: PE already puts spatially-varying corrections inside uniform LoRA's hypothesis class. Kept as a paper ablation; no GPU spend.
     motivation: "Model-level novelty per human directive; input-geometry-conditioned PEFT is unclaimed in the 2026-08-19 survey; inference-free (g(theta) precomputable per token)."
     parent: H5
     priority: high

@@ -514,3 +514,8 @@
   backbone's PE already lets LoRA condition spatially. r=4 arms running.
 - Fixed GPU-reported device bugs (losses.py x4, lora.py, raytun3r_row.py);
   5/5 loss tests pass. #37/#38 closed with consuming comments.
+
+## 2026-08-19 (tick 4b) — H7 REFUTED cleanly
+- gated==uniform at both ranks; gate flat; rank matters (r4 0.75 vs r8 0.57)
+  but conditioning does not substitute. Mechanism recorded in analysis.md.
+  Paper ablation; H7 closed without GPU spend.
