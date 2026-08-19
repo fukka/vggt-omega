@@ -87,3 +87,18 @@ cost. Spark3R's asymmetry finding + our geometry = merge KV along the ring
 where solid angle says tokens are redundant (the H8 refutation killed
 INPUT remapping; KV-side merging is context compression, which Spark3R
 shows is the safe side).
+
+## Addendum 2026-08-19b: H6.2 training-free multi-frame KV probe (locked)
+
+The module was trained with t-1 KV only, but MHA is permutation-invariant
+over the KV set — concatenating rim-KV from older frames needs no
+retraining. Variants (rim queries fixed): KV = rim(t-1) [H6.1 winner],
+rim(t-1)+rim(t-2), rim(t-1)+rim(t-2)+rim(t-4). seq131 dense 20 frames,
+EXPLORATORY (training scene).
+
+Predictions (locked):
+- P1: adding rim(t-2) does not hurt (near_rim within +2% of t-1-only);
+  any improvement >2% licenses H6.2 (trained pyramid) as a GPU ticket.
+- P2: marginal value decays with frame distance (t-4's addition changes
+  less than t-2's did) — the pyramid's decreasing-budget schedule is then
+  the right shape.
