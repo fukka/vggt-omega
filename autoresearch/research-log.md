@@ -142,3 +142,15 @@
 - Remaining before drafting: H2.3 result; VGGT-Omega variant (next CPU task:
   find the feature hook; its checkpoint lives on the box, so the run itself
   is a ticket); pose-stability statement (by construction, document it).
+
+## 2026-08-21 (tick 8) — H2.4 prepared: VGGT-Omega head code validated structurally
+
+- No VGGT-Omega weights on the Mac (empty HF cache) — the run is box-only.
+- omega_head.py written against the local vggt_omega source: tokens =
+  aggregated_tokens_list[-1][patch_token_start:], depth = dense_head planar z
+  converted once to range via the KB4 camera; patch 16, input 512.
+- Random-init smoke first produced all-NaN (untrained 24-block model
+  explodes) — added a sanitize mode (random-init only, loudly labeled) and
+  the full fit/eval path now runs end to end with finite dummies.
+- Ticket 031 filed for the six-sequence weighted run. #32 (cross-scene)
+  still pending on the box.

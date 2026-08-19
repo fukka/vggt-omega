@@ -58,7 +58,8 @@ def build_model(weights: str, random_init: bool, device: str):
     return model.to(device).eval()
 
 
-def cache_seq(src, frames, model, device, cache: Path) -> None:
+def cache_seq(src, frames, model, device, cache: Path,
+              sanitize: bool = False) -> None:
     cache.mkdir(parents=True, exist_ok=True)
     todo = [n for n in frames if not (cache / f"pred_{n}.npy").exists()
             or not (cache / f"feat_{n}.npy").exists()]
@@ -76,8 +77,15 @@ def cache_seq(src, frames, model, device, cache: Path) -> None:
         # dense head emits planar z; convert ONCE to euclidean range through
         # the calibrated KB4 camera (CONTEXT.md depth-convention discipline).
         z = depth.reshape(src.h, src.w).float().cpu()
-        np.save(cache / f"pred_{n}.npy", (z / cos_t.clamp_min(1e-6)).numpy())
         tok = final.reshape(-1, final.shape[-1])[patch_start:]
+        if sanitize:
+            # RANDOM-INIT ONLY: untrained weights emit NaN; substitute finite
+            # dummies so the downstream path is exercised. Numbers meaningless.
+            g = torch.Generator().manual_seed(SEED + n)
+            z = 2.0 + 0.5 * torch.rand(z.shape, generator=g)
+            tok = torch.nan_to_num(tok, nan=0.0) \
+                + 0.01 * torch.randn(tok.shape, generator=g)
+        np.save(cache / f"pred_{n}.npy", (z / cos_t.clamp_min(1e-6)).numpy())
         np.save(cache / f"feat_{n}.npy", tok.float().cpu().numpy())
         print(f"  cached {n} ({time.time() - t0:.1f}s, tok {tuple(tok.shape)})",
               flush=True)
@@ -127,7 +135,8 @@ def main(argv=None) -> None:
     model = build_model(args.weights, args.random_init, args.device)
     cache = CACHE_ROOT / (os.path.basename(args.seq.rstrip('/'))
                           + (".rnd" if args.random_init else ""))
-    cache_seq(src, frames, model, args.device, cache)
+    cache_seq(src, frames, model, args.device, cache,
+              sanitize=args.random_init)
     preds = {n: np.load(cache / f"pred_{n}.npy") for n in frames}
     feats = {n: np.load(cache / f"feat_{n}.npy") for n in frames}
 
