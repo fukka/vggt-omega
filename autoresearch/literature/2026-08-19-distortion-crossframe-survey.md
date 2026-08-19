@@ -104,3 +104,32 @@ different domain. Good "recipe framing" citation.
    (trained scale-field model / unsupervised PE TTA), with our supervised
    cross-scene tiny-budget adaptation as the third lane.
 4. Efficiency claims need a Spark3R citation and a stackability sentence.
+
+## Addendum: Spark3R method details (HTML read, 2026-08-19 evening)
+
+Confirmed from the paper body (arXiv:2605.06270v2): query tokens get
+INTRA-GROUP MERGING (light), KV tokens get PRUNING with a LAYER-ADAPTIVE
+schedule (heavier where empirically insensitive); training-free; prior
+uniform-reduction methods cap at ~10x before quality drops, the asymmetry
+is what unlocks 28x.
+
+### What this gives OUR efficient model (H6) — brainstorm with the human
+1. **Their asymmetry validates our query side and exposes our KV waste.**
+   Our rim-query design already treats queries as precious (geometry-
+   selected, uncompressed). But our KV = ALL 1296 prev-frame grid tokens,
+   including ~323 dead-corner vignette tokens (pure noise) — Spark3R says
+   KV is exactly where pruning is safe. H6.1 probe locked+running: KV in
+   {full, cone, rim, center} on the delivered #36 checkpoint.
+2. **H6.2 temporal KV pyramid** (design): rolling multi-frame peripheral
+   memory where KV from frame t-k is pruned/merged with factor growing in
+   k. Constant-cost video model; the "efficient fisheye video" novelty the
+   human asked for, now with two independent justifications (their
+   role-asymmetry + our angular-redundancy measurement: rim tokens carry
+   1/1.73 the solid angle of center tokens, so ring-merging rim KV is the
+   geometry-licensed compression).
+3. **Composition claim for the paper**: Spark3R compresses WITHIN existing
+   global attention (many-frame offline models); ours ADDS a gated
+   cross-frame path to single-frame-style frozen models. Orthogonal axes
+   (their role asymmetry x our geometric asymmetry) — cite + one-line
+   stackability note, plus the H6.3 ablation (geometry-selected vs
+   saliency-selected queries at equal budget) if time allows on the box.
