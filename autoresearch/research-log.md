@@ -349,3 +349,14 @@
   output in place — snapshot pattern documented in the smoke.)
 - #35 (H5 training) still running on the box. Next: H6 trainer (reuse H5's
   loop with the module in the depth path), then its training ticket.
+
+## 2026-08-24 (tick 22) — H6 trainer smoke-verified; ticket 034 filed
+
+- H6 train.py: two-direction module application per pair, two losses (the
+  rim-feature term is structurally unnecessary here), module-only optimizer,
+  12 MB checkpoints. Name-collision with the H5 trainer fixed by explicit-
+  path import. CPU smoke: loss 1.64->1.50 over 2 tiny epochs.
+- Watch item recorded: mv loss hit 0.0 on one 2-pair epoch sample — flagged
+  in the ticket as a health check for real training.
+- Ticket 034 (H6 rim vs all-token control) filed; eval_module.py to follow
+  as addendum. #35 still training.
