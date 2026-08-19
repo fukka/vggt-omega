@@ -547,3 +547,6 @@
 ## 2026-08-19 (tick 9) — box alive (delivered fovbench-019, other lane); #39 posted
 - ScanNet++ 3f15 pose-anchor + cross-lens probe posted as issue #39 (queue
   tail; eval batches for #35/#36/#38 remain the priority).
+
+## 2026-08-19 (tick 10) — H6.2 probe: +1.9% free from t-2 KV, saturates at t-2
+- Pyramid shape confirmed, magnitude thin; no GPU spend; revisit after #36.

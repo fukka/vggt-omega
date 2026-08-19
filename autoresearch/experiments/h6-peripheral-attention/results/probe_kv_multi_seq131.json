@@ -1,0 +1,44 @@
+{
+  "seq": "Apartment_release_clean_seq131_M1292",
+  "module": "/private/tmp/claude-501/-Users-fengjiazhang-Desktop-ADT-vggt-omega/c1591315-71f0-4ca2-9183-9f58fff82acc/scratchpad/h6_rim_module.pt",
+  "variants": {
+    "t1": [
+      1
+    ],
+    "t1_t2": [
+      1,
+      2
+    ],
+    "t1_t2_t4": [
+      1,
+      2,
+      4
+    ]
+  },
+  "report": {
+    "t1": {
+      "near_rim(<=2m,>=38deg)": 0.6408911990032526,
+      "center(<=11deg)": 0.36957251477261416,
+      "far(>=3m)": 0.21024361328952074
+    },
+    "t1_t2": {
+      "near_rim(<=2m,>=38deg)": 0.6289381282968712,
+      "center(<=11deg)": 0.3676530332212346,
+      "far(>=3m)": 0.2097773773745248
+    },
+    "t1_t2_t4": {
+      "near_rim(<=2m,>=38deg)": 0.6295416914264697,
+      "center(<=11deg)": 0.3645043131172341,
+      "far(>=3m)": 0.20898859699366185
+    }
+  },
+  "config": {
+    "seq": "/Users/fengjiazhang/Documents/projectaria_tools_adt_data/Apartment_release_clean_seq131_M1292",
+    "module": "/private/tmp/claude-501/-Users-fengjiazhang-Desktop-ADT-vggt-omega/c1591315-71f0-4ca2-9183-9f58fff82acc/scratchpad/h6_rim_module.pt",
+    "size": 504,
+    "max_frames": 20,
+    "depth_max_m": 10.0,
+    "device": "cpu",
+    "out": "results/probe_kv_multi_seq131.json"
+  }
+}

@@ -52,3 +52,22 @@ metrics are alignment-normalized (mean drift up to 0.26 m for cone-KV shows
 raw outputs do move — the affine absorbs it). Held-out confirmation added
 as an addendum to #36. H6.2 (temporal KV pyramid) design note in
 protocol.md — now licensed by this measurement.
+
+## H6.2 training-free multi-frame KV probe (2026-08-19, EXPLORATORY)
+
+Same setup as H6.1, frames pos>=4 so all variants share the eval set
+(results/probe_kv_multi_seq131.json):
+
+| KV | near_rim | center | far |
+|---|---|---|---|
+| rim(t-1) | 0.641 | 0.370 | 0.210 |
+| + rim(t-2) | 0.629 (-1.9%) | 0.368 | 0.210 |
+| + rim(t-4) | 0.630 | 0.365 | 0.209 |
+
+P1 marginal (improvement just under the 2% ticket bar), P2 confirmed
+(t-4 adds nothing beyond t-2 — the decreasing-budget pyramid shape is
+right, but the free effect saturates at one extra frame). Verdict: small
+free win; do NOT spend GPU on a trained pyramid now. Revisit only if the
+#36 held-out evals show the pairwise module strongly positive. Paper: one
+sentence in the efficiency/extension paragraph, clearly labeled
+training-free and exploratory.
