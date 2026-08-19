@@ -550,3 +550,9 @@
 
 ## 2026-08-19 (tick 10) — H6.2 probe: +1.9% free from t-2 KV, saturates at t-2
 - Pyramid shape confirmed, magnitude thin; no GPU spend; revisit after #36.
+
+## 2026-08-19 (tick 11) — external H2 review accepted in full
+- Items 1-2 upheld (percentage headlines, cross-sequence naming, 82% affine
+  placement), item 3 refuted our-way (features not geometry; control
+  imported). Camera guard added. seq136 mass question REOPENED (frame-window
+  artifact suspected: 1.359 vs 0.149). All records corrected same-tick.
