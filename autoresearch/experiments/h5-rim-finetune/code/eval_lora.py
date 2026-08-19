@@ -91,9 +91,11 @@ def main(argv=None) -> None:
 
     nb_d = len(GT_DEPTH_EDGES) - 1
     tables = {}
+    per_frame: Dict[str, list] = {}
     for arm in ("before", "after"):
         s_ = np.zeros((THETA_BINS, nb_d))
         n_ = np.zeros((THETA_BINS, nb_d), dtype=np.int64)
+        per_frame.setdefault(arm, [])
         for k, n in enumerate(s.frames):
             with torch.no_grad():
                 if arm == "before":
@@ -116,8 +118,25 @@ def main(argv=None) -> None:
             s_ += np.bincount(flat, weights=absrel,
                               minlength=THETA_BINS * nb_d
                               ).reshape(THETA_BINS, nb_d)
-            n_ += np.bincount(flat, minlength=THETA_BINS * nb_d
+            fn_ = np.bincount(flat, minlength=THETA_BINS * nb_d
                               ).reshape(THETA_BINS, nb_d)
+            fs_ = np.bincount(flat, weights=absrel,
+                              minlength=THETA_BINS * nb_d
+                              ).reshape(THETA_BINS, nb_d)
+            # per-frame zone AbsRel for bootstrap error bars (review
+            # change #3, 2026-08-19); frame is the sampling unit
+            nr = [(i, j) for i in range(THETA_BINS) for j in range(nb_d)
+                  if math.degrees(0.5 * (t_edges[i] + t_edges[i + 1])) >= 38
+                  and GT_DEPTH_EDGES[j + 1] <= 2.0]
+            ce = [(i, j) for i in range(THETA_BINS) for j in range(nb_d)
+                  if math.degrees(0.5 * (t_edges[i] + t_edges[i + 1])) <= 11]
+            def _z(cells):
+                wg = sum(fn_[i, j] for i, j in cells)
+                return (float(sum(fs_[i, j] for i, j in cells) / wg)
+                        if wg else None)
+            per_frame[arm].append({"frame": int(n),
+                                   "near_rim": _z(nr), "center": _z(ce)})
+            n_ += fn_
         tables[arm] = s_ / np.maximum(n_, 1)
         if arm == "before":
             counts = n_
@@ -131,6 +150,7 @@ def main(argv=None) -> None:
         print(f"{GT_DEPTH_EDGES[j]:4.0f}-{GT_DEPTH_EDGES[j + 1]:2.0f} m  {row}")
 
     zones: Dict[str, Dict] = {}
+    # (per_frame collected above)
     for zname, cells in {
         "near_rim(<=2m,>=38deg)": [(i, j) for i in range(THETA_BINS)
                                    for j in range(nb_d)
@@ -200,6 +220,7 @@ def main(argv=None) -> None:
                        "before": tables["before"].tolist(),
                        "after": tables["after"].tolist(),
                        "counts": counts.tolist(), "zones": zones,
+                       "per_frame": per_frame,
                        "pose": summ_pose,
                        "theta_bin_mid_deg": t_mid,
                        "config": vars(args)}, f, indent=2)
