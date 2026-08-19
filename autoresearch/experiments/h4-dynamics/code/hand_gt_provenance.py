@@ -90,7 +90,7 @@ def pick_high_dyn_frames(gt_with, human_ids: np.ndarray, cone: np.ndarray,
     return [t for _, t in scored[:n]]
 
 
-def process_sequence(seq_dir: str, out_dir: str, da3_bb) -> dict:
+def process_sequence(seq_dir: str, out_dir: str, da3_bb, device: str) -> dict:
     seq_name = os.path.basename(os.path.normpath(seq_dir))
     paths_provider = adt.AriaDigitalTwinDataPathsProvider(seq_dir)
     gt_with = adt.AriaDigitalTwinDataProvider(paths_provider.get_datapaths(True))
@@ -153,8 +153,8 @@ def process_sequence(seq_dir: str, out_dir: str, da3_bb) -> dict:
 
         cos_t = torch.cos(camera.incidence_grid(SIZE, SIZE)).numpy()
         gr_with = zw / np.clip(cos_t, 1e-6, None)
-        rgb_real_t = torch.from_numpy(rgb_real).permute(2, 0, 1).float()
-        rgb_syn_t = torch.from_numpy(rgb_syn).permute(2, 0, 1).float()
+        rgb_real_t = torch.from_numpy(rgb_real).permute(2, 0, 1).float().to(device)
+        rgb_syn_t = torch.from_numpy(rgb_syn).permute(2, 0, 1).float().to(device)
         with torch.no_grad():
             pr_real = da3_bb.forward(rgb_real_t[None, None])
             pr_real.require_convention("range")
@@ -239,19 +239,19 @@ def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seq-dirs", nargs="+", required=True)
     ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = ap.parse_args(argv)
 
+    device = args.device
     from raytun3r.backbones import build_backbone
-    da3_bb = build_backbone("da3", weights="pretrained",
-                            device="cuda" if torch.cuda.is_available() else "cpu",
-                            variant="small")
+    da3_bb = build_backbone("da3", weights="pretrained", device=device, variant="small")
     da3_bb.install(None, camera_for(SIZE), (SIZE, SIZE),
                   patch_undistort=False, border_token=False, dpt_grid=False,
                   depth_convention="range")
 
     os.makedirs(args.out_dir, exist_ok=True)
     for seq_dir in args.seq_dirs:
-        result = process_sequence(seq_dir, args.out_dir, da3_bb)
+        result = process_sequence(seq_dir, args.out_dir, da3_bb, device)
         out_path = os.path.join(args.out_dir, f"{result['seq']}.json")
         with open(out_path, "w") as f:
             json.dump(result, f, indent=2)
