@@ -488,3 +488,12 @@
 - New hypotheses H7 (theta-gated LoRA) and H8 (equal-solid-angle tokenization,
   probe-first) added to state. → literature/2026-08-19-novelty-brainstorm.md
 - Next CPU work: Center-PH baseline, H7 pilot, H8 probe (no GPU queue impact).
+
+## 2026-08-19 (tick 2) — Center-PH baseline anchor
+- Protocol addendum locked first (predictions P1-P3), then run: seq131 odd,
+  DA3-S, 504px, visual rectification check passed.
+- P2/P3 confirmed (near_rim coverage 49.6%, cone 75.2%). P1 HALF-REFUTED:
+  identical-pixel control shows center flat and near-center +62% WORSE under
+  rectification — Center-PH's ScanNet++ depth win does not transfer to
+  egocentric near-field ADT. Exploratory until reproduced on held-out scene.
+- Next: H7 pilot, H8 remap probe.
