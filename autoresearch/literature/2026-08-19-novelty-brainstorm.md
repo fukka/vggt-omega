@@ -27,18 +27,20 @@ input-geometry-conditioned PEFT. Cheap to implement on top of h5 lora.py
 (one extra file); CPU pilot on seq131 feasible this week. **Do first.**
 
 ### C2. Foveated tokenization / equal-solid-angle patching (arch, efficiency) — STRONG but heavier
-KB4 oversamples the center in pixels: uniform 14px patches = non-uniform
-solid angle (center patch ≈ 2.1× the steradians of a rim patch at 110°...
-verify exact ratio before claiming). Resample to an equal-area grid before
-the ViT → fewer tokens for the same FOV, and every token sees the same
-angular support (removes the very gradient K2 measures). Risk: breaks the
-pretrained PE distribution — mitigation is RayTun3R-style table refit. This
-is a bigger surgery; expected headline is efficiency (tokens ∝ solid angle:
-~35-40% fewer at 110°) plus possibly flattening the radial bias at source.
-Pilot: measure the solid-angle ratio + a remap-only zero-training probe
-(does vanilla DA3 on the equal-area remap already change the bias field?).
-CPU-feasible probe. **Do the probe; commit to full version only if the probe
-moves the bias field.**
+MEASURED 2026-08-19 (scratchpad solid_angle.py, spherical-excess per patch
+on the true Aria KB4 at 504²/14px): **a center patch covers 1.73× the solid
+angle of a rim patch** (0.00407 vs 0.00235 sr, θ>45° band) — the *rim* is
+the angularly oversampled side, opposite to the initial guess. Equal-area
+tokenization at center-patch density therefore **merges rim patches**: 651
+tokens instead of 973 in the cone = **33.1% fewer**, with zero change to
+center resolution. Two consistent readings: (a) efficiency — rim tokens are
+angularly redundant, merge them; (b) science — rim depth failure is NOT a
+sampling-starvation story (rim has *more* pixels per steradian), which
+independently corroborates K3: what the rim lacks is evidence (cross-frame),
+not resolution. Risk: breaks the pretrained PE distribution — mitigation is
+RayTun3R-style table refit. Remaining probe: remap-only forward (no
+training) — does vanilla DA3 on the equal-area remap move the bias field?
+**Do the remap probe; commit to training only if the field moves.**
 
 ### C3. Peripheral memory across many frames (arch, performance) — H6 extension
 H6 is pairwise (t-1 only). Extend to a rolling KV cache of rim tokens from
