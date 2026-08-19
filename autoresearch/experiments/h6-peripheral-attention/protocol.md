@@ -54,3 +54,36 @@ attention-routing problem (maybe the DPT head, maybe the compression is
 upstream of the final block) — probe earlier insertion points before
 abandoning; if the all-token control matches rim-query at equal params, the
 efficiency story dies but the routing story survives.
+
+## Addendum 2026-08-19: H6.1 KV-compression probe (locked before run)
+
+Trigger: human asked to study Spark3R (arXiv:2605.06270) — queries are
+compression-sensitive (view-specific requests), KV tolerates aggressive
+pruning (shared context), layer-adaptive factors, training-free. Our module
+already embodies the query half (rim-only queries, geometry-selected); its
+KV side is untouched: prev-frame KV = ALL 1296 grid tokens, of which ~323
+are dead-corner tokens outside the imaged cone (vignette black — noise).
+
+Probe (CPU, delivered #36 rim checkpoint, seq131 dense frames — a TRAINING
+scene, so this is an EXPLORATORY mechanism probe, not a held-out claim):
+run the module with KV restricted to (a) full 1296 [as trained], (b) cone
+only (~973), (c) cone rim-only, (d) cone center-only, comparing zone AbsRel
+of the after-arm and the output drift |d_b - d_a|.
+
+Predictions (locked):
+- P1: dropping dead-corner KV (b) changes near-rim AbsRel by <2% relative —
+  the trained attention already ignores vignette tokens; if so, cone-KV
+  becomes the default (25% attention-FLOPs saving, free).
+- P2: rim-only KV (c) degrades little for SMALL motions (temporal
+  neighbours see the same rim band) but center-only KV (d) hurts more —
+  the rim queries fetch context from where content overlaps, i.e. mostly
+  the rim band itself. Whichever way (c)/(d) lands, it tells us where the
+  cross-frame evidence lives, feeding the H6.2 design below.
+
+H6.2 (design note, no run yet): temporal KV pyramid — rolling memory where
+KV from t-k is pruned/merged with a factor growing in k (t-1 cone-full,
+t-2 2x-merged, t-4 4x-merged): multi-frame peripheral memory at ~constant
+cost. Spark3R's asymmetry finding + our geometry = merge KV along the ring
+where solid angle says tokens are redundant (the H8 refutation killed
+INPUT remapping; KV-side merging is context compression, which Spark3R
+shows is the safe side).
