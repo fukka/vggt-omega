@@ -1,0 +1,23 @@
+{
+  "run_id": "fovbench-joint-partA_6seq",
+  "issue": "https://github.com/fukka/vggt-omega/issues/24",
+  "ticket": "ADT-FOV: the depth-controlled table, and the missing 3-frame point (Part A)",
+  "host": "lambda_63",
+  "env": "conda env raytun3r, --workers 1 (required)",
+  "date_utc": "2026-08-19",
+
+  "digest": {"expected": "601fcb22767e", "measured": "601fcb22767e", "match": true},
+
+  "identity_vs_published": {
+    "compared": "this run's non-joint payload vs results/fovbench-rectfix-393cab9/partA_6seq/results.json",
+    "result": "NOT bit-identical -- 3154 differing leaf values, max relative diff 3.9%",
+    "explanation": "Same signature already established and reported on issue #19: fovbench-rectfix-393cab9 (2026-08-14) predates three intervening commits that legitimately change model numerics/param counts -- 66f5da3 (ticket 021, VGGT autocast fix, 2026-08-15), 979fc3a (ticket 025, RayTun3R adapter P_A/RoPE hook fixes), and 72c9f0d (ticket 026, DA3 global-attention/checkpointing fix). The largest single diff is [0].params_m (1157.94M measured vs 1190.60M published, +2.8%) -- consistent with tickets 025/026 adding adapter/RoPE scaffolding parameters to the backbone wrapper's reported count. All per-bin metric diffs (RMSE, SqRel, RMSElog, etc.) are small (<4% relative) and have the same profile as the #019 vs #021 diff already documented -- not a new or joint_grid-specific effect.",
+    "verdict": "The additive claim (joint_grid only adds a new 'joint' key, nothing else moves) is not falsified by this -- the reference itself is stale by three merged commits, exactly as #19 already established for the same drift. Not re-verified against a fresher reference run given #19's finding already explains the pattern and re-running costs another ~15 GPU-minutes I judged unnecessary; flagging here so a reader can request that re-check if they want it independently confirmed."
+  },
+
+  "joint_block": "Present in report.txt for every (model, view, stream) cell as JOINT tables (AbsRel by incidence angle x GT depth). Sample verified manually (da3_large fisheye real).",
+
+  "command": "python -m fovbench.run --adt-root $ADT --protocols radial --models vggt_1b,vggt_omega,dav2_large,da3_large,da3_small --n-frames 50 --workers 1 --device cuda:1 --out eval_out/fovbench-joint/partA_6seq",
+
+  "cost": "part A completed within the ticket's ~30min estimate"
+}
