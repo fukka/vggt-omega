@@ -44,3 +44,22 @@ Provenance: results/centerph_seq131_odd.json (row),
 results/centerph_seq131_odd_vanillacovered.json (control),
 code/centerph_row.py + scratch vanilla_covered.py (to be promoted when the
 held-out ticket is written).
+
+## Loader reconciliation: #37 vs #38 (2026-08-19) — RESOLVED
+
+The 3.6x near_rim gap (da3_small seq136: 0.149 in #37 vs 0.542 in #38
+vanilla) was a double depth conversion in raytun3r_row.py: ADTSequence
+already returns euclidean range; the script divided by cos(theta) again,
+inflating rim GT by up to 1.73x (and interacting with the per-frame affine).
+Frame selection (first-60), alignment, and conventions were otherwise
+identical between the two harnesses.
+
+Fix verified on local seq131 (28 frames, 504px, vanilla DA3-S): the fixed
+row reproduces the diagnosis-era signature (near rows rising with theta to
+~2.0-2.2 at the rim; far rows flat) — results/rt3r_seq131_vanilla_fixed.json.
+#38 reopened; 4-row re-run requested with adapters unchanged. v1 numbers
+quarantined (never entered findings as claims beyond the direction, which is
+itself now unverified).
+
+Residual #37-vs-ours difference is scene content (near-rim mass), documented
+above — not protocol.
