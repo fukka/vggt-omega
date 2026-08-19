@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>鱼眼深度研究 · 进度看板</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", sans-serif;
+         max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a; line-height: 1.75; }
+  h1 { font-size: 1.6rem; } h2 { font-size: 1.2rem; margin-top: 2.2rem; border-left: 4px solid #2980b9; padding-left: .6rem; }
+  .time { color: #888; font-size: .9rem; }
+  table { border-collapse: collapse; width: 100%; margin: .8rem 0; }
+  td, th { border: 1px solid #ddd; padding: .45rem .7rem; font-size: .92rem; vertical-align: top; }
+  th { background: #f7f9fb; }
+  .done { background: #eafaf1; } .doing { background: #fef9e7; } .todo { background: #fdfefe; } .block { background: #fdecea; }
+  .tag { padding: .1rem .45rem; border-radius: 4px; font-size: .8rem; font-weight: 600; white-space: nowrap; }
+  .me { background: #d6eaf8; } .gpu { background: #e8daef; } .you { background: #fdebd0; }
+  img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; }
+  .note { color: #666; font-size: .88rem; }
+  .big { font-size: 1.02rem; }
+  dt { font-weight: 600; margin-top: .5rem; }
+</style>
+</head>
+<body>
+<h1>鱼眼深度研究 · 进度看板</h1>
+<p class="time">最近更新:2026-08-19(这个页面会一直更新,刷新即可看到最新进度)</p>
+
+<h2>一、我们在研究什么(一句话版)</h2>
+<p class="big">Aria 眼镜的鱼眼相机视野很宽(约110°),但现有的深度估计大模型都是在普通相机图片上训练的:
+<b>画面边缘(视野外圈)的深度估计很差</b>。我们想用很小的改动(不重训大模型)让边缘变好,
+同时<b>不把画面中心弄坏</b>。你定的四个创新方向:
+① 边缘变好、中心不变差;② 让模型更聪明地处理畸变(不同位置畸变程度不同,处理方式也该不同);
+③ 边缘虽然深度差,但可能对"多帧对齐/定位"很有用,要把这个价值利用起来;④ 处理好画面里的手(第一视角视频总有手在动)。</p>
+
+<h2>二、到目前为止最重要的发现(白话版)</h2>
+<img src="assets/h1_family.png" alt="第一批实验的四张图">
+<p class="note">图从左到右:①按"离画面中心的角度"把特征点分组、每组数量一样多时,各组算出的相机转动误差——没有哪一组特别厉害;
+②同样数量的点,允许它们"铺得更开"(覆盖更大视野)时误差一路下降;③对"相机移动方向"的估计,视野铺开后误差从43°降到16°;
+④把深度大模型输入图的中心/边缘分别抹掉后,它估计相机转动的误差变化。</p>
+<ol>
+<li><b>猜想一(边缘的每个点更有用?)——结论:不成立。</b>
+把两帧之间匹配到的特征点按"离中心远近"分组、每组点数相同,边缘那组算出的相机姿态并不比中心组准。
+我们还做了一个"理想条件"的模拟对照(同样的点位、人工合成完美数据),也证明边缘单个点没有几何上的优势。</li>
+<li><b>猜想一改进版(边缘的价值在于"铺得开")——结论:成立,而且很稳。</b>
+点的数量固定,只把允许的视野范围从中心小圈逐步放大到全圈:相机转动的误差在真实数据上
+<b>每一对测试帧都变好</b>(17对里17对),移动方向的误差降到原来的1/3。
+有意思的是:在"理想条件"模拟里这个好处几乎消失——说明视野铺开的价值主要是<b>抗噪声、抗错误匹配</b>,
+不是教科书里的几何条件数——这一点之前没人量化过。</li>
+<li><b>猜想二(大模型是不是没用上边缘?)——结论:恰恰相反,它非常依赖边缘。</b>
+我们把输入图的中心39%像素抹掉,大模型(DA3-Small)估计的相机转动<b>几乎没变化</b>(4.9° vs 5.0°);
+把边缘61%抹掉,误差直接翻倍还多(12.3°);抹掉同样面积的"随机位置"只涨到7.4°。
+也就是说:<b>模型的"对齐能力"主要靠边缘,而它的"深度"恰恰在边缘最差</b>——你方向③的直觉被数据证实了,
+而且比想象的更强。</li>
+<li><b>换到真正的 Aria 数据上重做(正在收尾)。</b>上面的实验最初是在一个视野更宽(约170°)的鱼眼数据上做的。
+昨天开始在你 Mac 上现成的 ADT 真实序列(seq131,28帧)上复做:
+"铺得开更准"这条<b>在 Aria 上也成立</b>(视野从25°放大到45°,经典方法的误差从10.1°降到1.6°)。
+一个新细节:Aria 最外圈(45°→54.8°)在这个小样本上没有额外收益,值得继续查。
+"模型依赖边缘"的复做正在跑(见下面进行中列表)。</li>
+</ol>
+<p class="big"><b>这对方法设计意味着什么:</b>要改进边缘深度的任何"小改动",都<b>不能碰坏边缘的特征</b>——
+因为模型的对齐能力就靠它们。所以我们后面做适配器(adapter)时,会选"初始为零、只在输出端修正"的路线,
+并且每个版本都要同时汇报三个数:中心深度、边缘深度、姿态稳定性(以前的论文只报整图平均,这就是我们的差异点之一)。</p>
+
+<h2>三、进度看板</h2>
+<p>负责方说明:<span class="tag me">Mac-Claude</span> = 我(你 Mac 上这个会话,只用 CPU);
+<span class="tag gpu">GPU-Claude</span> = GPU 机器上的另一个 Claude(通过 GitHub 任务单接活);
+<span class="tag you">你</span> = 需要你看一眼/拍板的事。</p>
+
+<table>
+<tr><th>状态</th><th>事项</th><th>负责</th><th>说明</th></tr>
+<tr class="done"><td>✅ 已完成</td><td>研究工作区搭建 + 文献补查</td><td><span class="tag me">Mac-Claude</span></td>
+<td>建了 <code>autoresearch/</code>(研究状态、发现、日志都在里面);在你已有的文献综述之上,按四个方向补查了一轮新论文。</td></tr>
+<tr class="done"><td>✅ 已完成</td><td>猜想一、一改、二:共5个实验(见上文)</td><td><span class="tag me">Mac-Claude</span></td>
+<td>全部在 Mac CPU 上完成,每个实验先把"预测什么"写死并提交 git,再跑,防止事后圆话。</td></tr>
+<tr class="done"><td>✅ 已完成</td><td>Aria 真实数据的"坐标系标定"难题</td><td><span class="tag me">Mac-Claude</span></td>
+<td>本地缺一个"设备→相机"的标定文件,姿态真值会差约40°。我用经典几何方法从数据里反推出来了,并通过了预设的自检门槛(误差&lt;1°)。GPU 出正式标定文件后再替换(任务单 #27)。</td></tr>
+<tr class="done"><td>✅ 已完成</td><td>Aria 上复做"铺得开更准"</td><td><span class="tag me">Mac-Claude</span></td>
+<td>成立(误差 10.1°→1.6°)。最外圈的边际价值待查。</td></tr>
+<tr class="doing"><td>🔄 进行中</td><td>Aria 上复做"模型依赖边缘"</td><td><span class="tag me">Mac-Claude</span></td>
+<td>正在跑(DA3-Small 在28帧上做抹除对照),预计很快出结果,出来后更新本页。</td></tr>
+<tr class="doing"><td>🔄 进行中</td><td>任务单 #27:导出 Aria 相机标定文件</td><td><span class="tag gpu">GPU-Claude</span></td>
+<td>已发到 GitHub(英文)。很小的活:在 GPU 机器上用官方工具从数据里读出"设备→相机"的准确位置关系,存成 JSON。<b>作用:</b>让 ADT 上所有姿态实验的真值从"我反推的近似值"升级成"官方标定",还能解锁"移动方向"类的结论。</td></tr>
+<tr class="doing"><td>🔄 进行中</td><td>任务单 #28:统计 ADT 里"手/身体"占多少像素</td><td><span class="tag gpu">GPU-Claude</span></td>
+<td>已发到 GitHub(英文)。Mac 上这条序列恰好没有人手(357个物体全是静态的),所以要 GPU 机器上有人体骨架的序列。只做统计不跑模型:手占画面百分之几、集中在什么位置、离相机多远。<b>作用:</b>方向④(处理手)值不值得做,先用数据说话——如果手只占0.1%,这个方向就便宜地放弃。</td></tr>
+<tr class="todo"><td>📋 计划中</td><td>设计"中心不受伤"的边缘适配器(方向①的核心)</td><td><span class="tag me">Mac-Claude</span> → <span class="tag gpu">GPU-Claude</span></td>
+<td>基于 RayTun3R 的思路(总共约1万个参数、初始为零),但训练目标只针对边缘、并新增"姿态稳定性"指标。代码和测试在 Mac 写好,训练用 GPU 任务单发出。</td></tr>
+<tr class="todo"><td>📋 计划中</td><td>方向②:按畸变程度分配计算(DarSwin 式的径向分块)</td><td><span class="tag me">Mac-Claude</span></td>
+<td>先做零参数版本(按镜头模型重新采样图块),CPU 可验证一部分。</td></tr>
+<tr class="todo"><td>📋 计划中</td><td>边缘深度到底差多少(带"距离混淆"控制)</td><td><span class="tag me">Mac-Claude</span></td>
+<td>画面边缘看到的东西往往更近,所以"边缘误差大"有一部分是"东西不一样"。repo 里已有控制这个混淆的方法(slambench/fov.py),要把它接到本研究的深度评测里。</td></tr>
+<tr class="block"><td>⛔ 卡点</td><td>ADT 移动方向(平移)类结论</td><td><span class="tag gpu">GPU-Claude</span></td>
+<td>等 #27 的标定文件(缺相机和设备之间的位置偏移量)。转动类结论不受影响。</td></tr>
+<tr class="block"><td>⛔ 卡点</td><td>方向④(手)的下一步</td><td><span class="tag gpu">GPU-Claude</span></td>
+<td>等 #28 的统计结果决定做不做、怎么做。</td></tr>
+<tr class="todo"><td>👀 请你看</td><td>两张 GPU 任务单发得对不对;研究方向有没有要纠偏的</td><td><span class="tag you">你</span></td>
+<td>GitHub issues <a href="https://github.com/fukka/vggt-omega/issues/27">#27</a>、<a href="https://github.com/fukka/vggt-omega/issues/28">#28</a>。有任何想法直接在对话里说即可。</td></tr>
+</table>
+
+<h2>四、三方协作是怎么运转的</h2>
+<ul>
+<li><b>我(Mac-Claude)</b>:写代码、设计实验、跑所有 CPU 能跑的实验、分析结果、写文档和这个看板。每20分钟自动醒一次接着干。</li>
+<li><b>GPU-Claude</b>:另一个账号,在有显卡的机器上干活。它<b>只看 GitHub 任务单</b>(带 gpu 标签的 issue),干完把结果推到 results 分支,我再取回来分析。我们不直接对话,任务单就是全部沟通。</li>
+<li><b>你</b>:看这个页面掌握全局;想改方向、想追问、想否决,随时在对话里说。发 GPU 任务单前重要的我会先跟你说一声(这次两张是你允许后发的)。</li>
+</ul>
+
+<h2>五、小词典(以后报告尽量说人话,这里备查)</h2>
+<dl>
+<dt>特征点 / 匹配</dt><dd>两张图里能认出"是同一个东西"的小图案点;靠它们算出两帧之间相机怎么动了。</dd>
+<dt>相机姿态</dt><dd>相机转了多少度(转动)+ 往哪个方向移了(移动方向)。</dd>
+<dt>入射角 θ</dt><dd>一个像素离画面中心有多"偏":中心是0°,Aria 鱼眼最边上约54.8°。</dd>
+<dt>对照实验</dt><dd>为了排除其它解释,专门做的"陪跑"实验。比如"随机抹掉同样面积"是"抹掉边缘"的陪跑:只有边缘明显更糟,才能说边缘特殊。</dd>
+<dt>适配器(adapter)</dt><dd>不动大模型本体、外挂的小改动(这个研究里约1万个参数,大模型是十亿级)。</dd>
+<dt>协议先行</dt><dd>每个实验先把"要测什么、预测什么"写进 git 再跑,防止看到结果后改口。</dd>
+</dl>
+
+<p class="note">数据与代码:<code>autoresearch/</code>(分支 organized)。英文技术版报告:<code>autoresearch/to_human/2026-08-18-progress.html</code>。</p>
+</body>
+</html>
