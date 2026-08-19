@@ -29,8 +29,11 @@ def compression_weight_map(theta: torch.Tensor, gt_range: torch.Tensor,
     in (theta, log-depth) and clamp outside the measured support. NaN cells
     (never measured) contribute the neutral weight 1.
     """
+    dev = gt_range.device
+    theta = theta.to(dev)
     d = json.loads(Path(bias_json).read_text())
-    bias = torch.tensor(d["bias_log"], dtype=torch.float32)      # (8, 5)
+    bias = torch.tensor(d["bias_log"], dtype=torch.float32,
+                        device=dev)                              # (8, 5)
     bias = torch.nan_to_num(bias, nan=0.0)
     t_mid = torch.tensor(d["theta_bin_mid_deg"], dtype=torch.float32)
     edges = d["depth_edges_m"]
@@ -64,7 +67,7 @@ def rim_feature_loss(student_tokens: torch.Tensor, teacher_tokens: torch.Tensor,
                      rim_deg: float = 35.0) -> torch.Tensor:
     """L2 between student and (detached) teacher tokens on rim patches
     (protocol loss 2). Tokens: (N, C); theta_patch: (N,) radians."""
-    rim = theta_patch > math.radians(rim_deg)
+    rim = theta_patch.to(student_tokens.device) > math.radians(rim_deg)
     if not bool(rim.any()):
         return student_tokens.sum() * 0.0
     diff = student_tokens[rim] - teacher_tokens[rim].detach()
@@ -81,8 +84,10 @@ def warp_i_to_j(range_i: torch.Tensor, camera, R_rel: torch.Tensor,
     project / theta_max). Differentiable w.r.t. range_i.
     """
     h, w = range_i.shape
-    ys, xs = torch.meshgrid(torch.arange(h, dtype=range_i.dtype),
-                            torch.arange(w, dtype=range_i.dtype), indexing="ij")
+    ys, xs = torch.meshgrid(
+        torch.arange(h, dtype=range_i.dtype, device=range_i.device),
+        torch.arange(w, dtype=range_i.dtype, device=range_i.device),
+        indexing="ij")
     uv = torch.stack([xs, ys], dim=-1).reshape(-1, 2)
     rays = camera.unproject(uv).to(range_i.dtype)                # unit (N, 3)
     X_i = rays * range_i.reshape(-1, 1)
@@ -116,7 +121,8 @@ def multiframe_rim_loss(range_i: torch.Tensor, range_j: torch.Tensor,
     ok = front & (r_j_sampled > 1e-3)
     if not bool(ok.any()):
         return range_i.sum() * 0.0
-    wgt = (theta / float(camera.theta_max)).clamp(0, 1) ** rim_power
+    wgt = (theta.to(range_i.device)
+           / float(camera.theta_max)).clamp(0, 1) ** rim_power
     diff = (r_in_j.clamp_min(1e-6).log()
             - r_j_sampled.clamp_min(1e-6).log()).abs()
     m = ok.float() * wgt.to(range_i.dtype)

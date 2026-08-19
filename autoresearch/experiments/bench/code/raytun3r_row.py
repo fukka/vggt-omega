@@ -63,6 +63,7 @@ def main(argv=None) -> None:
         adapter = bb.make_adapter(n_radial=a["n_radial"],
                                   n_angular=a["n_angular"])
         adapter.load_state_dict(ck["adapter"])
+        adapter = adapter.to(args.device)
         print(f"[rt3r] adapter loaded: {ck.get('param_breakdown')}")
     bb.install(adapter, src.camera, (src.h, src.w),
                patch_undistort=bool(args.adapter), border_token=bool(args.adapter),

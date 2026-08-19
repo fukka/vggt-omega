@@ -24,8 +24,9 @@ class LoRALinear(nn.Module):
             p.requires_grad_(False)
         self.r = r
         self.scale = alpha / r
-        self.A = nn.Parameter(torch.empty(r, base.in_features))
-        self.B = nn.Parameter(torch.zeros(base.out_features, r))
+        dev = base.weight.device
+        self.A = nn.Parameter(torch.empty(r, base.in_features, device=dev))
+        self.B = nn.Parameter(torch.zeros(base.out_features, r, device=dev))
         nn.init.kaiming_uniform_(self.A, a=math.sqrt(5))
         self.enabled = True
 

@@ -1,0 +1,35 @@
+{
+  "ticket": "docs/handoff/tickets/034-h6-training-runs.md (issue #36)",
+  "run_on": "lambda_63",
+  "commit": "1327748",
+  "train_seqs": [
+    "Apartment_release_clean_seq131_M1292",
+    "Apartment_release_clean_seq133_M1292",
+    "Apartment_release_clean_seq134_M1292",
+    "Apartment_release_clean_seq135_M1292"
+  ],
+  "held_out": ["Apartment_release_clean_seq136_M1292", "Apartment_release_decoration_seq132_M1292"],
+  "epochs": 20,
+  "size": 504,
+  "n_pairs_per_epoch": 236,
+  "runs": {
+    "rim": {
+      "flags": "default (rim-query module, queries = 161/324 patches)",
+      "loss_epoch0": {"depth": 0.9300, "mv": 0.0364, "total": 0.9482},
+      "loss_epoch19": {"depth": 0.4812, "mv": 0.0299, "total": 0.4961}
+    },
+    "alltok": {
+      "flags": "--all-token-control (efficiency control, queries = ALL 1296/1296 patches)",
+      "loss_epoch0": {"depth": 0.6567, "mv": 0.0310, "total": 0.6722},
+      "loss_epoch19": {"depth": 0.1393, "mv": 0.0243, "total": 0.1514}
+    }
+  },
+  "mv_loss_health_check": {
+    "watch_item": "ticket #36 asked to stop and comment (rather than burn budget) if mv sits at 0 across an epoch, since a smoke run had printed 0.0 once on a tiny sample",
+    "result": "mv stayed nonzero on both runs across all 20 epochs (rim: 0.0364->0.0299; alltok: 0.0310->0.0243) -- no warp-overlap/pair-spacing problem at full resolution, safe to proceed"
+  },
+  "bugs_found_and_workaround": {
+    "summary": "Same losses.py device-placement bug as ticket #35/issue #35 (H6 imports the identical shared losses.py from the h5-rim-finetune code dir). Not edited (out of scope); see issue #36 comment.",
+    "reported_to": "cpu via issue #36 comment"
+  }
+}

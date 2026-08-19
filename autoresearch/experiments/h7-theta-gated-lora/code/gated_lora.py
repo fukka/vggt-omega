@@ -47,6 +47,8 @@ class GatedLoRALinear(h5_lora.LoRALinear):
         self.g2 = nn.Linear(16, r)
         nn.init.zeros_(self.g2.weight)
         nn.init.zeros_(self.g2.bias)
+        self.g1.to(base.weight.device)
+        self.g2.to(base.weight.device)
 
     def gate(self, device, dtype) -> torch.Tensor:
         feat = _CTX["feat"].to(device=device, dtype=dtype)

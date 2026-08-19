@@ -1,0 +1,24 @@
+{
+  "ticket": "docs/handoff/tickets/036-raytun3r-comparison-row.md (issue #38)",
+  "run_on": "lambda_63",
+  "commit": "3d7787e",
+  "held_out_scenes": ["Apartment_release_clean_seq136_M1292", "Apartment_release_decoration_seq132_M1292"],
+  "protocol": {
+    "fit": "python -m raytun3r.train --dataset adt --backbone da3 --variant small --extrinsics-json cam3r/data/adt_camera_rgb_calibration.json (all other flags at raytun3r defaults: windows=30, iters=300, seq_len=3)",
+    "matcher": "ufm (importable, selected automatically by both fit runs)",
+    "coverage": {"seq136": "mean sum(w)/|Omega| = 0.974 over 30 windows (8 windows dropped as static)", "decoration_seq132": "mean sum(w)/|Omega| = 0.977 over 30 windows (17 windows dropped as static)"},
+    "row_eval": "autoresearch/experiments/bench/code/raytun3r_row.py, all frames per sequence (max-frames default 60 in the CLI, but --max-frames wasn't passed here -- see note below), adapted vs vanilla anchor"
+  },
+  "near_rim_definition": "count-weighted mean AbsRel over joint-table cells with theta_bin_mid_deg >= 38 and depth row in {0-1m, 1-2m}, same convention as issue #37.",
+  "results": {
+    "seq136":            {"vanilla_whole_absrel": 0.1718, "adapted_whole_absrel": 0.2288, "vanilla_near_rim": 0.5417, "adapted_near_rim": 0.5771},
+    "decoration_seq132":  {"vanilla_whole_absrel": 0.0793, "adapted_whole_absrel": 0.1262, "vanilla_near_rim": 0.1295, "adapted_near_rim": 0.2555}
+  },
+  "read": "RayTun3R adaptation makes whole-image AND near-rim AbsRel WORSE than the untouched vanilla DA3-Small anchor on BOTH held-out scenes -- the opposite of the paper's claimed adapted > vanilla ordering, and consistent with issue #30/#4's earlier finding that the paper's raytun3r-beats-center_ph ordering does not reproduce cleanly under its own stride-60 protocol on our data. Not tuned toward the paper's numbers in any direction. Matcher coverage was high (>=0.974) on both scenes, so this isn't an obvious matcher-starvation failure; the adapter is presumably overfitting the 30 fit windows in a way that doesn't generalize to the full per-frame eval, or 300 iters at this data scale pushes it past a point that helps.",
+  "note_on_max_frames": "raytun3r_row.py's --max-frames default is 60, and the ticket's own template command didn't pass a value for the comparison rows -- so both adapted/vanilla rows here scored the same first-60-frames-of-len window as the BENCH ticket #37 rows, for an apples-to-apples read against issue #37's da3_small numbers (which used the same 60-frame cap); the two protocols still differ in loader/valid-pixel counting (ADTSequence here vs ADTWindowDataset in #37), so the absolute numbers aren't expected to match exactly, only the relative adapted-vs-vanilla direction is comparable within this ticket.",
+  "bug_found_and_workaround": {
+    "summary": "raytun3r_row.py builds the adapter via bb.make_adapter(...) (CPU by default) then adapter.load_state_dict(ck['adapter']) -- load_state_dict copies the checkpoint's (device-mapped) values in place into the adapter's existing CPU-resident parameters without changing their device, so the adapter stayed on CPU while the backbone/tokens were on CUDA. Crashed inside raytun3r/adapter.py's _interp_radial: 'indices should be either on cpu or on the same device as the indexed tensor (cpu)'.",
+    "workaround": "A driver script byte-for-byte identical to raytun3r_row.py's main() with exactly one line added (adapter = adapter.to(args.device) right after load_state_dict) -- no other logic touched, raytun3r_row.py itself not edited (out of this ticket's runs-only scope).",
+    "reported_to": "cpu via issue #38 comment"
+  }
+}

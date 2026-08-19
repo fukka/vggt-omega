@@ -1,0 +1,37 @@
+{
+  "ticket": "docs/handoff/tickets/033-h5-training-runs.md (issue #35)",
+  "run_on": "lambda_63",
+  "commit": "1327748",
+  "train_seqs": [
+    "Apartment_release_clean_seq131_M1292",
+    "Apartment_release_clean_seq133_M1292",
+    "Apartment_release_clean_seq134_M1292",
+    "Apartment_release_clean_seq135_M1292"
+  ],
+  "held_out": ["Apartment_release_clean_seq136_M1292", "Apartment_release_decoration_seq132_M1292"],
+  "epochs": 20,
+  "size": 504,
+  "n_pairs_per_epoch": 236,
+  "runs": {
+    "full": {
+      "flags": "default (depth-alpha 2.0, lambda-f 1.0, lambda-m 0.5)",
+      "loss_epoch0": {"depth": 0.9012, "feat": 0.1620, "mv": 0.2594, "total": 1.1929},
+      "loss_epoch19": {"depth": 0.2884, "feat": 0.0405, "mv": 0.1483, "total": 0.4031}
+    },
+    "plain": {
+      "flags": "--depth-alpha 0 --lambda-f 0 --lambda-m 0 (plain-LoRA control; total == depth, unweighted L1)",
+      "loss_epoch0": {"depth": 0.6664, "feat": 212.61, "mv": 0.2424, "total": 0.6664},
+      "loss_epoch19": {"depth": 0.1937, "feat": 160.85, "mv": 0.1501, "total": 0.1937},
+      "note": "feat/mv columns are logged-only for the control (weights are 0, so they never enter the optimized total); they drift because nothing constrains them, which is expected and not a bug."
+    }
+  },
+  "bugs_found_and_workaround": {
+    "summary": "Both runs required a driver-level device-placement patch; train.py/lora.py/losses.py were not edited (out of this ticket's scope -- runs only). See the issue #35 comment for the full writeup.",
+    "bugs": [
+      "lora.py: LoRALinear.__init__ creates self.A/self.B as fresh CPU nn.Parameters; train.py calls lora.inject(net, ...) AFTER build_backbone(..., device=cuda) already moved the backbone, so new LoRA params are left on CPU.",
+      "losses.py: theta = cam.incidence_grid(h, w) in train.py's main() is never moved to args.device before being passed into compression_weight_map / warp_i_to_j / multiframe_rim_loss / rim_feature_loss alongside CUDA tensors -- device mismatch in grid_sample, in warp_i_to_j's meshgrid-built rays, and in tensor indexing."
+    ],
+    "workaround": "A driver script (not committed -- lives only in the run's scratch dir) monkeypatches the four affected losses.py functions and lora.inject to add the missing .to(device) placements, with no change to any math. Purely mechanical device casts; results are the exact computation the (unwritten) fixed files would produce.",
+    "reported_to": "cpu via issue #35 comment"
+  }
+}
