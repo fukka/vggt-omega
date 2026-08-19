@@ -22,7 +22,7 @@
 </head>
 <body>
 <h1>鱼眼深度研究 · 进度看板</h1>
-<p class="time">最近更新:2026-08-23 · <b>研究阶段收官,进入论文起草</b>(这个页面会一直更新)</p>
+<p class="time">最近更新:2026-08-23 · <b>按你的评审意见转向:方法研发阶段开始,论文暂停</b>(这个页面会一直更新)</p>
 
 <h2>一、我们在研究什么(一句话版)</h2>
 <p class="big">Aria 眼镜的鱼眼相机视野很宽(约110°),但现有的深度估计大模型都是在普通相机图片上训练的:
@@ -131,8 +131,14 @@ CPU上几分钟就能训完。下一个问题:换别的场景还灵不灵?(已�
 <td>姿态部分的结论暂持("普通遮挡");深度部分连同 #28 的"手的距离"数字被你发现了一个未验证的假设,已重审(见下一行)。</td></tr>
 <tr class="done"><td>✅ 已完成</td><td>任务单 #34:手的真值验证(你提出的)— <b>虚惊,但补上了硬证据</b></td><td><span class="tag you">你</span> + <span class="tag gpu">GPU-Claude</span></td>
 <td>验证结果:之前用的就是"带人"的深度,人体确实渲染在里面(100%的手部像素与"不带人"版差>5cm),"手在0.26–0.94米"确认无误。合成画面确认无手,但模型在合成图上整体差7–34%(域差),盖过手的效应——所以"抹平均色"反而是更干净的工具,这个结论也记录在案。已关单。</td></tr>
-<tr class="doing"><td>🔄 进行中</td><td><b>论文初稿:正文已写完,待编译 PDF</b></td><td><span class="tag me">Mac-Claude</span></td>
-<td>完整初稿在 <code>autoresearch/paper/draft/main.tex</code>(NeurIPS 版式):摘要、引言(4条贡献)、两个测量章节、两级修法、六序列+跨场景+换骨干实验、诚实的局限性。每个数字都来自审计清单。<b>待办:</b>①编译 PDF(编译器资源服务器暂时限流,下轮重试);②文献条目还需程序化核对(3条已标注占位,见 CITATIONS-TODO.md)——投稿前必做。</td></tr>
+<tr class="block"><td>⏸️ 暂停</td><td>论文起草(按你的意见:新颖性不够 CVPR)</td><td><span class="tag you">你</span></td>
+<td>已写的初稿降级为"动机与分析"素材,不作废。等方法阶段出成果后重写主体。</td></tr>
+<tr class="doing"><td>🔄 进行中</td><td><b>方法一:边缘定向的骨干微调</b>(改进模型本身)</td><td><span class="tag me">Mac-Claude</span> → <span class="tag gpu">GPU-Claude</span></td>
+<td>LoRA 级微调 + 三个由测量结论决定的部件:①按"压缩地图"加权的深度损失(只在坏的地方用力);②边缘特征保持约束(蒸馏自冻结的原模型,保住姿态);③多帧一致性项(把视差证据引回边缘——正面攻打"上下文只补中心"那堵墙)。目标:控距后的边缘差距关掉一半以上,姿态 RRA/RTA 不降反升。</td></tr>
+<tr class="doing"><td>🔄 进行中</td><td><b>方法二:边缘跨帧注意力</b>(高效鱼眼视频架构)</td><td><span class="tag me">Mac-Claude</span></td>
+<td>时序注意力只给边缘 token(约占四成)——中心已被证明不需要时序帮助,边缘最需要却分不到。既是新架构,又有原理性的省算力理由。</td></tr>
+<tr class="doing"><td>🔄 进行中</td><td><b>基准测试矩阵</b>(公开数据集+已发表方法对比,姿态+深度双任务)</td><td><span class="tag me">Mac-Claude</span> → <span class="tag gpu">GPU-Claude</span></td>
+<td>数据集:ADT、ScanNet++(+按可用性:KITTI-360/TUM-VI/WideDepth);对比方法:DAC、UniK3D、DA3、VGGT-Ω、RayTun3R、Fisheye3R、CAM3R——<b>后三个本仓库已有可运行的复现,这是别人没有的优势</b>。指标:深度 AbsRel/δ1 + 径向分解,姿态 RRA/RTA@15(CAM3R 论文里的 ADT 数字 99.0/95.0 是现成的对标线)。</td></tr>
 <tr class="done"><td>✅ 已完成</td><td>任务单 #32:跨场景验证 — <b>"一个头就够,不用六个"</b></td><td><span class="tag gpu">GPU-Claude</span></td>
 <td>五个普通公寓场景:跨场景收益 −74.5%~−78.0%,追平甚至超过场景内现学;唯一例外是视觉风格不同的 decoration 序列(−18.7% 过线但中心有副作用)——"同风格内通用"是论文主张,风格切换是诚实边界。已关单。</td></tr>
 <tr class="done"><td>✅ 已完成</td><td>任务单 #33:换骨干(VGGT-Ω)— 方向成立,效果打折</td><td><span class="tag gpu">GPU-Claude</span></td>
