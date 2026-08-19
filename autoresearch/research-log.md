@@ -433,3 +433,14 @@
   bar re-read from its audited JSON. Added to the dashboard.
 - #35-#38 unchanged; the #35 status ping stands unanswered (the box session
   has presumably not run since).
+
+## 2026-08-26 (tick 30) — H5 CPU pilot: mechanism confirmed on held-out frames
+
+- Exploratory pilot (seq131 even/odd frame split, 252px, 10 epochs, ~3 min
+  train on CPU): near-rim -59.7%, and — unlike the H2.1 table — every other
+  zone improves too (near-center -31%, center -27%, far -21%). Loss
+  components behave as designed (feat term rises then plateaus under the
+  distillation pull). Pose unchanged within the saturated-pair regime
+  (no-collapse signal only).
+- No hyperparameter changes for #35; the pilot's job was direction + sanity
+  and it delivered both. Protocol claims stay GPU-gated.
