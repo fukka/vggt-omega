@@ -155,6 +155,17 @@ def main(argv=None) -> None:
     for sd in train_sd + eval_sd:
         sd.ensure_cached()
 
+    # One camera is assumed for every sequence (theta grid, cone, bins all
+    # come from the first). Correct for ADT (one device); silently WRONG for
+    # mixed-camera runs — guard added after the 2026-08-19 external review.
+    ref = train_sd[0].src.camera
+    for sd in train_sd:
+        c = sd.src.camera
+        assert (c.fx, c.fy, c.cx, c.cy, tuple(getattr(c, "k", ())),
+                c.width, c.height) == \
+               (ref.fx, ref.fy, ref.cx, ref.cy, tuple(getattr(ref, "k", ())),
+                ref.width, ref.height), \
+            f"cross_scene assumes ONE camera; {sd.src} differs from {train_sd[0].src}"
     cone, t_idx, t_edges, gh, gw, theta_p = geometry(train_sd[0].src)
 
     X, A, Y = [], [], []

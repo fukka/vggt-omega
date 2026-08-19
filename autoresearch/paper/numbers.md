@@ -46,3 +46,16 @@ table.
 | #38 v1 rows | ALL QUARANTINED | data/bench/rt3r/*.json | double depth conversion in raytun3r_row.py (fixed 8b5c13d); v2 re-run requested; cite NOTHING from v1 |
 | rt3r harness fix check | seq131 vanilla near rows rise to 2.0-2.2 at rim | bench/results/rt3r_seq131_vanilla_fixed.json | consistent with diagnosis-era signature |
 | H5/H6 training curves | full 1.19→0.40; plain 0.67→0.19; rim 0.95→0.50; alltok 0.67→0.15 | data/h5-train/*, data/h6-train/* (train_log.json, meta.json) | losses, not eval numbers; evals pending |
+
+## Caveats from the external H2 review (2026-08-19)
+
+- ALL scale_shift zone AbsRel numbers are "rim-under-this-alignment"
+  properties: on seq131 refitting the affine on near pixels drops the
+  uncorrected near-rim from 1.47 to 0.26 (~82% of the penalty is affine
+  placement). run_009's alignment-free bias field is the compression claim's
+  home. Alignment-robustness rows required before any of these enter the
+  paper as rim properties.
+- "cross-scene" numbers (#32) are cross-SEQUENCE (one apartment, one
+  device). Rename in every use.
+- seq136 near-rim mass discrepancy (run_012 1.359 vs #37 0.149) unresolved —
+  neither citable until the frame-window question closes.

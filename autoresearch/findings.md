@@ -72,6 +72,41 @@ scale_shift, range domain, full joint tables (zone pools hide collateral).
 - **BENCH:** frozen-row machinery smoke-tested (#37); RayTun3R comparison row
   runnable (#38). In flight: #35–#38.
 
+## Corrections from the external H2 review (2026-08-19, FEEDBACK-2026-08-19.md)
+
+An independent session re-audited the H2 line against our JSONs + 3 new
+matched-capacity controls (imported to h2 code/feedback-controls/). Verdict
+and consequences, all accepted:
+
+1. **"Cross-scene" is renamed "cross-sequence (one apartment, one device)"**
+   everywhere. ADT metadata: all six sequences are `Apartment_release_*`,
+   same `M1292` device, ~25 m² room; decoration is a redecoration of the
+   same room. A second real scene (ADT Office if available, else ScanNet++)
+   is now load-bearing, not nice-to-have.
+2. **Report absolute `after` first.** The head converges to ~0.29-0.36
+   near-rim from any baseline (before spread 4.4×, after spread 1.26×);
+   percentage headlines flatter easy baselines. decoration's "weak −18.7%"
+   was its baseline already sitting at the floor — not a transfer failure.
+3. **~82% of the seq131 near-rim "penalty" is the eval affine's placement**
+   (refit on near pixels: 1.47→0.26 uncorrected). The compression *field*
+   survives (run_009 is alignment-free) but every scale_shift AbsRel zone
+   number is a rim-under-this-alignment property. Protocol of record gains
+   alignment-robustness rows (frozen-affine / scale_only / zone-restricted).
+4. **The feature-vs-geometry control now exists and lands our way**: a
+   same-capacity MLP on (θ, d̂) recovers <half the rim gain AND reproduces
+   the H2.1 center damage; only frozen features double the gain and fix the
+   center. The aux-only arm becomes a permanent baseline row in every
+   adapter experiment.
+5. **Splits are not independent replications**: seq131 halves (0.639) sits
+   below the even/odd bootstrap 90% range (0.879-1.633) — temporally
+   correlated halves. Error bars (bootstrap over frames) required on
+   per-sequence numbers.
+6. **REOPENED: the "held-out scenes have no near-rim mass" claim.** run_012's
+   harness (uniform frames) measures seq136 before-near-rim at 1.359 while
+   #37's harness (FIRST-60 frames) reports 0.149 — the mass difference may be
+   a frame-window artifact, not scene content. Until resolved, neither claim
+   is citable. (Resolution: rerun one #37 row with uniform/full frames.)
+
 ## External positioning (2026-08-19 survey + comparison study)
 
 - **Closest lanes** (literature/2026-08-19-distortion-crossframe-survey.md):

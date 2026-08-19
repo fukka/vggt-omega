@@ -282,6 +282,19 @@ experiments:
       outcome: "REFUTED with mechanism: within-patch distortion <=0.2px at the rim on Aria KB4 — nothing to undistort at patch level"
       wall_time_min: 6
 
+review_2026_08_19:
+  source: "external session review of H2 line (FEEDBACK-2026-08-19.md), commissioned by the human"
+  accepted_changes:
+    - "rename cross-scene -> cross-sequence(one apartment, one device); second scene now load-bearing"
+    - "absolute-after-first reporting; percentage headlines demoted"
+    - "alignment-robustness rows (frozen/scale_only/zone-restricted affine) join the protocol of record"
+    - "aux-only (theta+dhat) arm = permanent baseline in every adapter experiment (H5/H6 included)"
+    - "bootstrap error bars over frames; halves split declared temporally correlated, not a replication"
+    - "cross_scene.py camera guard added (was silently single-camera)"
+  new_open_items:
+    - "seq136 near-rim mass: run_012 harness 1.359 vs #37 first-60 harness 0.149 — frame-window artifact suspected; rerun one #37 row with uniform/full frames"
+    - "does the head encode 'ADT apartment appearance'? cross-dataset (ScanNet++ via d_reproj, no dense GT needed) is the test"
+
 outer_loop:
   cycle: 4
   cycle4_reflection: >
