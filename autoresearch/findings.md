@@ -63,9 +63,16 @@ is inherited from this repo's prior work and the verified literature survey at
 - **H1.2 REFUTED, informatively (run 004):** DA3-Small's pose does NOT ignore the
   periphery — it depends on it. Deleting all central content (θ≤45°, 39% of
   pixels) leaves rotation error unchanged (4.93° vs 5.00°); deleting the rim
-  (61%) more than doubles it on every pair (12.32°). Not area-matched yet
-  (random-mask control pending), but center-masked ≈ vanilla is already decisive
-  in one direction: **the frozen model's alignment signal lives in the rim.**
+  (61%) more than doubles it on every pair (12.32°). Run 005 closed the area
+  confound: at equal 61% masked area, rim deletion costs 3× random deletion.
+- **H1.3 SUPPORTED (runs 006–007): both findings transfer to real Aria** (local
+  ADT seq131, GT via a gate-verified hand-eye extrinsics bootstrap: 0.77–0.96°
+  residual, angle(C)=40.6° vs the box's ~38°). Span value replicates
+  (10.1°→1.6° from θ≤25° to θ≤45° at fixed count) but **saturates by ~45°** —
+  the 45–54.8° ring's pose value is unproven at n=11. Rim-dependence replicates
+  softer: rim-masked 38.5° ≫ area-matched random 25.3° > center-masked 20.0° >
+  vanilla 14.8° — on Aria's narrower cone the center is not disposable, but the
+  rim is still the most load-bearing region per unit area.
 
 ## Patterns and Insights
 
