@@ -57,7 +57,8 @@ def main(argv=None) -> None:
     p.add_argument("--out", default=None)
     args = p.parse_args(argv)
 
-    s = Seq(os.path.expanduser(args.seq), args.size, args.max_frames)
+    s = Seq(os.path.expanduser(args.seq), args.size, args.max_frames,
+            dense=True)
     cam = s.src.camera
     h = w = args.size
     theta = cam.incidence_grid(h, w)

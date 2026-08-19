@@ -73,7 +73,7 @@ def main(argv=None) -> None:
     torch.manual_seed(args.seed)
     random.seed(args.seed)
 
-    seqs = [Seq(s.strip(), args.size, args.max_frames)
+    seqs = [Seq(s.strip(), args.size, args.max_frames, dense=True)
             for s in args.train_seqs.split(",") if s.strip()]
     C = camera_conjugation()
     print(f"[h6] {len(seqs)} sequences, "

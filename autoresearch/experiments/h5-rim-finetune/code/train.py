@@ -54,7 +54,8 @@ def camera_conjugation() -> torch.Tensor:
 
 
 class Seq:
-    def __init__(self, seq_dir: str, size: int, max_frames: int):
+    def __init__(self, seq_dir: str, size: int, max_frames: int,
+                 dense: bool = False):
         self.src = AriaLocalPairs(seq_dir, size=size)
         self.name = os.path.basename(seq_dir.rstrip("/"))
         dp = {os.path.splitext(os.path.basename(q))[0]: q for q in
@@ -62,7 +63,14 @@ class Seq:
         stem = lambda n: os.path.splitext(os.path.basename(self.src.paths[n]))[0]
         fr = [n for n in range(len(self.src.paths)) if stem(n) in dp]
         if len(fr) > max_frames:
-            fr = fr[::max(1, len(fr) // max_frames)][:max_frames]
+            if dense:
+                # contiguous middle block: adjacent pairs keep video-rate
+                # spacing — required when the multi-frame term is the core
+                # signal (H6 pilot showed 100-frame spacing starves it)
+                start = (len(fr) - max_frames) // 2
+                fr = fr[start:start + max_frames]
+            else:
+                fr = fr[::max(1, len(fr) // max_frames)][:max_frames]
         self.frames, self.dp, self.stem = fr, dp, stem
         # adjacent-frame pairs with GT pose
         self.pairs: List[Tuple[int, int]] = [
