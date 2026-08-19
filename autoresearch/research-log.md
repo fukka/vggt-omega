@@ -292,3 +292,16 @@
   a scaffolding change, not a result.
 - Next: train.py (4-scene loader, pairs, epochs, LoRA checkpoints, eval
   hooks), then the GPU training ticket.
+
+## 2026-08-23 (tick 18) — H5 trainer shipped; training ticket #35 filed
+
+- train.py: multi-sequence loader, GT-pose pairs via the official
+  calibration, three-loss objective with --depth-alpha 0 as half of the
+  plain-LoRA control, LoRA-only checkpoints (~500 KB). CPU smoke: 2 tiny
+  epochs on seq131, loss decreasing, checkpoint + log written.
+- Ticket 033 / issue #35: two training runs on the box (full method vs
+  plain-LoRA control), 4 clean sequences train, seq136 + decoration held
+  out. Evaluation deliberately stays CPU-side — the checkpoints are tiny
+  and come back via results.
+- Next: eval_lora.py (joint-table depth + RRA/RTA pose on held-out scenes,
+  loading the LoRA checkpoints) so it is ready when #35 lands.
