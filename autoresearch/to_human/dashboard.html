@@ -24,6 +24,8 @@
 <h1>鱼眼深度研究 · 进度看板</h1>
 <p class="time">最近更新:2026-08-19 下午 · <b>GPU 四单全部交付!训练完成、基准行到手;还差最后一步评测(已催)</b></p>
 
+<p class="note" style="background:#f7f9fb;padding:.6rem .9rem;border-radius:6px">
+<b>本页导读:</b>①研究问题 → ①·五 我们提出的方法和新颖点(图解) → ②重要发现(白话) → ②·六 最新结果图集(成功与失败) → ③进度看板(谁在干什么、卡在哪) → ④协作方式 ⑤小词典。</p>
 <h2>一、我们在研究什么(一句话版)</h2>
 <p class="big">Aria 眼镜的鱼眼相机视野很宽(约110°),但现有的深度估计大模型都是在普通相机图片上训练的:
 <b>画面边缘(视野外圈)的深度估计很差</b>。我们想用很小的改动(不重训大模型)让边缘变好,
@@ -31,6 +33,55 @@
 ① 边缘变好、中心不变差;② 让模型更聪明地处理畸变(不同位置畸变程度不同,处理方式也该不同);
 ③ 边缘虽然深度差,但可能对"多帧对齐/定位"很有用,要把这个价值利用起来;④ 处理好画面里的手(第一视角视频总有手在动)。</p>
 
+<h2>一·五、我们提出的方法(图解)与新颖点</h2>
+<p class="big">论文的方法是一个三级阶梯,每一级都由一个测量结果"指定"出来,而不是拍脑袋。三级都遵守同一条铁律(见②·六的规律图):<b>不动输入、不动骨干的边缘特征,在编码器后面动手</b>。</p>
+<div style="display:flex;gap:1rem;flex-wrap:wrap">
+<div style="flex:1;min-width:320px;border:1px solid #ddd;border-radius:8px;padding:.8rem">
+<b>第1级 · 看图小修正头(2.5万参数)</b>
+<svg viewBox="0 0 360 150" style="width:100%">
+<rect x="5" y="55" width="70" height="40" rx="6" fill="#d6eaf8"/><text x="40" y="79" text-anchor="middle" font-size="12">鱼眼图</text>
+<rect x="95" y="55" width="90" height="40" rx="6" fill="#e8e8e8"/><text x="140" y="73" text-anchor="middle" font-size="12">冻结大模型</text><text x="140" y="88" text-anchor="middle" font-size="10">(完全不动)</text>
+<rect x="205" y="15" width="80" height="34" rx="6" fill="#eafaf1" stroke="#27ae60"/><text x="245" y="30" text-anchor="middle" font-size="11">小头 25k参数</text><text x="245" y="43" text-anchor="middle" font-size="10">读特征→修正量</text>
+<rect x="205" y="95" width="80" height="34" rx="6" fill="#fff"/><text x="245" y="116" text-anchor="middle" font-size="11">深度输出</text>
+<rect x="300" y="55" width="55" height="40" rx="6" fill="#eafaf1"/><text x="327" y="73" text-anchor="middle" font-size="11">修正后</text><text x="327" y="87" text-anchor="middle" font-size="11">深度</text>
+<line x1="75" y1="75" x2="95" y2="75" stroke="#333" marker-end="url(#a)"/>
+<line x1="185" y1="65" x2="205" y2="35" stroke="#27ae60" marker-end="url(#a)"/>
+<line x1="185" y1="85" x2="205" y2="110" stroke="#333" marker-end="url(#a)"/>
+<line x1="285" y1="32" x2="305" y2="60" stroke="#27ae60" marker-end="url(#a)"/>
+<line x1="285" y1="112" x2="305" y2="90" stroke="#333" marker-end="url(#a)"/>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#333"/></marker></defs>
+</svg>
+<p class="note">依据:量尺压缩是"多对一",只看输出修不好(第0级查表的失败),必须看图像特征。<b>已验证:</b>六序列 −21~−75%,跨场景 −74~−78%,姿态零风险(结构上碰不到)。</p></div>
+<div style="flex:1;min-width:320px;border:1px solid #ddd;border-radius:8px;padding:.8rem">
+<b>第2级 · 边缘定向微调(训练新颖点,49万参数)</b>
+<svg viewBox="0 0 360 150" style="width:100%">
+<rect x="5" y="55" width="70" height="40" rx="6" fill="#d6eaf8"/><text x="40" y="79" text-anchor="middle" font-size="12">两帧输入</text>
+<rect x="95" y="55" width="100" height="40" rx="6" fill="#e8e8e8"/><text x="145" y="73" text-anchor="middle" font-size="12">大模型+LoRA</text><text x="145" y="88" text-anchor="middle" font-size="10">只微调最后4层MLP</text>
+<rect x="215" y="8" width="140" height="30" rx="6" fill="#fef9e7" stroke="#e67e22"/><text x="285" y="27" text-anchor="middle" font-size="10">损失① 按实测压缩图加权的深度损失</text>
+<rect x="215" y="60" width="140" height="30" rx="6" fill="#fef9e7" stroke="#e67e22"/><text x="285" y="79" text-anchor="middle" font-size="10">损失② 边缘特征保真(保姿态)</text>
+<rect x="215" y="112" width="140" height="30" rx="6" fill="#fef9e7" stroke="#e67e22"/><text x="285" y="131" text-anchor="middle" font-size="10">损失③ 跨帧边缘一致(引视差)</text>
+<line x1="75" y1="75" x2="95" y2="75" stroke="#333" marker-end="url(#a)"/>
+<line x1="195" y1="65" x2="215" y2="25" stroke="#333" marker-end="url(#a)"/>
+<line x1="195" y1="75" x2="215" y2="75" stroke="#333" marker-end="url(#a)"/>
+<line x1="195" y1="85" x2="215" y2="125" stroke="#333" marker-end="url(#a)"/>
+</svg>
+<p class="note"><b>新颖点:</b>三个损失都来自我们的测量——加权图=第9号实验的压缩场;特征保真=「姿态靠边缘」的发现;跨帧项=「融合红利不给边缘」的发现。试点:所有区域改善,近场边缘 −60%。<b>等 GPU 评测出正式成绩。</b></p></div>
+<div style="flex:1;min-width:320px;border:1px solid #ddd;border-radius:8px;padding:.8rem">
+<b>第3级 · 边缘跨帧注意力(架构新颖点,296万参数,0.48×算力)</b>
+<svg viewBox="0 0 360 150" style="width:100%">
+<rect x="5" y="15" width="80" height="34" rx="6" fill="#d6eaf8"/><text x="45" y="36" text-anchor="middle" font-size="11">当前帧 tokens</text>
+<rect x="5" y="100" width="80" height="34" rx="6" fill="#d6eaf8"/><text x="45" y="121" text-anchor="middle" font-size="11">上一帧 tokens</text>
+<rect x="115" y="55" width="110" height="44" rx="6" fill="#eafaf1" stroke="#27ae60"/><text x="170" y="72" text-anchor="middle" font-size="11">只有边缘 token 发问</text><text x="170" y="88" text-anchor="middle" font-size="10">(161/324,零初始化门)</text>
+<rect x="255" y="15" width="100" height="34" rx="6" fill="#fff"/><text x="305" y="30" text-anchor="middle" font-size="11">深度头(用增强版)</text><text x="305" y="43" text-anchor="middle" font-size="10">边缘获得视差证据</text>
+<rect x="255" y="100" width="100" height="34" rx="6" fill="#fff"/><text x="305" y="115" text-anchor="middle" font-size="11">姿态头(用原版)</text><text x="305" y="128" text-anchor="middle" font-size="10">逐位不变,零风险</text>
+<line x1="85" y1="32" x2="115" y2="60" stroke="#333" marker-end="url(#a)"/>
+<line x1="85" y1="117" x2="115" y2="92" stroke="#333" marker-end="url(#a)"/>
+<line x1="225" y1="65" x2="255" y2="35" stroke="#27ae60" marker-end="url(#a)"/>
+<line x1="85" y1="25" x2="255" y2="25" stroke="#bbb" stroke-dasharray="4" marker-end="url(#a)"/>
+</svg>
+<p class="note"><b>新颖点:</b>现有省算力方法(如 Spark3R)按"哪些块重要"删块;我们按镜头几何选块,而且是<b>给边缘加跨帧信息</b>而不是删——依据是「边缘为对齐出力、融合红利却只给中心」的测量。计算量是全 token 注意力的 0.48 倍。<b>等 GPU 评测。</b></p></div>
+</div>
+<p class="big" style="margin-top:.8rem"><b>一句话总结新颖性:</b>①先诊断(量出误差场和边缘的对齐价值),再把每一分参数花在诊断指向的地方——没有论文这么做;②架构上"边缘和中心区别对待"(边缘拿跨帧证据、中心保持原样)——没有论文这么做;③评测上同时报中心/边缘/姿态三轴+诚实的"适配数据"列——现有论文只报整图平均。四个失败路线(见下图)每一个都有实测的"为什么不行",这本身也是贡献。</p>
 <h2>二、到目前为止最重要的发现(白话版)</h2>
 <img src="assets/h1_family.png" alt="第一批实验的四张图">
 <img src="assets/aria_h13.png" alt="Aria 复做的两张图" style="margin-top:.6rem">
@@ -110,6 +161,16 @@ CPU上几分钟就能训完。下一个问题:换别的场景还灵不灵?(已�
 <img src="assets/trajectory.png" alt="研究轨迹">
 <p class="note">核心指标(没见过的帧上的近场边缘误差)随方法阶梯的下降:未修正 1.02 → 查表 0.76 → 看图小头 0.33(六序列平均 0.39、跨场景 0.32)。第 2/3 级(微调、视频注意力)训练中。另:方法二效率已实测——边缘查询的计算量是全 token 的 0.48 倍。</p>
 
+<h2>二·六、最新结果图集(8月19日:一天里的成功与失败)</h2>
+<p class="big"><b>规律图(本周最重要的一张):</b>在哪儿动手才有效。红色=失败的尝试(全是动输入或喂几何),绿色=有效的方法(全在编码器后面)。</p>
+<img src="assets/fig_intervene.png" alt="在哪动手才有效">
+<p class="big" style="margin-top:1rem"><b>失败案例一:对手最强的深度基线(裁剪矫正)在自我中心近场失灵。</b>同一批像素上,它让近场中心差 62%,还丢掉一半边缘覆盖。</p>
+<img src="assets/fig_centerph.png" alt="Center-PH 对照">
+<p class="big" style="margin-top:1rem"><b>失败案例二、三:H7 视角门控毫无增益(左);H8 等立体角重采样全面变差(右)。</b>两个都是当天提出、当天验证、当天关闭,不花 GPU。</p>
+<img src="assets/fig_h7h8.png" alt="H7 与 H8 试点">
+<p class="big" style="margin-top:1rem"><b>基准现状(#37 交付):</b>5 个冻结模型在两个留出场景的成绩。注意右图:这两个场景近场边缘内容极少(蓝橙柱都偏小),所以"近场边缘"的主战场证据仍由 seq131 家族的六序列+跨场景实验承担,留出场景负责证明"不伤中心、整图不退"。</p>
+<img src="assets/fig_baselines.png" alt="冻结基准">
+<p class="note">以上每个数字都来自入库的结果文件(autoresearch/experiments/*/results/、autoresearch/data/),画图脚本 src/plot_dashboard_2026-08-19.py 直接读文件,不手抄。RayTun3R 对比行因发现我方脚本 bug 已作废重跑,故不在图中。</p>
 <h2>三、进度看板</h2>
 <p>负责方说明:<span class="tag me">Mac-Claude</span> = 我(你 Mac 上这个会话,只用 CPU);
 <span class="tag gpu">GPU-Claude</span> = GPU 机器上的另一个 Claude(通过 GitHub 任务单接活);
