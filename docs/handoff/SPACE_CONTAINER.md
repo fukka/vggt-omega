@@ -38,6 +38,40 @@ DNS still resolves — which reads exactly like an air-gapped box. It is not
 air-gapped; this is the single most expensive mistake available here. Corollary:
 `env | grep proxy` over a non-login shell is not evidence of anything.
 
+Two harmless things that look like failures on every connect:
+`X11 forwarding request failed on channel 0` (from `ForwardX11 yes` in the config
+— ignore it), and a first connect that takes **2–4 minutes** to return. Launch any
+probe detached rather than blocking a turn on it. Also: **macOS has no `timeout`**,
+so do not wrap `ssh` in it — use
+`-o ConnectTimeout=25 -o ServerAliveInterval=10 -o ServerAliveCountMax=6`.
+
+### Health check — one command, run it before anything else
+
+This answers "am I on the pod, is the proxy live, is the env intact, is the GPU
+free" in a single round trip. Verified working 2026-08-19:
+
+```bash
+ssh -o ConnectTimeout=25 -o ServerAliveInterval=10 space-container 'bash -lc "
+  hostname
+  echo PROXY=\$http_proxy
+  /group-volume/Fengjia/envs/vggt360-py312/bin/python -c \"import torch;print(torch.__version__, torch.version.cuda)\"
+  nproc
+  nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader"'
+```
+
+Expected, and what each line is actually gating:
+
+```
+run<NNNNNNN>-vggt-omega-360        <- which pod; record it in the run's meta.json
+PROXY=http://75.17.107.42:8080     <- non-empty, else you forgot `bash -lc` (§1)
+2.11.0+cu128 12.8                  <- MUST say 12.8, not 13.0 (§2)
+247                                <- why OMP_NUM_THREADS=16 is mandatory (§4)
+NVIDIA A100-SXM4-80GB, 0 MiB, 81920 MiB   x2
+```
+
+If the torch line is missing or says `13.0`, or the venv path does not exist, go
+to §2 and re-run the bootstrap — that is the whole recovery, and it is idempotent.
+
 ### When it will not connect
 
 In this order, and do not skip to 3:
@@ -58,7 +92,10 @@ In this order, and do not skip to 3:
    message as case 1, which has already cost one round of misdiagnosis.
 3. **A stale address needs the user, not a retry loop.** The pod is recreated on
    its own schedule with a new name *and* address (`run1150238` 2026-08-06,
-   `run1151839` 2026-08-11, `run1154132` 2026-08-17). Recovering the new address
+   `run1151839` 2026-08-11, `run1154132` 2026-08-17, `run1155074` 2026-08-19 —
+   roughly weekly, so assume it has happened since this line was written). The
+   `space-container` entry in `~/.ssh/config` is kept pointing at the live one;
+   `_1`…`_4` are the dead history. Recovering the new address
    needs `space login --region n6`, which is interactive and whose token expires
    after ~10 days — **only the user can do it.** Do not cycle through
    `space-container_1`…`_4` in `~/.ssh/config`: those are confirmed-dead earlier
@@ -80,6 +117,12 @@ leaving no session and no error anyone would notice. `scp` a launcher to
 ```bash
 ssh space-container 'bash -lc "/group-volume/Fengjia/projects/vggt-omega-023/space_container_bootstrap.sh"'
 ```
+
+It is already staged on the pod at that path, and **the env normally survives a
+recreation** because it is on `/group-volume` — confirmed on `run1155074`
+(2026-08-19), where the health check above passed with no rebuild at all. So run
+the health check first and only bootstrap if it fails; the script is idempotent
+either way, but a clean rebuild costs ~3 GB of downloads over a flaky mirror.
 
 That script is [`space_container_bootstrap.sh`](../../space_container_bootstrap.sh)
 at the repo root; its header comments carry the full reasoning. Do **not**
