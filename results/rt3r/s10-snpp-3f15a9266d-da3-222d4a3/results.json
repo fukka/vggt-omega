@@ -1,0 +1,36 @@
+{
+  "_meta": {
+    "matcher": "ufm",
+    "match_coverage": 0.8562830789325276,
+    "backbone": "da3",
+    "dataset": "scannetpp",
+    "scene": "3f15a9266d",
+    "n_windows": 100,
+    "convention": "range",
+    "gt_pose": true,
+    "gt_depth": true
+  },
+  "vanilla": {
+    "AbsRel": 0.2950943545997143,
+    "R_deg": 2.63034441113472,
+    "R_deg_identity": 10.942017750740051,
+    "d_reproj": 5.604403529167175,
+    "d_reproj_conf": 2.169339152574539,
+    "delta_1.25": 0.6183716812729836,
+    "t_deg": 40.65808941602707,
+    "n_rows": 100,
+    "R_skill": 4.159918261814128
+  },
+  "center_ph": {
+    "AbsRel": 0.2320225392282009,
+    "R_deg": 1.7859516268968583,
+    "R_deg_identity": 10.942017750740051,
+    "d_reproj": 3.028473809957504,
+    "d_reproj_conf": 1.8372441878914834,
+    "delta_1.25": 0.7127942791581154,
+    "t_deg": 39.63739936351776,
+    "n_rows": 100,
+    "coverage": 0.6602123488284218,
+    "R_skill": 6.126715632131716
+  }
+}

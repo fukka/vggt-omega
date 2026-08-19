@@ -1,0 +1,18 @@
+{
+  "ticket": 3,
+  "issue": 4,
+  "run_id": "s10-snpp-3f15a9266d-222d4a3",
+  "what": "RayTun3R adapter fit + eval, VGGT backbone, ScanNet++ 3f15a9266d, post-audit code",
+  "supersedes": "results/rt3r/s10-snpp-3f15a9266d (code_commit bfdb47e, void per ticket 025 -- predates the Eq.6/Eq.12 fixes)",
+  "code_commit": "222d4a3",
+  "code_branch": "organized",
+  "preflight": "ticket 025, issue #25 -- checkpointing A/B not bit-identical (see #25/#26), UFM coverage 0.946 on the tiny preflight run",
+  "backbone": "vggt (facebook/VGGT-1B, frozen)",
+  "matcher": "ufm",
+  "host": "lambda_63, RTX 6000 Ada 48GB (GPU0), CUDA 12.8",
+  "conda_env": "raytun3r (python 3.11, torch 2.11.0+cu128)",
+  "protocol": "fit: 30 three-frame windows, stride 10, 3000 iters, Adam lr 1e-3, clip 1.0, seed 0, grad checkpointing on (default). eval: full sequence, stride 10, 100 windows",
+  "iters_choice": "3000, not the ticket's 300/3000 sweep -- that sweep is specified for DA3-Small only; extended to vggt/pi3 for consistency across backbones, flagged as a judgement call in issue #4",
+  "fit_wall_time_s": 1397.4,
+  "harness_verify": "results/rt3r/verify-3f15a9266d-222d4a3/3f15-vggt.json -- HARNESS OK, classical 0.76 deg (gain 0.935), vggt vanilla 1.96 deg (gain 0.828) on the 133-pair cross-stride sample"
+}

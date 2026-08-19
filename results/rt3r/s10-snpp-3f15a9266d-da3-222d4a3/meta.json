@@ -1,0 +1,15 @@
+{
+  "ticket": 3,
+  "issue": 4,
+  "run_id": "s10-snpp-3f15a9266d-da3-222d4a3",
+  "what": "DA3-Small vanilla + Center-PH eval only, ScanNet++ 3f15a9266d, post-audit code. No RayTun3R fit: install() raises (see issue #26) -- DA3's raytun3r row is blocked pending a cpu fix",
+  "code_commit": "222d4a3",
+  "code_branch": "organized",
+  "preflight": "ticket 025, issue #25 -- DA3 RoPE class confirmed RotaryPositionEmbedding2D, but the adapter hook install() raises RuntimeError (n_prefix_tokens undeclared); vanilla/center_ph are unaffected, hence this eval-only run",
+  "backbone": "da3 (variant small, frozen)",
+  "matcher": "ufm",
+  "host": "lambda_63, RTX 6000 Ada 48GB, CUDA 12.8",
+  "conda_env": "raytun3r (python 3.11, torch 2.11.0+cu128)",
+  "protocol": "eval only (no fit): full sequence, stride 10, 100 windows, methods vanilla+center_ph",
+  "harness_verify": "results/rt3r/verify-3f15a9266d-222d4a3/3f15-da3.json -- HARNESS OK, classical 0.76 deg (gain 0.935), da3 vanilla 2.53 deg (gain 0.818)"
+}

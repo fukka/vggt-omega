@@ -1,0 +1,18 @@
+{
+  "ticket": 3,
+  "issue": 4,
+  "run_id": "s10-snpp-3f15a9266d-pi3-222d4a3",
+  "what": "RayTun3R adapter fit + eval, pi3 backbone, ScanNet++ 3f15a9266d, post-audit code",
+  "code_commit": "222d4a3",
+  "code_branch": "organized",
+  "preflight": "ticket 025, issue #25 -- pi3 RoPE class confirmed RoPE2D (not the compiled cuRoPE2D), clean",
+  "backbone": "pi3 (frozen)",
+  "matcher": "ufm",
+  "host": "lambda_63, RTX 6000 Ada 48GB, CUDA 12.8",
+  "conda_env": "raytun3r (python 3.11, torch 2.11.0+cu128)",
+  "protocol": "fit: 30 three-frame windows, stride 10, 3000 iters, Adam lr 1e-3, clip 1.0, seed 0. eval: full sequence, stride 10, 100 windows",
+  "iters_choice": "3000, not the ticket's 300/3000 sweep -- that sweep is specified for DA3-Small only; extended to vggt/pi3 for consistency across backbones, flagged as a judgement call in issue #4",
+  "gpu_note": "pi3 does not support gradient checkpointing (whole-trunk activations retained for backward). First attempt on GPU1 OOM'd against another user's process holding 32.9 GB there; re-ran on GPU0 (more headroom) and it fit",
+  "fit_wall_time_s": 1448.6,
+  "harness_verify": "results/rt3r/verify-3f15a9266d-222d4a3/3f15-pi3.json -- HARNESS OK, classical 0.76 deg (gain 0.935), pi3 vanilla 2.21 deg (gain 0.840)"
+}
