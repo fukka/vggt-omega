@@ -1,0 +1,117 @@
+========================================================================================
+  ADT-FOV test · adt-fov-v1 · split 2fcdd55c80fd
+========================================================================================
+  18 frames over 6 sequence(s): Apartment_release_clean_seq131_M1292, Apartment_release_clean_seq133_M1292, Apartment_release_clean_seq134_M1292, Apartment_release_clean_seq135_M1292, Apartment_release_clean_seq136_M1292, Apartment_release_decoration_seq132_M1292
+  streams ['synthetic', 'real'] · views ['rect', 'fisheye'] · protocols ['radial']
+  GT valid <= 10.0 m; predictions beyond 100.0 m excluded from the metrics
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame, over every valid
+  pixel, and then frozen; binning is a masking step applied afterwards. Every
+  cell above — AbsRel, delta1, RMSE, and `pen` — obeys that.
+
+  pen    = AbsRel(outermost bin) / AbsRel(innermost)  — how much worse the
+           periphery is, in the metric a downstream user reads.
+  Absolute AbsRel is comparable only WITHIN an alignment protocol — see the
+  MODELS block: models sharing an `align=` may be read against each other,
+  one scored differently may not. pen is comparable across all of them,
+  being a within-model ratio.
+
+  RADIAL · rect · AbsRel   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_small     real         0.122   0.138   0.137   0.134   0.145   0.157    1.29
+  da3_small     synthetic    0.090   0.113   0.125   0.126   0.132   0.161    1.79
+
+  RADIAL · rect · delta1   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_small     real         0.845   0.832   0.837   0.814   0.770   0.737    1.29
+  da3_small     synthetic    0.922   0.890   0.859   0.839   0.807   0.728    1.79
+
+  RADIAL · fisheye · AbsRel   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_small     real         0.143   0.157   0.160   0.165   0.184   0.233    1.63
+  da3_small     synthetic    0.115   0.137   0.152   0.167   0.183   0.237    2.06
+
+  RADIAL · fisheye · delta1   (deg off-axis)
+  --------------------------------------------------------------------------------
+  model         stream        0-10   10-20   20-30   30-40   40-50   50-55     pen
+  --------------------------------------------------------------------------------
+  da3_small     real         0.819   0.810   0.789   0.756   0.719   0.634    1.63
+  da3_small     synthetic    0.882   0.858   0.821   0.786   0.755   0.645    2.06
+
+  COVERAGE · mean valid samples per incidence bin (radial protocol)
+  ----------------------------------------------------------------------------------
+  view      stream        px     0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye   real         518     4942    16007    29823    47592    67835    36251
+  fisheye   synthetic    518     4942    16007    29823    47592    67835    36251
+  rect      real         518     7923    25832    50979    94555    85824     2940
+  rect      synthetic    518     7923    25832    50979    94555    85824     2940
+  A rectified ~85 deg pinhole has no pixels past 42.3 deg off-axis except
+  in its corners (52.6 deg at most). Empty outer bins there are geometry,
+  not model failure — and are themselves the cost of rectifying.
+
+  RING COVERAGE · how much of each annulus the view images — geometry only
+  ----------------------------------------------------------------------------------
+  view         px  whole to       0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye     518     54.6°       100%     100%     100%     100%     100%      98%
+    mean θ                         6.7     15.6     25.4     35.3     45.2     52.4
+  rect        518     42.2°       100%     100%     100%     100%      55%       3%
+    mean θ                         6.7     15.7     25.5     35.5     43.8     50.7
+  `whole to` is the last angle at which EVERY azimuth is imaged. Past it a
+  bin is corner wedges, not a ring, so a `pen` spanning it is not the same
+  measurement in both views — compare the two only where both read 100%.
+
+  BIN DEPTH · median GT depth per incidence bin (m) — a confound, not a score
+  ----------------------------------------------------------------------------------
+  view      stream              px     0-10    10-20    20-30    30-40    40-50    50-55
+  fisheye   real+synthetic     518     3.15     2.81     2.48     2.22     1.86     1.60
+  rect      real+synthetic     518     3.16     2.81     2.48     2.21     1.89     1.99
+  Read the AbsRel tables against this row: a bin that is both farther and
+  worse has not yet been shown to be worse *because of* where it sits.
+
+  JOINT · AbsRel by incidence angle x GT depth — the depth-controlled read
+  ----------------------------------------------------------------------------------
+
+  da3_small · fisheye · real
+    depth (m)     0-10    10-20    20-30    30-40    40-50    50-55
+         5-10    0.079    0.104    0.103    0.118    0.113    0.211
+          3-5    0.069    0.071    0.069    0.072    0.085    0.145
+          2-3    0.084    0.095    0.092    0.093    0.106    0.152
+          1-2    0.258    0.201    0.174    0.170    0.186    0.210
+          0-1    0.767    0.629    0.522    0.422    0.379    0.406
+
+  da3_small · fisheye · synthetic
+    depth (m)     0-10    10-20    20-30    30-40    40-50    50-55
+         5-10    0.074    0.088    0.075    0.100    0.124    0.198
+          3-5    0.060    0.064    0.071    0.075    0.096    0.150
+          2-3    0.057    0.087    0.095    0.105    0.110    0.149
+          1-2    0.196    0.136    0.130    0.138    0.147    0.184
+          0-1    0.719    0.693    0.585    0.482    0.442    0.463
+
+  da3_small · rect · real
+    depth (m)     0-10    10-20    20-30    30-40    40-50    50-55
+         5-10    0.056    0.072    0.088    0.105    0.080    0.064
+          3-5    0.044    0.048    0.055    0.062    0.056    0.064
+          2-3    0.064    0.058    0.068    0.073    0.077    0.060
+          1-2    0.250    0.207    0.163    0.161    0.172    0.198
+          0-1    0.675    0.616    0.435    0.288    0.256    0.210
+
+  da3_small · rect · synthetic
+    depth (m)     0-10    10-20    20-30    30-40    40-50    50-55
+         5-10    0.058    0.065    0.059    0.084    0.074    0.075
+          3-5    0.035    0.049    0.066    0.066    0.069    0.079
+          2-3    0.048    0.054    0.068    0.077    0.081    0.096
+          1-2    0.152    0.102    0.093    0.105    0.112    0.162
+          0-1    0.726    0.714    0.528    0.352    0.311    0.281
+
+  Columns are incidence angle in degrees; each cell is pooled over every
+  frame's pixels in that band, off the same per-frame fit as every other table.
+
+  MODELS
+  ------------------------------------------------------------
+  da3_small     Depth-Anything-3 Small · 34M · align=scale_shift · views at 518px

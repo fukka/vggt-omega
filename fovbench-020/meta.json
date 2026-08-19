@@ -1,0 +1,45 @@
+{
+  "run_id": "fovbench-020",
+  "issue": "https://github.com/fukka/vggt-omega/issues/20",
+  "ticket": "ADT-FOV: add DA3-Small to the baseline line-up",
+  "host": "lambda_63",
+  "env": "conda env raytun3r",
+  "date_utc": "2026-08-19",
+
+  "smoke_test": "da3s_smoke -- da3_small loads and scores 3 frames without pulling weights on first use failing. OK.",
+
+  "digests": {
+    "six_seq_baseline": {"expected": "601fcb22767e", "measured": "601fcb22767e", "match": true},
+    "seq131_context_grid": {"expected": "8ca25fd0ebd2", "measured_all_5_arms": "8ca25fd0ebd2", "match": true}
+  },
+
+  "context_grid_note": "The harness refused --context-frames > 1 with dav2_large in --models ('dav2_large is monocular and cannot use a context'). Dropped dav2_large from the 4 context arms (kept only in the N=1 baseline, da3s_ctx_n1) -- same convention #22 already documents for slambench's context sweep.",
+
+  "six_seq_pen": {
+    "da3_large": {"fisheye_real": 1.68, "fisheye_synthetic": 1.80, "rect_real": 1.95, "rect_synthetic": 2.27},
+    "da3_small": {"fisheye_real": 1.40, "fisheye_synthetic": 1.35, "rect_real": 1.47, "rect_synthetic": 1.58},
+    "read": "da3_small's pen (proportional rim penalty) is LOWER than da3_large's in every column, but its absolute AbsRel is worse everywhere -- roughly 2x da3_large's, at every incidence-angle bin, both streams and both views. DA3-Small is simply a worse model overall; capacity does not remove the periphery penalty, it just makes the model's already-larger floor error dilute the relative rim/center ratio. Not tuning further, per the ticket's own instruction."
+  },
+
+  "context_behaviour_rect_real_AbsRel_0to10deg_bin": {
+    "da3_large":  {"N1": 0.077, "5f_s1": 0.075, "10f_s1": 0.066, "5f_s10": 0.049, "10f_s10": 0.048},
+    "da3_small":  {"N1": 0.155, "5f_s1": 0.136, "10f_s1": 0.135, "5f_s10": 0.124, "10f_s10": 0.121},
+    "read": "Same direction as da3_large: both models improve monotonically with more context frames, and strided (stride 10) beats consecutive (stride 1) at every frame count for both models. da3_large's N1->10f_s10 move (0.077->0.048) reproduces the historical 0.0774->0.0478 figure almost exactly. da3_small shows the identical qualitative pattern (0.155->0.121) but a smaller relative gain (~22% vs da3_large's ~38%)."
+  },
+
+  "context_behaviour_pen_rect": {
+    "da3_large": {"N1": 1.25, "5f_s1": 1.26, "10f_s1": 1.21, "5f_s10": 1.29, "10f_s10": 1.26},
+    "da3_small": {"N1": 1.10, "5f_s1": 0.99, "10f_s1": 0.97, "5f_s10": 0.97, "10f_s10": 0.94},
+    "read": "da3_small's rect pen drops BELOW 1.0 with any context (0.94-0.99) -- meaning with multi-frame context da3_small is scored no worse (even marginally better) at the rim than at the centre in the rectified view. da3_large's pen stays >1.2 throughout. This is the one qualitative difference: context flattens (and for da3_small, inverts) the pen curve more than it does for da3_large."
+  },
+
+  "context_behaviour_pen_fisheye": {
+    "da3_large": {"N1": 1.45, "5f_s1": 1.57, "10f_s1": 1.66, "5f_s10": 1.75, "10f_s10": 2.02},
+    "da3_small": {"N1": 1.22, "5f_s1": 1.24, "10f_s1": 1.22, "5f_s10": 1.17, "10f_s10": 1.18},
+    "read": "On the raw fisheye view, da3_large's pen actually WORSENS with more context (1.45->2.02) -- more frames sharpen the centre more than the rim. da3_small's fisheye pen stays roughly flat (1.17-1.24) regardless of context. So on fisheye specifically the two models diverge: da3_large's periphery penalty grows with context, da3_small's does not move."
+  },
+
+  "command": "python -m fovbench.run --adt-root <ADT|/tmp/adt_seq131> --models vggt_1b,vggt_omega,dav2_large,da3_large,da3_small --protocols radial --n-frames 50 [--workers 8] [--context-frames N --context-stride S] --device cuda:1",
+
+  "not_in_scope": "Six-sequence context grid and remaining 13 sequence extractions -- deferred by the owner, unchanged from prior tickets."
+}
