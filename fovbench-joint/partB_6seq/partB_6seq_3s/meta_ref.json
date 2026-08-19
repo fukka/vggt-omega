@@ -1,0 +1,10 @@
+{
+  "ticket": 24,
+  "part": "B",
+  "description": "fovbench joint 6-seq split, context sweep (3/5/10 frames, stride 10) on vggt_omega and vggt_1b, rect+fisheye, real+synthetic",
+  "digest": "601fcb22767e",
+  "digests_match_partA_singleframe_split": true,
+  "note": "context params excluded from split digest by design (per fovbench splitting rules); all three context arms share the 6-seq split confirmed via matching digest 601fcb22767e",
+  "host": "lambda_63",
+  "date": "2026-08-19"
+}
