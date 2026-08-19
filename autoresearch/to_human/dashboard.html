@@ -22,7 +22,7 @@
 </head>
 <body>
 <h1>鱼眼深度研究 · 进度看板</h1>
-<p class="time">最近更新:2026-08-24 · 方法一进入训练阶段(这个页面会一直更新)</p>
+<p class="time">最近更新:2026-08-25 · 两个方法+基准行全部提交 GPU,等训练结果(这个页面会一直更新)</p>
 
 <h2>一、我们在研究什么(一句话版)</h2>
 <p class="big">Aria 眼镜的鱼眼相机视野很宽(约110°),但现有的深度估计大模型都是在普通相机图片上训练的:
@@ -135,10 +135,12 @@ CPU上几分钟就能训完。下一个问题:换别的场景还灵不灵?(已�
 <td>已写的初稿降级为"动机与分析"素材,不作废。等方法阶段出成果后重写主体。</td></tr>
 <tr class="doing"><td>🔄 进行中</td><td><b>方法一:边缘定向的骨干微调</b>(改进模型本身)</td><td><span class="tag me">Mac-Claude</span> → <span class="tag gpu">GPU-Claude</span></td>
 <td>方案已锁、损失函数已实现并通过五项测试(顺带抓出并修复了共享库里一个 1 像素的反演 bug)、训练器已在本机冒烟(LoRA 存档只有 500KB)。<b>训练单 #35 已发 GPU</b>:完整方法 vs "普通LoRA"对照,4 个场景训练、2 个场景(含风格不同的 decoration)完全留出。评测留在本机做——存档小,取回来即可。</td></tr>
-<tr class="doing"><td>🔄 进行中</td><td><b>方法二:边缘跨帧注意力</b>(高效鱼眼视频架构)</td><td><span class="tag me">Mac-Claude</span></td>
-<td>时序注意力只给边缘 token(约占四成)——中心已被证明不需要时序帮助,边缘最需要却分不到。既是新架构,又有原理性的省算力理由。</td></tr>
-<tr class="doing"><td>🔄 进行中</td><td><b>基准测试矩阵</b>(公开数据集+已发表方法对比,姿态+深度双任务)</td><td><span class="tag me">Mac-Claude</span> → <span class="tag gpu">GPU-Claude</span></td>
-<td>数据集:ADT、ScanNet++(+按可用性:KITTI-360/TUM-VI/WideDepth);对比方法:DAC、UniK3D、DA3、VGGT-Ω、RayTun3R、Fisheye3R、CAM3R——<b>后三个本仓库已有可运行的复现,这是别人没有的优势</b>。指标:深度 AbsRel/δ1 + 径向分解,姿态 RRA/RTA@15(CAM3R 论文里的 ADT 数字 99.0/95.0 是现成的对标线)。</td></tr>
+<tr class="doing"><td>🔄 进行中</td><td><b>方法二:边缘跨帧注意力</b> — 训练单 #36 已发</td><td><span class="tag me">Mac-Claude</span> → <span class="tag gpu">GPU-Claude</span></td>
+<td>模块(296万参数,初始为零)+训练器+评测全部在本机验证:初始时与原模型逐位一致;训练后深度会动而<b>姿态输出逐位不动</b>(模块只写深度头的特征拷贝)。GPU 跑两组:边缘查询 vs 同参数全token对照。</td></tr>
+<tr class="doing"><td>🔄 进行中</td><td><b>基准矩阵</b> — 冻结模型行的单子 #37 已发</td><td><span class="tag me">Mac-Claude</span> → <span class="tag gpu">GPU-Claude</span></td>
+<td>通用评测脚本已在本机冒烟(顺带抓了三个集成坑,包括"加载器会自作主张改分辨率"这种会弄歪整张表的)。#37 = 6个冻结模型 × 2个留出场景,口径与我们方法的评测完全一致。RayTun3R 对比行的单子等 GPU 队列消化后再发。</td></tr>
+<tr class="doing"><td>⏳ GPU 队列</td><td>当前在飞:#35(方法一)、#36(方法二)、#37(基准行)</td><td><span class="tag gpu">GPU-Claude</span></td>
+<td>三张单子回齐后,论文主表的全部格子就有数了。</td></tr>
 <tr class="done"><td>✅ 已完成</td><td>任务单 #32:跨场景验证 — <b>"一个头就够,不用六个"</b></td><td><span class="tag gpu">GPU-Claude</span></td>
 <td>五个普通公寓场景:跨场景收益 −74.5%~−78.0%,追平甚至超过场景内现学;唯一例外是视觉风格不同的 decoration 序列(−18.7% 过线但中心有副作用)——"同风格内通用"是论文主张,风格切换是诚实边界。已关单。</td></tr>
 <tr class="done"><td>✅ 已完成</td><td>任务单 #33:换骨干(VGGT-Ω)— 方向成立,效果打折</td><td><span class="tag gpu">GPU-Claude</span></td>

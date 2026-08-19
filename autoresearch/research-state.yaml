@@ -65,7 +65,7 @@ hypotheses:
       multi-frame consistency term that routes parallax evidence into rim
       depth, closes >=half of the distance-controlled rim penalty on held-out
       scenes, IMPROVES pose (RRA/RTA), and beats the readout head.
-    status: pending
+    status: active   # mechanics CPU-verified (losses 5-part test suite caught+fixed the KB4 inversion bug; LoRA teacher bit-identical); training + eval = ticket #35, running
     motivation: "Human-directed method track 1 (improving backbones). Every component is dictated by a measured finding: compression map (runs 008b/009), rim-feature dependence (runs 004-007), context-buys-the-center (024B)."
     parent: null
     priority: high
@@ -80,6 +80,7 @@ hypotheses:
     motivation: "Human-directed method track 2 (efficient fisheye video model). Efficiency angle is principled: rim tokens are ~40% of the cone; the center provably doesn't need temporal help."
     parent: null
     priority: high
+    # status detail: module + trainer + eval CPU-verified (zero-init identity, camera outputs bit-identical via depth-head-only feats copy); training = ticket #36, queued
   - id: BENCH
     statement: >
       Benchmark matrix on public datasets with published baselines, both
@@ -91,6 +92,7 @@ hypotheses:
     motivation: "Human-directed: no CVPR paper without it. The in-repo reproductions are the unfair advantage — most labs cannot run these baselines."
     parent: null
     priority: high
+    # status detail: frozen-row machinery smoke-tested; 6 models x 2 held-out scenes = ticket #37, queued; RayTun3R comparison row ticket held until the GPU queue drains
   - id: H1
     statement: >
       Peripheral pose value: on Aria-like fisheye, restricting correspondences to the
