@@ -1,0 +1,21 @@
+{
+  "ticket": "docs/handoff/tickets/035-bench-frozen-rows.md (issue #37)",
+  "run_on": "lambda_63",
+  "commit": "f1b0ab7",
+  "held_out_scenes": ["Apartment_release_clean_seq136_M1292", "Apartment_release_decoration_seq132_M1292"],
+  "res": 504,
+  "max_frames": 60,
+  "models_run": ["unik3d_vitl", "da3_small", "da3_large", "vggt_omega", "dav2_large"],
+  "models_skipped": {
+    "dac_swinl_indoor": "eval_baseline_joint.py's DACAdapter.predict_frame raises NotImplementedError('DAC is ERP-native; use predict_erp') by design -- DAC produces an ERP euclidean-range depth + in-FOV mask, not a fisheye/pinhole planar-z map, and model_zoo.py's own comment says the ERP->fisheye inverse remap needed to score it through this evaluator's theta x GT-depth protocol is 'not on the hot path' (i.e. genuinely unimplemented, not a small adapter kwarg). This is the exact 'dac ERP path' case the ticket flagged as acceptable to skip-and-say-so rather than scratch-adapt. Environment-side, DAC itself was made runnable (missing wandb pip dep installed; missing MultiScaleDeformableAttention CUDA extension built after a 2-line .type()->.scalar_type() fix for the current torch API in the vendored third_party/depth_any_camera; config+weights downloaded) -- the blocker is specifically the planar-z/ERP output-format mismatch in the BENCH harness, not weights or environment."
+  },
+  "results": {
+    "unik3d_vitl":  {"seq136": {"whole_absrel": 0.0530, "whole_d1": 0.9704, "near_rim_absrel": 0.0600}, "decoration_seq132": {"whole_absrel": 0.0431, "whole_d1": 0.9873, "near_rim_absrel": 0.0727}},
+    "da3_small":    {"seq136": {"whole_absrel": 0.1376, "whole_d1": 0.8274, "near_rim_absrel": 0.1490}, "decoration_seq132": {"whole_absrel": 0.0439, "whole_d1": 0.9913, "near_rim_absrel": 0.0601}},
+    "da3_large":    {"seq136": {"whole_absrel": 0.0967, "whole_d1": 0.9372, "near_rim_absrel": 0.0877}, "decoration_seq132": {"whole_absrel": 0.0830, "whole_d1": 0.9520, "near_rim_absrel": 0.1402}},
+    "vggt_omega":   {"seq136": {"whole_absrel": 0.0564, "whole_d1": 0.9729, "near_rim_absrel": 0.0460}, "decoration_seq132": {"whole_absrel": 0.0730, "whole_d1": 0.9675, "near_rim_absrel": 0.1106}},
+    "dav2_large":   {"seq136": {"whole_absrel": 0.3173, "whole_d1": 0.4962, "near_rim_absrel": 0.4826}, "decoration_seq132": {"whole_absrel": 0.0888, "whole_d1": 0.9438, "near_rim_absrel": 0.0861}}
+  },
+  "near_rim_definition": "count-weighted mean AbsRel over joint-table cells with theta_bin_mid_deg >= 38 and depth row in {0-1m, 1-2m} (<=2m), matching the project's existing near_rim zone convention.",
+  "read": "dav2_large (relative-depth, scale-shift-per-frame) is a clear outlier on seq136 specifically (whole AbsRel 0.317, d1 0.496) but not on decoration_seq132 (0.089) -- a scene-specific scale-shift failure, not a systematic relative-depth weakness. The three metric models (unik3d_vitl, da3_small on decoration, vggt_omega) are close together on whole-image AbsRel (0.04-0.07); da3_small is notably worse on seq136 specifically (0.138) than its own decoration_seq132 number (0.044), suggesting DA3-Small's own scene sensitivity rather than a universal seq136 difficulty (unik3d/vggt_omega/da3_large don't show the same seq136 penalty). Not tuned toward any paper's target numbers."
+}
