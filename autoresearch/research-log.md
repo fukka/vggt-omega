@@ -537,3 +537,9 @@
   intervene → ladder → radially-honest benchmark); numbers.md audited
   through today incl. quarantines. Dashboard rebuilt earlier per human
   request (method diagrams + results gallery). Awaiting 3 GPU eval batches.
+
+## 2026-08-19 (tick 8) — H6.1 confirmed (exploratory): rim-KV == full-KV
+- Spark3R method read (query merge / KV prune / layer-adaptive). Probe on
+  delivered rim ckpt: rim-KV 627 == full 1296 on near_rim; center-KV +18%.
+  Module cost 0.48x -> 0.23x of all-token, training-free. Held-out version
+  appended to #36. H6.2 pyramid design recorded.
