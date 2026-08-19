@@ -74,6 +74,23 @@ is inherited from this repo's prior work and the verified literature survey at
   vanilla 14.8° — on Aria's narrower cone the center is not disposable, but the
   rim is still the most load-bearing region per unit area.
 
+- **H2.0/H2.0b (runs 008b–009): the fisheye depth failure is a precise,
+  radially-modulated RANGE COMPRESSION, not noise.** Alignment-free maps show
+  dispersion of only 2–10% everywhere (the model *sees* the near rim fine),
+  while bias is huge and structured: 0–1 m content placed 1.7–3.3× too far
+  (worst at the rim), 5–10 m content 1.4–1.8× too near. Matches the RayTun3R
+  repro's depth-gain-0.406 signature and UniK3D's wide-FOV contraction.
+- **H2.1 (run 010): a 48-param (θ × predicted-depth) table transfers the
+  near-rim fix (−18…−25% on held-out frames) but damages the near center — in
+  every variant, including with the eval affine frozen.** Mechanism: the
+  compression makes predicted depth many-to-one in true depth, so an
+  output-indexed correction pushes the majority's fix onto minorities.
+  **Post-hoc recalibration cannot invert a compression; input evidence is
+  necessary** — measured, not argued. The table is now the mandatory baseline
+  for any adapter.
+- **Official calibration landed (ticket #27, closed): device→RGB rotation
+  38.44°, vs the hand-eye bootstrap's 40.55° — 2.33° apart**, validating the
+  bootstrap; H1.3 conclusions unaffected (effects were ≥10°).
 - **Cross-lane result (GPU ticket 024, `results` branch digest 601fcb22767e —
   not produced by this workspace, provenance: 6 ADT sequences, 300 frames):
   the fisheye rim DEPTH penalty is real, not furniture.** After the GT-depth
@@ -106,6 +123,18 @@ is inherited from this repo's prior work and the verified literature survey at
   adapter variant (the Pareto front gains a third axis).
 
 ## Lessons and Constraints
+
+Learned inside this workspace:
+
+- **Zone aggregates hide collateral damage** — run_010's near-center harm was
+  invisible in pooled zones; always read the full (θ × depth) joint table.
+- **Check the eval-of-record before locking protocol details** — run_008's
+  scale_only vs fovbench's scale_shift cost a rerun.
+- **Under per-frame re-alignment, local corrections move remote cells** (the
+  affine couples them); when isolating a local effect, also evaluate with the
+  affine frozen from the uncorrected prediction.
+- **The hand-eye bootstrap works** (2.33° from factory calibration) — usable
+  whenever a GT frame conjugation is missing locally.
 
 Inherited from prior repo work — treat as hard constraints:
 
