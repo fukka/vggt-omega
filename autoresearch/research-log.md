@@ -329,3 +329,8 @@
   (3 in-repo reproductions are the moat), metrics incl. our radial breakdown
   as a benchmark contribution; execution order ADT-first.
 - #35 (H5 training + eval) still running on the box.
+- H6 premise check (same tick): DA3's pose head DOES read backbone feats —
+  premise false as stated; resolved better than the fallback: the module
+  feeds a depth-head-only copy of the tokens (heads are parallel readouts),
+  keeping pose bit-identical by construction. Protocol amended before any
+  implementation.

@@ -29,12 +29,14 @@ fraction of full temporal attention's cost.
   after the frozen backbone's final block: `rim_tokens_t += ZeroInitProj(
   Attn(Q=rim_tokens_t, KV=all_tokens_{t-1}))`. Zero-init output projection ⇒
   identity at start; center tokens pass through untouched by construction.
-- Pose-safety premise TO VERIFY AT IMPLEMENTATION: DA3's camera path
-  (cam_enc/cam_dec) is a separate trunk that does not consume the ViT's
-  final-layer tokens; if true, the pose output is bit-identical with the
-  module present, same as H5's LoRA-disabled guarantee. If false, the module
-  moves behind the depth-head hook only, and pose stability becomes an
-  empirical (measured) claim.
+- Pose-safety premise VERIFIED 2026-08-24, and it is FALSE as first stated:
+  DA3's `_process_camera_estimation(feats, ...)` consumes the backbone
+  feats, so modifying them would touch pose. RESOLUTION (better than the
+  planned fallback): the depth head and the camera head are PARALLEL
+  readouts of `feats`, so the module writes its rim-token update into a
+  copy consumed ONLY by `_process_depth_head`; the camera path reads the
+  originals. Structural pose safety is preserved. (cam_enc, despite the
+  name, is input camera-conditioning, not the pose estimator.)
 - Training: H5's three losses on frame pairs (the multi-frame term is the
   natural teacher here); module-only first, then optionally + H5 LoRA
   (stacking ablation).
