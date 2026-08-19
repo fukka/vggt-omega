@@ -162,3 +162,17 @@
   all match. Chain recorded in autoresearch/paper/numbers.md (with the
   caveats that must travel with each number). The paper can now be drafted
   without a single unverified quote.
+
+## 2026-08-21 (tick 10) — human flags a GT-provenance hole in the hand numbers
+
+- The human pointed out two things we had not verified: (1) ADT GT depth is
+  rendered in two variants (with/without the person) — if #28/#31 used the
+  without variant, the "hands at 0.26-0.94 m" depths are the BACKGROUND
+  behind the hand, not the hand; (2) the synthetic RGB stream is a natural
+  hands-free counterfactual, cleaner than mean-color masking.
+- Filed ticket 032 (issue #34): verify which variants #28/#31 used, measure
+  the with-vs-without depth difference at dynamic pixels, and re-run the #31
+  depth comparison with real-vs-synthetic input. H4 reopened as
+  under-verification; numbers.md rows marked. Theta-placement (from
+  segmentation) unaffected; the six-sequence H2 results unaffected (no
+  humans in those sequences).

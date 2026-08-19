@@ -16,8 +16,9 @@ precede `research(results)` throughout).
 | H2.1 table near-rim / near-center | −25% / damaged | `run_010_even_odd.json` (+ `_halves`, `_fixedaffine`) | 48 params, 16/48 cells fit |
 | H2.2 head near-rim (even/odd) | 1.023 → 0.333 (−67.4%) | `run_011_even_odd.json` | 25k params; halves −50.8% |
 | Six-sequence validation (halves) | −21.2% … −71.3% near-rim, 6/6 improve | `autoresearch/data/h22-sixseq/run_011_*_halves.json` | GPU ticket #29, `results` @ 65bb0aa |
-| Hands placement | 0.8–4% of cone; 80%+ θ>41°; median 0.26–0.94 m | `autoresearch/data/h4-stats/*.json` | GPU ticket #28, `results` @ 477b5ac |
-| H4.1 hands ≈ occlusion | Δ(random−gtmask) = −0.13…+1.03° on 10–25° baselines | `results` @ 793e10f (`autoresearch-h4-pose/`) | GPU ticket #31; meal_seq131 anomaly open |
+| Hands placement (θ distribution) | 0.8–4% of cone; 80%+ θ>41° | `autoresearch/data/h4-stats/*.json` | GPU ticket #28; θ part from segmentation, solid |
+| Hands depth (0.26–0.94 m) | **UNDER VERIFICATION (#34)** | same | human flagged 2026-08-21: ADT renders depth with/without the person; must confirm which variant these numbers came from |
+| H4.1 hands ≈ occlusion | Δ(random−gtmask) = −0.13…+1.03° on 10–25° baselines | `results` @ 793e10f (`autoresearch-h4-pose/`) | GPU ticket #31; **depth arm under verification (#34)**; synthetic-stream re-test pending; meal_seq131 anomaly open |
 | Cross-lane controlled rim penalty | VGGT-Ω 1.81×, DA3-S 1.25× (raw fisheye) | `results` @ 601fcb22767e (`fovbench-joint-0b0d1d7/ANALYSIS-partA.txt`) | GPU ticket 024, 6 seqs, 300 frames |
 | Context buys the centre | pen flat/up with N=3/5/10 frames | same, `ANALYSIS-partB.txt` | ticket 024B |
 

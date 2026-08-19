@@ -136,7 +136,7 @@ hypotheses:
       Dynamic-region handling: hand/dynamic pixels in ADT contribute a measurable,
       disproportionate share of depth error and correspondence outliers; masking them
       (GT masks first, predicted later) improves both static depth eval and pose.
-    status: refuted   # H4.1 (ticket #31): dynamic masking ~ area-matched random; hands are plain occlusion, not signal corruption. H4's yield = the placement measurement + loss hygiene. meal_seq131 anomaly open.
+    status: active   # REOPENED 2026-08-21 by the human: must verify whether ADT GT depth at hand pixels is the hand or the background (two render variants exist), and re-test with the synthetic-RGB stream as the natural hands-free control. Ticket #34. Theta-placement claim unaffected (from segmentation); depth claims and #31's depth arm on hold.
     motivation: "Novelty axis N4 — now measured to overlap the compression zone and the pose-critical band; the four axes unify at the near-field rim."
     parent: null
     priority: high
