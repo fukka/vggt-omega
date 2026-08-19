@@ -1,0 +1,34 @@
+{
+  "ticket": 30,
+  "ticket_file": "docs/handoff/tickets/030-cross-scene-head.md",
+  "issue": 32,
+  "code_commit": "9faab3b",
+  "code_branch": "organized",
+  "script": "autoresearch/experiments/h2-center-safe-adapter/code/cross_scene.py (untouched, run only)",
+  "host": "lambda_63, RTX 6000 Ada 48GB (GPU0), CUDA 12.8",
+  "conda_env": "raytun3r",
+  "sequences": [
+    "Apartment_release_clean_seq131_M1292", "Apartment_release_clean_seq133_M1292",
+    "Apartment_release_clean_seq134_M1292", "Apartment_release_clean_seq135_M1292",
+    "Apartment_release_clean_seq136_M1292", "Apartment_release_decoration_seq132_M1292"
+  ],
+  "run_notes": [
+    "videos_rgb on this data is *.png, not *.jpg as AriaLocalPairs globs for -- worked around with a scratch-only symlink tree at /tmp/adt_shadow/<seq>/ (*.jpg symlinks to the real *.png files, plus symlinks for depth_npy and groundtruth/aria_trajectory.csv); not committed, not a change to any repo file, same accommodation as #29 (see results/autoresearch-h22-sixseq/meta.json).",
+    "H2_CACHE=/tmp/h2_cross_cache, shared across all six folds so each sequence's DA3-Small forward pass + final-block token cache is computed once and reused across the five folds it appears in.",
+    "--max-frames 60 per sequence per the ticket; default --epochs 300."
+  ],
+  "protocol": "leave-one-scene-out, 6 folds: for each held-out sequence, the head is trained on the other five (same DA3-Small feature-head recipe as #29) and evaluated on the held-out one.",
+  "near_rim_before_after_vs_29_within_scene": {
+    "Apartment_release_clean_seq131_M1292": {"cross_scene": [1.271, 0.324, -74.5], "within_scene_29_halves": [0.720, 0.384, -46.7]},
+    "Apartment_release_clean_seq133_M1292": {"cross_scene": [1.475, 0.361, -75.5], "within_scene_29_halves": [1.320, 0.439, -66.8]},
+    "Apartment_release_clean_seq134_M1292": {"cross_scene": [1.259, 0.313, -75.2], "within_scene_29_halves": [1.379, 0.488, -64.6]},
+    "Apartment_release_clean_seq135_M1292": {"cross_scene": [1.544, 0.340, -78.0], "within_scene_29_halves": [1.127, 0.324, -71.3]},
+    "Apartment_release_clean_seq136_M1292": {"cross_scene": [1.359, 0.344, -74.7], "within_scene_29_halves": [1.593, 0.480, -69.9]},
+    "Apartment_release_decoration_seq132_M1292": {"cross_scene": [0.353, 0.287, -18.7], "within_scene_29_halves": [0.324, 0.255, -21.2]}
+  },
+  "near_center_center_damage": {
+    "note": "unlike #29's within-scene heads (near-center regressed by at most +5.8%), the decoration_seq132 fold shows real cross-scene collateral: near_center +66.5%, center +27.8%. The five clean-apartment folds stay in the same small-regression-to-improvement range as #29 (-22.8% to +10.1% center; near_center -21.8% to +10.1%, one outlier seq134 near_center +10.1%).",
+    "per_fold": "see per-run JSON for the full 8x5 before/after/counts matrices"
+  },
+  "read": "One head, not six -- for the five mutually-similar clean-apartment sequences, cross-scene near-rim gain matches or exceeds the within-scene number on every one of them (-74.5% to -78.0% vs -46.7% to -71.3%), clearing the ticket's >=half-of-within-scene bar with room to spare. The exception is decoration_seq132: its cross-scene near-rim gain is markedly weaker (-18.7%, versus -21.2% within-scene -- still >=half) and, unlike the within-scene head, it now visibly damages near-center/center (+66.5%/+27.8%) -- the single head transfers cleanly within-genre but not fully to the visually distinct decoration variant."
+}

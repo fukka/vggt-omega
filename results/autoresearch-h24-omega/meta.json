@@ -1,0 +1,40 @@
+{
+  "ticket": 31,
+  "ticket_file": "docs/handoff/tickets/031-omega-head-six-sequences.md",
+  "issue": 33,
+  "code_commit": "9faab3b",
+  "code_branch": "organized",
+  "script": "autoresearch/experiments/h2-center-safe-adapter/code/omega_head.py (untouched, run only)",
+  "host": "lambda_63, RTX 6000 Ada 48GB (GPU1), CUDA 12.8",
+  "conda_env": "raytun3r",
+  "weights": "checkpoints/VGGT-Omega-1B-512/model.pt (the conventional path finetune/eval/baselines/model_zoo.py's OMEGA_CKPT default resolves to; loaded with load_state_dict(strict=True), no fallback needed -- aggregator + dense_head load fully)",
+  "sequences": [
+    "Apartment_release_clean_seq131_M1292", "Apartment_release_clean_seq133_M1292",
+    "Apartment_release_clean_seq134_M1292", "Apartment_release_clean_seq135_M1292",
+    "Apartment_release_clean_seq136_M1292", "Apartment_release_decoration_seq132_M1292"
+  ],
+  "run_notes": [
+    "Same *.png/*.jpg glob accommodation as #29/#32 -- scratch-only symlink tree at /tmp/adt_shadow/<seq>/, not committed.",
+    "H2_CACHE=/tmp/h24_cache. Feature dim 2048 confirms real (not random-init) weights were used.",
+    "Both splits (halves, even_odd) run per sequence, default --max-frames 60, --epochs 300, patch size 16 (VGGT-Omega's, not DA3's 14)."
+  ],
+  "near_rim_before_after": {
+    "Apartment_release_clean_seq131_M1292_halves": [0.157, 0.127, -19.3],
+    "Apartment_release_clean_seq131_M1292_even_odd": [0.185, 0.110, -40.6],
+    "Apartment_release_clean_seq133_M1292_halves": [0.201, 0.137, -31.9],
+    "Apartment_release_clean_seq133_M1292_even_odd": [0.193, 0.140, -27.4],
+    "Apartment_release_clean_seq134_M1292_halves": [0.193, 0.155, -19.7],
+    "Apartment_release_clean_seq134_M1292_even_odd": [0.182, 0.131, -27.9],
+    "Apartment_release_clean_seq135_M1292_halves": [0.199, 0.148, -25.6],
+    "Apartment_release_clean_seq135_M1292_even_odd": [0.214, 0.136, -36.1],
+    "Apartment_release_clean_seq136_M1292_halves": [0.250, 0.201, -19.7],
+    "Apartment_release_clean_seq136_M1292_even_odd": [0.200, 0.138, -31.3],
+    "Apartment_release_decoration_seq132_M1292_halves": [0.118, 0.082, -30.5],
+    "Apartment_release_decoration_seq132_M1292_even_odd": [0.144, 0.089, -38.1]
+  },
+  "vs_da3_small_29": {
+    "note": "DA3-Small (#29): near-rim -21.2% to -75.2% across the six sequences/splits. VGGT-Omega here: -19.3% to -40.6% -- consistently positive on all 12 runs, but a narrower and generally smaller effect size than DA3-Small's, never approaching the -60/-70%+ DA3-Small got on seq133-136.",
+    "near_center_damage": "larger than DA3-Small's (+1.4% to +5.8% in #29): VGGT-Omega regresses near_center by up to +49.8% (seq134 halves) and +44-45% on several other halves splits, though even_odd splits mostly stay in the -4.8% to +12.3% range close to DA3-Small's collateral."
+  },
+  "read": "The recipe does transfer to VGGT-Omega -- near-rim AbsRel improves on all 6 sequences and both splits (-19.3% to -40.6%), so the backbone-agnostic claim holds. But it transfers with a smaller effect size than DA3-Small and with more near-center collateral damage on the halves split specifically (up to +49.8% vs DA3-Small's <+6%) -- VGGT-Omega's final-block tokens carry less of whatever DA3-Small's carry that lets the head correct the rim without touching the center."
+}
