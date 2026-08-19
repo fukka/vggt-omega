@@ -371,3 +371,13 @@
 - Idle-tick plan while training runs: BENCH cell prep (frozen UniK3D/DAC on
   ADT machinery exists in finetune/eval/baselines) and the paper's method
   section can be pre-drafted against the locked protocols.
+
+## 2026-08-25 (tick 24) — BENCH frozen-row machinery built and smoke-tested
+
+- eval_baseline_joint.py: any model_zoo baseline -> protocol-of-record joint
+  table + whole-image AbsRel/d1. Three integration fixes found by the smoke:
+  registry name, adapters snapping output shape, and the LOADER's own
+  token-friendly shape (camera/theta must follow the frames, not --res).
+- Smoke (da3_small, 4 local frames): table shape matches the diagnosis
+  (near-rim blow-up). Ticket 035 filed for the 6-model x 2-held-out-scene
+  frozen rows. In flight now: #35 (H5), #36 (H6), #37 (bench rows).
