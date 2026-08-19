@@ -968,8 +968,14 @@ def test_rope_correction_reaches_every_frame_in_the_global_layout():
     bb.remove()
 
 
-def test_rope_hook_refuses_an_undeclared_multi_frame_layout(monkeypatch):
-    """A backbone that declares no prefix must fail loudly, not correct one frame."""
+def test_rope_hook_refuses_an_unreadable_multi_frame_layout(monkeypatch):
+    """A backbone that declares no prefix must fail loudly, not correct one frame.
+
+    The positions here are *present* but resolve to no frame layout: no divisor
+    period is periodic, and the trailing ``g`` rows carry a duplicate so the
+    single-frame reading is rejected too. With no declaration to fall back on,
+    the hook must raise rather than guess ``prefix = n - g``.
+    """
     from raytun3r.backbones import VGGTBackbone
     from raytun3r.testing import tiny_vggt
 
@@ -989,22 +995,126 @@ def test_rope_hook_refuses_an_undeclared_multi_frame_layout(monkeypatch):
     dim = bb.model.aggregator.frame_blocks[0].attn.head_dim
     n = 3 * (g + 5)
     tokens = torch.randn(1, heads, n, dim)
-    grid = torch.cartesian_prod(torch.arange(5), torch.arange(5)) + 1
-    one = torch.cat((torch.zeros(5, 2, dtype=grid.dtype), grid), dim=0)
-    pos = one.repeat(3, 1)[None]
+    # All rows distinct (so this is not the spatially-unencoded skip) and
+    # strictly increasing (so no divisor period is periodic) -- except the last
+    # two rows, made equal so the s=1 reading fails its distinctness check.
+    pos = torch.stack((torch.arange(n), torch.arange(n)), dim=-1)
+    pos[-1] = pos[-2]
+    pos = pos[None]
 
-    # ``positions`` passed as a KEYWORD: a plain forward hook receives positional
-    # args only, so this is exactly the "module called without positions the hook
-    # can see" case that has to fall back on a declaration.
-    #
     # monkeypatch, not a bare assignment: ``n_prefix_tokens`` is a *property* on
     # VGGTBackbone, so `del` would drop it for every later test in the session.
     monkeypatch.setattr(VGGTBackbone, "n_prefix_tokens", None, raising=True)
     try:
         with pytest.raises(RuntimeError, match="n_prefix_tokens"):
-            rope(tokens, positions=pos)
+            rope(tokens, pos)
     finally:
         bb.remove()
+
+
+def test_rope_hook_reads_keyword_positions(monkeypatch):
+    """``positions`` passed as a keyword must work exactly like positional.
+
+    A plain forward hook receives positional args only; the hook is registered
+    ``with_kwargs=True`` so a package that calls ``rope(q, positions=pos)``
+    still gets the layout read from the data, with no declaration needed.
+    Before this, a keyword call fell through to the declaration fallback and a
+    backbone without one could not run multi-frame at all (issue #26).
+    """
+    from raytun3r.backbones import VGGTBackbone
+    from raytun3r.testing import tiny_vggt
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    gh, gw = hw[0] // bb.patch_size, hw[1] // bb.patch_size
+    g, k, s = gh * gw, 5, 3
+
+    rope = [m for m in bb.model.modules()
+            if type(m).__name__ == "RotaryPositionEmbedding2D"][0]
+
+    heads = bb.model.aggregator.frame_blocks[0].attn.num_heads
+    dim = bb.model.aggregator.frame_blocks[0].attn.head_dim
+    grid = torch.cartesian_prod(torch.arange(gh), torch.arange(gw)) + 1
+    one = torch.cat((torch.zeros(k, 2, dtype=grid.dtype), grid), dim=0)
+    pos = one.repeat(s, 1)[None]
+    tokens = torch.randn(1, heads, s * (g + k), dim)
+
+    base = rope(tokens, pos)
+    ad = bb.make_adapter()
+    with torch.no_grad():
+        ad.rope.delta_r.fill_(0.3)
+    bb.install(ad, cam, hw)
+    # No declaration: the keyword tensor is the only source of the layout.
+    monkeypatch.setattr(VGGTBackbone, "n_prefix_tokens", None, raising=True)
+    try:
+        out = rope(tokens, positions=pos)
+    finally:
+        bb.remove()
+
+    delta = (out - base).abs().reshape(1, heads, s, g + k, dim)
+    for f in range(s):
+        assert float(delta[:, :, f, k:].max()) > 0, (
+            f"frame {f} got no Eq. 6 correction from keyword positions")
+        assert float(delta[:, :, f, :k].max()) == 0, (
+            f"frame {f}: special tokens must not be rotated")
+
+
+def test_rope_hook_skips_spatially_unencoded_positions():
+    """DA3's global attention gives every patch the same coordinate; skip it.
+
+    DA3 hands ONE ``RotaryPositionEmbedding2D`` real per-patch coordinates in
+    local attention but ``pos_nodiff`` -- specials ``(0,0)``, every patch
+    ``(1,1)`` -- in global attention: spatially unencoded by design. Eq. 6 must
+    correct the local call and leave the nodiff call untouched; rotating it
+    would introduce spatial structure into a position-free pathway. Both calls
+    here share ``(n, g)``, so this also pins that the discriminator runs on the
+    actual tensor rather than trusting the layout cache (the S=1 alias).
+    """
+    from raytun3r.testing import tiny_vggt
+
+    bb, hw = tiny_vggt(), (70, 70)
+    cam = toy_camera(*hw, fov_deg=180.0)
+    gh, gw = hw[0] // bb.patch_size, hw[1] // bb.patch_size
+    g, k = gh * gw, 1                      # DA3-style: one cls token per frame
+
+    rope = [m for m in bb.model.modules()
+            if type(m).__name__ == "RotaryPositionEmbedding2D"][0]
+    heads = bb.model.aggregator.frame_blocks[0].attn.num_heads
+    dim = bb.model.aggregator.frame_blocks[0].attn.head_dim
+
+    grid = torch.cartesian_prod(torch.arange(gh), torch.arange(gw)) + 1
+    local_pos = torch.cat((torch.zeros(k, 2, dtype=grid.dtype), grid), dim=0)[None]
+    nodiff_pos = torch.cat((torch.zeros(k, 2, dtype=grid.dtype),
+                            torch.ones(g, 2, dtype=grid.dtype)), dim=0)[None]
+    tokens = torch.randn(1, heads, g + k, dim)
+
+    # DA3's actual global layout is 2 frames concatenated; build it too.
+    nodiff_multi = nodiff_pos[0].repeat(2, 1)[None]
+    tokens_multi = torch.randn(1, heads, 2 * (g + k), dim)
+
+    base_local = rope(tokens, local_pos)
+    base_nodiff = rope(tokens, nodiff_pos)
+    base_multi = rope(tokens_multi, nodiff_multi)
+    ad = bb.make_adapter()
+    with torch.no_grad():
+        ad.rope.delta_r.fill_(0.3)
+    bb.install(ad, cam, hw)
+    try:
+        # Local first: this caches the (n, g) layout, which the nodiff call
+        # must NOT then reuse.
+        out_local = rope(tokens, local_pos)
+        out_nodiff = rope(tokens, nodiff_pos)
+        out_multi = rope(tokens_multi, nodiff_multi)
+    finally:
+        bb.remove()
+
+    assert not torch.allclose(out_local, base_local), (
+        "the spatially-encoded local call must be corrected")
+    assert torch.equal(out_nodiff, base_nodiff), (
+        "positions with no per-patch location must be left untouched, even "
+        "when the layout cache holds a valid layout for the same (n, g)")
+    assert torch.equal(out_multi, base_multi), (
+        "DA3's two-frame global nodiff layout must be left untouched")
 
 
 def test_grad_checkpointing_is_toggled_and_always_restored():
@@ -1048,6 +1158,78 @@ def test_grad_checkpointing_is_toggled_and_always_restored():
     # frozen means frozen: train mode is a flag, not an unfreeze
     assert all(not p.requires_grad for p in bb.model.parameters())
     bb.remove()
+
+
+def test_grad_checkpointing_is_bit_identical_on_identical_windows():
+    """Checkpointing must change memory, not numbers.
+
+    Issue #26 reported a ~0.01-0.03 loss drift between ckpt on/off on VGGT-1B.
+    That A/B ran the whole pipeline twice, so each process drew its own UFM
+    matches and hence its own MAGSAC pose target -- and indeed the drift sat
+    entirely in the pose term (total minus pose was identical to rounding at
+    iter 0). With the windows held fixed, as here, on/off must agree bitwise:
+    the train-mode gate flips only the checkpoint call, every dropout is p=0,
+    and there is no droppath or batchnorm on the path. CPU kernels are
+    deterministic, so any difference at all would mean train mode changes the
+    math somewhere -- exactly the claim this pins down.
+    """
+    from raytun3r.smoke_test import synthetic_window
+    from raytun3r.testing import tiny_vggt
+    from raytun3r.train import fit_adapter
+
+    hw = (70, 70)
+    cam = toy_camera(*hw, fov_deg=140.0)
+    wins = [synthetic_window(cam, hw, seq_len=2, seed=s) for s in range(2)]
+
+    def run(ckpt):
+        torch.manual_seed(0)
+        bb = tiny_vggt()
+        ad = bb.make_adapter()
+        bb.install(ad, cam, hw)
+        log = fit_adapter(bb, wins, cam, iters=4, seed=0, verbose=False,
+                          min_coverage=0.0, matcher_name="synthetic",
+                          grad_checkpointing=ckpt)
+        params = [p.detach().clone() for p in ad.parameters()]
+        bb.remove()
+        return [h["total"] for h in log["history"]], params
+
+    hist_on, p_on = run(True)
+    hist_off, p_off = run(False)
+    assert hist_on == hist_off, (
+        f"loss histories differ with the windows held fixed:\n"
+        f"  on : {hist_on}\n  off: {hist_off}")
+    assert all(torch.equal(a, b) for a, b in zip(p_on, p_off)), (
+        "final adapter parameters differ between ckpt on/off")
+
+
+def test_windows_survive_a_save_load_round_trip(tmp_path):
+    """``--windows-cache`` must hand back exactly what was saved.
+
+    The point of the cache is pinning the fit's inputs across processes, so a
+    lossy round trip (dropped pose targets, dtype changes) would silently
+    reintroduce the variance it exists to remove.
+    """
+    from raytun3r.smoke_test import synthetic_window
+
+    cam = toy_camera(70, 70, fov_deg=140.0)
+    wins = [synthetic_window(cam, (70, 70), seq_len=2, seed=s) for s in range(2)]
+    path = tmp_path / "windows.pt"
+    torch.save(wins, path)
+    back = torch.load(path, map_location="cpu", weights_only=False)
+
+    assert len(back) == len(wins)
+    for a, b in zip(wins, back):
+        assert torch.equal(a.images, b.images)
+        assert set(a.matches) == set(b.matches)
+        for k in a.matches:
+            assert torch.equal(a.matches[k].target, b.matches[k].target)
+            assert torch.equal(a.matches[k].weight, b.matches[k].weight)
+        assert set(a.pose_targets) == set(b.pose_targets)
+        for k, v in a.pose_targets.items():
+            w = b.pose_targets[k]
+            assert (v is None) == (w is None)
+            if v is not None:
+                assert torch.equal(v[0], w[0]) and torch.equal(v[1], w[1])
 
 
 def test_grad_checkpointing_is_restored_when_the_fit_raises():

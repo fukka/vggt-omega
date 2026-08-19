@@ -140,7 +140,8 @@ the objective means:
 | Flag / field | Why it exists |
 |---|---|
 | `--allow-sparse-matcher` | Eq. 8 divides by `\|Omega\|`, not by `sum(w)`, so `L_reproj`'s weight against `w_smooth=10 / w_L2=2 / w_TV=20` is set by how much of the disc the matcher is confident about. Below 5% coverage the fit refuses to run; this overrides that. |
-| `--no-grad-checkpointing` | The adapter sits at the first layer, so the whole trunk is on the gradient path. Checkpointing is on by default and is numerically inert on VGGT; turn it off to trade memory back for speed. |
+| `--no-grad-checkpointing` | The adapter sits at the first layer, so the whole trunk is on the gradient path. Checkpointing is on by default and is numerically inert on VGGT (pinned by `test_grad_checkpointing_is_bit_identical_on_identical_windows`); turn it off to trade memory back for speed. |
+| `--windows-cache PATH` | Saves the built windows (images, matches, MAGSAC pose targets) on first run, loads them afterwards. The matcher's GPU forward is not run-to-run reproducible and MAGSAC turns that into a *discretely* different Eq. 9 target, so any A/B over something fit-side must pin the windows or it measures pipeline variance instead (issue #26). |
 | `match_coverage`, `matcher` in `train_log.json` and in `results.json`'s `_meta` | The measured coverage and the matcher that produced it. A number without these two cannot be compared against the paper, which assumes UFM. |
 
 A run on OpenCV older than 4.5 also warns that the Eq. 9 pose target fell back
@@ -314,81 +315,75 @@ default is listed first.
 
 ## Measured results
 
-First real runs: `lambda_63`, **VGGT-1B frozen**, UFM, 30 three-frame windows,
-300 iters, Adam 1e-3, clip 1.0, 504 max side. Artifacts on the `results` branch
-under `results/rt3r/`.
+All numbers: `lambda_63`, ScanNet++ `3f15a9266d`, UFM matcher, frozen
+checkpoints (`facebook/VGGT-1B @ 860abec`, `yyfz233/Pi3`, `depth-anything/DA3-SMALL`).
+Artifacts on the `results` branch; the run directory is named next to each table.
+Everything produced before `organized@979fc3a` is void per issue #25 (the Eq. 6
+and Eq. 12 fixes both change every number a fit produces) and is not shown here.
 
-**ScanNet++ `3f15a9266d`, stride 10** (`results/rt3r/s10-snpp-3f15a9266d/`):
+### Vanilla backbones — the training-free reference numbers
 
-| method | R° | t° | d_reproj | coverage |
+No adapter, no training, no matcher, no randomness: a frozen backbone on posed
+pairs. `identity` is the median GT rotation of the pair set — fixed by the frame
+span alone, and the x-axis everything else is read against.
+From `results/protocol-identify-3f15a9266d/` (ticket 10, code `7b7034f`;
+n=300 pairs for VGGT/π³, n=100 for DA3; `square=False`, `seq_len=2`,
+`is_bad` honoured):
+
+| stride | identity | VGGT `R°` | π³ `R°` | DA3-S `R°` |
 |---|---|---|---|---|
-| vanilla | 2.379 | 22.79 | 1.293 | — |
-| param_free | 2.377 | 22.64 | 1.304 | — |
-| **raytun3r** | **1.858** | 23.85 | 1.196 | — |
-| center_ph | 0.378 | 5.46 | 0.445 | 0.66 |
-| multi_ph | 0.406 | 5.24 | 0.836 | 1.00 |
+| 1 | 0.84 | 0.416 | 0.444 | 0.458 |
+| 2 | 1.60 | 0.643 | 0.829 | 0.674 |
+| 5 | 3.91 | 1.191 | 1.617 | 1.189 |
+| 10 | 7.56 | 1.759 | 2.158 | 2.342 |
+| 20 | 15.32 | 2.912 | 2.958 | 4.138 |
+| 40 | 29.42 | 5.312 | 4.627 | 6.686 |
+| **60** | **43.71** | **7.242** | **6.392** | 8.096 |
+| 80 | 57.25 | 8.867 | 7.594 | 9.936 |
 
-Read plainly: RayTun3R cuts rotation error 2.379° → 1.858°, a **1.28×**
-improvement against the paper's claimed 2–12×; it does **not** improve `t°`; and
-both virtual-pinhole baselines beat it by ~5× on `R°`, the *opposite* of Tab. 1's
-ordering. Candidate explanations, none yet tested: VGGT is not the paper's
-primary backbone (DA3-Small is), this frame is ~170° rather than the 115° the
-paper ascribes to ScanNet++, and one scene is one sample.
+**Stride 60 is the paper's protocol, and it is identified, not fitted.** Tab. 2
+gives vanilla `R°` on this named scene for two backbones: VGGT **7.21** and π³
+**6.17**. One span has to satisfy both independently, and stride 60 does — 7.242
+(off by 0.03) and 6.392 (off by 0.22) — while strides 40 and 80 miss both. A
+one-backbone match would be a curve crossing (ticket 9 demonstrated exactly
+that); the two-backbone agreement is what breaks the degeneracy. DA3-Small has
+no per-scene paper number (Tab. 1 is a mean over unnamed scenes), so its column
+is our reference measurement, not a comparison: **8.10° at the paper's span**.
 
-### Direct comparison against Tab. 2
+`t°` at stride 60: VGGT 20.3 (paper 16.6), π³ 16.6 (paper 19.7) — same ballpark,
+neither tight; `t°` never corroborated the span the way `R°` did, and the
+paper's Center-PH rows are not reproduced by any span (see
+`table-*-p300.txt` in the run directory for the full blocks).
 
-This run happens to be on the exact scene the paper names for ScanNet++ in Tab. 2
-(`3f15…`) with the same frozen backbone (VGGT), so the rows line up one-to-one —
-the only such comparison available to us:
+### Post-audit adaptation results — stride 10
 
-| | paper `R°` | ours `R°` | paper `t°` | ours `t°` | paper `d_reproj` | ours `d_reproj` |
-|---|---|---|---|---|---|---|
-| vanilla | 7.21 | **2.379** | 16.6 | 22.79 | 39.4 | **1.293** |
-| center_ph | 2.45 | **0.378** | 27.3 | **5.46** | 6.1 | **0.445** |
-| raytun3r | **0.93** | 1.858 | **6.0** | 23.85 | **3.2** | 1.196 |
+From `results/rt3r/*-222d4a3/` (ticket 003 / issue #4, code `222d4a3`): fit on
+30 three-frame windows, 3000 iters; eval on 100 windows, stride 10, identity
+10.94°. `gain = 1 − R°/identity`. UFM coverage 0.82–0.95 everywhere.
 
-The pattern is consistent and it inverts the obvious reading: **our *unadapted*
-numbers are much better than the paper's, and only our *adapted* number is
-worse.** Our vanilla rotation is 3.0× better than theirs (2.379 vs 7.21) and our
-Center-PH 6.5× better (0.378 vs 2.45), while our RayTun3R is 2.0× *worse* (1.858
-vs 0.93).
+| backbone | method | R° | gain | t° | AbsRel |
+|---|---|---|---|---|---|
+| VGGT | vanilla | 2.35 | 0.785 | 27.1 | 0.254 |
+| VGGT | **raytun3r** | 1.65 | 0.849 | 22.5 | 0.198 |
+| VGGT | center_ph | **0.36** | **0.967** | 4.8 | 0.172 |
+| π³ | vanilla | 2.68 | 0.755 | 20.8 | 0.255 |
+| π³ | **raytun3r** | 1.11 | 0.898 | 17.1 | 0.240 |
+| π³ | center_ph | **0.18** | **0.983** | 3.2 | 0.171 |
+| DA3-S | vanilla | 2.63 | 0.760 | 40.7 | 0.295 |
+| DA3-S | raytun3r | — | — | — | — |
+| DA3-S | center_ph | 1.79 | 0.837 | 39.6 | 0.232 |
 
-So the gap may not be a weak adapter but **a baseline that is already too good** —
-there is only 2.379° of error available to remove here, where the paper had 7.21°.
-Something in our evaluation is easier than theirs. The prime suspect is pair
-sampling: the paper evaluates *consecutive* pairs of the full sequence, we use
-`--stride 10` on a windowed subset. Every `d_reproj` of ours is also 14–30×
-smaller than the paper's, which points the same way and is not explained by the
-convention bug (that is worth ~1 px, not a factor of 30).
-
-That is a different and more tractable hypothesis than the FOV one, and it is
-testable off a single run — see `experiments/iters_sweep.py` for the other
-unstated-hyperparameter check, and ticket 003 Runs 3 and 5.
-
-> **These numbers predate three fixes and should not be quoted.** They were
-> produced before the depth-convention unification, before the DA3 hooks worked,
-> and before `d_reproj` was averaged the way Eq. 16 defines it.
->
-> **The `d_reproj` column is the worst affected and is not comparable to the
-> paper at all.** Two separate causes: the convention mismatch is worth ~0.99 px
-> on this geometry against a method-to-method spread of 0.10 px, and the metric
-> was a confidence-weighted mean over the *matched subset* where Eq. 16 is an
-> unweighted mean over all of Ω — a difference worth anywhere from 1× to 170×
-> depending on how much of Ω the matcher abandons (see
-> [reproduction.md §1](reproduction.md#1-hyperparameters--our-flags)). Runs from
-> `43ebada` on report both `d_reproj` and `d_reproj_conf`, so the ratio is
-> measured rather than assumed.
->
-> `R°` and `t°` are unaffected by all three — pose comes from the camera head,
-> not from depth — so the rotation story above still stands, and the inverted
-> baseline ordering remains the real open question.
-> `experiments/scannetpp_all.py`, `fov_sweep.py` and `iters_sweep.py` are the
-> reruns; ticket 003 Phase 1 is the reproduction target.
-
-**ADT `seq131`, stride 1** — degenerate, kept only for the record. All five
-methods land within 0.06 px of each other on `d_reproj` (6.51–6.57), and the fit
-*diverged*: total loss rose 3.44 → 4.11 over 300 iters and `raytun3r` scored
-worse than `vanilla` on both `R°` (1.349 vs 1.305) and `t°` (68.4 vs 64.0).
+The `harness_verify` reference on the same pairs: classical geometry (UFM +
+MAGSAC++) reaches 0.76° / gain 0.935. So the adapter moves both measurable
+backbones in the right direction — VGGT 0.785 → 0.849, π³ 0.755 → 0.898 — but
+stalls well short of both the classical reference and Center-PH, which is the
+"underperforms a pinhole crop" outcome under the ticket's own reading guide,
+not the paper's claimed ordering. Caveats that keep this from being final: one
+scene; Center-PH answers only 66% of Ω (it discards the rim); DA3's raytun3r
+row was blocked by the RoPE hook (issue #26, since fixed — its global attention
+is deliberately position-free and the hook now skips it rather than refusing);
+and stride 10 is our conditioned choice, not the paper's protocol — the
+stride-60 comparison against Tab. 2's adapted numbers has not been run yet.
 
 ### Finding 1 — the evaluation stride matters more than the method
 

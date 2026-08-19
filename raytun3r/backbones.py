@@ -418,11 +418,27 @@ class Backbone(nn.Module):
             with torch.enable_grad():
                 return _self.adapter.rope_sincos(sin, cos)
 
-        def hook_tokens(_m, _args, out, _self=self):
+        def hook_tokens(_m, _args, _kwargs, out, _self=self):
             """VGGT-style RoPE: the module returns rotated tokens, not (sin, cos).
 
             The prefix camera/register tokens have no image location, so the
             radial correction applies only to the patch tokens.
+
+            **Not every RoPE call encodes position.** DA3's alternating trunk
+            calls the *same* ``RotaryPositionEmbedding2D`` with real per-patch
+            coordinates in local (per-frame) attention but with ``pos_nodiff``
+            in global attention -- specials at ``(0, 0)`` and *every* patch at
+            ``(1, 1)`` (``dinov2/vision_transformer.py::_prepare_rope``). Global
+            attention there is spatially unencoded by design: identical
+            rotations cancel in q.k, so the only information carried is
+            special-vs-patch. Eq. 6 corrects RoPE where RoPE encodes patch
+            position; on a call whose positions cannot address a grid (fewer
+            than three distinct coordinates) the correction must *skip*, not
+            guess a layout -- applying the radial rotation there would
+            introduce spatial structure into a pathway the architecture defines
+            as position-free. This is why issue #26's install failure happened:
+            the layout scan (correctly) found no frame layout in ``pos_nodiff``
+            and the fallback then blamed "called without positions".
 
             **One RoPE module serves two different token layouts.** VGGT builds a
             single ``RotaryPositionEmbedding2D`` and hands the same instance to
@@ -460,10 +476,29 @@ class Backbone(nn.Module):
             g = gh * gw
             n = out.shape[-2]
 
+            pos = _args[1] if len(_args) > 1 else None
+            if pos is None and _kwargs:
+                # Some packages pass positions by keyword; the name is theirs,
+                # the shape is not -- take the first kwarg shaped (B, N, 2).
+                for v in _kwargs.values():
+                    if torch.is_tensor(v) and v.dim() == 3 \
+                            and v.shape[-1] == 2 and v.shape[-2] == n:
+                        pos = v
+                        break
+
+            usable = (torch.is_tensor(pos) and pos.dim() == 3
+                      and pos.shape[-1] == 2 and pos.shape[-2] == n)
+            if usable and int(torch.unique(pos[0], dim=0).shape[0]) <= 2:
+                # Positions that cannot address a grid (DA3's global-attention
+                # ``pos_nodiff``): spatially unencoded call, nothing for Eq. 6
+                # to correct -- see the docstring. Deliberately *not* cached:
+                # at S=1 a local call and a global call share (n, g), so the
+                # discriminator must run on the actual tensor every time.
+                return None
+
             # Cached per (n, g): the search is a divisor scan plus a unique(),
             # and this hook fires twice per attention block (q and k) in all 48
             # blocks, every iteration.
-            pos = _args[1] if len(_args) > 1 else None
             key = (n, g)
             if key in _self._rope_layout_cache:
                 layout = _self._rope_layout_cache[key]
@@ -480,10 +515,13 @@ class Backbone(nn.Module):
                     if n < g:
                         return None
                     if n - g >= g:
+                        why = ("its positions do not resolve to a frame layout "
+                               "on this grid" if usable
+                               else "the module was called without positions")
                         raise RuntimeError(
                             f"{type(_self).__name__}: {n} RoPE tokens on a {gh}x{gw} "
-                            f"grid is more than one frame's worth, the module was "
-                            f"called without positions, and the backbone declares no "
+                            f"grid is more than one frame's worth, {why}, and the "
+                            f"backbone declares no "
                             f"n_prefix_tokens. Refusing to guess: 'prefix = n - {g}' "
                             f"aligns on the *last* frame and silently leaves every "
                             f"earlier frame uncorrected.")
@@ -513,7 +551,8 @@ class Backbone(nn.Module):
                 self._handles.append(mod.register_forward_hook(hook))
                 found_rope = True
             elif name in _ROPE_TOKEN_MODULES:
-                self._handles.append(mod.register_forward_hook(hook_tokens))
+                self._handles.append(
+                    mod.register_forward_hook(hook_tokens, with_kwargs=True))
                 found_rope = True
 
         if not found_rope and self.adapter is not None and self.adapter.rope is not None:

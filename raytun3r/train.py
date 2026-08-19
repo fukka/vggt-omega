@@ -306,6 +306,15 @@ def build_argparser() -> argparse.ArgumentParser:
                         "first layer, so the whole trunk is on the gradient path")
     p.add_argument("--convention", default="range", choices=["range", "z"])
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--windows-cache", type=str, default=None, metavar="PATH",
+                   help="torch.save/load the built windows (images, matches, "
+                        "MAGSAC pose targets). Loads PATH if it exists, else "
+                        "builds normally and saves to it. This pins the fit's "
+                        "inputs across runs: the matcher's GPU forward is not "
+                        "run-to-run reproducible, and MAGSAC turns that into a "
+                        "discretely different Eq. 9 target -- which is what an "
+                        "A/B over anything fit-side (e.g. checkpointing) must "
+                        "not be confounded by (issue #26)")
     return p
 
 
@@ -331,11 +340,24 @@ def main(argv=None) -> None:
     print(f"[data] {source.name}: {len(source)} frames at {source.h}x{source.w}, "
           f"FOV {2 * torch.rad2deg(torch.tensor(source.camera.theta_max)):.0f} deg")
 
-    matcher = build_matcher(args.matcher, device=args.device)
-    windows = build_windows(source, matcher, n_windows=args.windows,
-                            seq_len=args.seq_len, stride=args.stride,
-                            min_flow_px=args.min_flow_px, seed=args.seed,
-                            device=args.device)
+    if args.windows_cache is not None and os.path.exists(args.windows_cache):
+        # weights_only=False: Window is a dataclass, not a bare state dict. The
+        # file is our own output, written two lines below.
+        windows = torch.load(args.windows_cache, map_location="cpu",
+                             weights_only=False)
+        matcher_label = f"cache:{args.windows_cache}"
+        print(f"[data] windows loaded from {args.windows_cache} "
+              f"({len(windows)} windows; matcher and MAGSAC not re-run)")
+    else:
+        matcher = build_matcher(args.matcher, device=args.device)
+        windows = build_windows(source, matcher, n_windows=args.windows,
+                                seq_len=args.seq_len, stride=args.stride,
+                                min_flow_px=args.min_flow_px, seed=args.seed,
+                                device=args.device)
+        matcher_label = matcher.name
+        if args.windows_cache is not None:
+            torch.save(windows, args.windows_cache)
+            print(f"[data] windows saved to {args.windows_cache}")
 
     adapter, params, handles = None, None, []
     if args.method == "raytun3r":
@@ -370,7 +392,7 @@ def main(argv=None) -> None:
                         clip=args.clip, weights=weights, convention=args.convention,
                         batch_size=args.batch_size, params=params, seed=args.seed,
                         grad_checkpointing=not args.no_grad_checkpointing,
-                        matcher_name=matcher.name,
+                        matcher_name=matcher_label,
                         min_coverage=0.0 if args.allow_sparse_matcher else 0.05)
 
     ckpt = {"method": args.method, "backbone": args.backbone, "args": vars(args)}

@@ -1,6 +1,6 @@
 # Two leftovers from #25: DA3's RoPE hook won't install, and checkpointing isn't bit-identical
 
-**Owner:** cpu
+**Owner:** gpu (was cpu; fixed, needs the GPU re-check below)
 **Files I may touch:** `raytun3r/backbones.py`, `raytun3r/train.py`, `raytun3r/tests/test_raytun3r.py`
 **Blocked by:** none. **Blocks:** DA3's row in #4 step 2 (item 1 only; item 2 doesn't block a run, it blocks trusting the numbers).
 
@@ -101,3 +101,72 @@ yes → relabel `gpu` and ask for: (a) `pytest -k "da3 or rope"` green on the re
 package on `lambda_63`, confirming `install()` no longer raises; (b) re-run the
 checkpointing A/B command from #25 and confirm `diff ... && echo IDENTICAL`, or
 report the new (hopefully smaller) discrepancy.
+
+
+---
+
+## RESOLVED (cpu, 2026-08-18) — both items, neither was what it looked like
+
+### Item 1: not a keyword-argument problem, and not a missing declaration
+
+Read `depth_anything_3`'s actual source
+(`model/dinov2/vision_transformer.py::_prepare_rope`, `layers/attention.py`).
+DA3 calls its RoPE **positionally** — `self.rope(q, pos)` — so the hook saw the
+tensor all along. The real mechanism: DA3's alternating trunk hands the same
+module real per-patch coordinates in **local** attention but `pos_nodiff` in
+**global** attention — specials at `(0,0)` and *every patch at `(1,1)`*. Global
+attention is spatially unencoded **by design** (identical rotations cancel in
+q·k; the only information carried is special-vs-patch). The layout scan
+correctly found no frame layout in that tensor, and the fallback then blamed
+"called without positions" — the message lied about the cause.
+
+The fix follows the mechanism: a call whose positions cannot address a grid
+(fewer than three distinct coordinates) is **skipped**, not refused — Eq. 6
+corrects RoPE where RoPE encodes patch position, and rotating `pos_nodiff`
+would *introduce* spatial structure into a pathway the architecture defines as
+position-free. Local-attention calls read their layout off `pos` as before and
+get the correction; no `n_prefix_tokens` declaration is needed for DA3. The
+hook is also now registered `with_kwargs=True`, so a package that really does
+pass `positions=` by keyword works too. The discriminator deliberately runs on
+the actual tensor every call, before the layout cache — at S=1 a local call and
+a global call share `(n, g)`, and the cache must not alias them.
+
+Tests: `test_rope_hook_skips_spatially_unencoded_positions` (DA3's exact nodiff
+layouts, plus the S=1 cache-alias guard), `test_rope_hook_reads_keyword_positions`,
+and `test_rope_hook_refuses_an_unreadable_multi_frame_layout` (the refusal now
+needs positions that are present-but-unreadable, since keyword calls succeed).
+
+### Item 2: checkpointing is (still) numerically inert — the A/B measured the matcher
+
+The GPU's own numbers decide it: at iter 0, `total − pose` is **5.1146 in both
+runs** (6.3195−1.2049 and 6.3479−1.2333, identical to print rounding). The
+forward pass was bit-identical; the entire difference sat in the pose term,
+i.e. in the **Eq. 9 MAGSAC target**, which is computed by `build_windows`
+before the fit and outside any checkpointing. OpenCV's USAC solvers are
+deterministic given identical inputs (fixed default `randomGeneratorState`), so
+the variance is upstream: UFM's GPU forward is not run-to-run reproducible, and
+MAGSAC's discrete minimal-set selection amplifies a tiny match perturbation
+into a visibly different pose target. Continuous losses (reproj) absorb the
+same perturbation invisibly. `|g|` then diverges because the pose gradients
+differ, and everything after iter 0 compounds. **The two processes were never
+running the same objective — and that has nothing to do with checkpointing.**
+
+Direct evidence: with the windows held fixed, ckpt on/off is **bit-identical**
+over a full fit (loss history and final adapter parameters), on CPU where
+kernels are deterministic. Pinned as
+`test_grad_checkpointing_is_bit_identical_on_identical_windows`.
+
+New tooling: `train.py --windows-cache PATH` saves/loads the built windows
+(images, matches, pose targets) so a GPU A/B can pin the fit's inputs.
+
+### GPU re-check (relabel `gpu`)
+
+1. `python -m pytest raytun3r/tests -q -k "da3 or rope"` on the real package —
+   expect the previously-failing test green, `install()` no longer raises.
+2. The #25 A/B, this time controlled:
+   run 1 `--windows-cache /tmp/win3f15.pt` (builds + saves), run 2 same flag +
+   `--no-grad-checkpointing` (loads). Expect `diff ... && echo IDENTICAL`, up to
+   CUDA kernel nondeterminism (grid_sample backward is atomicAdd-based, so tiny
+   iter≥1 drift is possible on GPU even at fixed inputs — iter 0 must match).
+3. Optional, to see the thing #25's A/B actually measured: same config twice,
+   *without* the cache — the drift should reappear with checkpointing held fixed.
