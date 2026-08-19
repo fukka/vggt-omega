@@ -381,3 +381,14 @@
 - Smoke (da3_small, 4 local frames): table shape matches the diagnosis
   (near-rim blow-up). Ticket 035 filed for the 6-model x 2-held-out-scene
   frozen rows. In flight now: #35 (H5), #36 (H6), #37 (bench rows).
+
+## 2026-08-25 (tick 25) — quiet GPU tick: state/dashboard synced, method section pre-drafted
+
+- #35/#36/#37 all still in the box queue; no results files yet.
+- research-state.yaml and the dashboard brought current (three tickets in
+  flight, per-track verification status).
+- paper/method-draft.md: the method section as a four-rung ladder
+  (table -> readout head -> rim-targeted LoRA -> peripheral attention), each
+  rung justified by a measured finding, with the two "deliberately not done"
+  paragraphs (patch undistortion <=0.21 px; hands = occlusion). Open table/
+  figure slots enumerated so numbers drop straight in when tickets land.
