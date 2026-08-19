@@ -426,3 +426,10 @@
 - Corrected efficiency numbers (paper table): rim 627/1296 grid tokens (64%
   of cone); module FLOPs 0.48x of all-token (5.45G vs 11.28G); CPU latency
   30.2 vs 49.0 ms. Saved to h6 results/efficiency.json.
+
+## 2026-08-26 (tick 29) — trajectory figure; GPU still quiet
+
+- trajectory.png: the near-rim metric's march down the method ladder, every
+  bar re-read from its audited JSON. Added to the dashboard.
+- #35-#38 unchanged; the #35 status ping stands unanswered (the box session
+  has presumably not run since).
