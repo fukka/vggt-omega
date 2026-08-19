@@ -125,6 +125,19 @@ scale_shift, range domain, full joint tables (zone pools hide collateral).
   pose, or are they mere occlusion?
 - **H2.2 flagged cell resolved:** the even/odd 0–1 m/3.4° regression sits on
   392 of 2.45 M pixels (0.016%) — noise, de-flagged.
+- **H2.2 SIX-SEQUENCE CONFIRMATION (ticket #29):** near-rim AbsRel drops on
+  every sequence and every split, −21%…−75%; 5/6 clear −30% on both splits;
+  near-center worst case +5.8% (noise-order). One scene wasn't a fluke.
+- **H4.1 (ticket #31): hands ≈ plain occlusion** — GT-dynamic masking vs
+  area-matched random differs by only 0.35–1.0° on 10–25° baselines; depth
+  arm inconsistent. (Depth-GT provenance under verification, #34.)
+- **H3 REFUTED with mechanism (runs 014/014b):** correct per-patch local
+  undistortion changes nothing (3rd-decimal identical) because **within-patch
+  distortion on Aria KB4 at patch 14 is ≤0.21 px even at the rim** — the
+  distortion lives between patches, not inside them. Closes N2's
+  patch-content branch and quantitatively explains RayTun3R's "patch
+  undistortion minimal" ablation row. (run_014 discarded: rotation bug caught
+  by the protocol's mandated visual check.)
 
 ## Patterns and Insights
 

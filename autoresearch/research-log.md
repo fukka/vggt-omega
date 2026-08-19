@@ -192,3 +192,11 @@
 - All four axes now have measured dispositions: N1+N2(inter-patch)+N3 unified
   in the compression/head story; N2(patch-content) closed; N4 under
   verification (#34). Still pending: #32, #33, #34 on the box.
+
+## 2026-08-22 (tick 12) — findings brought current; paper skeleton drafted
+
+- #32/#33/#34 still pending on the box.
+- findings.md Key Results now carries the six-seq confirmation, H4.1, and H3.
+- paper/outline.md drafted: 7 sections, contribution list, figure inventory,
+  and the three claims that wait on the pending tickets. Drafting proper
+  starts when they land (ml-paper-writing skill at that point).
