@@ -51,6 +51,7 @@ for y, (lab, v, c, grp) in zip(ys, items):
                 ha="left" if v >= 0 else "right", fontsize=10, fontweight="bold")
 ax.set_yticks(ys, [i[0] for i in items], fontsize=9)
 ax.axvline(0, color="#333", lw=1)
+ax.set_xlim(-85, 82)
 ax.set_xlabel("误差变化(%,负 = 变好)")
 ax.set_title("在哪儿动手才有效:动输入都变差(红),编码器后面都变好(绿)")
 ax.grid(alpha=.3, axis="x")
