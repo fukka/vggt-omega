@@ -543,3 +543,7 @@
   delivered rim ckpt: rim-KV 627 == full 1296 on near_rim; center-KV +18%.
   Module cost 0.48x -> 0.23x of all-token, training-free. Held-out version
   appended to #36. H6.2 pyramid design recorded.
+
+## 2026-08-19 (tick 9) — box alive (delivered fovbench-019, other lane); #39 posted
+- ScanNet++ 3f15 pose-anchor + cross-lens probe posted as issue #39 (queue
+  tail; eval batches for #35/#36/#38 remain the priority).
