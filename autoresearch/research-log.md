@@ -334,3 +334,18 @@
   feeds a depth-head-only copy of the tokens (heads are parallel readouts),
   keeping pose bit-identical by construction. Protocol amended before any
   implementation.
+
+## 2026-08-24 (tick 21) — H6 module implemented and smoke-verified
+
+- peripheral_attn.py: rim-query cross-frame attention, zero-init gate,
+  depth-head-only feats copy (camera path reads originals — the verified
+  parallel-readout route). Correction to the protocol's estimate: the final
+  feats level is dim 768 (not 384), so the module is 2.96M params, not 0.6M
+  — still small; recorded.
+- module_smoke.py PASSED on real DA3 + ADT frames: zero-init bit-identical
+  through the depth head; after one gradient step depth moves while every
+  camera-output tensor stays bit-identical; grads reach only the module.
+  (One integration lesson: DA3's camera estimation consumes/mutates the head
+  output in place — snapshot pattern documented in the smoke.)
+- #35 (H5 training) still running on the box. Next: H6 trainer (reuse H5's
+  loop with the module in the depth path), then its training ticket.
