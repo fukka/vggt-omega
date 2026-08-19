@@ -74,6 +74,17 @@ is inherited from this repo's prior work and the verified literature survey at
   vanilla 14.8° — on Aria's narrower cone the center is not disposable, but the
   rim is still the most load-bearing region per unit area.
 
+- **Cross-lane result (GPU ticket 024, `results` branch digest 601fcb22767e —
+  not produced by this workspace, provenance: 6 ADT sequences, 300 frames):
+  the fisheye rim DEPTH penalty is real, not furniture.** After the GT-depth
+  control, 57–85% of the log-penalty survives on raw fisheye (controlled
+  rim/center AbsRel ratio: VGGT-Ω 1.81, DA3-Large 1.66, DA3-Small 1.25,
+  VGGT-1B 1.33), while on rectified input it collapses to ≈1.0 (−0.5…0.2
+  survives — "the rect rim penalty is mostly the furniture"). This is the
+  depth half of the N3 tension, measured independently of this workspace, and
+  it sizes the N1 prize per backbone: **VGGT-Ω has the largest controlled rim
+  penalty and is therefore the highest-headroom adapter target.**
+
 ## Patterns and Insights
 
 - Using a quarter of the matches costs ~2–3× rotation error regardless of which

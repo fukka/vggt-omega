@@ -24,10 +24,11 @@ import numpy as np
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]
                        / "h1-rim-pose-value" / "code"))
 
 from adt_pose_value import AriaLocalPairs, DEFAULT_SEQ   # noqa: E402
+from finetune.eval.metrics import align_depth            # noqa: E402
 
 THETA_BINS = 8
 DEPTH_EDGES = (0.0, 1.0, 2.0, 3.0, 5.0, 10.0)
@@ -39,6 +40,10 @@ def main(argv=None) -> None:
     p.add_argument("--seq", default=DEFAULT_SEQ)
     p.add_argument("--size", type=int, default=504)
     p.add_argument("--depth-max-m", type=float, default=10.0)
+    p.add_argument("--align", default="scale_shift",
+                   choices=["scale_only", "scale_shift", "disparity_scale_shift"],
+                   help="fovbench's protocol of record is scale_shift; "
+                        "run_008 used scale_only and is superseded")
     p.add_argument("--out", default=None)
     args = p.parse_args(argv)
 
@@ -79,9 +84,13 @@ def main(argv=None) -> None:
         valid = cone & (gt_z > 0) & (gt_r <= args.depth_max_m) & (d > 0)
         if int(valid.sum()) < 1000:
             continue
-        s = float(torch.median(gt_r[valid] / d[valid]))    # one scale per frame,
-        scales.append(s)                                   # frozen before binning
-        absrel = ((d * s - gt_r).abs() / gt_r)[valid].numpy()
+        # one affine per frame, frozen before binning; finetune/eval/metrics.py
+        # is the single protocol authority (fovbench align_mode="scale_shift")
+        aligned = align_depth(d.numpy(), gt_r.numpy(), valid.numpy(),
+                              mode=args.align)
+        scales.append(float(np.median(gt_r[valid].numpy()
+                                      / np.maximum(d[valid].numpy(), 1e-9))))
+        absrel = (np.abs(aligned - gt_r.numpy()) / gt_r.numpy())[valid.numpy()]
         ti = t_idx[valid].numpy()
         di = np.clip(np.digitize(gt_r[valid].numpy(), DEPTH_EDGES) - 1, 0, nb_d - 1)
         flat = ti * nb_d + di
