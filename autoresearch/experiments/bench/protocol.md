@@ -49,3 +49,37 @@ the matrix before any number is produced; cells fill in as runs land.
    contributes pose + the classical harness; depth there only if renders
    become available.
 3. KITTI-360 / TUM-VI — stretch; decide after 1–2.
+
+## Addendum 2026-08-19: Center-PH baseline (locked before any run)
+
+Why: the comparison-recipe study (paper/comparison-protocol.md) showed
+Center-PH is RayTun3R's strongest *depth* baseline (wins ScanNet++ AbsRel
+2.5x over RayTun3R by discarding the rim) and the structural foil for our
+thesis — it cannot have rim depth at all. Without it, our near-rim gains
+have no "just crop the problem away" control.
+
+Definition (ADT/Aria, matches our eval grid):
+- Rectify the KB4 image to a pinhole: f = 252 px, principal point (252, 252),
+  output 504x504 (axis coverage theta<=45.0 deg, diagonal <=54.7 deg ~ the
+  Aria cone edge). Bilinear sampling from the fisheye frame via the exact
+  KB4 forward projection (shared raytun3r/cameras.py, post-bisection-fix).
+- Run the frozen backbone on the rectified image with the Pinhole camera
+  installed, depth_convention="range" (same install path as all other rows).
+- Evaluate ON THE FISHEYE PIXEL GRID: each fisheye pixel's ray is projected
+  into the pinhole; covered pixels sample the prediction bilinearly,
+  uncovered pixels (rim band the crop discards) are excluded AND counted.
+  One scale_shift affine per frame fitted on covered/valid pixels only.
+  Same joint (theta x GT-depth) table, same zones, plus per-zone coverage.
+
+Predictions (locked):
+- P1: center zone AbsRel <= vanilla-fisheye center (rectified input is
+  closer to the backbone's pretraining distribution).
+- P2: near_rim zone coverage collapses (38-45 deg sliver only, plus
+  diagonal wedges to 54.7 deg); covered-part AbsRel may look good — the
+  honest report is (coverage x error), never error alone.
+- P3: solid-angle coverage = 1.840/2.651 sr = 69.4% of the cone; the
+  discarded 30.6% is exactly where H5/H6 claim their gains.
+
+Local anchor first (this Mac): frozen DA3-S, seq131 odd frames (the
+run_010/011 eval split) so the row sits directly beside the existing anchor
+table. Held-out-scene rows go to the box later with the same script.
