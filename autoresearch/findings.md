@@ -88,6 +88,13 @@ scale_shift, range domain, full joint tables (zone pools hide collateral).
   Center-PH wins ScanNet++ depth 2.5× *by discarding the rim* and loses
   rotation 3× for it; RayTun3R wins pose but concedes depth on 4/5 datasets.
   Nobody holds both — that is the N1 lane.
+- **#38 first delivery INVALIDATED (2026-08-19)**: my raytun3r_row.py
+  double-converted GT (ADTSequence already returns range; the script divided
+  by cos again), inflating rim GT up to 1.73×. Fixed (8b5c13d), reopened
+  #38 for a 4-row re-run (adapters unaffected). The "RayTun3R adaptation
+  hurts on ADT" reading is UNVERIFIED until v2 lands; do not cite the v1
+  numbers anywhere. Lesson logged: any new eval script must assert its GT
+  domain against the loader's declared convention, not the variable name.
 - **Center-PH measured on ADT (2026-08-19, local anchor, exploratory)**: its
   ScanNet++ depth win does NOT transfer — on identical pixels the rectified
   input leaves the center flat and makes the near-field center (egocentric

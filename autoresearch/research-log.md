@@ -519,3 +519,10 @@
 - gated==uniform at both ranks; gate flat; rank matters (r4 0.75 vs r8 0.57)
   but conditioning does not substitute. Mechanism recorded in analysis.md.
   Paper ablation; H7 closed without GPU spend.
+
+## 2026-08-19 (tick 5) — #38 v1 invalidated by our own double-conversion bug
+- Reconciling #37 vs #38 (3.6x near_rim gap) found raytun3r_row.py dividing
+  already-range GT by cos again. Fixed (8b5c13d); #38 reopened, 4-row re-run
+  requested; local seq131 vanilla cross-check running. v1 numbers quarantined.
+- Lesson: eval scripts must assert GT domain against the loader's declared
+  convention (the variable was even named gt_z while holding range).
