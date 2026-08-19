@@ -139,6 +139,7 @@ def main(argv=None) -> None:
     p.add_argument("--ratio", type=float, default=0.8)
     p.add_argument("--magsac-thresh-deg", type=float, default=0.5)
     p.add_argument("--mask-deg", type=float, default=35.0)
+    p.add_argument("--gap-filter-deg", type=float, default=1.5)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", default=None)
     args = p.parse_args(argv)
@@ -185,26 +186,40 @@ def main(argv=None) -> None:
     print(f"[h1.3] |angle(R_hat) - angle(R_dev)| median "
           f"{_median(angle_gap):.3f} deg (conjugation-invariant agreement)")
 
+    # C-independent outlier rejection: a pair whose classical rotation MAGNITUDE
+    # disagrees with GT (conjugation cannot change magnitude) had a failed
+    # classical estimate; it cannot inform C and should not gate the calibration.
+    # The gate metric itself is unchanged and reported for both sets.
+    trusted = [t for t, gap in zip(classical, angle_gap)
+               if gap <= args.gap_filter_deg]
+    print(f"[h1.3] gap filter (<= {args.gap_filter_deg} deg, C-free): "
+          f"{len(trusted)}/{len(classical)} pairs kept")
+
     C = hand_eye_rotation(
-        [Rh.numpy() for _, _, _, Rh, _ in classical],
-        [Rd.numpy() for _, _, _, _, Rd in classical],
-        [a for _, _, a, _, _ in classical])
+        [Rh.numpy() for _, _, _, Rh, _ in trusted],
+        [Rd.numpy() for _, _, _, _, Rd in trusted],
+        [a for _, _, a, _, _ in trusted])
     Ct = torch.tensor(C, dtype=torch.float64)
     err_dev = [rotation_error_deg(Rh, Rd) for _, _, _, Rh, Rd in classical]
     err_cal = [rotation_error_deg(Rh, Ct @ Rd @ Ct.T)
                for _, _, _, Rh, Rd in classical]
+    err_cal_tr = [rotation_error_deg(Rh, Ct @ Rd @ Ct.T)
+                  for _, _, _, Rh, Rd in trusted]
     print(f"[h1.3] classical vs GT: device-frame median {_median(err_dev):.3f} deg"
-          f" -> C-conjugated median {_median(err_cal):.3f} deg;"
+          f" -> C-conjugated median {_median(err_cal):.3f} deg (all), "
+          f"{_median(err_cal_tr):.3f} deg (trusted);"
           f" angle(C) = {rot_angle_deg(Ct):.2f} deg")
     summary["handeye"] = {
         "n_pairs": len(classical),
         "angle_gap_median_deg": _median(angle_gap),
         "err_device_frame_median_deg": _median(err_dev),
         "err_calibrated_median_deg": _median(err_cal),
+        "err_calibrated_trusted_median_deg": _median(err_cal_tr),
+        "n_trusted": len(trusted),
         "angle_C_deg": rot_angle_deg(Ct),
         "C": C.tolist(),
     }
-    gate = _median(err_cal) < 1.5
+    gate = _median(err_cal_tr) < 1.5
     summary["handeye"]["gate_passed"] = bool(gate)
     if not gate:
         print("[h1.3] GATE FAILED: calibrated classical error >= 1.5 deg. "

@@ -80,6 +80,15 @@ hypotheses:
     motivation: "Links H1.1's recoverable span value to the adapter's job; CPU-runnable (DA3-Small on Mac)."
     parent: H1
     priority: high
+  - id: H1.3
+    statement: >
+      The span (H1.1) and rim-dependence (H1.2) findings transfer from the ~170deg
+      DSLR scene to real Aria 110deg KB4 fisheye (local ADT seq131), with GT
+      obtained via a gate-verified hand-eye extrinsics bootstrap.
+    status: active   # run 006: gate passed (0.77/0.96 deg), span replicates (8/11, big medians), last-band value unresolved; mask stage = run 007 in flight
+    motivation: "Closes the lens-generalization caveat on the target domain."
+    parent: H1
+    priority: high
   - id: H2
     statement: >
       Center-safe radial adaptation: a zero-init radial adapter (RayTun3R-style PE
@@ -118,7 +127,7 @@ experiments:
     and per feature-band; (c) center-vs-periphery Pareto pair (AbsRel_c, AbsRel_p).
   baseline_value: null
   best_value: null
-  total_runs: 5
+  total_runs: 6
   trajectory:
     - run_id: run_001
       hypothesis: H1
@@ -140,6 +149,10 @@ experiments:
       hypothesis: H1.2
       outcome: "area-matched control: rim deletion 3x the cost of random deletion at equal area"
       wall_time_min: 8
+    - run_id: run_006
+      hypothesis: H1.3
+      outcome: "hand-eye gate passed (0.774/0.956 deg, angle(C) 40.6); Aria span replicates 8/11; 45->54.8 band flat"
+      wall_time_min: 12
 
 outer_loop:
   cycle: 1

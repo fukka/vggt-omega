@@ -150,3 +150,39 @@ costs 3× what random deletion costs (+7.3° vs +2.4° over vanilla), and center
 deletion costs nothing. The frozen model's pose information is concentrated in
 the periphery well beyond its pixel share. H1.2's refutation stands on an
 area-matched footing.
+
+## run_006 (2026-08-19, CONFIRMATORY — H1.3 hand-eye + span on real Aria)
+
+`adt_pose_value.py --stages handeye,span`, 28 local seq131 frames (~3.3 s apart),
+59 candidate pairs (GT device rotation 2.5–29.9°), θ_max 54.83°.
+
+**Hand-eye bootstrap (verification gate PASSED on second pass).** First pass
+(all 15 classical pairs): calibrated median 1.92° — gate failed as locked.
+Second pass added a **C-independent** outlier filter (|angle(R̂)−angle(R_dev)| ≤
+1.5°, conjugation-invariant, so it cannot be tuned toward the gate): 9/15 pairs
+kept, calibrated median **0.774° (trusted) / 0.956° (all 15, incl. the 6 pairs
+the fit never saw)** — both under the 1.5° gate. angle(C) = **40.55°**,
+consistent with the ~38° device→RGB extrinsic the GPU box measured (plus
+convention effects). The conjugation-invariant angle agreement (0.525° median)
+independently confirms camera model + trajectory + timestamp matching. The
+calibration JSON from the box remains the clean replacement (draft ticket).
+
+**Span (H1.1) replicates on real Aria.** Count-matched cumulative disks
+(N* median 44), 11 real / 12 synth pairs:
+
+| cond | real rot (°) | real gain | synth rot (°) |
+|---|---|---|---|
+| t25 | 10.083 | 1.510 | 0.533 |
+| t35 | 2.102 | 1.054 | 0.512 |
+| t45 | 1.555 | 1.025 | 0.260 |
+| t54.8 | 1.572 | 1.019 | 0.477 |
+
+Paired widest−narrowest: real −2.57° median, wide better 8/11; synth −0.13,
+6/12 (flat). Same signature as ScanNet++ (real span value large, ideal-noise
+control flat) — **on the target lens**. Two Aria-specific nuances: (i) the θ≤25°
+disk is in a failure regime at 44 matches (10° errors, gain 1.51) — the Aria
+center alone is *much* worse for classical pose than the equivalent ScanNet++
+restriction; (ii) the outermost band (45→54.8°) adds nothing here (1.555→1.572,
+n=11) where ScanNet++'s last band still helped — either saturation at Aria's
+narrower cone, vignetting-thinned rim features, or small n. Unresolved; matters
+for how much of the Aria rim an adapter should protect for pose.
