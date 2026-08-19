@@ -245,3 +245,17 @@
   programmatically — 3 entries marked PLACEHOLDER; full fetch pass required
   (paper/CITATIONS-TODO.md). No LaTeX on this Mac; compile via
   tectonic/Overleaf next.
+
+## 2026-08-23 (tick 15) — HUMAN PIVOT: CVPR bar requires method novelty + benchmarks
+
+- The human reviewed the draft direction and ruled: diagnosis + readout head
+  is not enough for CVPR or products. Required: (1) architecture novelty
+  (efficient fisheye single-image/video), (2) finetuning that improves the
+  backbone, (3) public-dataset evaluations with published baselines on BOTH
+  pose and depth.
+- Accepted. Paper drafting PAUSED; draft becomes the motivation/analysis
+  skeleton. New method phase: H5 (rim-targeted pose-preserving finetuning),
+  H6 (peripheral cross-frame attention for video), BENCH (the baseline
+  matrix — RayTun3R/Fisheye3R/CAM3R reproductions in-repo are the moat).
+- The diagnosis assets are not wasted: every H5/H6 component is dictated by
+  a measured finding, which is exactly the story CVPR method papers want.

@@ -56,6 +56,41 @@ literature:
     - "Radial metrics in the wild are confounded by depth-vs-eccentricity; this repo has the only control (slambench/fov.py) we know of."
 
 hypotheses:
+  - id: H5
+    statement: >
+      Rim-targeted, pose-preserving finetuning: LoRA-scale finetuning of the
+      backbone with (a) a radially-weighted depth loss keyed to the measured
+      compression map, (b) a pose/rim-feature preservation constraint
+      (distillation from the frozen teacher on the rim band), and (c) a
+      multi-frame consistency term that routes parallax evidence into rim
+      depth, closes >=half of the distance-controlled rim penalty on held-out
+      scenes, IMPROVES pose (RRA/RTA), and beats the readout head.
+    status: pending
+    motivation: "Human-directed method track 1 (improving backbones). Every component is dictated by a measured finding: compression map (runs 008b/009), rim-feature dependence (runs 004-007), context-buys-the-center (024B)."
+    parent: null
+    priority: high
+  - id: H6
+    statement: >
+      Peripheral cross-frame attention (video architecture): temporal
+      attention restricted to rim tokens (the alignment-rich, fusion-starved
+      band) injects multi-frame evidence into rim depth at a fraction of full
+      temporal attention's cost, breaking the "context buys the center" wall
+      that ticket-024B measured.
+    status: pending
+    motivation: "Human-directed method track 2 (efficient fisheye video model). Efficiency angle is principled: rim tokens are ~40% of the cone; the center provably doesn't need temporal help."
+    parent: null
+    priority: high
+  - id: BENCH
+    statement: >
+      Benchmark matrix on public datasets with published baselines, both
+      tasks: depth (AbsRel/delta1, radial breakdown) and pose (RRA/RTA@15)
+      on ADT + ScanNet++ (+ KITTI-360/TUM-VI/WideDepth as available), against
+      DAC, UniK3D, DA3, VGGT-Omega, RayTun3R, Fisheye3R, CAM3R (the last
+      three have working reproductions IN THIS REPO).
+    status: pending
+    motivation: "Human-directed: no CVPR paper without it. The in-repo reproductions are the unfair advantage — most labs cannot run these baselines."
+    parent: null
+    priority: high
   - id: H1
     statement: >
       Peripheral pose value: on Aria-like fisheye, restricting correspondences to the
@@ -225,7 +260,7 @@ experiments:
 
 outer_loop:
   cycle: 3
-  last_direction: conclude   # all hypotheses dispositioned; drafting begins
+  last_direction: pivot   # HUMAN-DIRECTED 2026-08-23: diagnosis+head insufficient for CVPR. Method novelty required (architecture for fisheye single-image/video + backbone finetuning) plus public-dataset benchmarks with baselines on BOTH pose and depth. Diagnosis phase becomes the motivation/analysis section; paper drafting paused.
   last_reflection: >
     2026-08-18 evening: H1 family closed in 5 runs (H1 refuted, H1.1 supported,
     H1.2 refuted-informative + area-matched control). N3's premise is measured;
