@@ -102,6 +102,17 @@ is inherited from this repo's prior work and the verified literature survey at
   it sizes the N1 prize per backbone: **VGGT-Ω has the largest controlled rim
   penalty and is therefore the highest-headroom adapter target.**
 
+- **H4 measured (ticket #28, GPU): hand/body pixels are 0.8–4% of cone
+  pixels, 80%+ of them beyond θ=41°, at median depth 0.26–0.94 m** (the
+  wearer's own body enters from the frame edge, extremely near). **The hand
+  zone IS the near-field rim** — the same (θ, depth) cells where the
+  compression is worst and inside the band the pose path relies on. All four
+  novelty axes now point at one measured object: the near-field rim of
+  egocentric fisheye. H4.1 (ticket #31): do these pixels actively disrupt
+  pose, or are they mere occlusion?
+- **H2.2 flagged cell resolved:** the even/odd 0–1 m/3.4° regression sits on
+  392 of 2.45 M pixels (0.016%) — noise, de-flagged.
+
 ## Patterns and Insights
 
 - Using a quarter of the matches costs ~2–3× rotation error regardless of which
