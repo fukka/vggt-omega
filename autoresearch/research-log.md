@@ -317,3 +317,15 @@
   rotations — the box must pair closer frames for a meaningful RRA.
 - While #35 runs: next up is the H6 (peripheral cross-frame attention)
   protocol and the BENCH protocol skeletons.
+
+## 2026-08-24 (tick 20) — H6 protocol + BENCH matrix locked; #35 still training
+
+- H6 (peripheral cross-frame attention) protocol locked: rim-query
+  cross-frame block, zero-init, ~0.6M params; pose-safety premise (DA3's
+  camera path is a separate trunk) recorded as TO-VERIFY; the all-token
+  same-params control separates the routing story from the efficiency story.
+- BENCH matrix locked as a skeleton: datasets (ADT primary, ScanNet++
+  cross-lens, KITTI-360/TUM-VI stretch, WideDepth if public), 10 methods
+  (3 in-repo reproductions are the moat), metrics incl. our radial breakdown
+  as a benchmark contribution; execution order ADT-first.
+- #35 (H5 training + eval) still running on the box.
