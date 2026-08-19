@@ -342,8 +342,11 @@ def main(argv=None) -> None:
 
     if args.windows_cache is not None and os.path.exists(args.windows_cache):
         # weights_only=False: Window is a dataclass, not a bare state dict. The
-        # file is our own output, written two lines below.
-        windows = torch.load(args.windows_cache, map_location="cpu",
+        # file is our own output, written two lines below. map_location is
+        # --device, not "cpu": fit_adapter takes its working device from
+        # windows[0].images.device, so a cpu-loaded cache silently overrides
+        # --device and then dies inside the backbone forward (issue #26).
+        windows = torch.load(args.windows_cache, map_location=args.device,
                              weights_only=False)
         matcher_label = f"cache:{args.windows_cache}"
         print(f"[data] windows loaded from {args.windows_cache} "
