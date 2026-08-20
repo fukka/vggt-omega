@@ -1,0 +1,332 @@
+  [slambench] aea: 8 of 8 takes, 251 clips
+  [slambench] nymeria: 8 of 8 takes, 256 clips
+  [slambench] split 61195914f090: 400 frames over 16 take(s) of 2 dataset(s)
+
+[slambench] ══ vggt_omega ══
+[slambench]   VGGT-Omega 1B/512 | 1144M | align=scale_shift | frames at 512px
+[slambench]   clip 5/374 (56s)
+[slambench]   clip 10/374 (64s)
+[slambench]   clip 15/374 (71s)
+[slambench]   clip 20/374 (79s)
+[slambench]   clip 25/374 (87s)
+[slambench]   clip 30/374 (95s)
+[slambench]   clip 35/374 (103s)
+[slambench]   clip 40/374 (111s)
+[slambench]   clip 45/374 (119s)
+[slambench]   clip 50/374 (126s)
+[slambench]   clip 55/374 (135s)
+[slambench]   clip 60/374 (143s)
+[slambench]   clip 65/374 (151s)
+[slambench]   clip 70/374 (159s)
+[slambench]   clip 75/374 (167s)
+[slambench]   clip 80/374 (174s)
+[slambench]   clip 85/374 (181s)
+[slambench]   clip 90/374 (189s)
+[slambench]   clip 95/374 (197s)
+[slambench]   clip 100/374 (205s)
+[slambench]   clip 105/374 (213s)
+[slambench]   clip 110/374 (221s)
+[slambench]   clip 115/374 (229s)
+[slambench]   clip 120/374 (238s)
+[slambench]   clip 125/374 (246s)
+[slambench]   clip 130/374 (254s)
+[slambench]   clip 135/374 (262s)
+[slambench]   clip 140/374 (271s)
+[slambench]   clip 145/374 (279s)
+[slambench]   clip 150/374 (289s)
+[slambench]   clip 155/374 (297s)
+[slambench]   clip 160/374 (306s)
+[slambench]   clip 165/374 (315s)
+[slambench]   clip 170/374 (322s)
+[slambench]   clip 175/374 (331s)
+[slambench]   clip 180/374 (338s)
+[slambench]   clip 185/374 (345s)
+[slambench]   clip 190/374 (353s)
+[slambench]   clip 195/374 (361s)
+[slambench]   clip 200/374 (369s)
+[slambench]   clip 205/374 (377s)
+[slambench]   clip 210/374 (385s)
+[slambench]   clip 215/374 (393s)
+[slambench]   clip 220/374 (401s)
+[slambench]   clip 225/374 (409s)
+[slambench]   clip 230/374 (417s)
+[slambench]   clip 235/374 (425s)
+[slambench]   clip 240/374 (433s)
+[slambench]   clip 245/374 (441s)
+[slambench]   clip 250/374 (449s)
+[slambench]   clip 255/374 (456s)
+[slambench]   clip 260/374 (464s)
+[slambench]   clip 265/374 (471s)
+[slambench]   clip 270/374 (478s)
+[slambench]   clip 275/374 (486s)
+[slambench]   clip 280/374 (493s)
+[slambench]   clip 285/374 (500s)
+[slambench]   clip 290/374 (507s)
+[slambench]   clip 295/374 (513s)
+[slambench]   clip 300/374 (520s)
+[slambench]   clip 305/374 (526s)
+[slambench]   clip 310/374 (532s)
+[slambench]   clip 315/374 (538s)
+[slambench]   clip 320/374 (543s)
+[slambench]   clip 325/374 (549s)
+[slambench]   clip 330/374 (555s)
+[slambench]   clip 335/374 (560s)
+[slambench]   clip 340/374 (566s)
+[slambench]   clip 345/374 (571s)
+[slambench]   clip 350/374 (577s)
+[slambench]   clip 355/374 (583s)
+[slambench]   clip 360/374 (589s)
+[slambench]   clip 365/374 (594s)
+[slambench]   clip 370/374 (600s)
+[slambench]   done in 604s
+
+[slambench] ══ dav2_large ══
+Loading weights:   0%|          | 0/503 [00:00<?, ?it/s]Loading weights:  18%|█▊        | 90/503 [00:00<00:01, 312.93it/s]Loading weights:  31%|███       | 157/503 [00:00<00:01, 244.07it/s]Loading weights:  41%|████      | 204/503 [00:00<00:01, 262.17it/s]Loading weights:  51%|█████     | 257/503 [00:01<00:01, 195.25it/s]Loading weights:  55%|█████▌    | 279/503 [00:01<00:01, 123.95it/s]Loading weights:  60%|██████    | 304/503 [00:01<00:01, 111.02it/s]Loading weights:  91%|█████████ | 457/503 [00:02<00:00, 204.16it/s]Loading weights:  95%|█████████▌| 478/503 [00:02<00:00, 137.65it/s]Loading weights:  98%|█████████▊| 494/503 [00:03<00:00, 136.84it/s]Loading weights: 100%|██████████| 503/503 [00:03<00:00, 165.01it/s]
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+Retrying in 1s [Retry 1/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+Retrying in 2s [Retry 2/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+Retrying in 4s [Retry 3/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+Retrying in 8s [Retry 4/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+Retrying in 8s [Retry 5/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/preprocessor_config.json
+Retrying in 1s [Retry 1/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/preprocessor_config.json
+Retrying in 2s [Retry 2/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/preprocessor_config.json
+Retrying in 4s [Retry 3/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/preprocessor_config.json
+Retrying in 8s [Retry 4/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/preprocessor_config.json
+Retrying in 8s [Retry 5/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/preprocessor_config.json
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+Retrying in 1s [Retry 1/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+Retrying in 2s [Retry 2/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+Retrying in 4s [Retry 3/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+Retrying in 8s [Retry 4/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+Retrying in 8s [Retry 5/5].
+'timed out' thrown while requesting HEAD https://huggingface.co/depth-anything/Depth-Anything-V2-Large-hf/resolve/main/processor_config.json
+[slambench]   Depth-Anything-V2 Large | 335M | align=disparity_scale_shift | frames at 518px
+[slambench]   clip 5/374 (4682s)
+[slambench]   clip 10/374 (4715s)
+[slambench]   clip 15/374 (4748s)
+[slambench]   clip 20/374 (4790s)
+[slambench]   clip 25/374 (4827s)
+[slambench]   clip 30/374 (4857s)
+[slambench]   clip 35/374 (4888s)
+[slambench]   clip 40/374 (4922s)
+[slambench]   clip 45/374 (4958s)
+[slambench]   clip 50/374 (4997s)
+[slambench]   clip 55/374 (5034s)
+[slambench]   clip 60/374 (5071s)
+[slambench]   clip 65/374 (5113s)
+[slambench]   clip 70/374 (5153s)
+[slambench]   clip 75/374 (5193s)
+[slambench]   clip 80/374 (5228s)
+[slambench]   clip 85/374 (5260s)
+[slambench]   clip 90/374 (5291s)
+[slambench]   clip 95/374 (5322s)
+[slambench]   clip 100/374 (5360s)
+[slambench]   clip 105/374 (5395s)
+[slambench]   clip 110/374 (5430s)
+[slambench]   clip 115/374 (5463s)
+[slambench]   clip 120/374 (5502s)
+[slambench]   clip 125/374 (5536s)
+[slambench]   clip 130/374 (5556s)
+[slambench]   clip 135/374 (5571s)
+[slambench]   clip 140/374 (5579s)
+[slambench]   clip 145/374 (5586s)
+[slambench]   clip 150/374 (5592s)
+[slambench]   clip 155/374 (5598s)
+[slambench]   clip 160/374 (5606s)
+[slambench]   clip 165/374 (5613s)
+[slambench]   clip 170/374 (5620s)
+[slambench]   clip 175/374 (5626s)
+[slambench]   clip 180/374 (5632s)
+[slambench]   clip 185/374 (5639s)
+[slambench]   clip 190/374 (5645s)
+[slambench]   clip 195/374 (5651s)
+[slambench]   clip 200/374 (5667s)
+[slambench]   clip 205/374 (5696s)
+[slambench]   clip 210/374 (5727s)
+[slambench]   clip 215/374 (5764s)
+[slambench]   clip 220/374 (5798s)
+[slambench]   clip 225/374 (5830s)
+[slambench]   clip 230/374 (5864s)
+[slambench]   clip 235/374 (5895s)
+[slambench]   clip 240/374 (5926s)
+[slambench]   clip 245/374 (5959s)
+[slambench]   clip 250/374 (5989s)
+[slambench]   clip 255/374 (6027s)
+[slambench]   clip 260/374 (6067s)
+[slambench]   clip 265/374 (6101s)
+[slambench]   clip 270/374 (6137s)
+[slambench]   clip 275/374 (6181s)
+[slambench]   clip 280/374 (6216s)
+[slambench]   clip 285/374 (6255s)
+[slambench]   clip 290/374 (6287s)
+[slambench]   clip 295/374 (6326s)
+[slambench]   clip 300/374 (6360s)
+[slambench]   clip 305/374 (6400s)
+[slambench]   clip 310/374 (6433s)
+[slambench]   clip 315/374 (6467s)
+[slambench]   clip 320/374 (6500s)
+[slambench]   clip 325/374 (6531s)
+[slambench]   clip 330/374 (6563s)
+[slambench]   clip 335/374 (6599s)
+[slambench]   clip 340/374 (6630s)
+[slambench]   clip 345/374 (6662s)
+[slambench]   clip 350/374 (6691s)
+[slambench]   clip 355/374 (6722s)
+[slambench]   clip 360/374 (6756s)
+[slambench]   clip 365/374 (6793s)
+[slambench]   clip 370/374 (6831s)
+[slambench]   done in 6856s
+
+[slambench] ══ da3_large ══
+[97m[INFO ] using MLP layer as FFN[0m
+[slambench]   Depth-Anything-3 Large | 411M | align=scale_shift | frames at 518px
+[slambench]   clip 5/374 (148s)
+[slambench]   clip 10/374 (154s)
+[slambench]   clip 15/374 (161s)
+[slambench]   clip 20/374 (168s)
+[slambench]   clip 25/374 (175s)
+[slambench]   clip 30/374 (182s)
+[slambench]   clip 35/374 (191s)
+[slambench]   clip 40/374 (210s)
+[slambench]   clip 45/374 (239s)
+[slambench]   clip 50/374 (272s)
+[slambench]   clip 55/374 (303s)
+[slambench]   clip 60/374 (332s)
+[slambench]   clip 65/374 (362s)
+[slambench]   clip 70/374 (396s)
+[slambench]   clip 75/374 (431s)
+[slambench]   clip 80/374 (467s)
+[slambench]   clip 85/374 (498s)
+[slambench]   clip 90/374 (534s)
+[slambench]   clip 95/374 (570s)
+[slambench]   clip 100/374 (600s)
+[slambench]   clip 105/374 (645s)
+[slambench]   clip 110/374 (692s)
+[slambench]   clip 115/374 (740s)
+[slambench]   clip 120/374 (788s)
+[slambench]   clip 125/374 (826s)
+[slambench]   clip 130/374 (861s)
+[slambench]   clip 135/374 (899s)
+[slambench]   clip 140/374 (935s)
+[slambench]   clip 145/374 (974s)
+[slambench]   clip 150/374 (1010s)
+[slambench]   clip 155/374 (1043s)
+[slambench]   clip 160/374 (1082s)
+[slambench]   clip 165/374 (1123s)
+[slambench]   clip 170/374 (1157s)
+[slambench]   clip 175/374 (1189s)
+[slambench]   clip 180/374 (1223s)
+[slambench]   clip 185/374 (1254s)
+[slambench]   clip 190/374 (1285s)
+[slambench]   clip 195/374 (1315s)
+[slambench]   clip 200/374 (1352s)
+[slambench]   clip 205/374 (1395s)
+[slambench]   clip 210/374 (1434s)
+[slambench]   clip 215/374 (1466s)
+[slambench]   clip 220/374 (1498s)
+[slambench]   clip 225/374 (1525s)
+[slambench]   clip 230/374 (1548s)
+[slambench]   clip 235/374 (1566s)
+[slambench]   clip 240/374 (1577s)
+[slambench]   clip 245/374 (1585s)
+[slambench]   clip 250/374 (1591s)
+[slambench]   clip 255/374 (1597s)
+[slambench]   clip 260/374 (1602s)
+[slambench]   clip 265/374 (1608s)
+[slambench]   clip 270/374 (1614s)
+[slambench]   clip 275/374 (1619s)
+[slambench]   clip 280/374 (1625s)
+[slambench]   clip 285/374 (1632s)
+[slambench]   clip 290/374 (1638s)
+[slambench]   clip 295/374 (1644s)
+[slambench]   clip 300/374 (1650s)
+[slambench]   clip 305/374 (1655s)
+[slambench]   clip 310/374 (1661s)
+[slambench]   clip 315/374 (1667s)
+[slambench]   clip 320/374 (1692s)
+[slambench]   clip 325/374 (1720s)
+[slambench]   clip 330/374 (1750s)
+[slambench]   clip 335/374 (1781s)
+[slambench]   clip 340/374 (1808s)
+[slambench]   clip 345/374 (1833s)
+[slambench]   clip 350/374 (1865s)
+[slambench]   clip 355/374 (1898s)
+[slambench]   clip 360/374 (1932s)
+[slambench]   clip 365/374 (1962s)
+[slambench]   clip 370/374 (1991s)
+[slambench]   done in 2014s
+
+============================================================================================
+  ego-synth SLAM depth · egosynth-slam-v1 · split 61195914f090
+============================================================================================
+  400 frames over 16 take(s), datasets: aea, nymeria
+  GT: sparse MPS SLAM points, fisheye stream, native — the harness rectifies nothing
+  cut at inv_dist_std (1/m, scale-invariant) < 0.01 (the release ships UNFILTERED, so this is part of every number below)
+  baselines ['raw', 'rect_derect'] · 8 take(s)/dataset · 25 frame(s)/take
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame over every one
+  of that frame's points, then frozen. Frames combine unweighted. Each
+  model keeps its own alignment space — disparity for Depth-Anything V2,
+  depth for the up-to-scale heads — so ABSOLUTE AbsRel IS NOT COMPARABLE
+  ACROSS MODELS. It is comparable across baselines of one model.
+
+  BASELINE · raw
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  da3_large     aea            0.207    0.754    0.899    0.717    0.081    1.00    1.40     200
+  da3_large     nymeria        0.172    0.790    0.931    0.517    0.068    1.00    1.58     200
+  dav2_large    aea            0.158    0.838    0.931    0.803    0.066    1.00    1.40     200
+  dav2_large    nymeria        0.144    0.841    0.950    0.577    0.061    1.00    1.58     200
+  vggt_omega    aea            0.151    0.846    0.938    0.662    0.061    1.00    1.40     200
+  vggt_omega    nymeria        0.121    0.884    0.961    0.467    0.049    1.00    1.58     200
+
+  BASELINE · rect_derect
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  da3_large     aea            0.194    0.778    0.905    0.712    0.075    0.99    1.40     200
+  da3_large     nymeria        0.164    0.804    0.933    0.517    0.064    0.99    1.58     200
+  dav2_large    aea            0.150    0.835    0.935    0.761    0.064    0.99    1.40     200
+  dav2_large    nymeria        0.139    0.844    0.951    0.568    0.059    0.99    1.58     200
+  vggt_omega    aea            0.148    0.855    0.933    0.667    0.058    0.99    1.40     200
+  vggt_omega    nymeria        0.126    0.870    0.957    0.485    0.050    0.99    1.58     200
+
+  RECTIFY OR NOT · rect_derect / raw, within model (<1 means rectifying helped)
+  --------------------------------------------------------------------------------
+  model         dataset      AbsRel raw  rect_derect    ratio  cover raw  cover rd
+  --------------------------------------------------------------------------------
+  da3_large     aea              0.2068       0.1941    0.939       1.00      0.99
+  da3_large     nymeria          0.1722       0.1642    0.953       1.00      0.99
+  dav2_large    aea              0.1575       0.1500    0.952       1.00      0.99
+  dav2_large    nymeria          0.1441       0.1392    0.966       1.00      0.99
+  vggt_omega    aea              0.1512       0.1481    0.980       1.00      0.99
+  vggt_omega    nymeria          0.1206       0.1255    1.041       1.00      0.99
+  Both arms are scored on the points BOTH could answer for, so the
+  ratio is like-for-like; `cover` is what each gave up to get there and
+  is NOT in the ratio. A rect_derect that wins on 60% coverage has won
+  a different, smaller question.
+
+  MODELS
+  ------------------------------------------------------------
+  da3_large     Depth-Anything-3 Large · 411M · align=scale_shift · frames at 518px
+  dav2_large    Depth-Anything-V2 Large · 335M · align=disparity_scale_shift · frames at 518px
+  vggt_omega    VGGT-Omega 1B/512 · 1144M · align=scale_shift · frames at 512px
+
+
+[slambench] wrote eval_out/slambench-022-sc/step2.g1/results.json (+ csv, report.txt)
