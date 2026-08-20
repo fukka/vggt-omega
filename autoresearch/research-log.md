@@ -577,3 +577,16 @@
   CI [0.65, 1.11]). #35 asked to pull once more before evals.
 
 ## 2026-08-19 (tick 16) — per-frame zones in eval_module too; both eval scripts error-bar ready
+
+## 2026-08-19 (tick 17) — human-directed multi-agent architecture brainstorm
+- Q1 answered (data sufficiency): 4 seqs enough to learn the lens, not enough
+  for a generalization claim; loss still falling at ep20 -> widen data.
+- 3 agents (Fable/Opus/Sonnet) x ~18 proposals + adversarial cross-critique.
+  Record: literature/2026-08-19-arch-brainstorm/. Survivors -> H9 (RayCal-TTA
+  label-free field removal), H10 (FrozenMatch decoupled pose), H11 (parallax-
+  gated epipolar rim attention, t-8/t-16 horizon). Unanimous kills incl. the
+  center/rim dual-expert MoE (H7+F2+F4 evidence chain).
+- Cross-critique-only finds: two-annuli problem (pose value 35-45 vs depth
+  liability 45-55), Aria SLAM-cam static baseline, hand-motion triangulation
+  poisoning, rolling shutter. Pre-checks scheduled before GPU commitment.
+- Dashboard gained section 二·八 (brainstorm conclusions + Q1 answer).

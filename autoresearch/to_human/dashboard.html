@@ -25,7 +25,7 @@
 <p class="time">最近更新:2026-08-19 下午 · <b>GPU 四单全部交付!训练完成、基准行到手;还差最后一步评测(已催)</b></p>
 
 <p class="note" style="background:#f7f9fb;padding:.6rem .9rem;border-radius:6px">
-<b>本页导读:</b>①研究问题 → ①·五 我们提出的方法和新颖点(图解) → ②重要发现(白话) → ②·六 最新结果图集(成功与失败) → ③进度看板(谁在干什么、卡在哪) → ④协作方式 ⑤小词典。</p>
+<b>本页导读:</b>①研究问题 → ①·五 我们提出的方法和新颖点(图解) → ②重要发现(白话) → ②·六 最新结果图集(成功与失败) → ②·七 排队中的 GPU 单子 → <b>②·八 三模型头脑风暴的结论(新)</b> → ③进度看板(谁在干什么、卡在哪) → ④协作方式 ⑤小词典。</p>
 <h2>一、我们在研究什么(一句话版)</h2>
 <p class="big">Aria 眼镜的鱼眼相机视野很宽(约110°),但现有的深度估计大模型都是在普通相机图片上训练的:
 <b>画面边缘(视野外圈)的深度估计很差</b>。我们想用很小的改动(不重训大模型)让边缘变好,
@@ -254,6 +254,40 @@ CPU上几分钟就能训完。下一个问题:换别的场景还灵不灵?(已�
 <line x1="410" y1="32" x2="450" y2="52" stroke="#333"/><line x1="410" y1="87" x2="450" y2="70" stroke="#333"/>
 </svg>
 <p class="note"><b>目标:</b>"在公开数据集上、和已发表基线、用它们自己的口径比"——这是你定下的 CVPR 硬要求的最后一块。用别人发表的协议而不是自建协议,审稿人无从质疑口径。</p></div>
+<h2>二·八、三模型头脑风暴的结论(8月19日,按你的指示)</h2>
+<p>按你的要求,我启动了三个不同型号的模型(Fable / Opus / Sonnet)各自独立设计方案(共约 18 个),然后让它们互相挑刺。互评很有效:三方各自的第一名都被别人找出了实质问题,也各自认错修正。完整记录存在仓库 <code>autoresearch/literature/2026-08-19-arch-brainstorm/</code>(3 份提案 + 3 份互评 + 1 份综合)。</p>
+
+<div style="border:1px solid #ddd;border-radius:8px;padding:.8rem;margin-bottom:1rem">
+<b>先回答你的第一个问题:现在 4 段录像的训练数据够吗?</b>
+<p class="note">分两种目标:<b>学"这颗镜头"的固定畸变规律 → 够</b>(可训练参数只有骨干的千分之一,试点上边缘误差 1.408→0.567);<b>学"通用的边缘修正"并声称能泛化 → 不够</b>——外部复核证明起作用的是图像特征,而特征可能只是记住了这间公寓;4 段录像同房间同相机,有效信息量远小于表面数量;而且训练到第 20 轮损失还在降,说明该<b>加数据</b>而不是加轮数。扩充顺序:ADT 其他房间(#40 单子)→ ScanNet++ 不同鱼眼相机 → 合成数据。下面第一名方案从结构上化解了这个问题:它适配新场景<b>只需要视频,不需要深度真值</b>。</p></div>
+
+<div style="border:1px solid #ddd;border-radius:8px;padding:.8rem;margin-bottom:1rem">
+<b>三方讨论后合并出的核心思路(也是论文主张):位姿和深度分家,让"边缘"用位姿的富余去还深度的欠账</b>
+<svg viewBox="0 0 760 210" style="width:100%;max-width:760px">
+<defs><marker id="bs" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#333"/></marker></defs>
+<rect x="5" y="75" width="130" height="60" rx="6" fill="#eef3fb" stroke="#2f6fb2"/><text x="70" y="100" text-anchor="middle" font-size="12">冻结的大模型</text><text x="70" y="118" text-anchor="middle" font-size="10">(不动一个参数)</text>
+<rect x="185" y="15" width="170" height="55" rx="6" fill="#eafaf1" stroke="#27ae60"/><text x="270" y="35" text-anchor="middle" font-size="12">位姿:传统几何法</text><text x="270" y="52" text-anchor="middle" font-size="10">用冻结特征找对应点,球面解算</text>
+<rect x="185" y="140" width="170" height="55" rx="6" fill="#fdf2f2" stroke="#c0392b"/><text x="270" y="160" text-anchor="middle" font-size="12">深度:带径向压缩病</text><text x="270" y="177" text-anchor="middle" font-size="10">边缘系统性算错(已确诊)</text>
+<rect x="405" y="15" width="160" height="55" rx="6" fill="#eafaf1" stroke="#27ae60"/><text x="485" y="35" text-anchor="middle" font-size="12">三角化出稀疏</text><text x="485" y="52" text-anchor="middle" font-size="10">"真距离"锚点(不用真值)</text>
+<rect x="405" y="140" width="160" height="55" rx="6" fill="#fef9e7" stroke="#e67e22"/><text x="485" y="160" text-anchor="middle" font-size="12">用锚点把压缩病</text><text x="485" y="177" text-anchor="middle" font-size="10">拟合出来并去除</text>
+<rect x="615" y="75" width="140" height="60" rx="6" fill="#fff" stroke="#bbb"/><text x="685" y="98" text-anchor="middle" font-size="11">整幅图一个缩放</text><text x="685" y="115" text-anchor="middle" font-size="10">就对齐(治本标准)</text>
+<line x1="135" y1="90" x2="185" y2="45" stroke="#333" marker-end="url(#bs)"/>
+<line x1="135" y1="120" x2="185" y2="165" stroke="#333" marker-end="url(#bs)"/>
+<line x1="355" y1="42" x2="405" y2="42" stroke="#333" marker-end="url(#bs)"/>
+<line x1="485" y1="70" x2="485" y2="140" stroke="#27ae60" stroke-width="2" marker-end="url(#bs)"/>
+<line x1="565" y1="167" x2="615" y2="120" stroke="#333" marker-end="url(#bs)"/>
+<text x="497" y="110" font-size="10" fill="#27ae60">位姿反哺深度</text>
+</svg>
+<p class="note"><b>第一名(共识):</b>不训练、不加推理开销——用传统几何从视频里解出相机运动,三角化出一批可信的稀疏距离,拿它当"免费真值"把模型的径向压缩病拟合出来再扣掉。<b>新颖点:</b>现有方法(DUSt3R/VGGT 一族)都是"先深度再位姿",我们反过来"先位姿再修深度";而且适配新相机不需要深度传感器。<b>第二名:</b>位姿专用通道——直接用冻结模型的特征做跨帧配对+经典解算(实测传统法在能解的帧对上比学出来的位姿准约 10 倍:1.5° 对 14.8°)。<b>第三名:</b>视频版——把已验证的"边缘跨帧注意力"升级成沿极线曲线取证据,但取证据的帧距要拉远到 8~16 帧(算术账:相邻帧基线太短,深度假设挤在一个 token 里分不开)。三项的验证实验加起来约 5 个 GPU 天,每一项都有事先锁定的"证伪条件"。</p></div>
+
+<div style="border:1px solid #ddd;border-radius:8px;padding:.8rem;margin-bottom:1rem">
+<b>你点名的两个方向,讨论后的结论</b>
+<p class="note"><b>"中心一个模型 + 边缘一个模型":三方一致否决,且用的是我们自己的实验证据</b>——此前的 H7 实验证明,统一的小适配器借助位置编码已经天然"分区办事",人为分家是多余的机器;而且实测中心和边缘之间没有互相拖累(单个小头改善边缘时中心不受损),没有矛盾可供两个专家去调解。这条否决链本身可以写进论文。<b>"鱼眼转成潜在特征再融合":部分存活</b>——像素级重采样已被实测证伪(处处变差),但在冻结模型<b>之后</b>的特征层面做文章是安全的,存活形式就是上面第三名的跨帧注意力;"极坐标重排特征"作为低优先级备选保留。</p></div>
+
+<div style="border:1px solid #ddd;border-radius:8px;padding:.8rem;margin-bottom:1rem">
+<b>互评环节才抓出来的四个盲点(三个模型自己都没看见,互相看才发现)</b>
+<p class="note">① <b>"边缘"其实是两圈</b>:位姿信号集中在 35~45°,深度病最重在 45~55°——如果坐实,"用边缘位姿还边缘深度债"这个主张要改写成"几何管内圈、平滑外推管外圈"(反而是更强的论文主张);验证很便宜,优先做。② <b>Aria 眼镜不是单目</b>:机身上还有两个出厂标定过的 SLAM 相机,每一时刻都自带立体基线——可以完全绕开"头只转不走导致三角化失效"这个头号风险;需要先查 ADT 数据里有没有这路流。③ <b>动的手会污染三角化</b>:手正好出现在最需要修的区域,把运动物体当静态三角化会得到"自信的错误锚点",所有验证实验必须带运动一致性过滤。④ <b>卷帘快门</b>:边缘像素扫描时序差最大,现有解算都假设全局快门,ADT 有逐行时间戳可以先量一量这误差多大。</p></div>
+
 <h2>三、进度看板</h2>
 <p>负责方说明:<span class="tag me">Mac-Claude</span> = 我(你 Mac 上这个会话,只用 CPU);
 <span class="tag gpu">GPU-Claude</span> = GPU 机器上的另一个 Claude(通过 GitHub 任务单接活);

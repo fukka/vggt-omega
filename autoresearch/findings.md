@@ -72,6 +72,43 @@ scale_shift, range domain, full joint tables (zone pools hide collateral).
 - **BENCH:** frozen-row machinery smoke-tested (#37); RayTun3R comparison row
   runnable (#38). In flight: #35–#38.
 
+## Multi-agent architecture brainstorm (2026-08-19, human-directed)
+
+Three agents (Fable/Opus/Sonnet), ~18 independent proposals, then adversarial
+cross-critique. Full record: `literature/2026-08-19-arch-brainstorm/`
+(3 brainstorms + 3 critiques + synthesis.md). Survivors registered as H9/H10/H11;
+kills and pre-checks in `research-state.yaml: brainstorm_2026_08_19`.
+
+- **Organizing thesis (consensus):** pose→depth, inverting DUSt3R/MASt3R/VGGT's
+  arrow — "spend the rim's pose surplus on the rim's depth deficit."
+- **H9 RayCal-TTA** (top pick): classical pose → triangulated anchors → label-free
+  removal of the radial compression field; sold as GT-free adaptation to an unseen
+  camera (answers F8 structurally). Locked bar: the scale_shift↔frozen-affine gap
+  must collapse. Application-step fork (analytic inverse vs pseudo-labeled feature
+  head) is deliberately unresolved — both arms run on the same anchors.
+- **H10 FrozenMatch pose stream**: three agents converged independently. Stratify
+  the RANSAC sample, never θ-weight (H1); full-field, not rim-only (run_007);
+  never headline RRA@15 (CAM3R saturated it).
+- **H11 epipolar rim attention**: invented independently by two agents, then
+  re-scoped by baseline arithmetic — metric evidence needs t−8/t−16, appearance
+  evidence saturates at t−2; two temporal scales, a testable claim.
+- **Data-sufficiency verdict (human's Q1):** 4 sequences/one apartment is enough
+  to learn the lens (fixed radial function, 0.49M params — pilot works), NOT
+  enough to support a generalization claim: the review's aux-only control shows
+  features do the work, and features may be apartment appearance; training loss
+  still falling at epoch 20 → widen data, don't lengthen. Order: more ADT scenes
+  (#40), ScanNet++ 170°, ego-synth. H9's label-free adaptation is the structural
+  answer (needs video, not labels).
+- **Blind spots caught only by cross-critique** (none of the three saw their own):
+  the two-annuli problem (pose value ~35–45°, depth liability 45–55° — threatens
+  the thesis, run_006 outer arm was n=11, cheap to settle); Aria's SLAM cameras
+  give a static stereo baseline at every timestamp (bypasses rotation-dominant
+  motion, the #1 named killer); moving hands poison static-scene triangulation
+  precisely in the worst cells (motion gate mandatory); rolling shutter at the rim.
+- **Killed unanimously with our own measurements**: center/rim dual-expert MoE
+  (H7 flat gate + F2 no-interference + F4 wrong-axis) — the human's direction-B
+  first bullet, and the refutation chain is itself paper material.
+
 ## Corrections from the external H2 review (2026-08-19, FEEDBACK-2026-08-19.md)
 
 An independent session re-audited the H2 line against our JSONs + 3 new

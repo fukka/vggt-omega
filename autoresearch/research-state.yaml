@@ -214,6 +214,60 @@ hypotheses:
     motivation: "Novelty axis N4 — now measured to overlap the compression zone and the pose-critical band; the four axes unify at the near-field rim."
     parent: null
     priority: high
+  - id: H9
+    statement: >
+      Self-supervised radial-field removal (RayCal-TTA): classical bearing-space
+      pose -> triangulated full-FOV range anchors -> fit and remove the backbone's
+      radial compression field WITHOUT depth labels, so one affine serves the whole
+      image (the F4 criterion). Framed as GT-free adaptation to an unseen camera.
+      Application-step fork to settle empirically: analytic log-linear g(theta),c(theta)
+      inverse (Opus) vs anchor-pseudo-labeled feature-conditioned center-zero field
+      head (Fable; dodges the H2.1/F3 output-indexed ceiling).
+    status: proposed   # multi-agent brainstorm consensus M1 (literature/2026-08-19-arch-brainstorm/synthesis.md). Locked bar: scale_shift<->frozen-affine gap must COLLAPSE, not just the aligned number drop. Day-1 oracle-pose arm; g(theta) must match run_009's GT field. PRE-CHECKS FIRST: two-annuli (run_006 outer arm at adequate n), Aria SLAM-cam stereo availability, hand motion-consistency gate in every falsifier.
+    motivation: "Human-directed decoupling brainstorm 2026-08-19. Pose->depth arrow; converts F8 (one apartment) from liability to headline since adaptation needs video, not labels."
+    parent: null
+    priority: high
+  - id: H10
+    statement: >
+      Decoupled pose stream (FrozenMatch): detector-free coarse-to-fine matching on
+      FROZEN backbone features (zero extra encoder pass), exact KB4 ray lift,
+      classical spherical solver, coverage-stratified RANSAC (never theta-weighting,
+      per H1), full-field not rim-only (run_007: center deletion costs +5.3 deg).
+      Beats the measured bottleneck: SIFT solves only 15/59 Aria pairs.
+    status: proposed   # brainstorm consensus M2; three agents converged independently on this design. Report RRA@2/@5 + median + hard-pair splits, NEVER RRA@15 (CAM3R saturated it at 99.0/95.0). Optional block L-4 tap for structural pose-depth decoupling (pre-check: measure actual pose drift of the H5 checkpoint first). Falsifier mostly CPU on the H1 harness.
+    motivation: "Human direction A (traditional/matching pose). Classical is ~10x more accurate than the learned pose path on solvable pairs (1.5-1.6 vs 14.8 deg median, runs 006/007); learning's role is supplying matches, not replacing the solver."
+    parent: H1
+    priority: high
+  - id: H11
+    statement: >
+      Parallax-gated epipolar rim attention (re-scoped H6 successor): derotate
+      previous-frame tokens on the KB4 sphere (token re-addressing, no pixel
+      resampling), rim queries attend to D=16-32 inverse-range hypothesis KV along
+      their epipolar curves, KV drawn from t-8/t-16 (metric horizon; token pitch
+      ~3 deg needs >=5.5cm baseline) not t-1..t-4 (appearance horizon). Gain must
+      rise monotonically with baseline-length bin and vanish in the lowest bin.
+    status: proposed   # brainstorm consensus M3 (Fable+Opus invented epipolar-KV independently; Opus's baseline arithmetic re-scoped the horizon). Training-free epipolar-masking probe on the #36 checkpoint first — cheap kill if the H6 module turns out to aggregate band statistics rather than correspond (the honest alternative reading of rim-KV==full-KV). Efficiency claims in wall-clock, not FLOPs (per-query gathers are memory-bound). Gated on #36 held-out evals (H6.1 is train-scene/exploratory).
+    motivation: "F3 says geometry alone recovers <half the rim gain — H9 needs a content-dependent second stage; this is it, and it is the video-architecture leg of the paper."
+    parent: H6
+    priority: medium
+
+brainstorm_2026_08_19:
+  process: "3 agents (Fable/Opus/Sonnet), independent proposals (~18) then adversarial cross-critique; human-directed (decouple pose/depth, center+rim experts, latent fusion, efficiency)"
+  artifacts: "autoresearch/literature/2026-08-19-arch-brainstorm/ (3 brainstorms + 3 critiques + synthesis.md)"
+  survivors: [H9, H10, H11]
+  killed_do_not_revisit:
+    - "center/rim dual-expert MoE incl. discrete theta routing (H7 flat gate + F2 no-interference + F4 wrong-axis; unanimous, no ablation owed)"
+    - "latent-space equal-area resampling (H8 mechanism survives the move behind the encoder)"
+    - "rim-weighted RANSAC / theta-weighted pose loss (H1: stratify the sample, never weight)"
+    - "ring-buffer KV cache as a contribution (saves <0.5%/frame vs sane streaming; no validity horizon under head turns)"
+    - "annular center-token merging (DPT head mixes tokens spatially -> center merge moves rim outputs)"
+    - "pose headline at ADT RRA@15 (CAM3R saturated)"
+    - "distillation student until F3's apartment-overfit question closes"
+  missed_by_all_three_then_found_in_critique:
+    - "two-annuli problem: pose value ~35-45 deg, depth liability 45-55 deg (run_006 outer arm was n=11, nothing); if it holds, geometry supervises 38-45 and a smoothness prior extrapolates outward — sharper claim, cheap to settle"
+    - "Aria has 2 SLAM cams with factory extrinsics: static stereo baseline at every timestamp would bypass rotation-dominant-motion failure entirely; check ADT stream availability locally"
+    - "dynamic hands poison static-scene triangulation exactly in the worst cells; anchor motion-consistency gate mandatory in every H9 falsifier"
+    - "rolling shutter: rim has max image-plane velocity; solvers assume global shutter; ADT has row timestamps to measure it"
 
 experiments:
   proxy_metric: >
