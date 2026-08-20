@@ -108,6 +108,13 @@ kills and pre-checks in `research-state.yaml: brainstorm_2026_08_19`.
 - **Killed unanimously with our own measurements**: center/rim dual-expert MoE
   (H7 flat gate + F2 no-interference + F4 wrong-axis) — the human's direction-B
   first bullet, and the refutation chain is itself paper material.
+- **Independent corroboration of H11's temporal re-scope (2026-08-20)**: the
+  slambench #22 delivery (real MPS SLAM points, aea+nymeria, models incl.
+  VGGT-Omega/DA3) shows multi-frame context at stride 1 buys ~nothing (ratios
+  0.98–1.07) while stride 10 buys real gains (DA3-L nymeria −10…−13%, VGGT-Ω
+  rect −6…−7% at 10fr) — adjacent frames lack baseline; metric evidence needs
+  temporal distance. Exactly Opus's t−8/t−16 arithmetic, on independent data.
+  Caveat: whole-image averages, no zone split in that harness.
 
 ## Corrections from the external H2 review (2026-08-19, FEEDBACK-2026-08-19.md)
 
