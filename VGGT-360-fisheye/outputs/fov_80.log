@@ -1,0 +1,100 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/user/f.zhang2/projects/vggt-omega-organized/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/user/f.zhang2/projects/vggt-omega-organized/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+autocast: torch.bfloat16
+loading facebook/VGGT-1B ...
+  weight check OK: all 1403 keys matched
+  [ADT] 1 usable sequence(s) (need: depth_npy, videos_synthetic)
+  [ADT]   SKIP Apartment_release_clean_seq133_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq134_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq135_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq136_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq137_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq138_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq140_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq141_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq142_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq143_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq144_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq145_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq146_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq147_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq148_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq149_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq150_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_decoration_seq132_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP exocentric_rendered: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT] 100 frames <- Apartment_release_clean_seq131_M1292 (61 depth maps had no RGB partner)
+  [1/100] views=10  AbsRel=0.0677  delta1=0.9639
+  [10/100] views=10  AbsRel=0.0742  delta1=0.9629
+  [20/100] views=10  AbsRel=0.0783  delta1=0.9639
+  [30/100] views=10  AbsRel=0.0820  delta1=0.9640
+  [40/100] views=10  AbsRel=0.0832  delta1=0.9647
+  [50/100] views=10  AbsRel=0.0863  delta1=0.9637
+  [60/100] views=10  AbsRel=0.0747  delta1=0.9562
+  [70/100] views=10  AbsRel=0.0806  delta1=0.9508
+  [80/100] views=10  AbsRel=0.1103  delta1=0.9177
+  [90/100] views=10  AbsRel=0.0985  delta1=0.9402
+  [100/100] views=10  AbsRel=0.0895  delta1=0.9460
+
+============================================================
+  VGGT-360-fisheye (attn) [z-domain]  [scale_shift]  (n_frames=100)
+============================================================
+  AbsRel    : 0.0897
+  SqRel     : 0.0391
+  RMSE      : 0.3694
+  RMSElog   : 0.1410
+  log10     : 0.0391
+  delta1    : 94.30%
+  delta2    : 98.25%
+  delta3    : 99.17%
+  scale_ratio: 0.9691  (1.0 = perfect metric)
+============================================================
+
+
+============================================================
+  VGGT-360-fisheye (attn) [z-domain]  [scale_only]  (n_frames=100)
+============================================================
+  AbsRel    : 0.1272
+  SqRel     : 0.0517
+  RMSE      : 0.4047
+  RMSElog   : 0.1791
+  log10     : 0.0529
+  delta1    : 76.80%
+  delta2    : 98.08%
+  delta3    : 99.23%
+  scale_ratio: 1.0000  (1.0 = perfect metric)
+============================================================
+
+
+============================================================
+  VGGT-360-fisheye (attn) [range-domain]  [scale_shift]  (n_frames=100)
+============================================================
+  AbsRel    : 0.0956
+  SqRel     : 0.0526
+  RMSE      : 0.4964
+  RMSElog   : 0.1448
+  log10     : 0.0412
+  delta1    : 92.58%
+  delta2    : 98.22%
+  delta3    : 99.18%
+  scale_ratio: 0.9657  (1.0 = perfect metric)
+============================================================
+
+
+============================================================
+  VGGT-360-fisheye (attn) [range-domain]  [scale_only]  (n_frames=100)
+============================================================
+  AbsRel    : 0.1272
+  SqRel     : 0.0675
+  RMSE      : 0.5369
+  RMSElog   : 0.1791
+  log10     : 0.0529
+  delta1    : 76.80%
+  delta2    : 98.08%
+  delta3    : 99.23%
+  scale_ratio: 1.0000  (1.0 = perfect metric)
+============================================================
+

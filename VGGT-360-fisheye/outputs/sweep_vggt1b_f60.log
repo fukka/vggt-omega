@@ -1,0 +1,44 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/user/f.zhang2/projects/vggt-omega-organized/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+render size 518 (native token grid for vggt1b; override with --persp-size)
+  [ADT] 1 usable sequence(s) (need: depth_npy, videos_synthetic)
+  [ADT]   SKIP Apartment_release_clean_seq133_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq134_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq135_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq136_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq137_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq138_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq140_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq141_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq142_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq143_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq144_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq145_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq146_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq147_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq148_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq149_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq150_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_decoration_seq132_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP exocentric_rendered: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT] 61 frames <- Apartment_release_clean_seq131_M1292 (61 depth maps had no RGB partner)
+loading facebook/VGGT-1B on cuda (torch.bfloat16) ...
+====================================================================
+weight check OK: all model keys matched (no random-init layers).
+====================================================================
+
+config                          true_fov  infer(h,w)      align
+tangent_fov40_none                    40    43.3, 43.3    12.5%
+tangent_fov60_none                    60    60.4, 60.4    17.0%
+tangent_fov80_none                    80    73.2, 73.4    22.5%
+tangent_fov100_none                  100    93.4, 93.3    26.0%
+tangent_fov120_none                  120   113.2,114.0    19.0%
+raw_roi_fov40_none                    40    41.2, 41.2    11.8%
+raw_roi_fov60_none                    60    54.9, 54.9    14.6%
+raw_roi_fov80_none                    80    65.3, 65.3    19.5%
+raw_roi_fov100_none                  100    75.7, 76.0    20.5%
+raw_roi_fov120_none                  120    86.9, 87.0    23.9%
+rectifier_fovrect_none                85    78.2, 78.4    25.9%
+
+done — 11 configs. See VGGT-360-fisheye/outputs/sweep_vggt1b_f60/ (summary.csv, align_vs_fov.png, grid.png, per-config *.png)

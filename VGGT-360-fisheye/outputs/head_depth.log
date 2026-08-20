@@ -1,0 +1,120 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/user/f.zhang2/projects/vggt-omega-organized/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/user/f.zhang2/projects/vggt-omega-organized/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+WARNING: running VGGT-1B on CPU will be extremely slow.
+[vggt360] loading facebook/VGGT-1B (fov100 tilt26 ring8 fuse=attn head=depth adaptive sa-mask 512px bf16)
+[vggt360]   weight check OK: 1403 keys matched
+  [ADT] 6 usable sequence(s) (need: depth_npy, videos_synthetic)
+  [ADT]   SKIP Apartment_release_clean_seq137_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq138_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq140_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq141_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq142_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq143_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq144_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq145_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq146_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq147_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq148_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq149_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq150_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP exocentric_rendered: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT] 100 frames <- Apartment_release_clean_seq131_M1292 (61 depth maps had no RGB partner)
+  [ADT] 100 frames <- Apartment_release_clean_seq133_M1292 (2504 depth maps had no RGB partner)
+  [ADT] 100 frames <- Apartment_release_clean_seq134_M1292 (2476 depth maps had no RGB partner)
+  [ADT] 100 frames <- Apartment_release_clean_seq135_M1292 (2540 depth maps had no RGB partner)
+  [ADT] 100 frames <- Apartment_release_clean_seq136_M1292 (2539 depth maps had no RGB partner)
+  [ADT] 100 frames <- Apartment_release_decoration_seq132_M1292 (2391 depth maps had no RGB partner)
+  [1/600] views=9  AbsRel=0.1697  delta1=0.7253
+  [10/600] views=9  AbsRel=0.1594  delta1=0.6963
+  [20/600] views=9  AbsRel=0.2220  delta1=0.6041
+  [30/600] views=9  AbsRel=0.2032  delta1=0.6753
+  [40/600] views=9  AbsRel=0.1803  delta1=0.6685
+  [50/600] views=9  AbsRel=0.1676  delta1=0.6844
+  [60/600] views=9  AbsRel=0.1988  delta1=0.6534
+  [70/600] views=9  AbsRel=0.2958  delta1=0.4925
+  [80/600] views=9  AbsRel=0.1722  delta1=0.7818
+  [90/600] views=9  AbsRel=0.1396  delta1=0.8520
+  [100/600] views=9  AbsRel=0.1218  delta1=0.8971
+  [110/600] views=9  AbsRel=0.1736  delta1=0.7669
+  [120/600] views=9  AbsRel=0.1184  delta1=0.8804
+  [130/600] views=9  AbsRel=0.0415  delta1=0.9922
+  [140/600] views=9  AbsRel=0.1350  delta1=0.8057
+  [150/600] views=9  AbsRel=0.1079  delta1=0.9272
+  [160/600] views=9  AbsRel=0.2140  delta1=0.8684
+  [170/600] views=9  AbsRel=0.1944  delta1=0.7885
+  [180/600] views=9  AbsRel=0.1780  delta1=0.7971
+  [190/600] views=9  AbsRel=0.2619  delta1=0.5021
+  [200/600] views=9  AbsRel=0.3198  delta1=0.3819
+  [210/600] views=9  AbsRel=0.1712  delta1=0.6761
+  [220/600] views=9  AbsRel=0.4076  delta1=0.2143
+  [230/600] views=9  AbsRel=0.1696  delta1=0.7990
+  [240/600] views=9  AbsRel=0.0812  delta1=0.9525
+  [250/600] views=9  AbsRel=0.0838  delta1=0.9429
+  [260/600] views=9  AbsRel=0.0506  delta1=0.9849
+  [270/600] views=9  AbsRel=0.0489  delta1=0.9881
+  [280/600] views=9  AbsRel=0.2457  delta1=0.5825
+  [290/600] views=9  AbsRel=0.1202  delta1=0.8928
+  [300/600] views=9  AbsRel=0.1896  delta1=0.6500
+  [310/600] views=9  AbsRel=0.0727  delta1=0.9479
+  [320/600] views=9  AbsRel=0.2985  delta1=0.7216
+  [330/600] views=9  AbsRel=0.2014  delta1=0.8162
+  [340/600] views=9  AbsRel=0.1634  delta1=0.8306
+  [350/600] views=9  AbsRel=0.1725  delta1=0.7369
+  [360/600] views=9  AbsRel=0.1608  delta1=0.7827
+  [370/600] views=9  AbsRel=0.2013  delta1=0.7744
+  [380/600] views=9  AbsRel=0.1825  delta1=0.7948
+  [390/600] views=9  AbsRel=0.2561  delta1=0.6123
+  [400/600] views=9  AbsRel=0.2491  delta1=0.7012
+  [410/600] views=9  AbsRel=0.4366  delta1=0.3701
+  [420/600] views=9  AbsRel=0.1911  delta1=0.6985
+  [430/600] views=9  AbsRel=0.4791  delta1=0.1733
+  [440/600] views=9  AbsRel=0.2187  delta1=0.7168
+  [450/600] views=9  AbsRel=0.1650  delta1=0.7954
+  [460/600] views=9  AbsRel=0.1738  delta1=0.8171
+  [470/600] views=9  AbsRel=0.1445  delta1=0.7365
+  [480/600] views=9  AbsRel=0.5443  delta1=0.2105
+  [490/600] views=9  AbsRel=0.1150  delta1=0.8717
+  [500/600] views=9  AbsRel=0.1352  delta1=0.8796
+  [510/600] views=9  AbsRel=0.0784  delta1=0.9615
+  [520/600] views=9  AbsRel=0.0810  delta1=0.9567
+  [530/600] views=9  AbsRel=0.1500  delta1=0.7680
+  [540/600] views=9  AbsRel=0.2498  delta1=0.4770
+  [550/600] views=9  AbsRel=2.0706  delta1=0.3145
+  [560/600] views=9  AbsRel=1.9088  delta1=0.5595
+  [570/600] views=9  AbsRel=1.0537  delta1=0.4122
+  [580/600] views=9  AbsRel=1.5894  delta1=0.2140
+  [590/600] views=9  AbsRel=1.0767  delta1=0.4805
+  [600/600] views=9  AbsRel=0.7147  delta1=0.2848
+
+============================================================
+  VGGT-360-fisheye (attn) [z-domain]  [scale_shift]  (n_frames=600)
+============================================================
+  AbsRel    : 0.2819
+  SqRel     : 0.3883
+  RMSE      : 0.6421
+  RMSElog   : 0.2913
+  log10     : 0.0904
+  delta1    : 71.10%
+  delta2    : 89.34%
+  delta3    : 94.91%
+  scale_ratio: 0.9514  (residual after scale_shift; ~1.0 by construction, not a grade)
+============================================================
+
+
+============================================================
+  VGGT-360-fisheye (attn) [range-domain]  [scale_shift]  (n_frames=600)
+============================================================
+  AbsRel    : 0.2789
+  SqRel     : 0.4873
+  RMSE      : 0.8656
+  RMSElog   : 0.2917
+  log10     : 0.0905
+  delta1    : 70.59%
+  delta2    : 89.25%
+  delta3    : 94.95%
+  scale_ratio: 0.9502  (residual after scale_shift; ~1.0 by construction, not a grade)
+============================================================
+

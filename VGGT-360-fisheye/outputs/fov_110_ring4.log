@@ -1,0 +1,70 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/user/f.zhang2/projects/vggt-omega-organized/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/user/f.zhang2/projects/vggt-omega-organized/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+autocast: torch.bfloat16
+loading facebook/VGGT-1B ...
+  weight check OK: all 1403 keys matched
+  [ADT] 1 usable sequence(s) (need: depth_npy, videos_synthetic)
+  [ADT]   SKIP Apartment_release_clean_seq133_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq134_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq135_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq136_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq137_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq138_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq140_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq141_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq142_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq143_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq144_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq145_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq146_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq147_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq148_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq149_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_clean_seq150_M1292: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT]   SKIP Apartment_release_decoration_seq132_M1292: missing/empty ['videos_synthetic']
+  [ADT]   SKIP exocentric_rendered: missing/empty ['depth_npy', 'videos_synthetic']
+  [ADT] 100 frames <- Apartment_release_clean_seq131_M1292 (61 depth maps had no RGB partner)
+  [1/100] views=5  AbsRel=0.3928  delta1=0.4240
+  [10/100] views=5  AbsRel=0.3325  delta1=0.4694
+  [20/100] views=5  AbsRel=0.4544  delta1=0.3875
+  [30/100] views=5  AbsRel=0.3629  delta1=0.4943
+  [40/100] views=5  AbsRel=0.4769  delta1=0.4284
+  [50/100] views=5  AbsRel=0.2928  delta1=0.5827
+  [60/100] views=5  AbsRel=0.7043  delta1=0.3052
+  [70/100] views=5  AbsRel=0.7479  delta1=0.3367
+  [80/100] views=5  AbsRel=0.3310  delta1=0.4648
+  [90/100] views=5  AbsRel=0.2623  delta1=0.5363
+  [100/100] views=5  AbsRel=0.3391  delta1=0.4012
+
+============================================================
+  VGGT-360-fisheye (attn) [z-domain]  [scale_shift]  (n_frames=100)
+============================================================
+  AbsRel    : 0.4551
+  SqRel     : 0.4602
+  RMSE      : 0.8749
+  RMSElog   : 0.4901
+  log10     : 0.1618
+  delta1    : 43.83%
+  delta2    : 65.83%
+  delta3    : 82.08%
+  scale_ratio: 0.9621  (1.0 = perfect metric)
+============================================================
+
+
+============================================================
+  VGGT-360-fisheye (attn) [range-domain]  [scale_shift]  (n_frames=100)
+============================================================
+  AbsRel    : 0.4474
+  SqRel     : 0.5809
+  RMSE      : 1.1587
+  RMSElog   : 0.4637
+  log10     : 0.1571
+  delta1    : 44.20%
+  delta2    : 66.95%
+  delta3    : 82.70%
+  scale_ratio: 0.9526  (1.0 = perfect metric)
+============================================================
+
