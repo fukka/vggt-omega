@@ -1,0 +1,53 @@
+{
+  "seq": "Apartment_release_decoration_seq132_M1292",
+  "module": "/user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h6-train/rim/module_last.pt",
+  "kv_sizes": {
+    "full": 1296,
+    "cone": 975,
+    "rim": 627,
+    "center": 348
+  },
+  "report": {
+    "full": {
+      "zones": {
+        "near_rim(<=2m,>=38deg)": 0.23270636645663845,
+        "center(<=11deg)": 0.28286017432731786,
+        "far(>=3m)": 0.5822961861902459
+      },
+      "mean_drift_m": 0.0
+    },
+    "cone": {
+      "zones": {
+        "near_rim(<=2m,>=38deg)": 0.23063893428361726,
+        "center(<=11deg)": 0.29388339519064177,
+        "far(>=3m)": 0.5815801643890531
+      },
+      "mean_drift_m": 0.1534398543207269
+    },
+    "rim": {
+      "zones": {
+        "near_rim(<=2m,>=38deg)": 0.2309665808752711,
+        "center(<=11deg)": 0.2833800332547494,
+        "far(>=3m)": 0.5803276479112598
+      },
+      "mean_drift_m": 0.11225529838549464
+    },
+    "center": {
+      "zones": {
+        "near_rim(<=2m,>=38deg)": 0.2209697958442983,
+        "center(<=11deg)": 0.33658374759609394,
+        "far(>=3m)": 0.5824125938342738
+      },
+      "mean_drift_m": 0.4721124854527022
+    }
+  },
+  "config": {
+    "seq": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_decoration_seq132_M1292",
+    "module": "/user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h6-train/rim/module_last.pt",
+    "size": 504,
+    "max_frames": 20,
+    "depth_max_m": 10.0,
+    "device": "cuda",
+    "out": "/user/f.zhang2/projects/vggt-omega-organized/eval_out/evals-35-36/h6_kv_seq132.json"
+  }
+}

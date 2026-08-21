@@ -1,0 +1,143 @@
+{
+  "path": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_decoration_seq132_M1292",
+  "adapter": "/user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-bench/rt3r/decoration_seq132/adapter.pt",
+  "backbone": "da3",
+  "joint": [
+    [
+      0.0,
+      0.04181070147856459,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.04858295426789369,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.04059666263389817,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.046047666998032324,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.08466933455346076,
+      0.18221564263593956,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.12294931596396538,
+      0.11279233915457647,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.13221070013448297,
+      0.08548709526465406,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.2157913769930461,
+      0.07777727690138053,
+      0.20476795710298867,
+      0.0
+    ]
+  ],
+  "counts": [
+    [
+      0,
+      130260,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      407160,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      726300,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      1102500,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      1543670,
+      610,
+      0,
+      0
+    ],
+    [
+      0,
+      1829939,
+      231361,
+      0,
+      0
+    ],
+    [
+      0,
+      1484129,
+      1133191,
+      0,
+      0
+    ],
+    [
+      0,
+      1156945,
+      1594862,
+      161733,
+      0
+    ]
+  ],
+  "theta_bin_mid_deg": [
+    3.4266677066154516,
+    10.280003119846356,
+    17.133338533077257,
+    23.986673946308162,
+    30.84000935953906,
+    37.69334477276997,
+    44.54668018600088,
+    51.40001559923177
+  ],
+  "config": {
+    "path": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_decoration_seq132_M1292",
+    "adapter": "/user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-bench/rt3r/decoration_seq132/adapter.pt",
+    "backbone": "da3",
+    "variant": "small",
+    "max_size": 504,
+    "max_frames": 60,
+    "extrinsics_json": "cam3r/data/adt_camera_rgb_calibration.json",
+    "depth_max_m": 10.0,
+    "device": "cuda",
+    "out": "/user/f.zhang2/projects/vggt-omega-organized/eval_out/rt3r-v2/decoration_seq132_adapted_v2.json"
+  }
+}
