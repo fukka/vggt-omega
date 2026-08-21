@@ -1,0 +1,582 @@
+[slambench] distance strata, from ground truth only …
+  aea        0.80  1.13  1.47  2.18 m
+  nymeria    0.75  1.27  1.78  2.76 m
+
+[slambench] ══ vggt_1b ══
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[slambench]   VGGT 1B | align=scale_shift | frames at 518px
+/group-volume/Fengjia/projects/vggt-omega-023/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+[slambench]   clip 5/374 (17s)
+[slambench]   clip 10/374 (19s)
+[slambench]   clip 15/374 (20s)
+[slambench]   clip 20/374 (22s)
+[slambench]   clip 25/374 (23s)
+[slambench]   clip 30/374 (25s)
+[slambench]   clip 35/374 (27s)
+[slambench]   clip 40/374 (29s)
+[slambench]   clip 45/374 (30s)
+[slambench]   clip 50/374 (32s)
+[slambench]   clip 55/374 (33s)
+[slambench]   clip 60/374 (35s)
+[slambench]   clip 65/374 (37s)
+[slambench]   clip 70/374 (39s)
+[slambench]   clip 75/374 (41s)
+[slambench]   clip 80/374 (43s)
+[slambench]   clip 85/374 (45s)
+[slambench]   clip 90/374 (47s)
+[slambench]   clip 95/374 (49s)
+[slambench]   clip 100/374 (51s)
+[slambench]   clip 105/374 (53s)
+[slambench]   clip 110/374 (55s)
+[slambench]   clip 115/374 (58s)
+[slambench]   clip 120/374 (60s)
+[slambench]   clip 125/374 (62s)
+[slambench]   clip 130/374 (64s)
+[slambench]   clip 135/374 (67s)
+[slambench]   clip 140/374 (69s)
+[slambench]   clip 145/374 (72s)
+[slambench]   clip 150/374 (74s)
+[slambench]   clip 155/374 (76s)
+[slambench]   clip 160/374 (78s)
+[slambench]   clip 165/374 (80s)
+[slambench]   clip 170/374 (81s)
+[slambench]   clip 175/374 (83s)
+[slambench]   clip 180/374 (85s)
+[slambench]   clip 185/374 (86s)
+[slambench]   clip 190/374 (88s)
+[slambench]   clip 195/374 (90s)
+[slambench]   clip 200/374 (92s)
+[slambench]   clip 205/374 (93s)
+[slambench]   clip 210/374 (95s)
+[slambench]   clip 215/374 (97s)
+[slambench]   clip 220/374 (99s)
+[slambench]   clip 225/374 (101s)
+[slambench]   clip 230/374 (103s)
+[slambench]   clip 235/374 (105s)
+[slambench]   clip 240/374 (107s)
+[slambench]   clip 245/374 (108s)
+[slambench]   clip 250/374 (110s)
+[slambench]   clip 255/374 (112s)
+[slambench]   clip 260/374 (114s)
+[slambench]   clip 265/374 (116s)
+[slambench]   clip 270/374 (118s)
+[slambench]   clip 275/374 (120s)
+[slambench]   clip 280/374 (122s)
+[slambench]   clip 285/374 (124s)
+[slambench]   clip 290/374 (125s)
+[slambench]   clip 295/374 (127s)
+[slambench]   clip 300/374 (129s)
+[slambench]   clip 305/374 (131s)
+[slambench]   clip 310/374 (132s)
+[slambench]   clip 315/374 (134s)
+[slambench]   clip 320/374 (136s)
+[slambench]   clip 325/374 (137s)
+[slambench]   clip 330/374 (139s)
+[slambench]   clip 335/374 (140s)
+[slambench]   clip 340/374 (142s)
+[slambench]   clip 345/374 (144s)
+[slambench]   clip 350/374 (146s)
+[slambench]   clip 355/374 (148s)
+[slambench]   clip 360/374 (150s)
+[slambench]   clip 365/374 (152s)
+[slambench]   clip 370/374 (153s)
+[slambench]   done in 155s
+
+[slambench] ══ vggt_omega ══
+[slambench]   VGGT-Omega 1B/512 | align=scale_shift | frames at 512px
+[slambench]   clip 5/374 (11s)
+[slambench]   clip 10/374 (13s)
+[slambench]   clip 15/374 (14s)
+[slambench]   clip 20/374 (16s)
+[slambench]   clip 25/374 (17s)
+[slambench]   clip 30/374 (19s)
+[slambench]   clip 35/374 (20s)
+[slambench]   clip 40/374 (22s)
+[slambench]   clip 45/374 (24s)
+[slambench]   clip 50/374 (25s)
+[slambench]   clip 55/374 (27s)
+[slambench]   clip 60/374 (29s)
+[slambench]   clip 65/374 (31s)
+[slambench]   clip 70/374 (33s)
+[slambench]   clip 75/374 (34s)
+[slambench]   clip 80/374 (36s)
+[slambench]   clip 85/374 (37s)
+[slambench]   clip 90/374 (38s)
+[slambench]   clip 95/374 (40s)
+[slambench]   clip 100/374 (41s)
+[slambench]   clip 105/374 (43s)
+[slambench]   clip 110/374 (44s)
+[slambench]   clip 115/374 (46s)
+[slambench]   clip 120/374 (48s)
+[slambench]   clip 125/374 (49s)
+[slambench]   clip 130/374 (51s)
+[slambench]   clip 135/374 (53s)
+[slambench]   clip 140/374 (55s)
+[slambench]   clip 145/374 (57s)
+[slambench]   clip 150/374 (58s)
+[slambench]   clip 155/374 (60s)
+[slambench]   clip 160/374 (61s)
+[slambench]   clip 165/374 (63s)
+[slambench]   clip 170/374 (64s)
+[slambench]   clip 175/374 (66s)
+[slambench]   clip 180/374 (67s)
+[slambench]   clip 185/374 (68s)
+[slambench]   clip 190/374 (70s)
+[slambench]   clip 195/374 (71s)
+[slambench]   clip 200/374 (72s)
+[slambench]   clip 205/374 (74s)
+[slambench]   clip 210/374 (75s)
+[slambench]   clip 215/374 (76s)
+[slambench]   clip 220/374 (77s)
+[slambench]   clip 225/374 (79s)
+[slambench]   clip 230/374 (80s)
+[slambench]   clip 235/374 (81s)
+[slambench]   clip 240/374 (83s)
+[slambench]   clip 245/374 (84s)
+[slambench]   clip 250/374 (85s)
+[slambench]   clip 255/374 (87s)
+[slambench]   clip 260/374 (88s)
+[slambench]   clip 265/374 (89s)
+[slambench]   clip 270/374 (91s)
+[slambench]   clip 275/374 (92s)
+[slambench]   clip 280/374 (93s)
+[slambench]   clip 285/374 (95s)
+[slambench]   clip 290/374 (96s)
+[slambench]   clip 295/374 (97s)
+[slambench]   clip 300/374 (99s)
+[slambench]   clip 305/374 (100s)
+[slambench]   clip 310/374 (101s)
+[slambench]   clip 315/374 (103s)
+[slambench]   clip 320/374 (104s)
+[slambench]   clip 325/374 (105s)
+[slambench]   clip 330/374 (107s)
+[slambench]   clip 335/374 (108s)
+[slambench]   clip 340/374 (109s)
+[slambench]   clip 345/374 (110s)
+[slambench]   clip 350/374 (112s)
+[slambench]   clip 355/374 (113s)
+[slambench]   clip 360/374 (114s)
+[slambench]   clip 365/374 (116s)
+[slambench]   clip 370/374 (117s)
+[slambench]   done in 118s
+
+[slambench] ══ dav2_large ══
+Loading weights:   0%|          | 0/503 [00:00<?, ?it/s]Loading weights:  12%|█▏        | 60/503 [00:00<00:03, 120.95it/s]Loading weights:  23%|██▎       | 115/503 [00:00<00:02, 184.94it/s]Loading weights:  28%|██▊       | 139/503 [00:01<00:02, 127.10it/s]Loading weights:  32%|███▏      | 161/503 [00:01<00:03, 92.17it/s] Loading weights:  36%|███▌      | 180/503 [00:01<00:03, 84.30it/s]Loading weights:  41%|████      | 204/503 [00:02<00:03, 85.71it/s]Loading weights:  44%|████▍     | 222/503 [00:02<00:04, 68.39it/s]Loading weights:  50%|█████     | 252/503 [00:02<00:02, 92.58it/s]Loading weights:  53%|█████▎    | 265/503 [00:03<00:03, 61.64it/s]Loading weights:  62%|██████▏   | 312/503 [00:03<00:02, 72.76it/s]Loading weights:  76%|███████▌  | 380/503 [00:03<00:01, 104.68it/s]Loading weights:  87%|████████▋ | 436/503 [00:04<00:00, 132.77it/s]Loading weights:  90%|████████▉ | 452/503 [00:04<00:00, 110.52it/s]Loading weights:  95%|█████████▌| 478/503 [00:04<00:00, 104.90it/s]Loading weights:  97%|█████████▋| 490/503 [00:05<00:00, 91.46it/s] Loading weights: 100%|██████████| 503/503 [00:05<00:00, 99.39it/s]
+[slambench]   Depth-Anything-V2 Large | align=disparity_scale_shift | frames at 518px
+[slambench]   clip 5/374 (37s)
+[slambench]   clip 10/374 (39s)
+[slambench]   clip 15/374 (40s)
+[slambench]   clip 20/374 (42s)
+[slambench]   clip 25/374 (44s)
+[slambench]   clip 30/374 (45s)
+[slambench]   clip 35/374 (47s)
+[slambench]   clip 40/374 (48s)
+[slambench]   clip 45/374 (50s)
+[slambench]   clip 50/374 (51s)
+[slambench]   clip 55/374 (54s)
+[slambench]   clip 60/374 (55s)
+[slambench]   clip 65/374 (57s)
+[slambench]   clip 70/374 (59s)
+[slambench]   clip 75/374 (61s)
+[slambench]   clip 80/374 (62s)
+[slambench]   clip 85/374 (64s)
+[slambench]   clip 90/374 (65s)
+[slambench]   clip 95/374 (67s)
+[slambench]   clip 100/374 (68s)
+[slambench]   clip 105/374 (70s)
+[slambench]   clip 110/374 (72s)
+[slambench]   clip 115/374 (73s)
+[slambench]   clip 120/374 (76s)
+[slambench]   clip 125/374 (78s)
+[slambench]   clip 130/374 (79s)
+[slambench]   clip 135/374 (81s)
+[slambench]   clip 140/374 (83s)
+[slambench]   clip 145/374 (85s)
+[slambench]   clip 150/374 (87s)
+[slambench]   clip 155/374 (89s)
+[slambench]   clip 160/374 (90s)
+[slambench]   clip 165/374 (92s)
+[slambench]   clip 170/374 (93s)
+[slambench]   clip 175/374 (95s)
+[slambench]   clip 180/374 (96s)
+[slambench]   clip 185/374 (98s)
+[slambench]   clip 190/374 (99s)
+[slambench]   clip 195/374 (100s)
+[slambench]   clip 200/374 (102s)
+[slambench]   clip 205/374 (103s)
+[slambench]   clip 210/374 (104s)
+[slambench]   clip 215/374 (106s)
+[slambench]   clip 220/374 (107s)
+[slambench]   clip 225/374 (109s)
+[slambench]   clip 230/374 (110s)
+[slambench]   clip 235/374 (111s)
+[slambench]   clip 240/374 (113s)
+[slambench]   clip 245/374 (114s)
+[slambench]   clip 250/374 (116s)
+[slambench]   clip 255/374 (117s)
+[slambench]   clip 260/374 (118s)
+[slambench]   clip 265/374 (120s)
+[slambench]   clip 270/374 (121s)
+[slambench]   clip 275/374 (123s)
+[slambench]   clip 280/374 (125s)
+[slambench]   clip 285/374 (126s)
+[slambench]   clip 290/374 (127s)
+[slambench]   clip 295/374 (129s)
+[slambench]   clip 300/374 (130s)
+[slambench]   clip 305/374 (132s)
+[slambench]   clip 310/374 (134s)
+[slambench]   clip 315/374 (135s)
+[slambench]   clip 320/374 (137s)
+[slambench]   clip 325/374 (138s)
+[slambench]   clip 330/374 (140s)
+[slambench]   clip 335/374 (141s)
+[slambench]   clip 340/374 (142s)
+[slambench]   clip 345/374 (144s)
+[slambench]   clip 350/374 (145s)
+[slambench]   clip 355/374 (147s)
+[slambench]   clip 360/374 (148s)
+[slambench]   clip 365/374 (150s)
+[slambench]   clip 370/374 (151s)
+[slambench]   done in 152s
+
+[slambench] ══ da3_small ══
+[97m[INFO ] using MLP layer as FFN[0m
+[slambench]   Depth-Anything-3 Small | align=scale_shift | frames at 518px
+[slambench]   clip 5/374 (11s)
+[slambench]   clip 10/374 (12s)
+[slambench]   clip 15/374 (13s)
+[slambench]   clip 20/374 (15s)
+[slambench]   clip 25/374 (16s)
+[slambench]   clip 30/374 (17s)
+[slambench]   clip 35/374 (18s)
+[slambench]   clip 40/374 (20s)
+[slambench]   clip 45/374 (21s)
+[slambench]   clip 50/374 (22s)
+[slambench]   clip 55/374 (24s)
+[slambench]   clip 60/374 (25s)
+[slambench]   clip 65/374 (27s)
+[slambench]   clip 70/374 (28s)
+[slambench]   clip 75/374 (30s)
+[slambench]   clip 80/374 (31s)
+[slambench]   clip 85/374 (32s)
+[slambench]   clip 90/374 (33s)
+[slambench]   clip 95/374 (34s)
+[slambench]   clip 100/374 (36s)
+[slambench]   clip 105/374 (37s)
+[slambench]   clip 110/374 (38s)
+[slambench]   clip 115/374 (40s)
+[slambench]   clip 120/374 (41s)
+[slambench]   clip 125/374 (43s)
+[slambench]   clip 130/374 (44s)
+[slambench]   clip 135/374 (46s)
+[slambench]   clip 140/374 (47s)
+[slambench]   clip 145/374 (49s)
+[slambench]   clip 150/374 (50s)
+[slambench]   clip 155/374 (51s)
+[slambench]   clip 160/374 (53s)
+[slambench]   clip 165/374 (54s)
+[slambench]   clip 170/374 (55s)
+[slambench]   clip 175/374 (56s)
+[slambench]   clip 180/374 (58s)
+[slambench]   clip 185/374 (59s)
+[slambench]   clip 190/374 (60s)
+[slambench]   clip 195/374 (61s)
+[slambench]   clip 200/374 (62s)
+[slambench]   clip 205/374 (63s)
+[slambench]   clip 210/374 (64s)
+[slambench]   clip 215/374 (66s)
+[slambench]   clip 220/374 (67s)
+[slambench]   clip 225/374 (68s)
+[slambench]   clip 230/374 (69s)
+[slambench]   clip 235/374 (70s)
+[slambench]   clip 240/374 (71s)
+[slambench]   clip 245/374 (72s)
+[slambench]   clip 250/374 (74s)
+[slambench]   clip 255/374 (75s)
+[slambench]   clip 260/374 (76s)
+[slambench]   clip 265/374 (77s)
+[slambench]   clip 270/374 (78s)
+[slambench]   clip 275/374 (79s)
+[slambench]   clip 280/374 (81s)
+[slambench]   clip 285/374 (82s)
+[slambench]   clip 290/374 (83s)
+[slambench]   clip 295/374 (84s)
+[slambench]   clip 300/374 (85s)
+[slambench]   clip 305/374 (86s)
+[slambench]   clip 310/374 (87s)
+[slambench]   clip 315/374 (88s)
+[slambench]   clip 320/374 (90s)
+[slambench]   clip 325/374 (91s)
+[slambench]   clip 330/374 (92s)
+[slambench]   clip 335/374 (93s)
+[slambench]   clip 340/374 (94s)
+[slambench]   clip 345/374 (95s)
+[slambench]   clip 350/374 (97s)
+[slambench]   clip 355/374 (98s)
+[slambench]   clip 360/374 (99s)
+[slambench]   clip 365/374 (100s)
+[slambench]   clip 370/374 (102s)
+[slambench]   done in 103s
+
+[slambench] ══ da3_large ══
+[97m[INFO ] using MLP layer as FFN[0m
+[slambench]   Depth-Anything-3 Large | align=scale_shift | frames at 518px
+[slambench]   clip 5/374 (8s)
+[slambench]   clip 10/374 (9s)
+[slambench]   clip 15/374 (11s)
+[slambench]   clip 20/374 (12s)
+[slambench]   clip 25/374 (14s)
+[slambench]   clip 30/374 (15s)
+[slambench]   clip 35/374 (17s)
+[slambench]   clip 40/374 (18s)
+[slambench]   clip 45/374 (19s)
+[slambench]   clip 50/374 (21s)
+[slambench]   clip 55/374 (23s)
+[slambench]   clip 60/374 (24s)
+[slambench]   clip 65/374 (26s)
+[slambench]   clip 70/374 (28s)
+[slambench]   clip 75/374 (29s)
+[slambench]   clip 80/374 (30s)
+[slambench]   clip 85/374 (32s)
+[slambench]   clip 90/374 (33s)
+[slambench]   clip 95/374 (34s)
+[slambench]   clip 100/374 (36s)
+[slambench]   clip 105/374 (37s)
+[slambench]   clip 110/374 (39s)
+[slambench]   clip 115/374 (40s)
+[slambench]   clip 120/374 (42s)
+[slambench]   clip 125/374 (44s)
+[slambench]   clip 130/374 (45s)
+[slambench]   clip 135/374 (47s)
+[slambench]   clip 140/374 (49s)
+[slambench]   clip 145/374 (51s)
+[slambench]   clip 150/374 (53s)
+[slambench]   clip 155/374 (54s)
+[slambench]   clip 160/374 (55s)
+[slambench]   clip 165/374 (57s)
+[slambench]   clip 170/374 (59s)
+[slambench]   clip 175/374 (60s)
+[slambench]   clip 180/374 (61s)
+[slambench]   clip 185/374 (62s)
+[slambench]   clip 190/374 (64s)
+[slambench]   clip 195/374 (65s)
+[slambench]   clip 200/374 (66s)
+[slambench]   clip 205/374 (67s)
+[slambench]   clip 210/374 (68s)
+[slambench]   clip 215/374 (69s)
+[slambench]   clip 220/374 (71s)
+[slambench]   clip 225/374 (72s)
+[slambench]   clip 230/374 (73s)
+[slambench]   clip 235/374 (74s)
+[slambench]   clip 240/374 (76s)
+[slambench]   clip 245/374 (77s)
+[slambench]   clip 250/374 (78s)
+[slambench]   clip 255/374 (80s)
+[slambench]   clip 260/374 (81s)
+[slambench]   clip 265/374 (82s)
+[slambench]   clip 270/374 (83s)
+[slambench]   clip 275/374 (85s)
+[slambench]   clip 280/374 (86s)
+[slambench]   clip 285/374 (87s)
+[slambench]   clip 290/374 (89s)
+[slambench]   clip 295/374 (90s)
+[slambench]   clip 300/374 (91s)
+[slambench]   clip 305/374 (92s)
+[slambench]   clip 310/374 (94s)
+[slambench]   clip 315/374 (95s)
+[slambench]   clip 320/374 (96s)
+[slambench]   clip 325/374 (97s)
+[slambench]   clip 330/374 (99s)
+[slambench]   clip 335/374 (100s)
+[slambench]   clip 340/374 (101s)
+[slambench]   clip 345/374 (103s)
+[slambench]   clip 350/374 (104s)
+[slambench]   clip 355/374 (105s)
+[slambench]   clip 360/374 (107s)
+[slambench]   clip 365/374 (108s)
+[slambench]   clip 370/374 (110s)
+[slambench]   done in 111s
+
+============================================================================================
+  FOV ON SLAM GROUND TRUTH · where in the field does depth degrade
+============================================================================================
+
+  split digest   61195914f090
+  frames         400 over aea, nymeria
+  points kept    inv_dist_std < 0.01 1/m (the release ships unfiltered)
+  protocols      radial
+  strata         5 equal-population distance quantiles of this split's own GT
+
+  FIELD PROFILE · radial · AbsRel by incidence angle (deg)  ↓ lower is better
+  --------------------------------------------------------------------------------------------
+
+  aea
+  model         arm        ctx       0-10    10-20    20-30    30-40    40-50    50-55    55-60   spread
+  da3_large     raw          1      0.161    0.165    0.160    0.174    0.189    0.244    0.296     1.85   pooled
+                                    0.168    0.174    0.171    0.180    0.187    0.227    0.267     1.59   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+  da3_small     raw          1      0.200    0.203    0.190    0.205    0.228    0.297    0.363     1.92   pooled
+                                    0.208    0.217    0.203    0.212    0.226    0.273    0.316     1.56   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+  dav2_large    raw          1      0.171    0.178    0.151    0.128    0.122    0.135    0.164     1.46   pooled
+                                    0.170    0.179    0.153    0.128    0.126    0.145    0.175     1.41   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+  vggt_1b       raw          1      0.148    0.140    0.147    0.161    0.187    0.248    0.293     2.09   pooled
+                                    0.151    0.144    0.151    0.166    0.186    0.230    0.260     1.80   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+  vggt_omega    raw          1      0.119    0.112    0.109    0.123    0.134    0.186    0.233     2.13   pooled
+                                    0.123    0.118    0.116    0.128    0.133    0.176    0.213     1.83   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+
+  nymeria
+  model         arm        ctx       0-10    10-20    20-30    30-40    40-50    50-55    55-60   spread
+  da3_large     raw          1      0.130    0.131    0.141    0.157    0.183    0.236    0.286     2.20   pooled
+                                    0.185    0.164    0.163    0.157    0.175    0.226    0.263     1.68   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+  da3_small     raw          1      0.159    0.166    0.174    0.197    0.224    0.280    0.334     2.10   pooled
+                                    0.213    0.203    0.200    0.196    0.212    0.262    0.307     1.57   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+  dav2_large    raw          1      0.144    0.147    0.142    0.139    0.131    0.148    0.176     1.35   pooled
+                                    0.179    0.153    0.146    0.143    0.160    0.195    0.224     1.57   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+  vggt_1b       raw          1      0.098    0.103    0.113    0.147    0.179    0.217    0.251     2.56   pooled
+                                    0.148    0.126    0.125    0.148    0.185    0.230    0.259     2.07   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+  vggt_omega    raw          1      0.097    0.097    0.094    0.108    0.125    0.172    0.213     2.26   pooled
+                                    0.142    0.116    0.105    0.109    0.126    0.171    0.206     1.96   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+
+  Two readings of the same points. `pooled` is every point in the
+  bin; `at fixed distance` averages the bin's score over the
+  distance strata every bin shares, so a bin cannot look good by
+  being nearer. Distance falls ~3.6x from this field's centre to
+  its rim and every metric here is relative, so the two rows
+  disagreeing is the expected case; the gap between them is the
+  size of the confound, and `spread` (the largest live bin over the
+  smallest) is the two answers to the actual question.
+
+  `spread` rather than rim-over-centre because one frozen affine
+  turns a MONOTONE radial bias into a U: least squares puts the
+  fitted scale in the middle of the bias range, so the centre is
+  over-corrected and the rim under-corrected and both ends rise.
+  An endpoint ratio reads ~1.2 on a bias that is 1.33 end to end.
+  (The window rows do not have this problem — each window is
+  aligned on its own — but one statistic beats two.)
+
+  The third row is the price of the control. Centre and rim barely
+  overlap in distance here, so the shared strata can be a small
+  slice of a bin; where the share is low the standardised number is
+  a sound comparison of that slice and not of the bin. Both rows
+  are printed because neither is the whole answer.
+
+  AbsRel = mean over points of |aligned − GT| / GT, under ONE
+  affine fitted per frame over all that frame's points and frozen
+  before any binning. Fitting per bin would hand an up-to-scale
+  model a new scale at every radius and flatten exactly the effect
+  this table exists to find.
+
+  BIN DISTANCE · radial · mean GT depth per bin (m) — a confound, not a score
+  --------------------------------------------------------------------------------------------
+  dataset                        0-10    10-20    20-30    30-40    40-50    50-55    55-60
+  aea                            2.00     1.96     1.87     1.61     1.35     1.14     1.03
+  nymeria                        2.64     2.50     2.14     1.67     1.28     1.07     1.00
+  nymeria                        2.64     2.50     2.14     1.67     1.27     1.06     1.00
+  nymeria                        2.64     2.50     2.14     1.67     1.28     1.06     1.00
+
+  Model-independent — it is the ground truth — so rows that share a
+  profile collapse. Read the field profile against this: a bin that
+  is both further out and nearer has two reasons to score the way
+  it does, and only the standardised row separates them.
+
+  CELLS · radial · AbsRel at (field position, distance stratum)
+  --------------------------------------------------------------------------------------------
+
+  aea · da3_large · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.80 *                  0.317    0.331    0.339    0.350    0.360    0.383    0.424    146539
+  0.80–1.13 *               0.142    0.139    0.127    0.171    0.195    0.201    0.233    146653
+  1.13–1.47 *               0.160    0.170    0.141    0.143    0.129    0.175    0.213    146686
+  1.47–2.18 *               0.109    0.107    0.113    0.115    0.109    0.166    0.191    146661
+  2.18–∞ *                  0.112    0.122    0.134    0.122    0.143    0.209    0.275    146948
+
+  aea · da3_small · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.80 *                  0.399    0.429    0.368    0.372    0.420    0.525    0.583    146603
+  0.80–1.13 *               0.154    0.173    0.172    0.211    0.242    0.211    0.234    146755
+  1.13–1.47 *               0.218    0.205    0.184    0.176    0.150    0.185    0.255    146692
+  1.47–2.18 *               0.130    0.132    0.139    0.145    0.140    0.211    0.236    146662
+  2.18–∞ *                  0.139    0.143    0.152    0.153    0.178    0.231    0.275    146949
+
+  aea · dav2_large · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.80 *                  0.251    0.312    0.281    0.183    0.173    0.196    0.220    146624
+  0.80–1.13 *               0.184    0.137    0.100    0.103    0.106    0.097    0.115    146753
+  1.13–1.47 *               0.121    0.164    0.102    0.097    0.089    0.092    0.125    146687
+  1.47–2.18 *               0.123    0.101    0.109    0.111    0.104    0.136    0.162    146662
+  2.18–∞ *                  0.169    0.180    0.174    0.146    0.161    0.205    0.253    146960
+
+  aea · vggt_1b · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.80 *                  0.284    0.288    0.272    0.287    0.285    0.318    0.357    146366
+  0.80–1.13 *               0.129    0.120    0.125    0.164    0.194    0.245    0.288    146686
+  1.13–1.47 *               0.120    0.102    0.105    0.124    0.168    0.219    0.244    146625
+  1.47–2.18 *               0.099    0.083    0.091    0.107    0.118    0.168    0.191    146661
+  2.18–∞ *                  0.124    0.130    0.162    0.148    0.165    0.200    0.222    146955
+
+  aea · vggt_omega · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.80 *                  0.280    0.272    0.257    0.268    0.248    0.268    0.299    146605
+  0.80–1.13 *               0.094    0.090    0.081    0.111    0.125    0.159    0.199    146749
+  1.13–1.47 *               0.080    0.073    0.066    0.085    0.095    0.147    0.198    146692
+  1.47–2.18 *               0.067    0.063    0.071    0.084    0.084    0.145    0.184    146661
+  2.18–∞ *                  0.092    0.092    0.104    0.090    0.113    0.158    0.182    146958
+
+  nymeria · da3_large · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.75 *                  0.404    0.337    0.364    0.314    0.303    0.360    0.427    118535
+  0.75–1.27 *               0.174    0.152    0.167    0.166    0.155    0.170    0.205    118609
+  1.27–1.78 *               0.125    0.127    0.102    0.106    0.114    0.141    0.173    118602
+  1.78–2.76 *               0.124    0.104    0.088    0.090    0.104    0.150    0.163    118721
+  2.76–∞ *                  0.099    0.100    0.096    0.107    0.199    0.311    0.350    118707
+
+  nymeria · da3_small · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.75 *                  0.426    0.413    0.445    0.418    0.358    0.410    0.489    118379
+  0.75–1.27 *               0.227    0.180    0.184    0.187    0.201    0.225    0.249    118613
+  1.27–1.78 *               0.136    0.163    0.134    0.134    0.144    0.171    0.198    118602
+  1.78–2.76 *               0.143    0.114    0.108    0.111    0.131    0.177    0.201    118720
+  2.76–∞ *                  0.132    0.145    0.129    0.132    0.224    0.329    0.399    118700
+
+  nymeria · dav2_large · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.75 *                  0.341    0.209    0.215    0.177    0.144    0.168    0.201    118614
+  0.75–1.27 *               0.157    0.135    0.135    0.128    0.121    0.124    0.144    118613
+  1.27–1.78 *               0.134    0.136    0.107    0.111    0.102    0.116    0.146    118602
+  1.78–2.76 *               0.135    0.128    0.116    0.117    0.127    0.172    0.214    118721
+  2.76–∞ *                  0.129    0.156    0.159    0.180    0.308    0.394    0.413    118707
+
+  nymeria · vggt_1b · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.75 *                  0.353    0.253    0.250    0.260    0.272    0.290    0.326    117479
+  0.75–1.27 *               0.150    0.119    0.118    0.139    0.144    0.167    0.198    118575
+  1.27–1.78 *               0.084    0.090    0.077    0.098    0.113    0.161    0.194    118600
+  1.78–2.76 *               0.078    0.086    0.079    0.103    0.138    0.190    0.222    118711
+  2.76–∞ *                  0.076    0.084    0.101    0.137    0.256    0.340    0.355    118706
+
+  nymeria · vggt_omega · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.75 *                  0.341    0.223    0.214    0.199    0.190    0.228    0.271    118599
+  0.75–1.27 *               0.121    0.099    0.094    0.103    0.106    0.133    0.168    118613
+  1.27–1.78 *               0.080    0.094    0.066    0.069    0.083    0.134    0.177    118602
+  1.78–2.76 *               0.088    0.081    0.068    0.074    0.092    0.147    0.187    118721
+  2.76–∞ *                  0.078    0.081    0.081    0.097    0.158    0.213    0.225    118707
+
+  * = a stratum populated above 256 points in every
+  bin, so it is one of the ones the standardised row averages over.
+  A stratum without a star is present but not in every bin, and
+  including it would compare bins at different distances again.
+
+
+[slambench] wrote /group-volume/Fengjia/projects/vggt-omega-023/eval_out/slamfov-022/radial/results.json (+ csv, report.txt)
+MARKER_radial=0

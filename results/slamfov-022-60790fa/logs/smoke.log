@@ -1,0 +1,286 @@
+  [slambench] aea: 1 of 8 takes, 49 clips
+  [slambench] nymeria: 1 of 8 takes, 32 clips
+  [slambench] split 23604a7c077f: 16 frames over 2 take(s) of 2 dataset(s)
+[slambench] distance strata, from ground truth only …
+  aea        0.63  1.11  1.35  2.58 m
+  nymeria    0.80  1.28  1.70  2.42 m
+
+[slambench] ══ analytic ══
+[slambench]   analytic — | align=scale_shift | frames at 518px
+[slambench]   clip 5/16 (39s)
+[slambench]   clip 10/16 (78s)
+[slambench]   clip 15/16 (116s)
+[slambench]   17 frame/window(s) too thin to score
+[slambench]   done in 123s
+
+============================================================================================
+  FOV ON SLAM GROUND TRUTH · where in the field does depth degrade
+============================================================================================
+
+  split digest   23604a7c077f
+  frames         16 over aea, nymeria
+  points kept    inv_dist_std < 0.01 1/m (the release ships unfiltered)
+  protocols      radial, window
+  strata         5 equal-population distance quantiles of this split's own GT
+
+  FIELD PROFILE · radial · AbsRel by incidence angle (deg)  ↓ lower is better
+  --------------------------------------------------------------------------------------------
+
+  aea
+  model         arm        ctx       0-10    10-20    20-30    30-40    40-50    50-55   spread
+  analytic      raw          1      0.321    0.357    0.420    0.456    0.522    1.056     3.29   pooled
+                                    0.057    0.103    0.108    0.125    0.958    2.078    36.50   at fixed distance (1 of 5 strata)
+                                    0.263    0.219    0.138    0.147    0.181    0.342              ^ share of the bin that describes
+
+  nymeria
+  model         arm        ctx       0-10    10-20    20-30    30-40    40-50    50-55   spread
+  analytic      raw          1      0.249    0.307    0.344    0.354    0.431    0.674     2.71   pooled
+                                        —        —        —        —        —        —        —   at fixed distance (0 of 5 strata)
+                                    0.000    0.000    0.000    0.000    0.000    0.000              ^ share of the bin that describes
+
+  Two readings of the same points. `pooled` is every point in the
+  bin; `at fixed distance` averages the bin's score over the
+  distance strata every bin shares, so a bin cannot look good by
+  being nearer. Distance falls ~3.6x from this field's centre to
+  its rim and every metric here is relative, so the two rows
+  disagreeing is the expected case; the gap between them is the
+  size of the confound, and `spread` (the largest live bin over the
+  smallest) is the two answers to the actual question.
+
+  `spread` rather than rim-over-centre because one frozen affine
+  turns a MONOTONE radial bias into a U: least squares puts the
+  fitted scale in the middle of the bias range, so the centre is
+  over-corrected and the rim under-corrected and both ends rise.
+  An endpoint ratio reads ~1.2 on a bias that is 1.33 end to end.
+  (The window rows do not have this problem — each window is
+  aligned on its own — but one statistic beats two.)
+
+  The third row is the price of the control. Centre and rim barely
+  overlap in distance here, so the shared strata can be a small
+  slice of a bin; where the share is low the standardised number is
+  a sound comparison of that slice and not of the bin. Both rows
+  are printed because neither is the whole answer.
+
+  AbsRel = mean over points of |aligned − GT| / GT, under ONE
+  affine fitted per frame over all that frame's points and frozen
+  before any binning. Fitting per bin would hand an up-to-scale
+  model a new scale at every radius and flatten exactly the effect
+  this table exists to find.
+
+  BIN DISTANCE · radial · mean GT depth per bin (m) — a confound, not a score
+  --------------------------------------------------------------------------------------------
+  dataset                        0-10    10-20    20-30    30-40    40-50    50-55
+  aea                            2.90     2.32     1.81     1.54     1.23     0.89
+  nymeria                        2.64     2.10     1.71     1.58     1.39     1.15
+
+  Model-independent — it is the ground truth — so rows that share a
+  profile collapse. Read the field profile against this: a bin that
+  is both further out and nearer has two reasons to score the way
+  it does, and only the standardised row separates them.
+
+  CELLS · radial · AbsRel at (field position, distance stratum)
+  --------------------------------------------------------------------------------------------
+
+  aea · analytic · raw · ctx 1 · 8 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55         n
+  0–0.63 *                  0.057    0.103    0.108    0.125    0.958    2.078      7545
+  0.63–1.11                     —    0.327    0.603    0.825    0.572    0.633      7502
+  1.11–1.35                     —    0.626    0.599    0.522    0.495    0.468      7765
+  1.35–2.58                     —    0.248    0.257    0.299    0.245    0.327      7773
+  2.58–∞                    0.410    0.440    0.400    0.383        —        —      7979
+
+  nymeria · analytic · raw · ctx 1 · 8 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55         n
+  0–0.80                        —    0.769    0.848    0.980    1.067    1.607      3497
+  0.80–1.28                     —        —    0.150    0.193    0.334    0.386      3386
+  1.28–1.70                     —        —    0.291    0.258    0.303    0.360      3576
+  1.70–2.42                     —    0.151    0.183    0.158    0.215    0.289      3631
+  2.42–∞                    0.210    0.174    0.200    0.201        —        —      3700
+
+  * = a stratum populated above 256 points in every
+  bin, so it is one of the ones the standardised row averages over.
+  A stratum without a star is present but not in every bin, and
+  including it would compare bins at different distances again.
+
+  FIELD PROFILE · window · AbsRel by window tilt (deg)  ↓ lower is better
+  --------------------------------------------------------------------------------------------
+
+  aea
+  model         arm        ctx          0       20       40   spread
+  analytic      az0          1      0.363    0.421    0.194     2.18   pooled
+                                    0.597    0.488    0.166     3.60   at fixed distance (4 of 5 strata)
+                                    0.558    0.748    0.963              ^ share of the bin that describes
+  analytic      az180        1      0.363    0.333    0.245     1.49   pooled
+                                    0.623    0.374    0.250     2.50   at fixed distance (4 of 5 strata)
+                                    0.778    0.897    0.971              ^ share of the bin that describes
+  analytic      az270        1      0.363    0.479    0.268     1.79   pooled
+                                    0.623    0.695    0.273     2.55   at fixed distance (4 of 5 strata)
+                                    0.778    0.957    0.971              ^ share of the bin that describes
+  analytic      az90         1      0.363    0.272    0.265     1.37   pooled
+                                    0.516    0.398    0.282     1.83   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000              ^ share of the bin that describes
+
+  nymeria
+  model         arm        ctx          0       20       40   spread
+  analytic      az0          1      0.112    0.241    0.242     2.17   pooled
+                                        —        —        —        —   at fixed distance (0 of 5 strata)
+                                    0.000    0.000    0.000              ^ share of the bin that describes
+  analytic      az180        1      0.112    0.155    0.221     1.98   pooled
+                                    0.133    0.175    0.240     1.81   at fixed distance (3 of 5 strata)
+                                    0.896    0.757    0.538              ^ share of the bin that describes
+  analytic      az270        1      0.112    0.145    0.156     1.39   pooled
+                                    0.133    0.154    0.138     1.16   at fixed distance (3 of 5 strata)
+                                    0.896    0.907    0.813              ^ share of the bin that describes
+  analytic      az90         1      0.112    0.203    0.225     2.01   pooled
+                                    0.167    0.280    0.384     2.29   at fixed distance (2 of 5 strata)
+                                    0.309    0.357    0.457              ^ share of the bin that describes
+
+  Two readings of the same points. `pooled` is every point in the
+  bin; `at fixed distance` averages the bin's score over the
+  distance strata every bin shares, so a bin cannot look good by
+  being nearer. Distance falls ~3.6x from this field's centre to
+  its rim and every metric here is relative, so the two rows
+  disagreeing is the expected case; the gap between them is the
+  size of the confound, and `spread` (the largest live bin over the
+  smallest) is the two answers to the actual question.
+
+  `spread` rather than rim-over-centre because one frozen affine
+  turns a MONOTONE radial bias into a U: least squares puts the
+  fitted scale in the middle of the bias range, so the centre is
+  over-corrected and the rim under-corrected and both ends rise.
+  An endpoint ratio reads ~1.2 on a bias that is 1.33 end to end.
+  (The window rows do not have this problem — each window is
+  aligned on its own — but one statistic beats two.)
+
+  The third row is the price of the control. Centre and rim barely
+  overlap in distance here, so the shared strata can be a small
+  slice of a bin; where the share is low the standardised number is
+  a sound comparison of that slice and not of the bin. Both rows
+  are printed because neither is the whole answer.
+
+  AbsRel = mean over points of |aligned − GT| / GT, under ONE
+  affine fitted per frame over all that frame's points and frozen
+  before any binning. Fitting per bin would hand an up-to-scale
+  model a new scale at every radius and flatten exactly the effect
+  this table exists to find.
+
+  BIN DISTANCE · window · mean GT depth per bin (m) — a confound, not a score
+  --------------------------------------------------------------------------------------------
+  dataset                           0       20       40
+  aea                            2.39     1.78     1.00
+  aea                            2.39     2.21     1.50
+  aea                            2.39     2.70     1.84
+  aea                            2.39     1.94     1.45
+  nymeria                        2.26     1.97     1.08
+  nymeria                        2.26     1.91     1.49
+  nymeria                        2.26     2.23     1.82
+  nymeria                        2.26     1.97     1.49
+
+  Model-independent — it is the ground truth — so rows that share a
+  profile collapse. Read the field profile against this: a bin that
+  is both further out and nearer has two reasons to score the way
+  it does, and only the standardised row separates them.
+
+  CELLS · window · AbsRel at (field position, distance stratum)
+  --------------------------------------------------------------------------------------------
+
+  aea · analytic · az0 · ctx 1 · 23 frames
+  distance (m)                  0       20       40         n
+  0–0.63 *                  0.086    0.064    0.185      7171
+  0.63–1.11 *               0.690    0.797    0.195      5811
+  1.11–1.35 *               1.126    0.598    0.101      3931
+  1.35–2.58 *               0.487    0.490    0.182      3171
+  2.58–∞                    0.190    0.306        —      7631
+
+  aea · analytic · az180 · ctx 1 · 23 frames
+  distance (m)                  0       20       40         n
+  0–0.63                    0.086    0.147        —      3667
+  0.63–1.11 *               0.690    0.059    0.120      3523
+  1.11–1.35 *               1.126    0.841    0.273      5567
+  1.35–2.58 *               0.487    0.385    0.257      5426
+  2.58–∞ *                  0.190    0.211    0.348      9445
+
+  aea · analytic · az270 · ctx 1 · 24 frames
+  distance (m)                  0       20       40         n
+  0–0.63                    0.086    0.054        —      2876
+  0.63–1.11 *               0.690    0.891    0.165      1995
+  1.11–1.35 *               1.126    1.068    0.376      3263
+  1.35–2.58 *               0.487    0.597    0.250      4585
+  2.58–∞ *                  0.190    0.222    0.301      8995
+
+  aea · analytic · az90 · ctx 1 · 24 frames
+  distance (m)                  0       20       40         n
+  0–0.63 *                  0.086    0.093    0.259      7097
+  0.63–1.11 *               0.690    0.767    0.345      1486
+  1.11–1.35 *               1.126    0.742    0.355      4043
+  1.35–2.58 *               0.487    0.213    0.153      4593
+  2.58–∞ *                  0.190    0.175    0.297      8623
+
+  nymeria · analytic · az0 · ctx 1 · 14 frames
+  distance (m)                  0       20       40         n
+  0–0.80                    0.149    1.159        —      1056
+  0.80–1.28                     —    0.163    0.115      1757
+  1.28–1.70                     —        —    0.124       764
+  1.70–2.42                 0.185        —        —       862
+  2.42–∞                    0.063    0.083        —      3484
+
+  nymeria · analytic · az180 · ctx 1 · 22 frames
+  distance (m)                  0       20       40         n
+  0–0.80 *                  0.149    0.241    0.387      2682
+  0.80–1.28                     —    0.182    0.237      1557
+  1.28–1.70                     —    0.132    0.153      2311
+  1.70–2.42 *               0.185    0.198    0.138      2671
+  2.42–∞ *                  0.063    0.087    0.195      4952
+
+  nymeria · analytic · az270 · ctx 1 · 21 frames
+  distance (m)                  0       20       40         n
+  0–0.80 *                  0.149    0.193    0.116      1673
+  0.80–1.28                     —        —        —       457
+  1.28–1.70                     —        —    0.230       667
+  1.70–2.42 *               0.185    0.174    0.128      2291
+  2.42–∞ *                  0.063    0.093    0.171      4310
+
+  nymeria · analytic · az90 · ctx 1 · 21 frames
+  distance (m)                  0       20       40         n
+  0–0.80 *                  0.149    0.397    0.646      1618
+  0.80–1.28                     —    0.269    0.289       905
+  1.28–1.70                     —    0.343    0.096      1360
+  1.70–2.42 *               0.185    0.164    0.122      1890
+  2.42–∞                    0.063    0.082        —      3997
+
+  * = a stratum populated above 256 points in every
+  bin, so it is one of the ones the standardised row averages over.
+  A stratum without a star is present but not in every bin, and
+  including it would compare bins at different distances again.
+
+  WINDOW COVERAGE · share of the window backed by real pixels
+  --------------------------------------------------------------------------------------------
+  dataset       tilt  azimuth   in cone   scored
+  aea              0        0    100.0%      yes
+  aea             20        0    100.0%      yes
+  aea             20       90    100.0%      yes
+  aea             20      180    100.0%      yes
+  aea             20      270    100.0%      yes
+  aea             40        0     96.8%      yes
+  aea             40       90     93.0%      yes
+  aea             40      180     90.1%      yes
+  aea             40      270     94.3%      yes
+  nymeria          0        0    100.0%      yes
+  nymeria         20        0    100.0%      yes
+  nymeria         20       90    100.0%      yes
+  nymeria         20      180    100.0%      yes
+  nymeria         20      270    100.0%      yes
+  nymeria         40        0     95.9%      yes
+  nymeria         40       90     93.5%      yes
+  nymeria         40      180     90.5%      yes
+  nymeria         40      270     93.1%      yes
+
+  A window below 50% is mostly black and is not scored:
+  the model's response to padding is not a depth measurement. The
+  window WIDTH is fixed across the sweep, so this fraction moves
+  only with the aim — varying both is what made an earlier sweep in
+  this repository a measurement of dead pixels.
+
+
+[slambench] wrote /group-volume/Fengjia/projects/vggt-omega-023/eval_out/slamfov-022/smoke/results.json (+ csv, report.txt)
+MARKER_smoke=0

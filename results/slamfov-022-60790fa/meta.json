@@ -1,0 +1,65 @@
+{
+  "run_id": "slamfov-022-60790fa",
+  "ticket": "docs/handoff/tickets/022-fov-on-slam-data.md",
+  "issue": "https://github.com/fukka/vggt-omega/issues/23",
+  "commit": "60790fa",
+  "protocol": "egosynth-slam-fov-v1",
+  "date_utc": "2026-08-22",
+  "status": "PARTIAL -- the radial half (steps 1, 2 and 4). The window protocol (step 3) was still running when this was published; it is ~17x the radial cost and lands separately. The ticket's own guidance is to push as each half lands rather than hold one behind the other.",
+
+  "what_this_is": "fovbench's question -- does depth degrade toward the rim of a wide lens -- asked of real egocentric footage scored against MPS SLAM points, instead of a synthetic twin with a dense depth map.",
+
+  "hardware": "space-container pod run1156075-vggt-omega-360, 2x NVIDIA A100-SXM4-80GB",
+  "env": {
+    "venv": "/group-volume/Fengjia/envs/vggt360-py312",
+    "python": "3.12", "torch": "2.11.0+cu128",
+    "thread_caps": "OMP_NUM_THREADS=MKL_NUM_THREADS=OPENBLAS_NUM_THREADS=16 -- 247 visible threads across two NUMA sockets make unpinned BLAS ~7x slower than lambda_63 here"
+  },
+
+  "split": {
+    "digest": "61195914f090",
+    "identical_to": "results/slambench-020-143686a",
+    "from_manifest": true,
+    "frames": 400,
+    "datasets": ["aea", "nymeria"],
+    "why_the_manifest": "so the FOV tables and #020's accuracy tables are two views of ONE set of points rather than two samples of a dataset"
+  },
+
+  "manifest_was_repointed": {
+    "what": "#020's manifest carries lambda_63 absolute paths (/data/f.zhang2/ego-synth-5b/...). It was rewritten to the pod's root (/group-volume/Fengjia/data/ego-synth-5b) as step2/manifest.pod.json.",
+    "why_this_is_safe": "the manifest's contract is the FRAME SELECTION, not the paths. root and the npz/video prefixes were substituted, digest is unchanged at 61195914f090, and the repoint script asserts every one of the 800 referenced files exists before writing -- so a partial staging fails loudly instead of silently scoring fewer frames.",
+    "script": "repoint_manifest.py, kept beside this meta"
+  },
+
+  "preflight": {
+    "tests": "pytest tests slambench/tests -> 129 passed, 7 skipped, 0 failed, in the run's own env on the pod",
+    "note_on_the_count": "the ticket says 'expect 232 passed'. The suite has moved since the ticket was filed; 0 failures is the gate that was actually applied.",
+    "smoke": "--models analytic, both protocols, 8 frames, --device cpu -> exit 0, both tables produced, no window under MIN_IN_CONE_FRAC"
+  },
+
+  "runs": {
+    "radial": {"what": "the headline -- one whole frame to the model, per-point error binned by the incidence angle of the point's ray", "models": ["vggt_1b","vggt_omega","dav2_large","da3_small","da3_large"], "baselines": ["raw"], "theta_edges": [0,10,20,30,40,50,55,60], "context_frames": 1, "wall_clock_s": 670, "exit_code": 0},
+    "oracle": {"what": "step 4, the control -- answers per point from GT with a fixed 0.15 m error, so no field dependence whatever; whatever slope it shows is confound", "oracle_noise_m": 0.15, "wall_clock_s": 86, "exit_code": 0},
+    "window": {"what": "step 3 -- a fixed 40 deg pinhole re-aimed across the lens, width held fixed, aim moving. NOT in this artefact; still running at publication.", "status": "in flight"}
+  },
+
+  "headline": {
+    "the_null": {"aea": {"pooled": 1.63, "standardised": 1.10}, "nymeria": {"pooled": 2.84, "standardised": 1.26},
+                 "reading": "a model with NO field dependence reads a 1.63x / 2.84x rim penalty on this data. That is the confound, caught in the act on real points."},
+    "the_answer": "every one of the five models exceeds that null on both datasets, at full share (1.000 in every bin -- no bin was narrowed to a slice). The rim degradation is REAL on real egocentric footage: it survives holding GT distance fixed. fovbench's synthetic finding reproduces against independent ground truth.",
+    "standardised_spread": {
+      "aea":     {"vggt_omega": 1.83, "vggt_1b": 1.80, "da3_large": 1.59, "da3_small": 1.56, "dav2_large": 1.41, "null": 1.10},
+      "nymeria": {"vggt_omega": 1.96, "vggt_1b": 2.07, "da3_large": 1.68, "da3_small": 1.57, "dav2_large": 1.57, "null": 1.26}
+    },
+    "the_confound_has_a_sign_per_cell": "dav2_large on nymeria reads 1.35x pooled and 1.57x standardised -- the correction RAISED it. The distance confound was hiding that model's field effect rather than inventing one. So 'pooled overstates the rim penalty' cannot be applied as a blanket discount; only the two-way table recovers the sign.",
+    "accuracy_and_evenness_are_different_axes": "vggt_omega has the best absolute AbsRel of the five on both datasets and one of the steepest fields; dav2_large is the flattest field while far from the best absolute. A single pooled number hides which of the two a model bought."
+  },
+
+  "not_claimed": [
+    "Raw arm only, deliberately. The two arms do not resample alike and the difference runs WITH eccentricity -- raw decimates through INTER_AREA which filters, rect resamples through INTER_LINEAR which does not, by a factor running 2.13x on axis to 0.78x at 55 deg. That asymmetry is shaped like the effect being measured. Recorded, not fixed.",
+    "The window protocol is absent from this artefact and is the other half of the ticket.",
+    "The residual null (1.10x / 1.26x) is five-strata coarseness, not a residual finding; more strata would lower it and lower every over-null denominator. The ORDERING is unaffected.",
+    "These are pod numbers. Cross-box agreement against lambda_63 on this harness is mean 0.15% / worst 1.28% AbsRel -- see results/slambench-022sc-b961f98. Do not mix boxes inside one curve.",
+    "No oxford, no egoexo4d -- the same absences as #020, for the same reasons."
+  ]
+}

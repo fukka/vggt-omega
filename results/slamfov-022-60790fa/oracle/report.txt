@@ -1,0 +1,90 @@
+
+============================================================================================
+  FOV ON SLAM GROUND TRUTH · where in the field does depth degrade
+============================================================================================
+
+  split digest   61195914f090
+  frames         400 over aea, nymeria
+  points kept    inv_dist_std < 0.01 1/m (the release ships unfiltered)
+  protocols      radial
+  strata         5 equal-population distance quantiles of this split's own GT
+
+  FIELD PROFILE · radial · AbsRel by incidence angle (deg)  ↓ lower is better
+  --------------------------------------------------------------------------------------------
+
+  aea
+  model         arm        ctx       0-10    10-20    20-30    30-40    40-50    50-55    55-60   spread
+  oracle        raw          1      0.091    0.091    0.090    0.102    0.115    0.132    0.147     1.63   pooled
+                                    0.101    0.102    0.103    0.107    0.109    0.109    0.111     1.10   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+
+  nymeria
+  model         arm        ctx       0-10    10-20    20-30    30-40    40-50    50-55    55-60   spread
+  oracle        raw          1      0.058    0.068    0.081    0.104    0.133    0.156    0.166     2.84   pooled
+                                    0.090    0.093    0.096    0.102    0.106    0.110    0.113     1.26   at fixed distance (5 of 5 strata)
+                                    1.000    1.000    1.000    1.000    1.000    1.000    1.000              ^ share of the bin that describes
+
+  Two readings of the same points. `pooled` is every point in the
+  bin; `at fixed distance` averages the bin's score over the
+  distance strata every bin shares, so a bin cannot look good by
+  being nearer. Distance falls ~3.6x from this field's centre to
+  its rim and every metric here is relative, so the two rows
+  disagreeing is the expected case; the gap between them is the
+  size of the confound, and `spread` (the largest live bin over the
+  smallest) is the two answers to the actual question.
+
+  `spread` rather than rim-over-centre because one frozen affine
+  turns a MONOTONE radial bias into a U: least squares puts the
+  fitted scale in the middle of the bias range, so the centre is
+  over-corrected and the rim under-corrected and both ends rise.
+  An endpoint ratio reads ~1.2 on a bias that is 1.33 end to end.
+  (The window rows do not have this problem — each window is
+  aligned on its own — but one statistic beats two.)
+
+  The third row is the price of the control. Centre and rim barely
+  overlap in distance here, so the shared strata can be a small
+  slice of a bin; where the share is low the standardised number is
+  a sound comparison of that slice and not of the bin. Both rows
+  are printed because neither is the whole answer.
+
+  AbsRel = mean over points of |aligned − GT| / GT, under ONE
+  affine fitted per frame over all that frame's points and frozen
+  before any binning. Fitting per bin would hand an up-to-scale
+  model a new scale at every radius and flatten exactly the effect
+  this table exists to find.
+
+  BIN DISTANCE · radial · mean GT depth per bin (m) — a confound, not a score
+  --------------------------------------------------------------------------------------------
+  dataset                        0-10    10-20    20-30    30-40    40-50    50-55    55-60
+  aea                            2.00     1.96     1.87     1.61     1.35     1.14     1.03
+  nymeria                        2.64     2.50     2.14     1.67     1.28     1.06     1.00
+
+  Model-independent — it is the ground truth — so rows that share a
+  profile collapse. Read the field profile against this: a bin that
+  is both further out and nearer has two reasons to score the way
+  it does, and only the standardised row separates them.
+
+  CELLS · radial · AbsRel at (field position, distance stratum)
+  --------------------------------------------------------------------------------------------
+
+  aea · oracle · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.80 *                  0.205    0.210    0.210    0.222    0.226    0.220    0.233    146169
+  0.80–1.13 *               0.107    0.110    0.115    0.117    0.119    0.120    0.119    146756
+  1.13–1.47 *               0.091    0.088    0.088    0.089    0.089    0.092    0.092    146692
+  1.47–2.18 *               0.065    0.065    0.065    0.066    0.068    0.069    0.067    146662
+  2.18–∞ *                  0.037    0.037    0.039    0.042    0.044    0.044    0.043    146960
+
+  nymeria · oracle · raw · ctx 1 · 200 frames
+  distance (m)               0-10    10-20    20-30    30-40    40-50    50-55    55-60         n
+  0–0.75 *                  0.178    0.189    0.201    0.223    0.245    0.259    0.273    118235
+  0.75–1.27 *               0.111    0.112    0.116    0.118    0.115    0.117    0.116    118613
+  1.27–1.78 *               0.075    0.077    0.077    0.077    0.078    0.079    0.079    118602
+  1.78–2.76 *               0.052    0.053    0.054    0.054    0.056    0.057    0.058    118721
+  2.76–∞ *                  0.034    0.032    0.033    0.036    0.036    0.035    0.039    118707
+
+  * = a stratum populated above 256 points in every
+  bin, so it is one of the ones the standardised row averages over.
+  A stratum without a star is present but not in every bin, and
+  including it would compare bins at different distances again.
+

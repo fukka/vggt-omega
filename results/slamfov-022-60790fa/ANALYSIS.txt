@@ -1,0 +1,91 @@
+slamfov-022 -- ANALYSIS (radial half)
+==============================================================================
+
+THE QUESTION.  fovbench established on a synthetic twin that depth degrades
+toward the rim of a wide lens.  This asks it of the real thing: does the same
+degradation appear on real egocentric footage, scored against MPS SLAM points?
+
+WHY IT NEEDS A CONTROL.  On this data distance and eccentricity move together
+hard -- the rim of this lens looks at nearer surfaces, and every metric here is
+relative.  So a bare error-against-eccentricity curve is partly a distance
+curve.  The oracle arm answers per point from the ground truth with a fixed
+0.15 m error -- the SAME error at every eccentricity and every distance, a model
+with no field dependence whatever.  Whatever slope it shows is confound.
+
+`spread` = largest live bin over smallest, on AbsRel.  `pooled` is every point
+in the bin; `standardised` averages each bin over the distance strata all bins
+share, so a bin cannot look good merely by being nearer.
+
+------------------------------------------------------------------------------
+THE NULL -- what a model with NO field dependence reads
+------------------------------------------------------------------------------
+  oracle  aea       pooled 1.63x   standardised 1.10x   share 1.000
+  oracle  nymeria   pooled 2.84x   standardised 1.26x   share 1.000
+
+  A 1.63x (aea) / 2.84x (nymeria) "the rim is worse" effect, from a model that
+  has no idea where the rim is.  Standardising removes most of it -- and the
+  share row is 1.000 in every bin, so nothing was narrowed to achieve that.
+  The 1.10-1.26x that survives is the coarseness of five strata, not a finding.
+
+  So the NULL for the standardised column is ~1.10x on aea and ~1.26x on
+  nymeria.  A real model must beat that to have said anything.
+
+------------------------------------------------------------------------------
+THE ANSWER -- the five models, standardised spread against that null
+------------------------------------------------------------------------------
+  model        dataset     pooled  standard    null  over null
+  vggt_omega   aea           2.13      1.83    1.10      1.67x
+  vggt_1b      aea           2.09      1.80    1.10      1.64x
+  da3_large    aea           1.85      1.59    1.10      1.45x
+  da3_small    aea           1.92      1.56    1.10      1.42x
+  dav2_large   aea           1.46      1.41    1.10      1.29x
+
+  vggt_omega   nymeria       2.26      1.96    1.26      1.56x
+  vggt_1b      nymeria       2.56      2.07    1.26      1.65x
+  da3_large    nymeria       2.20      1.68    1.26      1.34x
+  da3_small    nymeria       2.10      1.57    1.26      1.25x
+  dav2_large   nymeria       1.35      1.57    1.26      1.25x
+
+  READING.  Every model's standardised spread exceeds the oracle null, on both
+  datasets.  The rim degradation on real egocentric footage is REAL: it survives
+  holding GT distance fixed, at full share (1.000 in every bin -- no bin was
+  narrowed to a slice).  fovbench's synthetic finding reproduces on real data
+  with independent ground truth.
+
+  But the pooled column is where the honesty is.  Read pooled, nymeria vggt_1b
+  is a 2.56x field effect; standardised it is 2.07x against a 1.26x null.  The
+  pooled row on this dataset is not a stronger version of the result, it is a
+  different claim, and roughly half of what it reports is the subject changing
+  rather than the model failing.
+
+  AND THE CORRECTION DOES NOT ONLY EVER LOWER.  dav2_large on nymeria reads
+  1.35x pooled and 1.57x standardised -- the confound was HIDING its field
+  effect, not inventing one, because its errors happen to fall where the near
+  surfaces are.  So "pooled overstates the rim penalty" is not a rule that can
+  be applied as a discount; the confound has a sign per cell and only the
+  two-way table recovers it.  This is the strongest argument in this artefact
+  for not reading the pooled row alone.
+
+  ORDERING.  dav2_large is the flattest field on both datasets (1.41x / 1.57x)
+  while being far from the best in absolute terms.  vggt_omega has the best
+  absolute AbsRel of the five on both datasets and one of the STEEPEST fields
+  (1.83x / 1.96x).  Accuracy at the centre and evenness across the field are not
+  the same axis, and a single pooled number hides which one a model bought.
+
+------------------------------------------------------------------------------
+WHAT IS NOT CLAIMED
+------------------------------------------------------------------------------
+  * Raw arm only.  --baselines raw deliberately: the two arms do not resample
+    alike and the difference runs WITH eccentricity (raw decimates through
+    INTER_AREA, which filters; rect resamples through INTER_LINEAR, which does
+    not, by a factor running 2.13x on axis to 0.78x at 55 deg).  That asymmetry
+    is shaped like the effect being measured, so mixing arms here would be
+    unreadable.  Recorded, not fixed.
+  * The window protocol -- where the camera was POINTED, as against where in
+    the image -- is a separate arm and was still running when this was written.
+  * Five distance strata.  The residual null (1.10x / 1.26x) is strata
+    coarseness; --depth-strata 6+ would lower it and lower every "over null"
+    figure's denominator.  The ordering is unaffected.
+  * Nothing here is cross-box comparable to a lambda_63 number at better than
+    ~1.3% AbsRel; see results/slambench-022sc-b961f98 for that control.
+
