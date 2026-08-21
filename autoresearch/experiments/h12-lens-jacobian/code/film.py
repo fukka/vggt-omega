@@ -51,9 +51,14 @@ class FiLMConditioner(nn.Module):
         p = field.shape[0]
         gb = self.net(field.to(tok.dtype))
         gamma, beta = gb[:, :self.dim], gb[:, self.dim:]
-        out = tok.clone()
-        out[..., -p:, :] = out[..., -p:, :] * (1.0 + gamma) + beta
-        return out
+        # Concatenate rather than assign into a slice: an in-place write to a
+        # view of `tok` bumps its autograd version counter and backward dies
+        # with "a variable needed for gradient computation has been modified by
+        # an inplace operation". Hit on the first box smoke, 2026-08-22.
+        patch = tok[..., -p:, :] * (1.0 + gamma) + beta
+        if p >= tok.shape[-2]:
+            return patch
+        return torch.cat([tok[..., :-p, :], patch], dim=-2)
 
 
 def make_arm_field(field_jac: torch.Tensor, arm: str,
