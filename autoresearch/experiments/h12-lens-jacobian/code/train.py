@@ -36,14 +36,23 @@ import torch
 _H12 = Path(__file__).resolve().parent
 sys.path.insert(0, str(_H12.parents[3]))
 sys.path.insert(0, str(_H12.parents[1] / "h1-rim-pose-value" / "code"))
-sys.path.insert(0, str(_H12.parents[1] / "h5-rim-finetune" / "code"))
+sys.path.append(str(_H12.parents[1] / "h5-rim-finetune" / "code"))
 sys.path.insert(0, str(_H12))
 
 import losses  # noqa: E402
 import lora  # noqa: E402
 import jacobian as J  # noqa: E402
 from film import FiLMConditioner, make_arm_field  # noqa: E402
-from train import Seq  # noqa: E402  (h5's Seq: frames + depth + pairs)
+
+# h5's Seq by FILE, not by name: this module is also called train.py, so a
+# plain `from train import Seq` imports itself. Same importlib pattern that
+# h6's eval_module.py already uses to borrow it.
+import importlib.util as _ilu  # noqa: E402
+_spec = _ilu.spec_from_file_location(
+    "h5_train", _H12.parents[1] / "h5-rim-finetune" / "code" / "train.py")
+_h5 = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_h5)
+Seq = _h5.Seq
 
 LORA_PATTERNS = [r"backbone\.pretrained\.blocks\.(8|9|10|11)\.mlp\.fc[12]$"]
 
