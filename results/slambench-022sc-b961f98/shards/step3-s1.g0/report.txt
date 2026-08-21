@@ -1,0 +1,75 @@
+============================================================================================
+  ego-synth SLAM depth · egosynth-slam-v1 · split 61195914f090
+============================================================================================
+  400 frames over 16 take(s), datasets: aea, nymeria
+  GT: sparse MPS SLAM points, fisheye stream, native — the harness rectifies nothing
+  cut at inv_dist_std (1/m, scale-invariant) < 0.01 (the release ships UNFILTERED, so this is part of every number below)
+  baselines ['raw', 'rect_derect'] · 8 take(s)/dataset · 25 frame(s)/take
+
+  CONTEXT SWEEP: [1, 3, 5, 10] frame(s) in one forward pass, stride 1. Only the split's own frame is
+  scored, so every arm measures the identical points and the digest above covers them all.
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame over every one
+  of that frame's points, then frozen. Frames combine unweighted. Each
+  model keeps its own alignment space — disparity for Depth-Anything V2,
+  depth for the up-to-scale heads — so ABSOLUTE AbsRel IS NOT COMPARABLE
+  ACROSS MODELS. It is comparable across baselines of one model.
+
+  BASELINE · raw
+  ---------------------------------------------------------------------------------------------------
+  model         dataset      ctx   AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ---------------------------------------------------------------------------------------------------
+  vggt_1b       aea            1    0.198    0.762    0.902    0.727    0.079    1.00    1.40     200
+  vggt_1b       aea            3    0.209    0.740    0.899    0.735    0.084    1.00    1.40     200
+  vggt_1b       aea            5    0.213    0.734    0.900    0.736    0.085    1.00    1.40     200
+  vggt_1b       aea           10    0.220    0.718    0.894    0.742    0.088    1.00    1.40     200
+  vggt_1b       nymeria        1    0.145    0.825    0.937    0.501    0.063    1.00    1.58     200
+  vggt_1b       nymeria        3    0.157    0.809    0.927    0.510    0.069    1.00    1.58     200
+  vggt_1b       nymeria        5    0.161    0.800    0.923    0.515    0.071    1.00    1.58     200
+  vggt_1b       nymeria       10    0.167    0.785    0.921    0.522    0.073    1.00    1.58     200
+
+  BASELINE · rect_derect
+  ---------------------------------------------------------------------------------------------------
+  model         dataset      ctx   AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ---------------------------------------------------------------------------------------------------
+  vggt_1b       aea            1    0.158    0.834    0.924    0.686    0.063    0.99    1.40     200
+  vggt_1b       aea            3    0.160    0.829    0.922    0.688    0.065    0.99    1.40     200
+  vggt_1b       aea            5    0.161    0.826    0.923    0.690    0.065    0.99    1.40     200
+  vggt_1b       aea           10    0.161    0.824    0.923    0.689    0.065    0.99    1.40     200
+  vggt_1b       nymeria        1    0.131    0.864    0.949    0.502    0.053    0.99    1.58     200
+  vggt_1b       nymeria        3    0.134    0.858    0.948    0.504    0.055    0.99    1.58     200
+  vggt_1b       nymeria        5    0.133    0.857    0.947    0.504    0.055    0.99    1.58     200
+  vggt_1b       nymeria       10    0.135    0.857    0.947    0.505    0.056    0.99    1.58     200
+
+  RECTIFY OR NOT · rect_derect / raw, within model (<1 means rectifying helped)
+  -------------------------------------------------------------------------------------
+  model         dataset      ctx  AbsRel raw  rect_derect    ratio  cover raw  cover rd
+  -------------------------------------------------------------------------------------
+  vggt_1b       aea            1      0.1985       0.1577    0.795       1.00      0.99
+  vggt_1b       aea            3      0.2092       0.1601    0.766       1.00      0.99
+  vggt_1b       aea            5      0.2129       0.1614    0.758       1.00      0.99
+  vggt_1b       aea           10      0.2196       0.1614    0.735       1.00      0.99
+  vggt_1b       nymeria        1      0.1446       0.1311    0.907       1.00      0.99
+  vggt_1b       nymeria        3      0.1567       0.1336    0.853       1.00      0.99
+  vggt_1b       nymeria        5      0.1609       0.1331    0.828       1.00      0.99
+  vggt_1b       nymeria       10      0.1673       0.1347    0.805       1.00      0.99
+  Both arms are scored on the points BOTH could answer for, so the
+  ratio is like-for-like; `cover` is what each gave up to get there and
+  is NOT in the ratio. A rect_derect that wins on 60% coverage has won
+  a different, smaller question.
+
+  CONTEXT · AbsRel, and the ratio to the 1-frame arm (<1 means more frames helped)
+  ------------------------------------------------------------------------------
+  model         baseline     dataset       1 frame      3 fr      5 fr     10 fr
+  ------------------------------------------------------------------------------
+  vggt_1b       raw          aea            0.1985     1.054     1.073     1.107
+  vggt_1b       raw          nymeria        0.1446     1.084     1.113     1.157
+  vggt_1b       rect_derect  aea            0.1577     1.015     1.023     1.024
+  vggt_1b       rect_derect  nymeria        0.1311     1.019     1.015     1.027
+  The window PRECEDES the target at stride 1 and is handed over in ONE forward pass.
+  Only the target frame is scored, so every column measures the identical points and only
+  the evidence moves. Monocular models are absent by refusal, not by having failed.
+
+  MODELS
+  ------------------------------------------------------------
+  vggt_1b       VGGT 1B · 1158M · align=scale_shift · frames at 518px

@@ -1,0 +1,215 @@
+/group-volume/Fengjia/projects/vggt-omega-023/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+  [slambench] aea: 8 of 8 takes, 251 clips
+  [slambench] nymeria: 8 of 8 takes, 256 clips
+  [slambench] split 61195914f090: 400 frames over 16 take(s) of 2 dataset(s)
+
+[slambench] ══ vggt_1b ══
+[slambench]   VGGT 1B | 1158M | align=scale_shift | frames at 518px
+[slambench]   clip 5/374 (120s)
+[slambench]   clip 10/374 (130s)
+[slambench]   clip 15/374 (153s)
+[slambench]   clip 20/374 (179s)
+[slambench]   clip 25/374 (208s)
+[slambench]   clip 30/374 (233s)
+[slambench]   clip 35/374 (271s)
+[slambench]   clip 40/374 (308s)
+[slambench]   clip 45/374 (349s)
+[slambench]   clip 50/374 (378s)
+[slambench]   clip 55/374 (410s)
+[slambench]   clip 60/374 (443s)
+[slambench]   clip 65/374 (473s)
+[slambench]   clip 70/374 (501s)
+[slambench]   clip 75/374 (531s)
+[slambench]   clip 80/374 (565s)
+[slambench]   clip 85/374 (600s)
+[slambench]   clip 90/374 (631s)
+[slambench]   clip 95/374 (662s)
+[slambench]   clip 100/374 (692s)
+[slambench]   clip 105/374 (718s)
+[slambench]   clip 110/374 (749s)
+[slambench]   clip 115/374 (780s)
+[slambench]   clip 120/374 (817s)
+[slambench]   clip 125/374 (857s)
+[slambench]   clip 130/374 (897s)
+[slambench]   clip 135/374 (935s)
+[slambench]   clip 140/374 (970s)
+[slambench]   clip 145/374 (1005s)
+[slambench]   clip 150/374 (1044s)
+[slambench]   clip 155/374 (1081s)
+[slambench]   clip 160/374 (1114s)
+[slambench]   clip 165/374 (1156s)
+[slambench]   clip 170/374 (1196s)
+[slambench]   clip 175/374 (1235s)
+[slambench]   clip 180/374 (1274s)
+[slambench]   clip 185/374 (1310s)
+[slambench]   clip 190/374 (1350s)
+[slambench]   clip 195/374 (1392s)
+[slambench]   clip 200/374 (1424s)
+[slambench]   clip 205/374 (1453s)
+[slambench]   clip 210/374 (1480s)
+[slambench]   clip 215/374 (1506s)
+[slambench]   clip 220/374 (1522s)
+[slambench]   clip 225/374 (1530s)
+[slambench]   clip 230/374 (1536s)
+[slambench]   clip 235/374 (1544s)
+[slambench]   clip 240/374 (1550s)
+[slambench]   clip 245/374 (1556s)
+[slambench]   clip 250/374 (1562s)
+[slambench]   clip 255/374 (1568s)
+[slambench]   clip 260/374 (1574s)
+[slambench]   clip 265/374 (1581s)
+[slambench]   clip 270/374 (1587s)
+[slambench]   clip 275/374 (1593s)
+[slambench]   clip 280/374 (1604s)
+[slambench]   clip 285/374 (1636s)
+[slambench]   clip 290/374 (1665s)
+[slambench]   clip 295/374 (1697s)
+[slambench]   clip 300/374 (1727s)
+[slambench]   clip 305/374 (1759s)
+[slambench]   clip 310/374 (1791s)
+[slambench]   clip 315/374 (1820s)
+[slambench]   clip 320/374 (1850s)
+[slambench]   clip 325/374 (1881s)
+[slambench]   clip 330/374 (1912s)
+[slambench]   clip 335/374 (1952s)
+[slambench]   clip 340/374 (1987s)
+[slambench]   clip 345/374 (2019s)
+[slambench]   clip 350/374 (2060s)
+[slambench]   clip 355/374 (2099s)
+[slambench]   clip 360/374 (2138s)
+[slambench]   clip 365/374 (2185s)
+[slambench]   clip 370/374 (2225s)
+[slambench]   done in 2257s
+
+[slambench] ══ da3_small ══
+[97m[INFO ] using MLP layer as FFN[0m
+[slambench]   Depth-Anything-3 Small | 34M | align=scale_shift | frames at 518px
+[slambench]   clip 5/374 (245s)
+[slambench]   clip 10/374 (283s)
+[slambench]   clip 15/374 (318s)
+[slambench]   clip 20/374 (353s)
+[slambench]   clip 25/374 (396s)
+[slambench]   clip 30/374 (433s)
+[slambench]   clip 35/374 (473s)
+[slambench]   clip 40/374 (505s)
+[slambench]   clip 45/374 (538s)
+[slambench]   clip 50/374 (568s)
+[slambench]   clip 55/374 (605s)
+[slambench]   clip 60/374 (635s)
+[slambench]   clip 65/374 (660s)
+[slambench]   clip 70/374 (679s)
+[slambench]   clip 75/374 (691s)
+[slambench]   clip 80/374 (699s)
+[slambench]   clip 85/374 (705s)
+[slambench]   clip 90/374 (710s)
+[slambench]   clip 95/374 (716s)
+[slambench]   clip 100/374 (721s)
+[slambench]   clip 105/374 (728s)
+[slambench]   clip 110/374 (736s)
+[slambench]   clip 115/374 (742s)
+[slambench]   clip 120/374 (749s)
+[slambench]   clip 125/374 (755s)
+[slambench]   clip 130/374 (760s)
+[slambench]   clip 135/374 (766s)
+[slambench]   clip 140/374 (773s)
+[slambench]   clip 145/374 (779s)
+[slambench]   clip 150/374 (786s)
+[slambench]   clip 155/374 (792s)
+[slambench]   clip 160/374 (814s)
+[slambench]   clip 165/374 (838s)
+[slambench]   clip 170/374 (862s)
+[slambench]   clip 175/374 (888s)
+[slambench]   clip 180/374 (913s)
+[slambench]   clip 185/374 (937s)
+[slambench]   clip 190/374 (962s)
+[slambench]   clip 195/374 (989s)
+[slambench]   clip 200/374 (1015s)
+[slambench]   clip 205/374 (1042s)
+[slambench]   clip 210/374 (1078s)
+[slambench]   clip 215/374 (1114s)
+[slambench]   clip 220/374 (1147s)
+[slambench]   clip 225/374 (1181s)
+[slambench]   clip 230/374 (1208s)
+[slambench]   clip 235/374 (1238s)
+[slambench]   clip 240/374 (1276s)
+[slambench]   clip 245/374 (1310s)
+[slambench]   clip 250/374 (1341s)
+[slambench]   clip 255/374 (1371s)
+[slambench]   clip 260/374 (1401s)
+[slambench]   clip 265/374 (1434s)
+[slambench]   clip 270/374 (1463s)
+[slambench]   clip 275/374 (1494s)
+[slambench]   clip 280/374 (1523s)
+[slambench]   clip 285/374 (1552s)
+[slambench]   clip 290/374 (1584s)
+[slambench]   clip 295/374 (1616s)
+[slambench]   clip 300/374 (1647s)
+[slambench]   clip 305/374 (1675s)
+[slambench]   clip 310/374 (1705s)
+[slambench]   clip 315/374 (1740s)
+[slambench]   clip 320/374 (1771s)
+[slambench]   clip 325/374 (1800s)
+[slambench]   clip 330/374 (1838s)
+[slambench]   clip 335/374 (1874s)
+[slambench]   clip 340/374 (1907s)
+[slambench]   clip 345/374 (1934s)
+[slambench]   clip 350/374 (1960s)
+[slambench]   clip 355/374 (1986s)
+[slambench]   clip 360/374 (2005s)
+[slambench]   clip 365/374 (2019s)
+[slambench]   clip 370/374 (2026s)
+[slambench]   done in 2031s
+
+============================================================================================
+  ego-synth SLAM depth · egosynth-slam-v1 · split 61195914f090
+============================================================================================
+  400 frames over 16 take(s), datasets: aea, nymeria
+  GT: sparse MPS SLAM points, fisheye stream, native — the harness rectifies nothing
+  cut at inv_dist_std (1/m, scale-invariant) < 0.01 (the release ships UNFILTERED, so this is part of every number below)
+  baselines ['raw', 'rect_derect'] · 8 take(s)/dataset · 25 frame(s)/take
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame over every one
+  of that frame's points, then frozen. Frames combine unweighted. Each
+  model keeps its own alignment space — disparity for Depth-Anything V2,
+  depth for the up-to-scale heads — so ABSOLUTE AbsRel IS NOT COMPARABLE
+  ACROSS MODELS. It is comparable across baselines of one model.
+
+  BASELINE · raw
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  da3_small     aea            0.240    0.689    0.878    0.756    0.092    1.00    1.40     200
+  da3_small     nymeria        0.205    0.722    0.915    0.561    0.080    1.00    1.58     200
+  vggt_1b       aea            0.198    0.762    0.902    0.727    0.079    1.00    1.40     200
+  vggt_1b       nymeria        0.145    0.825    0.937    0.501    0.063    1.00    1.58     200
+
+  BASELINE · rect_derect
+  ----------------------------------------------------------------------------------------------
+  model         dataset       AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ----------------------------------------------------------------------------------------------
+  da3_small     aea            0.234    0.694    0.875    0.757    0.090    0.99    1.40     200
+  da3_small     nymeria        0.208    0.714    0.905    0.568    0.082    0.99    1.58     200
+  vggt_1b       aea            0.158    0.834    0.924    0.686    0.063    0.99    1.40     200
+  vggt_1b       nymeria        0.131    0.864    0.949    0.502    0.053    0.99    1.58     200
+
+  RECTIFY OR NOT · rect_derect / raw, within model (<1 means rectifying helped)
+  --------------------------------------------------------------------------------
+  model         dataset      AbsRel raw  rect_derect    ratio  cover raw  cover rd
+  --------------------------------------------------------------------------------
+  da3_small     aea              0.2396       0.2344    0.979       1.00      0.99
+  da3_small     nymeria          0.2050       0.2078    1.014       1.00      0.99
+  vggt_1b       aea              0.1985       0.1577    0.795       1.00      0.99
+  vggt_1b       nymeria          0.1446       0.1311    0.907       1.00      0.99
+  Both arms are scored on the points BOTH could answer for, so the
+  ratio is like-for-like; `cover` is what each gave up to get there and
+  is NOT in the ratio. A rect_derect that wins on 60% coverage has won
+  a different, smaller question.
+
+  MODELS
+  ------------------------------------------------------------
+  da3_small     Depth-Anything-3 Small · 34M · align=scale_shift · frames at 518px
+  vggt_1b       VGGT 1B · 1158M · align=scale_shift · frames at 518px
+
+
+[slambench] wrote eval_out/slambench-022-sc/step2.g0/results.json (+ csv, report.txt)

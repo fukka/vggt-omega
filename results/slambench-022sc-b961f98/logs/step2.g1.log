@@ -1,0 +1,2 @@
+[slambench] 1 of 3 requested models cannot run (dav2_large). Fix them with the instructions above, or pass --skip-unavailable to run the rest (the report and results.json then record what was left out).
+[slambench] dav2_large: download — depth-anything/Depth-Anything-V2-Large-hf

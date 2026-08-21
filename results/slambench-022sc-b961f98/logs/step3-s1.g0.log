@@ -1,0 +1,162 @@
+/group-volume/Fengjia/projects/vggt-omega-023/VGGT-360-fisheye/vggt_visfeat/models/vggt.py:72: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+  [slambench] aea: 8 of 8 takes, 251 clips
+  [slambench] nymeria: 8 of 8 takes, 256 clips
+  [slambench] split 61195914f090: 400 frames over 16 take(s) of 2 dataset(s)
+
+[slambench] ══ vggt_1b ══
+[slambench]   VGGT 1B | 1158M | align=scale_shift | frames at 518px
+[slambench]   clip 5/374 (149s)
+[slambench]   clip 10/374 (188s)
+[slambench]   clip 15/374 (229s)
+[slambench]   clip 20/374 (268s)
+[slambench]   clip 25/374 (316s)
+[slambench]   clip 30/374 (359s)
+[slambench]   clip 35/374 (411s)
+[slambench]   clip 40/374 (458s)
+[slambench]   clip 45/374 (501s)
+[slambench]   clip 50/374 (548s)
+[slambench]   clip 55/374 (605s)
+[slambench]   clip 60/374 (663s)
+[slambench]   clip 65/374 (718s)
+[slambench]   clip 70/374 (771s)
+[slambench]   clip 75/374 (817s)
+[slambench]   clip 80/374 (865s)
+[slambench]   clip 85/374 (915s)
+[slambench]   clip 90/374 (963s)
+[slambench]   clip 95/374 (1011s)
+[slambench]   clip 100/374 (1061s)
+[slambench]   clip 105/374 (1115s)
+[slambench]   clip 110/374 (1167s)
+[slambench]   clip 115/374 (1210s)
+[slambench]   clip 120/374 (1262s)
+[slambench]   clip 125/374 (1314s)
+[slambench]   clip 130/374 (1357s)
+[slambench]   clip 135/374 (1388s)
+[slambench]   clip 140/374 (1412s)
+[slambench]   clip 145/374 (1435s)
+[slambench]   clip 150/374 (1460s)
+[slambench]   clip 155/374 (1478s)
+[slambench]   clip 160/374 (1509s)
+[slambench]   clip 165/374 (1547s)
+[slambench]   clip 170/374 (1585s)
+[slambench]   clip 175/374 (1624s)
+[slambench]   clip 180/374 (1663s)
+[slambench]   clip 185/374 (1706s)
+[slambench]   clip 190/374 (1752s)
+[slambench]   clip 195/374 (1798s)
+[slambench]   clip 200/374 (1850s)
+[slambench]   clip 205/374 (1905s)
+[slambench]   clip 210/374 (1954s)
+[slambench]   clip 215/374 (1997s)
+[slambench]   clip 220/374 (2039s)
+[slambench]   clip 225/374 (2086s)
+[slambench]   clip 230/374 (2131s)
+[slambench]   clip 235/374 (2177s)
+[slambench]   clip 240/374 (2220s)
+[slambench]   clip 245/374 (2262s)
+[slambench]   clip 250/374 (2306s)
+[slambench]   clip 255/374 (2355s)
+[slambench]   clip 260/374 (2411s)
+[slambench]   clip 265/374 (2460s)
+[slambench]   clip 270/374 (2506s)
+[slambench]   clip 275/374 (2552s)
+[slambench]   clip 280/374 (2605s)
+[slambench]   clip 285/374 (2656s)
+[slambench]   clip 290/374 (2702s)
+[slambench]   clip 295/374 (2744s)
+[slambench]   clip 300/374 (2777s)
+[slambench]   clip 305/374 (2798s)
+[slambench]   clip 310/374 (2816s)
+[slambench]   clip 315/374 (2836s)
+[slambench]   clip 320/374 (2854s)
+[slambench]   clip 325/374 (2872s)
+[slambench]   clip 330/374 (2896s)
+[slambench]   clip 335/374 (2940s)
+[slambench]   clip 340/374 (2978s)
+[slambench]   clip 345/374 (3017s)
+[slambench]   clip 350/374 (3057s)
+[slambench]   clip 355/374 (3099s)
+[slambench]   clip 360/374 (3139s)
+[slambench]   clip 365/374 (3186s)
+[slambench]   clip 370/374 (3238s)
+[slambench]   done in 3278s
+
+============================================================================================
+  ego-synth SLAM depth · egosynth-slam-v1 · split 61195914f090
+============================================================================================
+  400 frames over 16 take(s), datasets: aea, nymeria
+  GT: sparse MPS SLAM points, fisheye stream, native — the harness rectifies nothing
+  cut at inv_dist_std (1/m, scale-invariant) < 0.01 (the release ships UNFILTERED, so this is part of every number below)
+  baselines ['raw', 'rect_derect'] · 8 take(s)/dataset · 25 frame(s)/take
+
+  CONTEXT SWEEP: [1, 3, 5, 10] frame(s) in one forward pass, stride 1. Only the split's own frame is
+  scored, so every arm measures the identical points and the digest above covers them all.
+
+  PROTOCOL: the scale (and shift) is fitted ONCE per frame over every one
+  of that frame's points, then frozen. Frames combine unweighted. Each
+  model keeps its own alignment space — disparity for Depth-Anything V2,
+  depth for the up-to-scale heads — so ABSOLUTE AbsRel IS NOT COMPARABLE
+  ACROSS MODELS. It is comparable across baselines of one model.
+
+  BASELINE · raw
+  ---------------------------------------------------------------------------------------------------
+  model         dataset      ctx   AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ---------------------------------------------------------------------------------------------------
+  vggt_1b       aea            1    0.198    0.762    0.902    0.727    0.079    1.00    1.40     200
+  vggt_1b       aea            3    0.209    0.740    0.899    0.735    0.084    1.00    1.40     200
+  vggt_1b       aea            5    0.213    0.734    0.900    0.736    0.085    1.00    1.40     200
+  vggt_1b       aea           10    0.220    0.718    0.894    0.742    0.088    1.00    1.40     200
+  vggt_1b       nymeria        1    0.145    0.825    0.937    0.501    0.063    1.00    1.58     200
+  vggt_1b       nymeria        3    0.157    0.809    0.927    0.510    0.069    1.00    1.58     200
+  vggt_1b       nymeria        5    0.161    0.800    0.923    0.515    0.071    1.00    1.58     200
+  vggt_1b       nymeria       10    0.167    0.785    0.921    0.522    0.073    1.00    1.58     200
+
+  BASELINE · rect_derect
+  ---------------------------------------------------------------------------------------------------
+  model         dataset      ctx   AbsRel   delta1   delta2     RMSE    log10   cover  gt_med  frames
+  ---------------------------------------------------------------------------------------------------
+  vggt_1b       aea            1    0.158    0.834    0.924    0.686    0.063    0.99    1.40     200
+  vggt_1b       aea            3    0.160    0.829    0.922    0.688    0.065    0.99    1.40     200
+  vggt_1b       aea            5    0.161    0.826    0.923    0.690    0.065    0.99    1.40     200
+  vggt_1b       aea           10    0.161    0.824    0.923    0.689    0.065    0.99    1.40     200
+  vggt_1b       nymeria        1    0.131    0.864    0.949    0.502    0.053    0.99    1.58     200
+  vggt_1b       nymeria        3    0.134    0.858    0.948    0.504    0.055    0.99    1.58     200
+  vggt_1b       nymeria        5    0.133    0.857    0.947    0.504    0.055    0.99    1.58     200
+  vggt_1b       nymeria       10    0.135    0.857    0.947    0.505    0.056    0.99    1.58     200
+
+  RECTIFY OR NOT · rect_derect / raw, within model (<1 means rectifying helped)
+  -------------------------------------------------------------------------------------
+  model         dataset      ctx  AbsRel raw  rect_derect    ratio  cover raw  cover rd
+  -------------------------------------------------------------------------------------
+  vggt_1b       aea            1      0.1985       0.1577    0.795       1.00      0.99
+  vggt_1b       aea            3      0.2092       0.1601    0.766       1.00      0.99
+  vggt_1b       aea            5      0.2129       0.1614    0.758       1.00      0.99
+  vggt_1b       aea           10      0.2196       0.1614    0.735       1.00      0.99
+  vggt_1b       nymeria        1      0.1446       0.1311    0.907       1.00      0.99
+  vggt_1b       nymeria        3      0.1567       0.1336    0.853       1.00      0.99
+  vggt_1b       nymeria        5      0.1609       0.1331    0.828       1.00      0.99
+  vggt_1b       nymeria       10      0.1673       0.1347    0.805       1.00      0.99
+  Both arms are scored on the points BOTH could answer for, so the
+  ratio is like-for-like; `cover` is what each gave up to get there and
+  is NOT in the ratio. A rect_derect that wins on 60% coverage has won
+  a different, smaller question.
+
+  CONTEXT · AbsRel, and the ratio to the 1-frame arm (<1 means more frames helped)
+  ------------------------------------------------------------------------------
+  model         baseline     dataset       1 frame      3 fr      5 fr     10 fr
+  ------------------------------------------------------------------------------
+  vggt_1b       raw          aea            0.1985     1.054     1.073     1.107
+  vggt_1b       raw          nymeria        0.1446     1.084     1.113     1.157
+  vggt_1b       rect_derect  aea            0.1577     1.015     1.023     1.024
+  vggt_1b       rect_derect  nymeria        0.1311     1.019     1.015     1.027
+  The window PRECEDES the target at stride 1 and is handed over in ONE forward pass.
+  Only the target frame is scored, so every column measures the identical points and only
+  the evidence moves. Monocular models are absent by refusal, not by having failed.
+
+  MODELS
+  ------------------------------------------------------------
+  vggt_1b       VGGT 1B · 1158M · align=scale_shift · frames at 518px
+
+
+[slambench] wrote eval_out/slambench-022-sc/step3-s1.g0/results.json (+ csv, report.txt)

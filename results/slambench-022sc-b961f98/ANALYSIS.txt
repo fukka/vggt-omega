@@ -1,0 +1,82 @@
+slambench-022sc-b961f98 -- ANALYSIS
+==============================================================================
+
+WHAT THIS IS.  Six slambench.run shards produced on the space-container A100 pod
+on 2026-08-20, against ego-synth 5B (aea + nymeria), split digest 61195914f090 --
+the same split #020 published.  They sat in the pod's eval_out unpublished until
+2026-08-22; findings.md already cites their stride-10 result, so the numbers were
+read before the artefacts were on a branch.  This directory closes that gap.
+
+It carries two things #020 does not:
+
+  1. a CROSS-BOX CONTROL.  84 of its cells are #020's cells, recomputed on a
+     different GPU architecture (A100-80GB vs lambda_63's RTX 6000 Ada).
+  2. 48 NEW cells -- the multi-frame context arms at STRIDE 1, which #020 never
+     ran.  #020 has N=1 at stride 1 and N=3/5/10 at stride 10 only.
+
+------------------------------------------------------------------------------
+1. CROSS-BOX CONTROL -- the 84 cells that are also #020's
+------------------------------------------------------------------------------
+  AbsRel  n=84  mean|rel| 0.1506%   max|rel| 1.2788%   at ('da3_small', 'nymeria', 'rect_derect', 5, 10)
+  RMSE    n=84  mean|rel| 0.0376%   max|rel| 0.2927%   at ('da3_small', 'nymeria', 'rect_derect', 5, 10)
+  SqRel   n=84  mean|rel| 0.1914%   max|rel| 1.1017%   at ('da3_small', 'nymeria', 'rect_derect', 10, 10)
+
+  Not bit-identical, and it was never going to be: a different GPU architecture
+  reorders floating-point reductions.  The size is what matters.  Mean 0.15% and
+  worst 1.28% on AbsRel is an order below the 3-40% context effects this harness
+  is used to measure, so a pod number may be tabulated beside a lambda one --
+  but it is NOT zero, so the two boxes must not be mixed inside a single curve.
+  Why da3_small nymeria rect_derect is the worst cell is not established here.
+
+------------------------------------------------------------------------------
+2. THE NEW ARMS -- multi-frame context at stride 1 against stride 10
+------------------------------------------------------------------------------
+  AbsRel of the N-frame arm divided by that same cell's own N=1 arm.
+  Below 1.000 = context helped.
+
+  model       dataset  lens         stride 1 (3/5/10)          stride 10 (3/5/10)
+  vggt_1b     aea      raw          1.054 / 1.073 / 1.107      1.032 / 1.042 / 1.086
+  vggt_1b     aea      rect_derect  1.015 / 1.023 / 1.024      0.997 / 1.013 / 1.023
+  vggt_1b     nymeria  raw          1.084 / 1.113 / 1.157      1.069 / 1.062 / 1.081
+  vggt_1b     nymeria  rect_derect  1.019 / 1.015 / 1.027      0.962 / 0.952 / 0.954
+  vggt_omega  aea      raw          1.001 / 1.011 / 1.013      1.008 / 0.997 / 0.992
+  vggt_omega  aea      rect_derect  0.984 / 0.978 / 0.966      0.958 / 0.947 / 0.933
+  vggt_omega  nymeria  raw          0.985 / 0.995 / 1.015      1.012 / 0.998 / 0.969
+  vggt_omega  nymeria  rect_derect  0.981 / 0.976 / 0.966      0.954 / 0.951 / 0.943
+  da3_large   aea      raw          1.030 / 1.025 / 1.015      0.992 / 0.985 / 0.969
+  da3_large   aea      rect_derect  1.055 / 1.060 / 1.067      1.014 / 1.004 / 0.995
+  da3_large   nymeria  raw          0.983 / 0.987 / 0.957      0.930 / 0.925 / 0.896
+  da3_large   nymeria  rect_derect  1.008 / 0.990 / 0.975      0.931 / 0.914 / 0.867
+  da3_small   aea      raw          1.054 / 1.051 / 1.039      1.002 / 1.003 / 1.007
+  da3_small   aea      rect_derect  1.012 / 1.021 / 1.027      0.975 / 0.964 / 0.980
+  da3_small   nymeria  raw          1.047 / 1.041 / 1.026      0.960 / 0.943 / 0.941
+  da3_small   nymeria  rect_derect  0.997 / 1.005 / 1.011      0.948 / 0.925 / 0.914
+
+  stride 1  : 48 arms, ratio 0.957-1.157, mean 1.022
+  stride 10 : 48 arms, ratio 0.867-1.086, mean 0.977
+
+  READING.  At stride 1 the mean arm is slightly WORSE than its own single frame
+  and 10 frames is usually the worst point of the three -- adding adjacent frames
+  costs rather than pays.  At stride 10 the mean arm improves and the best cells
+  reach -13% (da3_large nymeria rect_derect at 10 frames, 0.867).
+
+  The mechanism this is consistent with is baseline, not frame count: consecutive
+  frames of a head-mounted camera are separated by ~1 cm, which is no parallax
+  against several metres of scene, so the extra views add compute and no geometry.
+  Stride 10 buys ~9 cm and the same frame count then pays.
+
+  This is the same conclusion #001 recorded for ScanNet++ stride, reached
+  independently on real egocentric footage with MPS SLAM points as ground truth,
+  and it is what autoresearch/findings.md cites under H11's temporal re-scope.
+
+------------------------------------------------------------------------------
+3. WHAT IS NOT CLAIMED
+------------------------------------------------------------------------------
+  * NOT a replacement for #020.  #020 stays the published SLAM baseline table;
+    this is a control beside it plus the stride-1 arms it lacks.
+  * NO eccentricity axis.  These are whole-image averages.  The FOV question on
+    these same points is ticket #022's run_fov work, which is separate.
+  * The 84-cell agreement is a control on THIS harness at THIS split.  It does
+    not license mixing boxes inside one curve; see section 1.
+  * No oxford, no egoexo4d -- same absences as #020, for the same reasons.
+

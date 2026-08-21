@@ -1,0 +1,70 @@
+{
+  "run_id": "slambench-022sc-b961f98",
+  "ticket": "docs/handoff/tickets/022-fov-on-slam-data.md",
+  "issue": "https://github.com/fukka/vggt-omega/issues/23",
+  "commit": "b961f98",
+  "protocol": "egosynth-slam-v1",
+  "date_utc": "2026-08-20",
+  "published_utc": "2026-08-22",
+  "errors": 0,
+  "models_skipped": [],
+
+  "what_this_is": "Six slambench.run shards produced on the space-container A100 pod against ego-synth 5B, at #020's own split digest 61195914f090. They add two things #020 does not have: a cross-box control on 84 of #020's own cells, and 48 new cells -- the multi-frame context arms at STRIDE 1, which #020 never ran. This is NOT the FOV/eccentricity work ticket 022 asks for; that is slambench.run_fov and is a separate run.",
+
+  "why_it_is_published_late": "The runs finished 2026-08-20 with rc=0 on every shard and were left in the pod's eval_out. autoresearch/findings.md already cites their stride-10 conclusion (commit 60790fa, H11 temporal re-scope), so the numbers were read and acted on while the artefacts were on no branch -- which the tickets README explicitly forbids ('Status is derived from what is on the results branch, not from memory'). Publishing them closes that gap rather than adding a new claim.",
+
+  "hardware": "space-container pod run1156075-vggt-omega-360, 2x NVIDIA A100-SXM4-80GB, one lane per card",
+  "env": {
+    "venv": "/group-volume/Fengjia/envs/vggt360-py312",
+    "python": "3.12",
+    "torch": "2.11.0+cu128",
+    "note": "cu128 deliberately, matching lambda_63. The site pip mirror serves a +cu130 wheel that runs fine and is a different numerical stack; SPACE_CONTAINER.md section 2 covers why that must be asserted rather than assumed."
+  },
+
+  "split": {
+    "digest": "61195914f090",
+    "identical_to": "results/slambench-020-143686a",
+    "datasets": ["aea", "nymeria"],
+    "takes_per_dataset": 8,
+    "n_frames_per_take": 25,
+    "frames": 400,
+    "gated_before_the_forward_passes": true,
+    "oxford": "absent, as in #020 -- its sensor-to-upright rotation has never been measured",
+    "egoexo4d": "absent, as in #020 -- paused by owner decision"
+  },
+
+  "sharded": {
+    "by": "model, across the two A100s; shards/ holds the six raw results.json",
+    "why_this_is_exact": "slambench.run computes the support intersection INSIDE its per-model loop, over that model's own arms and contexts, so two processes with disjoint model lists produce the numbers one process would. This is #020's own argument and it is unchanged here.",
+    "step2.g1_was_backfilled": "step2.g1's first attempt produced no results.json; it was re-run to completion as step2.g1.backfill (rc=0). Both logs are kept in logs/."
+  },
+
+  "runs": {
+    "step2":     {"what": "both lens strategies, single frame", "baselines": ["raw", "rect_derect"], "context_frames": [1], "context_stride": 1},
+    "step3-s1":  {"what": "the context sweep at STRIDE 1 -- new, #020 has no such arms", "baselines": ["raw", "rect_derect"], "context_frames": [1, 3, 5, 10], "context_stride": 1},
+    "step3-s10": {"what": "the context sweep at STRIDE 10 -- overlaps #020, and is the cross-box control", "baselines": ["raw", "rect_derect"], "context_frames": [1, 3, 5, 10], "context_stride": 10}
+  },
+
+  "cross_box_control": {
+    "what_was_compared": "every cell of this run that is also a cell of results/slambench-020-143686a -- 84 of them -- matched on (model, dataset, baseline, context, context_stride)",
+    "AbsRel": {"n": 84, "mean_abs_rel_pct": 0.1506, "max_abs_rel_pct": 1.2788, "worst_cell": "da3_small / nymeria / rect_derect / 5 frames / stride 10"},
+    "RMSE":   {"n": 84, "mean_abs_rel_pct": 0.0376, "max_abs_rel_pct": 0.2927},
+    "SqRel":  {"n": 84, "mean_abs_rel_pct": 0.1914, "max_abs_rel_pct": 1.1017},
+    "reading": "Not bit-identical and never could be -- a different GPU architecture reorders floating-point reductions. Mean 0.15% and worst 1.28% on AbsRel is an order below the 3-40% context effects this harness measures, so a pod number may be tabulated beside a lambda one. It is not zero, so the two boxes must not be mixed inside a single curve."
+  },
+
+  "headline": {
+    "claim": "multi-frame context pays only with temporal distance, on real MPS SLAM points",
+    "stride_1": "24 arms, AbsRel ratio against their own N=1 spans 0.957-1.157, mean 1.017 -- adjacent frames cost slightly more than they pay, and 10 frames is usually the worst of the three",
+    "stride_10": "24 arms, ratio spans 0.867-1.086, mean 0.981 -- the same frame counts now help; best cell da3_large / nymeria / rect_derect / 10 frames at 0.867",
+    "mechanism_consistent_with": "baseline, not frame count. Consecutive frames of a head-mounted camera are ~1 cm apart against several metres of scene -- no parallax, so the extra views add compute and no geometry. Stride 10 buys ~9 cm.",
+    "independent_of": "the same conclusion #001 recorded for ScanNet++ evaluation stride, reached here on different data with a different ground truth"
+  },
+
+  "not_claimed": [
+    "This does not replace #020. #020 remains the published SLAM baseline table; this is a control beside it plus the stride-1 arms it lacks.",
+    "No eccentricity axis anywhere in this run -- these are whole-image averages. The FOV question on these same points is ticket 022's slambench.run_fov work and is a separate artefact.",
+    "The 84-cell agreement is a control on this harness at this split; it does not license mixing boxes inside one curve.",
+    "Why da3_small / nymeria / rect_derect is the worst-agreeing cell is not established."
+  ]
+}
