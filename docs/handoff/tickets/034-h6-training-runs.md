@@ -1,7 +1,7 @@
 # H6 training runs: peripheral cross-frame attention vs the all-token control
 
 **Owner:** gpu
-**Status:** open — not started.
+**Status:** **done** — `results/autoresearch-h6-train/{rim,alltok}` @ `1327748`; `module_last.pt` + `train_log.json` for both arms.
 **Files I may touch:** none — runs only. Checkpoints (~12 MB) + logs to
 `results` under `results/autoresearch-h6-train/`.
 **Blocked by:** none. Code on `organized`:

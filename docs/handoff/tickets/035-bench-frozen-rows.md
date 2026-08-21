@@ -1,7 +1,7 @@
 # BENCH: frozen-model rows on the two held-out scenes
 
 **Owner:** gpu
-**Status:** open — not started.
+**Status:** **done** — `results/autoresearch-bench/` @ `f1b0ab7`: 5 models x 2 held-out scenes (seq136, decoration_seq132), 504 px, 60 frames. `dac_swinl_indoor` skipped by design (ERP-native output, not planar-z) and said so in its meta.
 **Files I may touch:** none — runs only. JSONs to `results` under
 `results/autoresearch-bench/`.
 **Blocked by:** none. Code on `organized`:

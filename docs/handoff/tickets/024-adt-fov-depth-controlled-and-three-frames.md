@@ -1,10 +1,7 @@
 # ADT-FOV: the depth-controlled table, and the context arms on the right split
 
 **Owner:** gpu
-**Status:** **open — neither half has run.** Nothing matching
-`results/fovbench-joint-*` is on the `results` branch as of 2026-08-17 23:30 EDT.
-Part A unchanged; **part B rewritten 2026-08-17**, it is now the six-sequence
-split and not seq131. Code is on `organized`; the runs are the ticket.
+**Status:** **done, both halves** — `results/fovbench-joint-0b0d1d7` (2026-08-18). Part A ran on lambda_63 (16/20 cells bit-identical to #019; the four that moved are vggt_1b's known #021 bf16 step), part B's four context arms on space-container's A100s, all at digest `601fcb22767e`. Superseded the "neither half has run" line this file carried until 2026-08-22.
 **Files I may touch:** nothing under `fovbench/` — runs only. Results to `results`.
 **Blocked by:** none. `organized` @ the commit that adds `geometry.joint_grid`.
 **Issue:** https://github.com/fukka/vggt-omega/issues/24 — that, not this file,

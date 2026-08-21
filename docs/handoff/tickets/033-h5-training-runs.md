@@ -1,7 +1,7 @@
 # H5 training runs: rim-targeted LoRA vs the plain-LoRA control
 
 **Owner:** gpu
-**Status:** open — not started.
+**Status:** **done** — `results/autoresearch-h5-train/{full,plain}` @ `1327748`; `lora_last.pt` + `train_log.json` for both arms. Evaluation is CPU-side, hence the `cpu` label on issue #35.
 **Files I may touch:** none — runs only. Checkpoints (~500 KB each) + train
 logs to `results` under `results/autoresearch-h5-train/`.
 **Blocked by:** none. Code on `organized`:

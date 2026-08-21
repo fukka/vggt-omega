@@ -1,7 +1,7 @@
 # Feature head on the six-sequence split: does run_011 hold beyond seq131?
 
 **Owner:** gpu
-**Status:** open — not started.
+**Status:** **done** — `results/autoresearch-h22-sixseq` (meta `ticket: 28`). near-rim holds on all 6 sequences, −21.2%/−32.7% (decoration_seq132, weakest) to −71.3%/−75.2% (seq135).
 **Files I may touch:** none — runs only. Results as JSONs to the `results`
 branch under `results/autoresearch-h22-sixseq/`.
 **Blocked by:** none. Code is on `organized`:

@@ -1,7 +1,7 @@
 # VGGT-Omega feature head: the highest-headroom backbone, six sequences
 
 **Owner:** gpu
-**Status:** open — not started.
+**Status:** **done** — `results/autoresearch-h24-omega` (meta `ticket: 31`). Transfers to VGGT-Omega on all 6 sequences and both splits (−19.3% to −40.6%), smaller effect size than DA3-Small.
 **Files I may touch:** none — runs only (scratch runners fine, as in #29).
 Results to `results` under `results/autoresearch-h24-omega/`.
 **Blocked by:** none. Code on `organized`:

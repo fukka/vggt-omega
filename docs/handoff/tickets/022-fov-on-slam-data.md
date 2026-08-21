@@ -1,6 +1,13 @@
 # The FOV question, asked of real SLAM points
 
 **Owner:** gpu
+**Status:** **radial half done** — `results/slamfov-022-60790fa` (2026-08-22): steps 1, 2
+and 4 on space-container's A100s, off #020's own manifest at digest `61195914f090`.
+Step 4's oracle reads 1.63x (aea) / 2.84x (nymeria) pooled with NO field dependence,
+1.10x / 1.26x standardised at share 1.000 — the confound caught in the act. All five
+models exceed that null on both datasets, so the rim degradation is real on real
+footage. **Step 3 (window) still running.** See also `results/slambench-022sc-b961f98`,
+the pod's context/cross-box shards for issue #22.
 **Files I may touch:** `slambench/fov.py`, `slambench/run_fov.py`,
 `slambench/fov_report.py`, `slambench/tests/test_fov.py`, `slamfov_lane.sh`
 (all new; nothing in the published `slambench.run` path)

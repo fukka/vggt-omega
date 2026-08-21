@@ -41,9 +41,19 @@ Does **not** require the box (CPU-Claude):
   suite is CPU-only and finishes in under a minute** (73 tests + 33 checks, no
   weights, no data, no GPU; one test skips without `depth_anything_3`). This is the
   single biggest win: nearly all code work can be written *and verified* without
-  the box. On this Mac the interpreter that has torch is
-  `~/opt/anaconda3/bin/python` (3.8.3 / torch 2.2.2 / cv2 4.4.0) — **not** any
-  `python3` on `PATH`, which is 3.7 with torch 1.0.1.
+  the box.
+  > ⚠️ **Corrected 2026-08-22 — this Mac can no longer run the full suite.**
+  > This line used to name `~/opt/anaconda3/bin/python` as "the interpreter that
+  > has torch (3.8.3 / torch 2.2.2 / cv2 4.4.0)". Measured today, that
+  > interpreter is **Python 3.9.7 with neither `torch` nor `cv2`**, and *no*
+  > python on this Mac imports torch (`~/opt/anaconda3/bin/python`,
+  > `/usr/bin/python3`, `/opt/homebrew/bin/python3` all fail). `pytest tests`
+  > gives **14 passed, 5 failed**, every failure a bare `ModuleNotFoundError` —
+  > on a clean tree, so it is the environment and not a regression.
+  > The consequence is the part that matters: "written *and verified* off-box"
+  > is currently only partly true here, and a green-looking local run can be
+  > hiding five tests that never executed. Either rebuild a local env with
+  > torch + cv2, or verify on the box and say which you did.
 * interpreting `results.json` once it is on the `results` branch
 * README, docs, plots, tables
 

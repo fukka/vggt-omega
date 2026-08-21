@@ -1,7 +1,7 @@
 # Do hand/body pixels disrupt pose, and should the head ignore them?
 
 **Owner:** gpu
-**Status:** open — not started.
+**Status:** **done** — `results/autoresearch-h4-pose` (meta `ticket: 29`).
 **Files I may touch:** new script(s) under
 `autoresearch/experiments/h4-dynamics/code/` (create), results to `results`
 under `results/autoresearch-h4-pose/`.

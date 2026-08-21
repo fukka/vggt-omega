@@ -1,12 +1,7 @@
 # slambench: a proper baseline evaluation on real egocentric SLAM data
 
 **Owner:** gpu (#016's fetch is done, and it ran on cpu)
-**Status:** **RUN. Steps 2 and 3 are measured** on `143686a`, digest
-`61195914f090`, published to `results` @ `b10b087` as
-`results/slambench-020-143686a`. Issue
-[#22](https://github.com/fukka/vggt-omega/issues/22). See "What it says" below.
-Both pre-flight items the issue carries are done: `verify_camera --takes 8`
-passes 8/8 on aea and nymeria at 0.30 px, and the rectification was done by
+**Status:** **done** — `results/slambench-020-143686a`, digest `61195914f090` across all three steps.
 **`projectaria_tools`**, not the silent cv2 fallback.
 **Files I may touch:** nothing under `slambench/` except what #016 adds — runs only.
 Results to `results`. Nothing under `slambench/` was touched.

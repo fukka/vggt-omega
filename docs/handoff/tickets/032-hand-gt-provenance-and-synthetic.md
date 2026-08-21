@@ -1,11 +1,7 @@
 # Verify hand GT-depth provenance; use the synthetic stream as the hands-free control
 
 **Owner:** gpu
-**Status:** open — not started. **Raised by the human** (2026-08-21): #28/#31's
-depth numbers assume ADT's GT depth at dynamic-segmentation pixels is the
-*person's* depth — but ADT renders depth from the twin, in two variants
-(`skeleton_flag` True/False), and if the wrong variant was used those numbers
-are the *background behind the hand*, not the hand.
+**Status:** **done** — `results/autoresearch-h4-provenance` (meta `ticket: 32`).
 **Files I may touch:** scripts under `autoresearch/experiments/h4-dynamics/code/`
 (create/extend), results to `results/autoresearch-h4-provenance/`.
 **Blocked by:** none — the three #28 skeleton sequences are on lambda_63.

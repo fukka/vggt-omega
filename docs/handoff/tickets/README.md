@@ -16,36 +16,46 @@ number forever; numbers are referenced from commit messages and are never reused
 
 ## Live now
 
-Audited against the `results` branch on **2026-08-17 23:30 EDT**. Two tickets
-have no run behind them:
+Audited against the `results` branch on **2026-08-22**, by
+[`tools/ticket_status.py`](../../../tools/ticket_status.py) rather than by hand.
+Run it before trusting this table:
+
+```bash
+python3 tools/ticket_status.py            # full report
+python3 tools/ticket_status.py --stale    # exit 1 if any Status disagrees
+```
+
+The previous audit (2026-08-17) had drifted badly: **12 tickets said "open — not
+started" while their artefacts were already on `results`**, including all of
+#028–#035. That is what the tool exists to prevent — the rule was written down
+("Status is derived from what is on the results branch") but was being applied
+from memory.
+
+**Actually open, with no artefact behind them:**
 
 | # | | owner | queue |
 |---|---|---|---|
-| [028](028-da3-row-and-the-papers-span.md) (#30) | **DA3's `raytun3r` row (now unblocked), and the whole table re-evaluated at stride 60** — the span ticket 10 identified as the paper's protocol, so every cell lines up with Tab. 2's absolute numbers. One fit (DA3), the rest is eval. | gpu | with the 026 re-check, same session |
-| [026](026-da3-rope-n-prefix-and-checkpointing-drift.md) (#26) | **Done — closed.** Both items were misdiagnosed, both now verified on the box: DA3's global attention is spatially unencoded by design (`pos_nodiff`) so the hook skips those calls (real-package pytest green), and the checkpointing "drift" was the un-pinned matcher→MAGSAC pipeline (every forward-pass loss term bit-identical at fixed windows). The re-check found one cache-device bug, fixed in `ea55dd3`. | — | closed 2026-08-19 |
-| [024](024-adt-fov-depth-controlled-and-three-frames.md) | **How much of the rim penalty survives with GT depth held fixed** — the joint incidence-angle x depth table (part A), plus the context arms (3/5/10 @ stride 10) re-run on the **six-sequence** split so they are comparable to the headline (part B). Code and tests on `organized`; the runs are the ticket. | gpu | **first.** Part A is ~30 min and is the only thing between `adt_fov_experiment_v6.pptx` p.7 and a figure; part B is ~6.3 h and is p.8. Run both `--workers 1` — see the ticket |
-| [022](022-fov-on-slam-data.md) | **The FOV question on real SLAM points**: the `fovbench` experiment, repeated against ego-synth's MPS points. Code, tests and lane script are on `organized`; the run is the ticket. | gpu | after 024 |
+| [022](022-fov-on-slam-data.md) (#23) | **The FOV question on real SLAM points.** Radial half is **done** — `slamfov-022-60790fa`, and its oracle control is the result: a model with *no* field dependence reads a 2.84x rim penalty on nymeria, 1.26x once distance is held fixed. All five models beat that null, so the degradation is real. **Step 3 (window) is running on the pod.** | gpu | in flight |
+| [036](036-raytun3r-comparison-row.md) (#38) | RayTun3R comparison row on the two held-out scenes | gpu | after the eval batches |
+| [037](037-scannetpp-pose-anchor.md) (#39) | ScanNet++ 3f15 pose anchor — external published reference | gpu | queue tail |
+| [027](027-adt-hand-pixel-stats.md) | ADT hand-pixel stats | gpu | — |
+| [026](026-aria-rgb-calibration-json.md) | Aria RGB calibration JSON | gpu | — |
+| [003](003-full-scannetpp-da3-rerun.md) · [006](006-render-scannetpp-depth.md) · [007](007-centerph-fov.md) | raytun3r line — see below | gpu | #006 is **unblocked**: all 5 DAC test scenes have meshes and `renderpy` is already built (issue [#41](https://github.com/fukka/vggt-omega/issues/41)) |
 
-Three more are **run and pushed, and left open only for the issue comment** —
-[019](019-adt-fov-rect-rerun.md) (`fovbench-rectfix-393cab9`),
-[020](020-slam-baseline-programme.md) (`slambench-020-143686a`) and
-[023](023-vggt360-on-both-benchmarks.md) (`fovbench-023-6fedc20` +
-`slambench-023-6fedc20`). No GPU time is owed on any of them. #023 never had a
-GitHub issue at all: both its `meta.json` files say `"issue": 25` and issues stop
-at #24.
+**Two GitHub issues were unblocked on 2026-08-22 without spending GPU time:**
+
+* **[#40](https://github.com/fukka/vggt-omega/issues/40) second scene** — ADT has no Office/bedroom capture, but `adt_egocentric/annotate_rooms.py` left per-frame room labels on the box: `decoration_seq132` frames **1745–2246 are `bedroom`** (502 frames, all with RGB *and* depth), and that sequence is already held out. Same device, same lens, same depth scale — no download and none of the `Lite` set's depth-range confound. It is a **cross-room** probe: cross-sequence < cross-room < cross-building, and it must be named that way.
+* **[#41](https://github.com/fukka/vggt-omega/issues/41) Part B** — not blocked. 5/5 DAC `scannetpp_tiny_test` scenes downloaded, 5/5 have `scans/mesh_aligned_0.05.ply`, 0/5 have `render_depth` (the output). `renderpy` is prebuilt for cpython-311 and imports in the `raytun3r` env. Also corrects the ticket: `third_party/` is gitignored, so the DAC splits are on lambda_63, not in a checkout.
+
+**Duplicate ticket numbers** (the README says numbers are never reused, so these
+need resolving): `026-aria-rgb-calibration-json.md` / `026-da3-rope-n-prefix-and-checkpointing-drift.md`,
+and `028-da3-row-and-the-papers-span.md` / `028-feature-head-six-sequences.md`.
+The `autoresearch-h22-sixseq` artefact belongs to **028-feature-head-six-sequences**;
+`028-da3-row-and-the-papers-span` has no artefact and is still open.
 
 **#025 is done** — all five checks ran on `lambda_63`, commented on
 [#25](https://github.com/fukka/vggt-omega/issues/25#issuecomment-5335209060),
-relabeled `cpu`. π³'s RoPE class, OpenCV/MAGSAC++, and UFM coverage were clean;
-DA3's hook and the checkpointing A/B were not, and became #026. VGGT and π³ are
-unblocked for #4 step 2 as of `organized@222d4a3`; DA3 is unblocked for
-`vanilla`/`center_ph` only.
-
-**#016 is done: `d` is planar z**, on both staged datasets, decisively — so no
-published number moves and #020's steps 2 and 3 may run. Read #020's step
-ordering before queueing anything: both remaining steps must run as single
-invocations, because `slambench` intersects its scored points across every arm
-in a run.
+relabeled `cpu`.
 
 **Known hazard on lambda_63:** `fovbench` deadlocks at `dav2_large` at any
 `--workers` above 1 — first hit by #023 on 2026-08-17, on code that ran the same

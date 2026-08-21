@@ -1,7 +1,7 @@
 # Cross-scene head: leave-one-scene-out over the six-sequence split
 
 **Owner:** gpu
-**Status:** open — not started.
+**Status:** **done** — `results/autoresearch-h23-crossscene` (meta `ticket: 30`). One head, not six: cross-sequence near-rim gain matches or exceeds the within-sequence number on all five mutually-similar clean sequences. NB the external review renamed this axis cross-SEQUENCE.
 **Files I may touch:** none — runs only. Results to `results` under
 `results/autoresearch-h23-crossscene/`.
 **Blocked by:** none. Code on `organized`:
