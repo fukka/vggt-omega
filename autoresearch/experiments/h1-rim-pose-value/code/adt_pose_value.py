@@ -62,9 +62,21 @@ class AriaLocalPairs:
     def __init__(self, seq_dir: str, size: int = 504) -> None:
         from PIL import Image
 
-        self.paths = sorted(glob.glob(os.path.join(seq_dir, "videos_rgb", "*.jpg")))
+        # Accept .jpg or .png. This class was written against 28 staged seq131
+        # JPGs; every ADT sequence extracted since is PNG, so a bare "*.jpg"
+        # glob matches NOTHING on any of the six sequences and every caller
+        # dies with "no frames" on data that is sitting right there. That is
+        # the "*.png glob workaround" tickets 033/034 tell the runner to apply
+        # by hand -- applied here instead, so it stops being folklore.
+        # One extension at a time, jpg first, so a directory holding both does
+        # not silently yield an interleaved pair list.
+        for ext in ("*.jpg", "*.png"):
+            self.paths = sorted(glob.glob(os.path.join(seq_dir, "videos_rgb", ext)))
+            if self.paths:
+                break
         if not self.paths:
-            raise RuntimeError(f"no frames under {seq_dir}/videos_rgb")
+            raise RuntimeError(
+                f"no .jpg or .png frames under {seq_dir}/videos_rgb")
         ts, T = load_trajectory(os.path.join(seq_dir, "groundtruth",
                                              "aria_trajectory.csv"))
         self._traj_ts, self._traj_T = ts.numpy(), T
