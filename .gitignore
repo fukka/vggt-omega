@@ -42,3 +42,8 @@ raytun3r/*.pdf
 scannetpp_example/
 **/SAMPLE_MANIFEST.json
 *_sample_scene/
+
+# Scratch folders for eyeballing run output (images, previews). The repo
+# carries JSON and trimmed logs; binaries belong on disk or in a message, not
+# in history. Named temp_<what>_<date>_<nn>.
+temp_*/
