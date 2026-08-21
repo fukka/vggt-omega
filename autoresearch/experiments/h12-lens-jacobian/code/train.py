@@ -70,13 +70,26 @@ def token_jacobian_field(cam, h: int, w: int, patch: int = 14) -> torch.Tensor:
         raise SystemExit("[h12] camera exposes no KB4 coefficients `k`; the "
                          "Jacobian channels cannot be computed without them.")
     k = tuple(float(x) for x in (k.tolist() if hasattr(k, "tolist") else k))[:4]
-    la, ln = J.log_area_aniso(theta, lambda t: J.kb4_d(t, k),
-                              lambda t: J.kb4_dprime(t, k))
     tmax = float(cam.theta_max)
+    # CLAMP to the imaged cone before evaluating the lens polynomial. The square
+    # token grid has corners whose rays exceed theta_max; out there the KB4 fit
+    # is being read outside the field it was fitted on and d(theta) can go
+    # non-positive, which lands on the log floor as -690. Unclamped, the first
+    # box smoke printed log_area[-690.776, 0.577] -- one saturated corner token
+    # would then dominate the FiLM MLP's input scale and swamp the real signal
+    # everywhere else. Same clamp `jacobian_field()` already applies.
+    theta_c = np.minimum(theta, tmax)
+    la, ln = J.log_area_aniso(theta_c, lambda t: J.kb4_d(t, k),
+                              lambda t: J.kb4_dprime(t, k))
     gh, gw = h // patch, w // patch
     def pool(a):
         return a.reshape(gh, patch, gw, patch).mean((1, 3)).ravel()
-    f = np.stack([pool(la), pool(ln), pool(theta) / tmax], axis=-1)
+    f = np.stack([pool(la), pool(ln), pool(theta_c) / tmax], axis=-1)
+    if not np.isfinite(f).all() or np.abs(f).max() > 50.0:
+        raise SystemExit(
+            f"[h12] token field out of range: min {f.min():.3f} max {f.max():.3f}. "
+            f"A saturated value here silently sets the FiLM input scale for the "
+            f"whole run; refusing rather than training on it.")
     return torch.from_numpy(f).float()
 
 
