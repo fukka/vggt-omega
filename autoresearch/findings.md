@@ -108,6 +108,21 @@ kills and pre-checks in `research-state.yaml: brainstorm_2026_08_19`.
 - **Killed unanimously with our own measurements**: center/rim dual-expert MoE
   (H7 flat gate + F2 no-interference + F4 wrong-axis) — the human's direction-B
   first bullet, and the refutation chain is itself paper material.
+- **The premise survives its own confound on real footage (2026-08-21, slamfov #23)**:
+  an oracle answering from GT with a fixed 0.15 m error — zero field dependence —
+  reads a 1.63x (aea) / 2.84x (nymeria) pooled "rim is worse" effect on real MPS
+  SLAM points: the depth-vs-eccentricity confound caught in the act, at full
+  coverage. After distance standardisation (null residual 1.10/1.26, strata
+  coarseness), ALL five models still exceed the null (vggt_omega 1.83/1.96,
+  vggt_1b 1.80/2.07, da3_large 1.59/1.68, da3_small 1.56/1.57, dav2_large
+  1.41/1.57) — the rim degradation is real, not a depth artifact. Two rules to
+  carry: (1) the confound's SIGN varies per cell (dav2/nymeria went UP under
+  standardisation) so pooled numbers can't be discounted blind — only the
+  two-way table + an oracle-null row is citable; adopt both in our bench
+  protocol. (2) **Accuracy and evenness are different axes**: vggt_omega is the
+  most accurate AND has one of the steepest fields; dav2_large is the flattest
+  and far from the best. Our project's claim is exactly "buy evenness without
+  selling accuracy" — this is the paper's Figure-2-grade motivation.
 - **Independent corroboration of H11's temporal re-scope (2026-08-20)**: the
   slambench #22 delivery (real MPS SLAM points, aea+nymeria, models incl.
   VGGT-Omega/DA3) shows multi-frame context at stride 1 buys ~nothing (ratios

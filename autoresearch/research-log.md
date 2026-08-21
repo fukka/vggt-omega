@@ -590,3 +590,18 @@
   liability 45-55), Aria SLAM-cam static baseline, hand-motion triangulation
   poisoning, rolling shutter. Pre-checks scheduled before GPU commitment.
 - Dashboard gained section 二·八 (brainstorm conclusions + Q1 answer).
+
+## 2026-08-21 (tick 18) — slamfov #23 radial half consumed; #40 replanned; plan re-ordered
+- #23 (results 8e5fb5e): oracle null catches the depth confound in the act on
+  real SLAM points (1.63-2.84x pooled with zero field dependence); after
+  distance standardisation ALL 5 models exceed the null -> rim degradation is
+  real on real footage. Accuracy vs evenness are different axes (vggt_omega
+  most accurate AND steepest field) -> the paper's motivation figure.
+- Protocol adoption: oracle-null row + two-way table become part of our bench
+  protocol; pooled numbers no longer citable alone.
+- #40 replanned by GPU recon (accepted with conditions): ADT has NO
+  non-Apartment scene; seq132 bedroom segment (502 annotated frames) ->
+  cross-ROOM probe; ladder cross-sequence < cross-room < cross-building.
+- #41 Part B unblocked (meshes + renderpy on box). Priority posted on #40:
+  #35/#36 evals -> bedroom probe -> ScanNet++ render -> #38 v2.
+- Dashboard: new section 二·九 (result + revised plan), #40/#41 cards updated.

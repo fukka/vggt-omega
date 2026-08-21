@@ -88,7 +88,7 @@ hypotheses:
       on ADT + ScanNet++ (+ KITTI-360/TUM-VI/WideDepth as available), against
       DAC, UniK3D, DA3, VGGT-Omega, RayTun3R, Fisheye3R, CAM3R (the last
       three have working reproductions IN THIS REPO).
-    status: pending
+    status: pending   # 2026-08-21 slamfov #23 radial half landed (results 8e5fb5e): oracle null reads 1.63-2.84x pooled rim effect with ZERO field dependence -> distance-standardised spread is the only citable form; ALL 5 models exceed the null after standardisation (vggt_omega 1.83/1.96, dav2_large 1.41/1.57 vs null 1.10/1.26) -> rim degradation REAL on real footage; accuracy and evenness are different axes (vggt_omega best absolute AND steepest field). ADOPT: oracle-null row + two-way table in our bench protocol. #40 replanned by GPU recon: ADT has NO non-Apartment scene (184 Apartment + 52 Lite object-recog); bedroom segment in seq132 (502 frames, annotated) -> cross-ROOM probe, ladder cross-sequence < cross-room < cross-building. #41 Part B unblocked (meshes + renderpy present; only render_depth missing).
     motivation: "Human-directed: no CVPR paper without it. The in-repo reproductions are the unfair advantage — most labs cannot run these baselines."
     parent: null
     priority: high
