@@ -605,3 +605,22 @@
 - #41 Part B unblocked (meshes + renderpy on box). Priority posted on #40:
   #35/#36 evals -> bedroom probe -> ScanNet++ render -> #38 v2.
 - Dashboard: new section 二·九 (result + revised plan), #40/#41 cards updated.
+
+## Tick 19 — 2026-08-22
+
+- Consumed the decisive deliveries (results aef0f04 + 1158e27): #35 rim losses
+  LOSE to plain LoRA; #36 rim-KV LOSES to all-token on held-out; #38 v2 mixed
+  (helps seq136, hurts dec_seq132); oracle null must be per-model.
+- Added the missing error bars myself: paired bootstrap on delivered per_frame
+  (data/bootstrap_h5_h6_2026-08-22.md) — both kills significant on seq136,
+  H6's on both seqs.
+- State updates: H5 refuted-by-control, H6 refuted-on-held-out, H11 blocked
+  (precondition failed), H12 registered (GPU-authored lens-Jacobian FiLM,
+  pre-registered shuffled-field kill bar), plain-LoRA = standing baseline.
+- findings.md: new section "The reframe (2026-08-22)" — rim deficit is a
+  global lens-prior mismatch; four region-targeted failures vs global wins.
+- Dashboard: new section 二·十 (full experiment review + verdict + regear),
+  header/nav/queue rows updated. Consumption comment with bootstrap CIs
+  posted on #35; H12 pilot declared GPU priority 1.
+- POLICY correction noted: this Mac no longer imports torch — local "verified"
+  claims now only cover pure-python/numpy tests.

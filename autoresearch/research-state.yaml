@@ -65,7 +65,7 @@ hypotheses:
       multi-frame consistency term that routes parallax evidence into rim
       depth, closes >=half of the distance-controlled rim penalty on held-out
       scenes, IMPROVES pose (RRA/RTA), and beats the readout head.
-    status: active   # TRAINING DELIVERED 2026-08-19 (#35: full+plain, 20ep@504, curves healthy; two device bugs found by GPU, fixed on organized 53c06c4); EVALS still owed by the box (8 JSONs, addendum re-requested)
+    status: refuted-by-control   # EVALS LANDED 2026-08-22 (results aef0f04): plain LoRA (control) MATCHES OR BEATS full rim-loss arm on both held-out seqs — near-rim seq136 -83.5% vs -80.6%, dec_seq132 -33.5% vs -33.3%; plain also wins pose (13.51->11.52 deg vs full 13.51->13.73). CPU paired bootstrap on delivered per_frame (2026-08-22): full-minus-plain +0.038 [+0.017,+0.059] on seq136 = rim losses SIGNIFICANTLY WORSE; seq132 tie [-0.018,+0.035]. The big rim gain is bought by LoRA finetuning per se, not by the rim-targeted terms. Caveat: eval_lora scores euclidean-range, frozen bench rows planar-z — cross-table magnitudes blocked (cpu ticket), within-table comparisons clean. plain-LoRA row PROMOTED to the standing adaptation baseline every method must beat.
     motivation: "Human-directed method track 1 (improving backbones). Every component is dictated by a measured finding: compression map (runs 008b/009), rim-feature dependence (runs 004-007), context-buys-the-center (024B)."
     parent: null
     priority: high
@@ -76,7 +76,7 @@ hypotheses:
       band) injects multi-frame evidence into rim depth at a fraction of full
       temporal attention's cost, breaking the "context buys the center" wall
       that ticket-024B measured.
-    status: active   # TRAINING DELIVERED (#36); EVALS owed (4 JSONs + probe_kv addendum). H6.1 KV probe (exploratory, train scene): rim-KV == full-KV near_rim (0.684 vs 0.685) at HALF the KV -> module 0.23x all-token attention cost; center-KV +18%. Spark3R asymmetry confirmed on our module from the geometric side.
+    status: refuted-on-held-out   # EVALS LANDED 2026-08-22 (results aef0f04): H6.1's train-scene "rim-KV == full-KV" DOES NOT SURVIVE held-out — alltok control -75.9% vs rim -52.2% on seq136, and rim arm makes dec_seq132 WORSE (+3.2% vs alltok -6.2%). CPU paired bootstrap (2026-08-22): rim-minus-alltok +0.177 [+0.163,+0.193] seq136 and +0.027 [+0.015,+0.039] seq132 — significantly worse on BOTH. The 0.48x-FLOPs efficiency claim is not free; the cross-frame module works, restricting it to rim tokens is what fails. Temporal context itself remains real (#22 stride-10: da3_large nymeria -10..-13%) — the surviving question is temporal-scale, not token-subset.
     motivation: "Human-directed method track 2 (efficient fisheye video model). Efficiency angle is principled: rim tokens are ~40% of the cone; the center provably doesn't need temporal help."
     parent: null
     priority: high
@@ -88,7 +88,7 @@ hypotheses:
       on ADT + ScanNet++ (+ KITTI-360/TUM-VI/WideDepth as available), against
       DAC, UniK3D, DA3, VGGT-Omega, RayTun3R, Fisheye3R, CAM3R (the last
       three have working reproductions IN THIS REPO).
-    status: pending   # 2026-08-21 slamfov #23 radial half landed (results 8e5fb5e): oracle null reads 1.63-2.84x pooled rim effect with ZERO field dependence -> distance-standardised spread is the only citable form; ALL 5 models exceed the null after standardisation (vggt_omega 1.83/1.96, dav2_large 1.41/1.57 vs null 1.10/1.26) -> rim degradation REAL on real footage; accuracy and evenness are different axes (vggt_omega best absolute AND steepest field). ADOPT: oracle-null row + two-way table in our bench protocol. #40 replanned by GPU recon: ADT has NO non-Apartment scene (184 Apartment + 52 Lite object-recog); bedroom segment in seq132 (502 frames, annotated) -> cross-ROOM probe, ladder cross-sequence < cross-room < cross-building. #41 Part B unblocked (meshes + renderpy present; only render_depth missing).
+    status: pending   # 2026-08-21 slamfov #23 radial half landed (results 8e5fb5e): oracle null reads 1.63-2.84x pooled rim effect with ZERO field dependence -> distance-standardised spread is the only citable form; ALL 5 models exceed the null after standardisation (vggt_omega 1.83/1.96, dav2_large 1.41/1.57 vs null 1.10/1.26) -> rim degradation REAL on real footage; accuracy and evenness are different axes (vggt_omega best absolute AND steepest field). ADOPT: oracle-null row + two-way table in our bench protocol. #40 replanned by GPU recon: ADT has NO non-Apartment scene (184 Apartment + 52 Lite object-recog); bedroom segment in seq132 (502 frames, annotated) -> cross-ROOM probe, ladder cross-sequence < cross-room < cross-building. #41 Part B unblocked (meshes + renderpy present; only render_depth missing). 2026-08-22 (results 1158e27): the oracle null is NOT one number — nymeria falls with strata count (1.295@4 -> 1.129@10, still falling = coarseness) but aea PLATEAUS ~1.10 from 6 strata (residual is something else); null GROWS with model error size (sigma 0.05->0.30m: aea 1.068->1.169, nymeria 1.087->1.283) because AbsRel=|err|/GT and the rim sees nearer surfaces -> a per-MODEL null (matched to that model's own error scale) is required; one shared null under-credits noisy models. #38 v2 (aef0f04): double-conversion fix FLIPPED a conclusion — adaptation now helps seq136 (whole -7.2%, near-rim -15.6%) and hurts dec_seq132 (+47.3%/+37.6%); mixed, no v1 number citable.
     motivation: "Human-directed: no CVPR paper without it. The in-repo reproductions are the unfair advantage — most labs cannot run these baselines."
     parent: null
     priority: high
@@ -246,10 +246,22 @@ hypotheses:
       their epipolar curves, KV drawn from t-8/t-16 (metric horizon; token pitch
       ~3 deg needs >=5.5cm baseline) not t-1..t-4 (appearance horizon). Gain must
       rise monotonically with baseline-length bin and vanish in the lowest bin.
-    status: proposed   # brainstorm consensus M3 (Fable+Opus invented epipolar-KV independently; Opus's baseline arithmetic re-scoped the horizon). Training-free epipolar-masking probe on the #36 checkpoint first — cheap kill if the H6 module turns out to aggregate band statistics rather than correspond (the honest alternative reading of rim-KV==full-KV). Efficiency claims in wall-clock, not FLOPs (per-query gathers are memory-bound). Gated on #36 held-out evals (H6.1 is train-scene/exploratory).
+    status: blocked-precondition-failed   # 2026-08-22: the gate this was waiting on (#36 held-out evals) CLOSED AGAINST it — rim-KV significantly worse than all-token on both held-out seqs (see H6). The design's premise (rim tokens are where cross-frame evidence pays; restrict KV there for free efficiency) is dead in its efficiency form. What survives is only the temporal-scale claim (metric horizon t-8/t-16 vs appearance horizon, corroborated by #22 stride-10) — if revived, it must be as FULL-field epipolar attention with the temporal-scale claim as the contribution, and it must first beat the plain all-token module which is now the measured stronger baseline. Do not spend GPU here before H12 resolves.
     motivation: "F3 says geometry alone recovers <half the rim gain — H9 needs a content-dependent second stage; this is it, and it is the video-architecture leg of the paper."
     parent: H6
-    priority: medium
+    priority: low
+  - id: H12
+    statement: >
+      Lens-Jacobian conditioning: per-token FiLM on the last ViT block driven by
+      the local lens Jacobian shape fields log_area = log(d'(th)*d(th)/sin th)
+      and log_aniso = log(d'(th)*sin th/d(th)) (focal length cancels — the field
+      encodes the LENS, not the sensor) beats the same architecture + parameter
+      count conditioned on a position-SHUFFLED field. If real <= shuffled, stop:
+      publish as the fourth controlled negative sealing the global-mismatch reframe.
+    status: proposed-pilot-queued   # registered by GPU-Claude 2026-08-22 (organized 4a9fe8a..5ce4fca): primitive + FiLM + 3 arms (jac / shuffled / theta-only) built, 10 CPU tests green, zero-init = bit-identical start pinned by test. Motivating measurement: on Aria's calib log_area PEAKS at 48.9 deg then FALLS; log_aniso crosses ZERO near 50 deg, -0.191 at 54.83 — the rim band differs in KIND, so any monotone-in-theta scalar weight (H5's form) cannot represent it: a concrete mechanism for H5's loss to its control. Pilot bug already caught pre-run: checkpoint filter saved ZERO LoRA tensors (fixed 5ce4fca, found by tensor-norm audit not by any error). Loss is PLAIN (alpha=0) to avoid re-importing the refuted rim weighting. Open question flagged: is the near-rim non-monotonicity physical or a KB4-fit artefact.
+    motivation: "The unifying reframe after three rim-targeted losses to controls (H5, H6, H7+MoE) while global lens ops win (rect_derect, plain LoRA): the rim deficit is a GLOBAL lens-prior mismatch whose symptom is loudest at the rim. Feed the network the local image-formation geometry instead of telling it where to try harder. Transfer story: f cancels -> same field family on any lens -> ScanNet++ 170-deg cross-lens row becomes the test of the claim, aligning with H9's GT-free framing."
+    parent: H5
+    priority: high
 
 brainstorm_2026_08_19:
   process: "3 agents (Fable/Opus/Sonnet), independent proposals (~18) then adversarial cross-critique; human-directed (decouple pose/depth, center+rim experts, latent fusion, efficiency)"

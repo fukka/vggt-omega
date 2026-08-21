@@ -56,21 +56,54 @@ scale_shift, range domain, full joint tables (zone pools hide collateral).
 
 ## Method-phase status (post-pivot, 2026-08-27)
 
-- **H5 (rim-targeted LoRA):** mechanics verified end to end on CPU (five-part
-  loss tests — which caught and fixed a ~1 px KB4-inversion bug in the shared
-  camera code; LoRA-disabled path bit-identical). CPU pilot (exploratory,
-  frame-split): ALL zones improve on held-out frames (near rim −60%, center
-  −27%), no collateral, defaults sane. Protocol claims await #35 (scene-level
-  holdout + pose + plain-LoRA control).
-- **H6 (peripheral cross-frame attention):** module verified (zero-init
-  identity; pose path structurally untouched). CPU pilot did NOT confirm —
-  and diagnosed itself: sparse "adjacent" frames (3.3 s) violate the module's
-  premise, and the same uniform-subsampling trap sat in the trainer for the
-  box run; dense-window sampling landed before #36 started. Center-safety
-  wording corrected to token-level. Efficiency measured: rim queries = 0.48×
-  FLOPs of all-token. Real test = #36 dense.
-- **BENCH:** frozen-row machinery smoke-tested (#37); RayTun3R comparison row
-  runnable (#38). In flight: #35–#38.
+- **H5 (rim-targeted LoRA): REFUTED BY ITS OWN CONTROL (2026-08-22, #35 evals).**
+  Plain LoRA matches or beats the full rim-loss arm on both held-out sequences
+  (near-rim −83.5% vs −80.6% on seq136; −33.5% vs −33.3% on dec_seq132) and wins
+  pose (13.51→11.52° vs 13.51→13.73°). Mac-side paired bootstrap on the delivered
+  per-frame values: full-minus-plain +0.038 [+0.017,+0.059] on seq136 — the rim
+  losses are significantly WORSE there, a tie on the other. The gain is bought by
+  LoRA finetuning per se. Plain-LoRA is now the standing adaptation baseline.
+- **H6 (rim-restricted cross-frame attention): REFUTED ON HELD-OUT (2026-08-22,
+  #36 evals).** H6.1's train-scene "rim-KV==full-KV" does not survive: all-token
+  −75.9% vs rim −52.2% on seq136, and the rim arm makes dec_seq132 worse (+3.2%
+  vs −6.2%). Bootstrap: rim worse on BOTH seqs outside error bars (+0.177 and
+  +0.027). The module works; the restriction is what fails. 0.48× FLOPs is not free.
+- **#38 (RayTun3R rows) v2:** the double-conversion fix FLIPPED the conclusion —
+  adaptation helps seq136 (−7.2% whole, −15.6% near-rim) and hurts dec_seq132
+  (+47.3%/+37.6%). Mixed, not uniformly negative; no v1 number citable.
+- **Oracle null refinement (results 1158e27):** the null is not one number — it
+  grows with the model's own error size (σ 0.05→0.30 m: aea 1.068→1.169) and
+  aea's residual plateaus at ~1.10 regardless of strata. A per-model null is
+  required; a single shared null under-credits noisy models.
+- **BENCH:** frozen rows done; #40 = cross-room bedroom probe; #41 unblocked.
+
+## The reframe (2026-08-22): the rim deficit is a global lens-prior mismatch
+
+Three rim-targeted interventions have now lost to their own controls — H5's rim
+losses to plain LoRA, H6's rim-KV to all-token, H7's θ-gated LoRA to uniform
+(and the center/rim MoE was killed unanimously before any GPU spend). Meanwhile
+every intervention that helps is GLOBAL: plain LoRA, rect_derect on slambench,
+the whole-image feature head. Read together: **the rim deficit is not a
+region-shaped capacity problem; it is the loudest symptom of a global mismatch
+between the backbone's near-pinhole image-formation prior and the fisheye's.**
+"Add capacity where the symptom is loudest" has now failed four ways — that
+refutation chain is itself paper material.
+
+GPU-Claude independently registered **H12 (lens-Jacobian FiLM conditioning)**
+as the constructive form of this reframe, with a mechanism that explains H5's
+failure rather than restating it: on Aria's calibration, log_area peaks at
+48.9° then FALLS, and log_aniso crosses ZERO near 50° (−0.191 at 54.83°) — the
+rim band differs in KIND, and a monotone-in-θ scalar weight cannot represent a
+field that turns over and changes sign inside the band it weights. The pilot's
+kill bar is pre-registered (real field must beat a position-shuffled field at
+equal capacity), and a silent checkpoint bug (zero LoRA tensors saved) was
+caught by tensor-norm audit before any wrong number shipped.
+
+Consequences for the brainstorm survivors: **H11 is blocked** (its precondition
+— rim-KV==full-KV — failed held-out; only the temporal-scale claim survives,
+corroborated by #22 stride-10). **H9 gains weight** (GT-free, per-lens, same
+global-field diagnosis; unaffected by the kills). **H10 unaffected** (pose leg).
+Priority: H12 pilot > H9 pre-checks > H10; no GPU on H11 before H12 resolves.
 
 ## Multi-agent architecture brainstorm (2026-08-19, human-directed)
 
