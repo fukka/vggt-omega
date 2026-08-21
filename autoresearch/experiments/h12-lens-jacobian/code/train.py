@@ -181,10 +181,18 @@ def main(argv=None) -> None:
         log.append(rec)
         print(f"[h12/{a.arm}] ep{ep:02d} depth {rec['depth']:.4f} "
               f"({cnt} steps, {rec['sec']}s)", flush=True)
-        torch.save({"lora": {k: v for k, v in net.state_dict().items()
-                             if "lora_" in k},
-                    "film": film.state_dict(),
-                    "arm": a.arm, "config": vars(a)}, out / "cond_last.pt")
+        # Collect from the LoRALinear modules themselves, as h5 does. The
+        # obvious `{k: v for k, v in net.state_dict() if "lora_" in k}` matches
+        # NOTHING -- lora.py names its tensors `.A`/`.B`, so that filter saved a
+        # checkpoint with zero LoRA tensors and the first pilot's checkpoints
+        # were unloadable. Caught by checking the saved norms, not by any error.
+        state = {name: {"A": m.A.detach().cpu(), "B": m.B.detach().cpu()}
+                 for name, m in hits}
+        assert state, "no LoRA tensors collected -- refusing to save an empty checkpoint"
+        torch.save({"lora": state, "patterns": LORA_PATTERNS,
+                    "film": film.state_dict(), "field": field.detach().cpu(),
+                    "arm": a.arm, "epoch": ep, "config": vars(a)},
+                   out / "cond_last.pt")
         (out / "train_log.json").write_text(json.dumps(log, indent=1))
     print(f"[h12/{a.arm}] done -> {out}")
 
