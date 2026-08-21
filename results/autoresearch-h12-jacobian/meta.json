@@ -1,0 +1,27 @@
+{
+  "run_id": "autoresearch-h12-jacobian",
+  "experiment": "autoresearch/experiments/h12-lens-jacobian",
+  "date_utc": "2026-08-22",
+  "box": "lambda_63, RTX 6000 Ada",
+  "verdict": "STOP — the pre-registered kill criterion fired. `jac` does not beat `shuffled` on either held-out sequence, and is the worst of three arms on near-rim on both.",
+  "design": {
+    "arms": {"jac": "real (log_area, log_aniso, theta/theta_max) per token",
+             "shuffled": "same values, fixed permutation of token positions",
+             "theta": "theta only, zero-padded to equal width"},
+    "held_fixed": "architecture, parameter count (LoRA 122.9k + FiLM 25.5k), data, seed, optimiser, loss",
+    "loss": "PLAIN depth loss (alpha=0) — rim weighting is what lost to its control in H5",
+    "train_seqs": ["seq131", "seq133", "seq134", "seq135"],
+    "held_out": ["seq136", "decoration_seq132"],
+    "epochs": 20, "size": 504
+  },
+  "decider_near_rim_after": {
+    "seq136": {"jac": 0.2477, "shuffled": 0.2354, "theta": 0.2400},
+    "decoration_seq132": {"jac": 0.2394, "shuffled": 0.2337, "theta": 0.2334}
+  },
+  "the_one_thing_that_is_not_nothing": "on decoration_seq132 the arms differ far more in the CENTRE than at the rim, and there jac is much the best (centre +0.31% vs shuffled +16.73%; near-centre +29.97% vs +57.49%). The conditioning is not inert — it protects the centre rather than helping the rim. Reported because it is real, not as a salvaged result; it was not pre-registered and it does not rescue the hypothesis.",
+  "not_claimed": [
+    "One seed, one run per arm; margins are small (5% relative on seq136) and no error bars were computed. The stop rests on the DIRECTION plus pre-registration, not on the size of the gap.",
+    "Not that conditioning cannot work — only that FiLM on the last ViT block, at this capacity, on this data, does not.",
+    "Nothing about cross-lens transfer: that was the reason for the design and was never reached."
+  ]
+}
