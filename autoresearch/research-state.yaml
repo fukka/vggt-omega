@@ -68,7 +68,7 @@ hypotheses:
     status: refuted-by-control   # EVALS LANDED 2026-08-22 (results aef0f04): plain LoRA (control) MATCHES OR BEATS full rim-loss arm on both held-out seqs — near-rim seq136 -83.5% vs -80.6%, dec_seq132 -33.5% vs -33.3%; plain also wins pose (13.51->11.52 deg vs full 13.51->13.73). CPU paired bootstrap on delivered per_frame (2026-08-22): full-minus-plain +0.038 [+0.017,+0.059] on seq136 = rim losses SIGNIFICANTLY WORSE; seq132 tie [-0.018,+0.035]. The big rim gain is bought by LoRA finetuning per se, not by the rim-targeted terms. Caveat: eval_lora scores euclidean-range, frozen bench rows planar-z — cross-table magnitudes blocked (cpu ticket), within-table comparisons clean. plain-LoRA row PROMOTED to the standing adaptation baseline every method must beat.
     motivation: "Human-directed method track 1 (improving backbones). Every component is dictated by a measured finding: compression map (runs 008b/009), rim-feature dependence (runs 004-007), context-buys-the-center (024B)."
     parent: null
-    priority: high
+    priority: closed
   - id: H6
     statement: >
       Peripheral cross-frame attention (video architecture): temporal
@@ -79,7 +79,7 @@ hypotheses:
     status: refuted-on-held-out   # EVALS LANDED 2026-08-22 (results aef0f04): H6.1's train-scene "rim-KV == full-KV" DOES NOT SURVIVE held-out — alltok control -75.9% vs rim -52.2% on seq136, and rim arm makes dec_seq132 WORSE (+3.2% vs alltok -6.2%). CPU paired bootstrap (2026-08-22): rim-minus-alltok +0.177 [+0.163,+0.193] seq136 and +0.027 [+0.015,+0.039] seq132 — significantly worse on BOTH. The 0.48x-FLOPs efficiency claim is not free; the cross-frame module works, restricting it to rim tokens is what fails. Temporal context itself remains real (#22 stride-10: da3_large nymeria -10..-13%) — the surviving question is temporal-scale, not token-subset.
     motivation: "Human-directed method track 2 (efficient fisheye video model). Efficiency angle is principled: rim tokens are ~40% of the cone; the center provably doesn't need temporal help."
     parent: null
-    priority: high
+    priority: closed
     # status detail: module + trainer + eval CPU-verified (zero-init identity, camera outputs bit-identical via depth-head-only feats copy); training = ticket #36, queued
   - id: BENCH
     statement: >
@@ -104,7 +104,7 @@ hypotheses:
     status: refuted   # all three predictions failed: gated==uniform at r=8 AND r=4 (0.572/0.567, 0.754/0.753); gate curve flat (|g-1|~0.06). Mechanism: PE already puts spatially-varying corrections inside uniform LoRA's hypothesis class. Kept as a paper ablation; no GPU spend.
     motivation: "Model-level novelty per human directive; input-geometry-conditioned PEFT is unclaimed in the 2026-08-19 survey; inference-free (g(theta) precomputable per token)."
     parent: H5
-    priority: high
+    priority: closed
   - id: H8
     statement: >
       Equal-solid-angle tokenization: resampling KB4 input to an equal-area
@@ -114,7 +114,7 @@ hypotheses:
     status: refuted   # Probe A 2026-08-19: equisolid remap degrades EVERY zone (+16..+31%) at equal tokens — radial failure is not sampling density; efficiency parity dead a fortiori. Part of the input-surgery-hurts pattern (H3/Center-PH/H8 vs feature/loss-side fixes).
     motivation: "Efficiency-headline candidate; complements H6 (fewer tokens) and attacks K2's gradient at its cause."
     parent: null
-    priority: medium
+    priority: closed
   - id: H1
     statement: >
       Peripheral pose value: on Aria-like fisheye, restricting correspondences to the
@@ -138,7 +138,7 @@ hypotheses:
     status: refuted   # run 004: the OPPOSITE — center-masked == vanilla, rim-masked 2.5x worse; the model's pose lives in the periphery
     motivation: "Links H1.1's recoverable span value to the adapter's job; CPU-runnable (DA3-Small on Mac)."
     parent: H1
-    priority: high
+    priority: closed
   - id: H1.3
     statement: >
       The span (H1.1) and rim-dependence (H1.2) findings transfer from the ~170deg
@@ -161,7 +161,7 @@ hypotheses:
       48-param (theta x predicted-depth) table can fix on held-out frames.
     status: refuted   # partially: near-rim -18..-25% transfers (the table is now the mandatory baseline), but near-center collateral shows output-indexed correction cannot invert the compression
     parent: H2
-    priority: high
+    priority: closed
   - id: H2.2
     statement: >
       Frozen-feature head (25k params, readout-side, pose untouched) beats the
@@ -204,7 +204,7 @@ hypotheses:
     status: refuted   # run_014b: tables unchanged to 3rd decimal; mechanism measured — within-patch distortion on Aria KB4 is <=0.2px even at the rim; distortion lives BETWEEN patches. N2 patch-content branch closed with a number.
     motivation: "Novelty axis N2, cheapest entry point: parameter-free, partially CPU-testable with DA3-Small."
     parent: null
-    priority: medium
+    priority: closed
   - id: H4
     statement: >
       Dynamic-region handling: hand/dynamic pixels in ADT contribute a measurable,
@@ -213,7 +213,7 @@ hypotheses:
     status: refuted   # corruption hypothesis dead, twice-verified: #31 (hands ~ occlusion) and #34 (GT provenance confirmed: with-skeleton depth contains the person, #28 numbers stand; synthetic stream unsuitable as counterfactual — domain gap swamps the effect). Yield: placement measurement + loss hygiene. meal anomaly isolated, open.
     motivation: "Novelty axis N4 — now measured to overlap the compression zone and the pose-critical band; the four axes unify at the near-field rim."
     parent: null
-    priority: high
+    priority: closed
   - id: H9
     statement: >
       Self-supervised radial-field removal (RayCal-TTA): classical bearing-space
@@ -258,10 +258,21 @@ hypotheses:
       encodes the LENS, not the sensor) beats the same architecture + parameter
       count conditioned on a position-SHUFFLED field. If real <= shuffled, stop:
       publish as the fourth controlled negative sealing the global-mismatch reframe.
-    status: proposed-pilot-queued   # registered by GPU-Claude 2026-08-22 (organized 4a9fe8a..5ce4fca): primitive + FiLM + 3 arms (jac / shuffled / theta-only) built, 10 CPU tests green, zero-init = bit-identical start pinned by test. Motivating measurement: on Aria's calib log_area PEAKS at 48.9 deg then FALLS; log_aniso crosses ZERO near 50 deg, -0.191 at 54.83 — the rim band differs in KIND, so any monotone-in-theta scalar weight (H5's form) cannot represent it: a concrete mechanism for H5's loss to its control. Pilot bug already caught pre-run: checkpoint filter saved ZERO LoRA tensors (fixed 5ce4fca, found by tensor-norm audit not by any error). Loss is PLAIN (alpha=0) to avoid re-importing the refuted rim weighting. Open question flagged: is the near-rim non-monotonicity physical or a KB4-fit artefact.
-    motivation: "The unifying reframe after three rim-targeted losses to controls (H5, H6, H7+MoE) while global lens ops win (rect_derect, plain LoRA): the rim deficit is a GLOBAL lens-prior mismatch whose symptom is loudest at the rim. Feed the network the local image-formation geometry instead of telling it where to try harder. Transfer story: f cancels -> same field family on any lens -> ScanNet++ 170-deg cross-lens row becomes the test of the claim, aligning with H9's GT-free framing."
+    status: refuted-by-preregistered-criterion   # PILOT RAN AND LOST 2026-08-22 (results da38331). near-rim AbsRel held-out: seq136 jac 0.2477 vs shuffled 0.2354 vs theta 0.2400; dec_seq132 jac 0.2394 vs shuffled 0.2337 vs theta 0.2334 — jac is WORST of three on BOTH. The criterion was written before the run; GPU stopped, correctly, and did not proceed to ScanNet++. FIFTH controlled negative in the rim-intervention line, and the strongest form available (hand the network the geometry rather than tell it where to try harder). MAC POST-MORTEM 2026-08-24 (data/h12_gradient_and_field_sensitivity_2026-08-24.md), neither part a rescue: (1) jac-minus-control is MONOTONE IN THETA — count-weighted corr(diff,theta) +0.66 seq132 / +0.24 seq136 vs BOTH controls; seq132's nearest-depth column is perfectly monotone across all 8 rings (-0.092 on axis -> +0.019 at 51.4 deg). Real geometry helps on axis (beating theta-only too, so it is the Jacobian CONTENT not just a smooth radial field) and hurts at the rim. (2) the field is 10-40x less determined at the rim: +-1% per-coefficient KB4 perturbation swings log_aniso ~2% of its value at 30 deg but ~12% at 54.83 deg (summed over coefficients ~5% vs ~31%). Reading: conditioning pays where the field is well-determined, costs where it is not, crossover near the 45-50 deg turnover. Geometric conditioning is a CENTRE tool on this lens and must never again be sold as a rim fix. Gap: eval_cond.py emits no per_frame, so H12 alone among the kills has no error bars — cheap re-emit requested.
+    # superseded status detail (pre-run): primitive + FiLM + 3 arms built, 10 CPU tests green, zero-init = bit-identical start pinned by test. Motivating measurement: on Aria's calib log_area PEAKS at 48.9 deg then FALLS; log_aniso crosses ZERO near 50 deg, -0.191 at 54.83 — the rim band differs in KIND, so any monotone-in-theta scalar weight (H5's form) cannot represent it: a concrete mechanism for H5's loss to its control. Pilot bug already caught pre-run: checkpoint filter saved ZERO LoRA tensors (fixed 5ce4fca, found by tensor-norm audit not by any error). Loss is PLAIN (alpha=0) to avoid re-importing the refuted rim weighting. Open question flagged: is the near-rim non-monotonicity physical or a KB4-fit artefact.
+    motivation: "The unifying reframe after three rim-targeted losses to controls (H5, H6, H7+MoE) while global lens ops win (rect_derect, plain LoRA): the rim deficit is a GLOBAL lens-prior mismatch whose symptom is loudest at the rim. Feed the network the local image-formation geometry instead of telling it where to try harder. Transfer story: f cancels -> same field family on any lens -> ScanNet++ 170-deg cross-lens row becomes the test of the claim, aligning with H9's GT-free framing. OUTCOME: the reframe SURVIVES an experiment built to exploit it and failing — which strengthens rather than weakens it, since the failure mode is again 'the rim is not separable'."
     parent: H5
-    priority: high
+    priority: closed
+  - id: H13
+    statement: >
+      Distillation ladder: with VGGT-1B teacher predictions cached offline
+      (depth + conf, native convention recorded in the manifest), a ladder of
+      small student architectures can be trained teacher-free and compared for
+      the accuracy/cost frontier on fisheye — the efficiency leg of the paper.
+    status: proposed-infrastructure-built   # registered by GPU-Claude 2026-08-24 (organized 3afbace): cache_teacher.py measures VGGT-1B at 1157.9M params / 5.50GB peak / 70ms per frame at 504px, so caching is what makes an architecture ladder affordable at all. conf cached deliberately (whether the teacher KNOWS it degrades toward the rim is a separate question). MAC WARNINGS ATTACHED 2026-08-24, both from evidence already in this repo: (1) slamfov #23 measured VGGT-Omega as the model with the STEEPEST rim error field of the five tested (1.83/1.96 standardised vs dav2_large 1.41/1.57) — a student matching this teacher everywhere INHERITS the worst rim behaviour of any model we benchmarked, so the rim must be supervised by GT/geometry, not by the teacher. (2) the DAv2 Phase-A gate already measured that VGGT-confidence gating UNDERPERFORMS ungated (a1 0.0474 vs a0 0.0469) because conf is high on easy central textured pixels and low exactly on the periphery/edges where the error lives — conf-weighted distillation would actively down-weight the band this project exists to fix. Use conf as the target of a "does the teacher know?" probe, never as a loss weight; VGGT's own multi-view consistency (1-r)^pow was the better signal there. PRECONDITION NOT CLEARED: the brainstorm killed "distillation student (now)" pending F3's apartment-overfit question — either clear F3 first or scope H13 to the efficiency frontier (params/latency at matched accuracy) rather than to generalisation.
+    motivation: "The human's original brief included efficient architectures. After five region-targeted depth methods lost to their controls, the constructive space that remains is (a) GT-free global adaptation (H9) and (b) the accuracy/cost frontier — H13 is (b), and it is orthogonal to the rim question rather than another attempt at it."
+    parent: null
+    priority: medium
 
 brainstorm_2026_08_19:
   process: "3 agents (Fable/Opus/Sonnet), independent proposals (~18) then adversarial cross-critique; human-directed (decouple pose/depth, center+rim experts, latent fusion, efficiency)"

@@ -624,3 +624,32 @@
   posted on #35; H12 pilot declared GPU priority 1.
 - POLICY correction noted: this Mac no longer imports torch — local "verified"
   claims now only cover pure-python/numpy tests.
+
+## Tick 20 — 2026-08-24
+
+- Pulled: H12 pilot RAN AND LOST (results da38331) — jac worst of three arms on
+  both held-out sequences; GPU stopped on the pre-registered criterion. Fifth
+  controlled negative. GPU also opened H13 (teacher caching for a distillation
+  ladder, organized 3afbace).
+- Mac post-mortem (data/h12_gradient_and_field_sensitivity_2026-08-24.md), run
+  locally — jacobian.py is pure numpy and DOES run on this Mac (10 tests/0.86s):
+  (1) jac-minus-control is monotone in theta, corr +0.66 (seq132) / +0.24
+  (seq136) against BOTH controls; seq132's nearest-depth column perfectly
+  monotone over 8 rings, crossing zero at 38-45 deg. Real geometry helps on
+  axis, hurts at the rim, and beats theta-only at the centre so it is content
+  not just radiality. (2) log_aniso is 10-40x more sensitive to KB4 coefficient
+  perturbation at the rim than mid-field (~31% vs ~5% relative). Reading:
+  conditioning is a CENTRE tool on this lens.
+- State: H12 refuted-by-preregistered-criterion; H13 registered with two
+  evidence-based guardrails (teacher has the steepest rim field of the five
+  benchmarked; VGGT-conf gating already measured worse than ungated on the
+  DAv2 work); all refuted hypotheses' priorities set to closed. Live set is now
+  BENCH, H9, H10, H13 (+ H2 family, H11 blocked).
+- Strategy: every "rim as a separate sub-problem" hypothesis is closed. H9
+  promoted to priority 1 — its locked bar is global by construction, the one
+  property every surviving intervention shares.
+- Posted to #35: the two analyses, the re-prioritisation, the H13 guardrails,
+  and two cheap asks (per_frame re-emit for H12; SLAM-stream enumeration, which
+  gates H9's design and cannot be checked locally — the Mac sample has
+  groundtruth/ only, no VRS).
+- Dashboard: new section 二·十一; 二·十's ledger and plan rows updated.

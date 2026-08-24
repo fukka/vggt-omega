@@ -99,11 +99,66 @@ kill bar is pre-registered (real field must beat a position-shuffled field at
 equal capacity), and a silent checkpoint bug (zero LoRA tensors saved) was
 caught by tensor-norm audit before any wrong number shipped.
 
+### H12 RAN AND LOST (2026-08-22, results da38331) — the fifth controlled negative
+
+near-rim AbsRel, held-out: seq136 jac 0.2477 / shuffled **0.2354** / theta 0.2400;
+dec_seq132 jac 0.2394 / shuffled 0.2337 / theta **0.2334**. **`jac` is the worst
+of the three on both sequences** — the real geometry field loses to a scrambled
+one carrying identical values at identical capacity. GPU stopped on the
+pre-registered criterion and did not proceed to ScanNet++. This was the
+strongest available form of the idea (hand the network the geometry rather than
+tell it where to try harder), and the reframe that motivated it survives an
+experiment built to exploit it and failing.
+
+**Mac post-mortem (2026-08-24, `data/h12_gradient_and_field_sensitivity_2026-08-24.md`),
+neither half a rescue:**
+
+1. **The real field's advantage is monotone in eccentricity and reverses at the
+   rim.** Count-weighted corr(jac−control, θ) = **+0.66** on seq132 and +0.24 on
+   seq136, against *both* controls; seq132's nearest-depth column is perfectly
+   monotone across all eight θ rings (−0.092 on axis → +0.019 at 51.4°). Real
+   geometry helps on axis — beating θ-only too, so it is the Jacobian *content*,
+   not merely a smooth radial field — and hurts at the rim.
+2. **The field is 10–40× less determined at the rim.** A ±1% perturbation of a
+   single KB4 coefficient swings log_aniso by ~2% of its value at 30° but ~12%
+   at 54.83° (≈5% vs ≈31% summed over the four coefficients). Caveat: 1% is a
+   conditioning probe, not Aria's published coefficient uncertainty, so this
+   does not settle whether the rim turnover is physical or a fit artefact.
+
+Together: **conditioning pays where the field is well-determined and costs where
+it is not**, with the crossover near the same 45–50° band where log_aniso turns
+over. A confidently-wrong input is worse than a scrambled one — which is exactly
+what the `shuffled` control measured. Consequence for the line: **geometric
+conditioning is a centre tool on this lens** and must not be sold as a rim fix.
+
+Process gap worth fixing: `eval_cond.py` emits no `per_frame`, so H12 alone
+among the kills has no error bars, and its largest margin (the centre effect,
++0.31% vs +16.73% on seq132) is a single unbarred number. Cheap re-emit asked for.
+
 Consequences for the brainstorm survivors: **H11 is blocked** (its precondition
 — rim-KV==full-KV — failed held-out; only the temporal-scale claim survives,
 corroborated by #22 stride-10). **H9 gains weight** (GT-free, per-lens, same
 global-field diagnosis; unaffected by the kills). **H10 unaffected** (pose leg).
-Priority: H12 pilot > H9 pre-checks > H10; no GPU on H11 before H12 resolves.
+
+**Standing after H12 (2026-08-24).** Every hypothesis of the form "treat the rim
+as a separate sub-problem" is now closed: H5, H6, H7, the MoE, and H12. The
+constructive space that remains has exactly two shapes, and neither is
+region-targeted:
+
+- **H9 (RayCal-TTA)** — the last untested *depth* method. Its locked bar ("one
+  affine must serve the whole image") is global by construction, which is the
+  one property every surviving intervention shares. It is now priority 1.
+- **H10 (FrozenMatch)** — the pose leg, untouched by the depth kills; classical
+  geometry is ~10× more accurate than the learned pose path on solvable pairs.
+- **H13 (distillation ladder)** — GPU's new efficiency leg (teacher caching
+  built 2026-08-24). Orthogonal to the rim question rather than another attempt
+  at it, with two guardrails from evidence already in this repo: the VGGT
+  teacher has the **steepest** rim error field of the five models we
+  benchmarked, so a student that matches it everywhere inherits the worst rim
+  behaviour available; and VGGT confidence gating already measured *worse* than
+  ungated on this repo's DAv2 work, because conf is high on easy central pixels
+  and low exactly on the band we care about. Distil the centre; supervise the
+  rim from GT or geometry; use conf as a probe target, never a loss weight.
 
 ## Multi-agent architecture brainstorm (2026-08-19, human-directed)
 
