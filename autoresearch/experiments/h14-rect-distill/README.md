@@ -89,6 +89,31 @@ The harness note that makes this non-trivial: fovbench rectifies at focal
 `test_the_fovbench_85_deg_rectification_does_not_cover_the_cone` exists so that
 number can never be quietly reused as if it did.
 
+## The standing warning about distillation, and why this design is its answer
+
+H13's registration carries a Mac warning drawn from `slamfov` #23: a student
+that matches a fisheye-space teacher everywhere **inherits that teacher's rim
+behaviour**, and VGGT-Ω was measured as the steepest rim error field of the
+five models benchmarked (1.83/1.96 standardised, against dav2_large's
+1.41/1.57). The conclusion attached to it was that the rim must be supervised
+by GT or geometry, not by a teacher.
+
+That warning is about a teacher run **in fisheye space**, and it is exactly why
+this experiment's teacher is not one. 024A's whole content is that the same
+weights do not have the rim deficit when they are run on rectified input, so
+the `rect` teacher is not a copy of the model's fisheye rim behaviour — it is
+the model's *pinhole* behaviour, transported.
+
+The warning does apply, in full force, to the **`roundtrip` control**: that arm
+is a fisheye-space teacher and should therefore lock in the rim error rather
+than reduce it. So the standing warning becomes a prediction about the control,
+which is the strongest position a control can be in.
+
+The warning's second half is also respected: teacher confidence is **not**
+cached and **not** used. The DAv2 Phase-A gate already measured conf-weighted
+training as worse than ungated (a1 0.0474 vs a0 0.0469), because conf is high
+on easy central texture and low exactly on the band this project exists to fix.
+
 ## Pre-registered predictions
 
 **P1 (the decider).** `rect` beats `roundtrip` on `near_rim` on **both**

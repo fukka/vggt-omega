@@ -32,6 +32,27 @@ the argument as a measurement rather than as prose: across two lenses the real
 fields correlate > 0.9 at matching token positions, per-lens shuffled ones
 < 0.2. On one lens that difference is invisible.
 
+## The other half of the post-mortem, and how this design removes it too
+
+The Mac post-mortem of H12 (`data/h12_gradient_and_field_sensitivity_2026-08-24.md`)
+found a second reason the field could lose that is not the identifiability
+argument above: **`log_aniso` is 10-40x more sensitive to KB4 coefficient
+perturbation at the rim than mid-field** (~31% vs ~5% relative swing). The
+network was handed a quantity that is least determined exactly where the method
+needed it, and a confidently-wrong input can be worse than a scrambled one.
+
+That is a property of reading a *fitted* KB4 near the edge of the field it was
+fitted on, and this family largely does not have it: `equidistant`,
+`equisolid`, `stereographic`, `orthographic` and `rectilinear` have
+**closed-form, exact** `d` and `d'`, so their fields carry no fit uncertainty
+at all. **Both held-out lenses are analytic ones.** The three KB4 members
+(`aria_kb4`, `kb4x0.5`, `kb4x1.5`) keep a fitted lens in the training mix,
+which is realistic, but the decider does not rest on one.
+
+So the two live explanations for H12's null -- single-lens
+non-identifiability, and an ill-determined rim field -- are removed by the same
+experiment, and the arms still differ only in what the conditioner is shown.
+
 ## The setting
 
 Every frame is warped into a lens drawn from a family that all image **exactly
@@ -93,6 +114,16 @@ Losing to plain LoRA would mean the conditioning is not worth its 25.5k
 parameters even where it is identifiable — a fifth controlled negative, and a
 sharper one than H12's because it would be measured in the setting the method
 was designed for.
+
+**P5 (the post-mortem's reading, tested rather than assumed).** The H12
+post-mortem found `jac - control` monotone in theta and reversing sign at
+38-45 deg: real geometry helped on axis and hurt at the rim, hence "geometric
+conditioning is a CENTRE tool on this lens". If that survives lens diversity --
+`jac` wins the centre on the held-out lens but still loses the rim -- then the
+centre-tool reading is confirmed independently of the two explanations above,
+and it is a finding rather than a consolation. If instead `jac`'s advantage
+extends to the rim once the lens varies, the centre-only shape was an artefact
+of the single-lens setting.
 
 **P4 (centre, as always).** No arm may damage `near_center` more than `none`
 does. Centre collateral killed H2.1 and is invisible in pooled zones, so the
