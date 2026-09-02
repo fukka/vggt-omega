@@ -165,6 +165,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
   <div class="meta">
     <span>61 项 CPU 测试全绿</span>
     <span>两条流水线在跑</span>
+    <span>前提 4/4 确认</span>
     <span>结论尚未产生</span>
     <span>分支 organized / results</span>
   </div>
@@ -183,8 +184,8 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       <ul class="stages">
         <li><span class="s-mark s-done">✓</span><span class="s-name">几何原语 + 15 项测试</span><span class="chip done">完成</span></li>
         <li><span class="s-mark s-done">✓</span><span class="s-name">前提预检（FOV 扫描）</span><span class="chip done">前提成立</span></li>
-        <li><span class="s-mark s-run">▸</span><span class="s-name">教师缓存 ×8（2 臂 × 4 序列）</span><span class="chip run">进行中</span></li>
-        <li><span class="s-mark s-wait">·</span><span class="s-name">三臂训练 rect / roundtrip / gt</span><span class="chip wait">排队</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">教师缓存 ×8（2 臂 × 4 序列）</span><span class="chip done">完成</span></li>
+        <li><span class="s-mark s-run">▸</span><span class="s-name">三臂训练 rect / roundtrip / gt</span><span class="chip run">进行中</span></li>
         <li><span class="s-mark s-wait">·</span><span class="s-name">留出评测 ×6（含姿态）</span><span class="chip wait">排队</span></li>
       </ul>
     </article>
@@ -326,6 +327,32 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
         这条已经写成测试留在代码里，免得以后有人再试一遍。
       </p>
     </div>
+    <h3 style="margin-top:28px">采用的配置，在四个训练序列上的预检</h3>
+    <p style="margin-bottom:14px">
+      95° 单视角，60 帧／序列，教师与原模型<strong>逐像素同集</strong>打分。前提 4/4 确认。
+    </p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <caption>方括号里是教师能看到该 zone 的比例 —— 近边缘只覆盖约 70%，最外圈没有监督信号，这是 H14 最可能的失败处。</caption>
+      <thead>
+        <tr><th>序列</th><th>近边缘</th><th>教师可见</th><th>近中心</th><th>中心</th><th>远场</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">seq131</td><td class="num good">−35.33%</td><td class="num">70.4%</td><td class="num bad">+34.36%</td><td class="num good">−5.44%</td><td class="num good">−13.64%</td></tr>
+        <tr><td class="mono">seq133</td><td class="num good">−24.55%</td><td class="num">68.7%</td><td class="num bad">+37.69%</td><td class="num good">−8.52%</td><td class="num good">−7.05%</td></tr>
+        <tr><td class="mono">seq134</td><td class="num good">−31.57%</td><td class="num">71.9%</td><td class="num bad">+33.13%</td><td class="num good">−4.03%</td><td class="num good">−4.66%</td></tr>
+        <tr><td class="mono">seq135</td><td class="num good">−34.74%</td><td class="num">71.2%</td><td class="num bad">+32.38%</td><td class="num good">−14.05%</td><td class="num good">−6.14%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <p style="margin-top:18px">
+      近中心那一列<strong>四个序列都是 +32…+38%</strong>，几乎是常数。这种一致性更像评测仿射的系统性摆放，而不是场景相关的真实损伤 ——
+      但在跑过 alignment-robustness 行之前，这只是一个待验证的解释。
+    </p>
     <p>
       所以最终采用<strong>单个 95° 视角</strong>：画幅 98.7% 真实、覆盖锥体的 84%。覆盖不到的最外圈就<strong>不给监督</strong> ——
       学生仍然看得见整张鱼眼图，得自己往外推。这是个诚实的设计，不是妥协掉的版本。
