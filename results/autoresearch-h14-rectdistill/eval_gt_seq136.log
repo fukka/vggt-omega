@@ -1,22 +1,22 @@
 [93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
-[97m[INFO ] using MLP layer as FFN[0m
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
 [eval] loaded LoRA into 8 layers from /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-rectdistill/gt/lora_last.pt
 
 depth joint AbsRel BEFORE -> AFTER:
-   0- 1 m  0.610>0.382 0.859>0.310 0.966>0.219 1.195>0.196 1.478>0.245 1.790>0.289 2.215>0.345 2.885>0.470
-   1- 2 m  0.286>0.204 0.358>0.225 0.410>0.194 0.468>0.198 0.479>0.201 0.564>0.213 0.692>0.220 0.891>0.226
-   2- 3 m  0.230>0.125 0.230>0.133 0.226>0.130 0.224>0.129 0.225>0.141 0.235>0.152 0.237>0.163 0.333>0.199
-   3- 5 m  0.235>0.131 0.255>0.127 0.264>0.116 0.261>0.113 0.238>0.115 0.212>0.122 0.190>0.131 0.194>0.151
-   5-10 m  0.262>0.142 0.339>0.139 0.381>0.108 0.379>0.099 0.367>0.104 0.329>0.107 0.274>0.112 0.225>0.128
-near_rim(<=2m,>=38deg): 1.359 -> 0.281 (-79.3%)
-near_center(<=2m,<=11deg): 0.449 -> 0.245 (-45.5%)
-center(<=11deg): 0.295 -> 0.157 (-46.7%)
-far(>=3m): 0.248 -> 0.124 (-50.3%)
+   0- 1 m  0.610>0.162 0.859>0.201 0.966>0.170 1.195>0.170 1.478>0.239 1.790>0.284 2.215>0.365 2.885>0.479
+   1- 2 m  0.286>0.205 0.358>0.230 0.410>0.206 0.468>0.218 0.479>0.201 0.564>0.194 0.692>0.170 0.891>0.155
+   2- 3 m  0.230>0.116 0.230>0.120 0.226>0.112 0.224>0.109 0.225>0.111 0.235>0.114 0.237>0.120 0.333>0.134
+   3- 5 m  0.235>0.101 0.255>0.102 0.264>0.099 0.261>0.099 0.238>0.100 0.212>0.104 0.190>0.108 0.194>0.119
+   5-10 m  0.262>0.114 0.339>0.108 0.381>0.083 0.379>0.078 0.367>0.085 0.329>0.084 0.274>0.091 0.225>0.112
+near_rim(<=2m,>=38deg): 1.359 -> 0.245 (-82.0%)
+near_center(<=2m,<=11deg): 0.449 -> 0.217 (-51.7%)
+center(<=11deg): 0.295 -> 0.136 (-54.1%)
+far(>=3m): 0.248 -> 0.102 (-58.9%)
 
 pose (adjacent pairs, official calibration GT):
   before: rot median 13.51 deg, RRA@15 0.542, tdir median 15.94, RTA@15 0.492 (n=59)
-  after : rot median 13.80 deg, RRA@15 0.576, tdir median 17.25, RTA@15 0.424 (n=59)
+  after : rot median 11.38 deg, RRA@15 0.610, tdir median 21.27, RTA@15 0.424 (n=59)
 
 [eval] wrote /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-rectdistill/eval_gt_seq136.json
 MARKER_eval_gt_seq136=0
