@@ -21,8 +21,14 @@ def cam(size: int = 252):
     return from_aria(size, size, rotated=False)
 
 
-def synthetic_scene(n: int = 900, seed: int = 0):
-    """Points in front of the camera, inside the imaged cone, at known range."""
+def synthetic_scene(n: int = 900, seed: int = 0, dtype=torch.float64):
+    """Points in front of the camera, inside the imaged cone, at known range.
+
+    float64 by default: at a 12 cm baseline and 6 m range the parallax is about
+    a degree, so 1/(1 - c^2) amplifies whatever error the BEARINGS carry by
+    ~5000x. That is a property of the geometry, not of the solver, and
+    `test_float32_bearings_cost_three_decimals` pins the size of it.
+    """
     g = torch.Generator().manual_seed(seed)
     c = cam()
     # Sample bearings inside the cone, then push each out to its own range.
@@ -31,6 +37,7 @@ def synthetic_scene(n: int = 900, seed: int = 0):
     d = torch.stack([torch.sin(th) * torch.cos(ph),
                      torch.sin(th) * torch.sin(ph), torch.cos(th)], dim=-1)
     rng = 0.4 + 6.0 * torch.rand(n, generator=g)
+    d, rng = d.to(dtype), rng.to(dtype)
     return c, d, rng, d * rng[:, None]
 
 
@@ -42,7 +49,8 @@ def pose(rx=0.03, ry=-0.02, rz=0.01, tx=0.12, ty=0.02, tz=0.03):
                                     [-math.sin(a), 0, math.cos(a)]])
     def Rz(a): return torch.tensor([[math.cos(a), -math.sin(a), 0],
                                     [math.sin(a), math.cos(a), 0], [0, 0, 1]])
-    return Rz(rz) @ Ry(ry) @ Rx(rx), torch.tensor([tx, ty, tz])
+    R = (Rz(rz) @ Ry(ry) @ Rx(rx)).double()
+    return R, torch.tensor([tx, ty, tz], dtype=torch.float64)
 
 
 # ------------------------------------------------------------------ geometry
@@ -56,7 +64,7 @@ def test_triangulation_recovers_the_range_it_was_given():
     got, par, ok = AN.triangulate(d, u2, R, t)
     assert bool(ok.all())
     rel = ((got - rng).abs() / rng)[ok]
-    assert float(rel.max()) < 1e-6, f"max rel err {float(rel.max()):.2e}"
+    assert float(rel.max()) < 1e-9, f"max rel err {float(rel.max()):.2e}"
 
 
 def test_it_works_at_the_rim_as_well_as_at_the_centre():
@@ -70,8 +78,27 @@ def test_it_works_at_the_rim_as_well_as_at_the_centre():
     ctr = ok & (th < math.radians(11))
     assert int(rim.sum()) > 50 and int(ctr.sum()) > 20
     err = ((got - rng).abs() / rng)
-    assert float(err[rim].max()) < 1e-6
-    assert float(err[ctr].max()) < 1e-6
+    assert float(err[rim].max()) < 1e-9
+    assert float(err[ctr].max()) < 1e-9
+
+
+def test_float32_bearings_cost_three_decimals_and_why():
+    """The number that decides what dtype the pipeline must build rays in.
+
+    The solve is exact; the AMPLIFICATION is the geometry. At ~1 degree of
+    parallax, c is within 1e-4 of 1 and 1/(1 - c^2) is ~5e3, so the 1e-7 that
+    float32 bearings carry arrives as ~1e-3 of relative range. The anchors are
+    supposed to pin down the far and rim cells to better than the effect being
+    measured, so `run_h9.py` unprojects float64 pixel coordinates.
+    """
+    c, d, rng, X = synthetic_scene(n=2000, seed=7, dtype=torch.float64)
+    R, t = pose()
+    u2_64 = torch.nn.functional.normalize(X @ R.transpose(0, 1) + t, dim=-1)
+    e64 = ((AN.triangulate(d, u2_64, R, t)[0] - rng).abs() / rng).max()
+    e32 = ((AN.triangulate(d.float(), u2_64.float(), R, t)[0] - rng).abs() / rng).max()
+    assert float(e64) < 1e-9
+    assert 1e-4 < float(e32) < 1e-2
+    assert float(e32) > 1e4 * float(e64)
 
 
 def test_pure_rotation_gives_no_parallax_and_is_rejected():
