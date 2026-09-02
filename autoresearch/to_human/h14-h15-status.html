@@ -159,14 +159,15 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
   <div class="eyebrow">vggt-omega · 研究现场 · 2026-09-02</div>
   <h1>H14 与 H15 实验台</h1>
   <p class="lede">
-    上一轮讨论里排在最前面的两条（P1 蒸馏、P2 跨镜头留出）已经落成代码、跑通测试、正在 lambda_63 上训练。
-    这一页说明：计划是什么、今天做完了什么、途中量到的一个关键结果、还缺什么、以及接下来的判据和风险。
+    上一轮讨论里排在最前面的两条（P1 蒸馏、P2 跨镜头留出）已经跑完。<strong>结果方向相反</strong>：
+    H14 的主判据通过 —— 无标签蒸馏真的把边缘修好了；H15 的主判据未通过 —— 而且它否定的是<em>我自己提出的那个补救假设</em>。
+    这一页记录：两边各自的数、判据逐条对照、以及这两个结果各自指向哪里。
   </p>
   <div class="meta">
     <span>61 项 CPU 测试全绿</span>
-    <span>两条流水线在跑</span>
-    <span>前提 4/4 确认</span>
-    <span>结论尚未产生</span>
+    <span>H14 判据通过</span>
+    <span>H15 判据未通过</span>
+    <span>结果已进 results 分支</span>
     <span>分支 organized / results</span>
   </div>
 </header>
@@ -178,38 +179,105 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <article class="exp">
       <div class="top">
         <span class="name">H14 · 透视教师蒸馏</span>
-        <span class="chip run"><span class="dot"></span>训练中</span>
+        <span class="chip done"><span class="dot"></span>主判据通过</span>
       </div>
       <p>把冻结模型<strong>在透视图里已经给出的答案</strong>搬回鱼眼域，用它当监督信号。全程<strong>不用任何深度真值</strong>。</p>
       <ul class="stages">
         <li><span class="s-mark s-done">✓</span><span class="s-name">几何原语 + 15 项测试</span><span class="chip done">完成</span></li>
         <li><span class="s-mark s-done">✓</span><span class="s-name">前提预检（FOV 扫描）</span><span class="chip done">前提成立</span></li>
         <li><span class="s-mark s-done">✓</span><span class="s-name">教师缓存 ×8（2 臂 × 4 序列）</span><span class="chip done">完成</span></li>
-        <li><span class="s-mark s-run">▸</span><span class="s-name">三臂训练 rect / roundtrip / gt</span><span class="chip run">进行中</span></li>
-        <li><span class="s-mark s-wait">·</span><span class="s-name">留出评测 ×6（含姿态）</span><span class="chip wait">排队</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">三臂训练 rect / roundtrip / gt</span><span class="chip done">完成</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">留出评测 ×6（含姿态）</span><span class="chip done">完成</span></li>
       </ul>
     </article>
 
     <article class="exp">
       <div class="top">
         <span class="name">H15 · 跨镜头留出</span>
-        <span class="chip run"><span class="dot"></span>训练中 1/4</span>
+        <span class="chip kill"><span class="dot"></span>第六个受控否定</span>
       </div>
       <p>把 H12 的问题搬到<strong>能判定它的场景</strong>：在一族镜头上训练，用一只<strong>训练时从未见过的镜头</strong>做判据。</p>
       <ul class="stages">
         <li><span class="s-mark s-done">✓</span><span class="s-name">镜头族 + 形变 + 20 项测试</span><span class="chip done">完成</span></li>
-        <li><span class="s-mark s-done">✓</span><span class="s-name">jac 臂训练（474 秒）</span><span class="chip done">完成</span></li>
-        <li><span class="s-mark s-run">▸</span><span class="s-name">mismatched 臂</span><span class="chip run">进行中</span></li>
-        <li><span class="s-mark s-wait">·</span><span class="s-name">shuffled / none 两臂</span><span class="chip wait">排队</span></li>
-        <li><span class="s-mark s-wait">·</span><span class="s-name">评测 ×8（每臂 × 每镜头）</span><span class="chip wait">排队</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">四臂训练 jac / mismatched / shuffled / none</span><span class="chip done">完成</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">评测 ×8（每臂 × 8 镜头 × 2 序列）</span><span class="chip done">完成</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">近边缘对头比 16/16</span><span class="chip kill">打乱场全胜</span></li>
       </ul>
     </article>
 
   </div>
 </section>
 
+
+<section>
+  <div class="section-head"><span class="eyebrow">02</span><h2>结果</h2></div>
+
+  <div class="col">
+    <h3>H14 · 无标签的透视教师蒸馏 —— 主判据通过</h3>
+    <p style="margin-bottom:14px">留出序列的近边缘 AbsRel，训练前 → 训练后。<strong>rect 臂全程没有用过任何深度真值。</strong></p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption><code>roundtrip</code> 对照走的是<strong>同一套重采样、同一个覆盖掩码、同一个损失、同样的容量</strong>，唯一不同是模型从没看过透视图 —— 它动了 0.1%。</caption>
+      <thead><tr><th>臂</th><th>seq136 近边缘</th><th>seq132 近边缘</th><th>用真值？</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">rect</td><td class="num good">1.359 → 1.006　(−26.0%)</td><td class="num good">0.361 → 0.315　(−12.9%)</td><td>否</td></tr>
+        <tr><td class="mono">roundtrip（对照）</td><td class="num">1.359 → 1.360　(+0.1%)</td><td class="num">0.361 → 0.361　(+0.0%)</td><td>否</td></tr>
+        <tr><td class="mono">gt（上限参照）</td><td class="num good">1.359 → 0.281　(−79.3%)</td><td class="num good">0.361 → 0.269　(−25.4%)</td><td>是</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p style="margin-top:16px">
+      对照几乎没动，意味着<strong>增益只可能来自成像方式的改变</strong>，别无他处。但这也正是它的弱点，而且是跑之前就写下的风险：
+      对照臂的学生和它自己的教师起点逐位相同，所以那条判据更接近「rect 赢过原地不动」，而不是「rect 赢过用力自训练」。
+    </p>
+    <p>其余三条判据逐条对照：<strong>P2 险些差一点、P3 在一个序列上不及格</strong>。</p>
+  </div>
+  <div class="crit" style="margin-top:6px">
+    <div class="row"><span class="who">P1 主判据 ✓</span><p>rect 在两个留出序列的近边缘都赢对照。通过，而且是压倒性的。</p></div>
+    <div class="row"><span class="who">P2 ≥1/3 ✗/✓</span><p>seq136 拿回 gt 增益的 <span class="mono">32.8%</span> —— <strong>差 0.5 个百分点没够到 1/3</strong>；seq132 <span class="mono">50.8%</span>，通过。一比一。</p></div>
+    <div class="row"><span class="who">P3 中心不塌 ✗</span><p>seq136 上 rect 把近中心弄坏 <span class="mono">+31.1%</span>，而 gt 是<strong>改善</strong> <span class="mono">−45.5%</span> —— 不及格。seq132 上两者持平（+20.7 vs +20.0）。这正是预检里那个四序列常数偏移，现在跟着进了学生。</p></div>
+    <div class="row"><span class="who">P4 姿态 ~</span><p>rect 两个序列的旋转都<strong>变好</strong>（13.51→11.87°、9.54→8.87°），比 gt 还好；但 seq136 的平移方向变差（15.9→19.9° vs gt 的 17.3°）。混合。</p></div>
+  </div>
+
+  <div class="col" style="margin-top:34px">
+    <h3>H15 · 跨镜头留出 —— 判据未通过，而且否定的是我自己的补救假设</h3>
+    <p style="margin-bottom:14px">
+      近边缘对头比，覆盖<strong>全部 16 个（镜头 × 序列）格子</strong>，含两只训练时从未见过的镜头：
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>留出镜头（★）上，真实几何场依然输给打乱场。差距很小（2–4% 相对），但方向 16/16 一致。</caption>
+      <thead><tr><th>对比</th><th>打乱场更好</th><th>错配场更好</th><th>普通 LoRA 更好</th></tr></thead>
+      <tbody>
+        <tr><td>相对 <code>jac</code>（真实几何场）</td><td class="num bad">16 / 16</td><td class="num">8 / 16</td><td class="num">4 / 16</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note warn" style="margin-top:16px">
+    <span class="eyebrow">这条否定的是我上一轮提出的那个假设</span>
+    <p>
+      我当时说：H12 之所以输，是因为<strong>单只镜头上真实场和打乱场在构造上等价</strong>，所以那个零结果是「不可判定」而不是「否定」。
+      H15 就是为把它变成可判定而造的 —— 八只镜头、两只留出、两个对照夹住。<strong>场景换成可判定的了，答案没变。</strong>
+      所以那个补救假设本身被否定了：H12 不是输在设置上。这是第六个受控否定，而且比 H12 那个更硬，因为这一个是奔着赢去设计的。
+    </p>
+  </div>
+  <div class="col">
+    <p>
+      唯一站住的正面结果是<strong>预注册过的 P5</strong>（所以它算发现，不算安慰奖）：
+      <code>jac</code> 在留出镜头的<strong>中心</strong>区 8 个格子里有 5 个最好，seq132 的四个中心格子全部最好。
+      H12 事后分析说的「几何条件化是个中心工具，不是边缘工具」，现在<strong>在模型没见过的镜头上复现了</strong>。
+    </p>
+    <p style="color:var(--ink-faint);font-size:.9rem">
+      每臂一个种子、无误差棒，和 H12 一样。支撑读方向的是 16/16 的一致性，不是任何单个差值的大小。
+    </p>
+  </div>
+</section>
+
 <section class="col">
-  <div class="section-head"><span class="eyebrow">02</span><h2>为什么是这两个</h2></div>
+  <div class="section-head"><span class="eyebrow">03</span><h2>为什么是这两个</h2></div>
   <p>
     项目已经有<strong>五个受控否定</strong>：H5 的边缘损失输给普通 LoRA、H6 的边缘 KV 输给全 token、中心／边缘 MoE 被自家证据杀死、
     H7 的 θ 门是平的、H12 的镜头雅可比 FiLM 输给打乱场。共同点是：凡「哪里症状重就在哪儿加力气」的设计都输，凡作用于全图的操作都赢。
@@ -234,7 +302,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">03</span><h2>途中量到的关键结果：教师能做多宽</h2></div>
+  <div class="section-head"><span class="eyebrow">04</span><h2>途中量到的关键结果：教师能做多宽</h2></div>
   <div class="col">
     <p>
       H14 的设计里预留了一个<strong>能在训练前杀死整个前提</strong>的预检：先拿教师和原始模型在同一批像素上对分。第一次跑，它就开火了 ——
@@ -361,7 +429,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">04</span><h2>今天做完的</h2></div>
+  <div class="section-head"><span class="eyebrow">05</span><h2>今天做完的</h2></div>
   <div class="stack">
     <div class="row"><span class="who">H14 代码</span><p><code>rect_teacher.py</code>（鱼眼↔透视搬运、Rig 多视角装置、视角间尺度对齐）、<code>cache_teacher.py</code>（教师缓存 + 预检）、<code>train_student.py</code>（三臂）。评测直接复用 h5 的 <code>eval_lora.py</code>，所以数字会落在 #35/#36 和 H12 的同一张表里，并且自带姿态轴。</p></div>
     <div class="row"><span class="who">H15 代码</span><p><code>lens_family.py</code>（七种镜头形状、固定锥体构造、镜头间形变、逐镜头 token 场）、<code>arms.py</code>（四臂的定义，训练和评测共用同一条规则）、<code>train_multilens.py</code>、<code>eval_lens.py</code>。</p></div>
@@ -372,7 +440,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">05</span><h2>还缺什么</h2></div>
+  <div class="section-head"><span class="eyebrow">06</span><h2>还缺什么</h2></div>
   <div class="stack">
     <div class="row"><span class="who">结果本身</span><p>两条流水线都还在跑。<strong>现在没有任何可引用的结论</strong>，上面那张 FOV 表是唯一已完成的测量。</p></div>
     <div class="row"><span class="who">误差棒</span><p>每臂一个种子，和 H12 一样。方向 + 预注册可以支持「停」，但要下<strong>结论</strong>需要按本项目的标准做逐帧配对自助法。</p></div>
@@ -382,7 +450,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">06</span><h2>判据：跑之前就写死了</h2></div>
+  <div class="section-head"><span class="eyebrow">07</span><h2>判据：跑之前就写死了</h2></div>
   <div class="col"><p>两个 README 里的预注册条款，原样搬在这里，方便结果回来时直接对照，不给事后解释留空间。</p></div>
   <div class="crit">
     <div class="row"><span class="who">H14 · 主判据</span><p><code>rect</code> 必须在<strong>两个</strong>留出序列的近边缘上打赢 <code>roundtrip</code>。输了就是<strong>第六个受控否定</strong>，照实写。</p></div>
@@ -395,7 +463,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">07</span><h2>风险与挑战</h2></div>
+  <div class="section-head"><span class="eyebrow">08</span><h2>风险与挑战</h2></div>
   <div class="stack">
     <div class="row"><span class="who">最可能的失败</span><p>H14 的教师只覆盖 84% 的锥体，而近边缘 zone 只被看到 <span class="mono">70.4%</span>。最外那圈完全没有监督，恰恰是问题最重的地方。如果学生学不会往外推，H14 会变成「把中场修好了，边缘没动」。</p></div>
     <div class="row"><span class="who">对照可能太弱</span><p><code>roundtrip</code> 的教师和学生起点逐位相同，损失起步接近零，所以它天然动得少。这是设计意图（「蒸馏一个模糊的自己什么也学不到」），但它也意味着主判据接近「rect 赢过几乎不动」。<code>gt</code> 臂是防这一点的天花板参照。</p></div>
@@ -406,7 +474,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">08</span><h2>怎么自己看</h2></div>
+  <div class="section-head"><span class="eyebrow">09</span><h2>怎么自己看</h2></div>
   <div class="scroll">
     <table class="files">
       <thead><tr><th>位置</th><th style="text-align:left">内容</th></tr></thead>
