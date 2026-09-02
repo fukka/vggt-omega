@@ -70,8 +70,16 @@ def triangulate(u1: Tensor, u2_j: Tensor, R: Tensor, t: Tensor
     Returns ``(range_i, parallax_rad, ok)``. ``ok`` is the cheirality test --
     both depths positive -- and is False wherever the solve is degenerate.
     """
-    R = R.to(u1.dtype)
-    t = t.to(u1.dtype).reshape(3)
+    # Solved in float64 and cast back. The 1/(1 - c^2) below is the whole
+    # conditioning of the problem: at a 12 cm baseline and 6 m range the
+    # parallax is about 1 degree, c is within 1e-4 of 1, and float32 leaves
+    # 1.4e-3 of relative range error purely in the arithmetic -- a systematic
+    # error at exactly the far/rim cells the anchors exist to pin down.
+    dt = u1.dtype
+    u1 = u1.double()
+    u2_j = u2_j.double()
+    R = R.double()
+    t = t.double().reshape(3)
     C = -(R.transpose(0, 1) @ t)                 # camera j's centre, in frame i
     u2 = u2_j @ R                                # = (R^T d_j)^T, rows are rays
     u2 = torch.nn.functional.normalize(u2, dim=-1)
@@ -85,7 +93,7 @@ def triangulate(u1: Tensor, u2_j: Tensor, R: Tensor, t: Tensor
     lam2 = (c * b1 - b2) / d
     ok = safe & (lam1 > 0) & (lam2 > 0) & torch.isfinite(lam1)
     parallax = torch.acos(c.clamp(-1.0, 1.0))
-    return lam1, parallax, ok
+    return lam1.to(dt), parallax.to(dt), ok
 
 
 @dataclass
