@@ -106,14 +106,17 @@ def test_it_works_at_the_rim_as_well_as_at_the_centre():
     assert float(err[ctr].max()) < 1e-9
 
 
-def test_float32_bearings_cost_three_decimals_and_why():
-    """The number that decides what dtype the pipeline must build rays in.
+def test_float32_bearings_are_cheap_ONCE_the_assumptions_are_enforced():
+    """What the amplifier actually costs, after the two repairs.
 
-    The solve is exact; the AMPLIFICATION is the geometry. At ~1 degree of
-    parallax, c is within 1e-4 of 1 and 1/(1 - c^2) is ~5e3, so the 1e-7 that
-    float32 bearings carry arrives as ~1e-3 of relative range. The anchors are
-    supposed to pin down the far and rim cells to better than the effect being
-    measured, so `run_h9.py` unprojects float64 pixel coordinates.
+    Before them, float32 inputs cost ~6e-4 of relative range, because
+    `triangulate` used R^T as R^-1 on a rotation that was 1e-7 off orthonormal
+    and dropped the (u.u) terms on bearings that were 3e-7 off unit. Both are
+    now enforced rather than assumed, and what is left is the bearings'
+    DIRECTION error, which is amplified by ~1/parallax rather than by
+    1/(1 - c^2): about 5e-6 at two degrees. So the pipeline is free to work in
+    float32 -- but it does not, because float64 costs nothing on a few thousand
+    anchors and the failure mode this test used to describe was silent.
     """
     c, d, rng, X = synthetic_scene(n=2000, seed=7, dtype=torch.float64)
     R, t = pose()
@@ -121,8 +124,8 @@ def test_float32_bearings_cost_three_decimals_and_why():
     e64 = ((AN.triangulate(d, u2_64, R, t)[0] - rng).abs() / rng).max()
     e32 = ((AN.triangulate(d.float(), u2_64.float(), R, t)[0] - rng).abs() / rng).max()
     assert float(e64) < 1e-9
-    assert 1e-5 < float(e32) < 1e-2
-    assert float(e32) > 1e3 * float(e64)
+    assert float(e32) < 1e-4
+    assert float(e32) > float(e64)
 
 
 def test_pure_rotation_gives_no_parallax_and_is_rejected():
