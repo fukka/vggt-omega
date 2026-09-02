@@ -306,9 +306,12 @@ class ViewSpec:
         z_v = torch.tensor([st * cp, st * sp, ct])            # the view axis
         radial = torch.tensor([ct * cp, ct * sp, -st])        # increasing theta
         tangential = torch.tensor([-sp, cp, 0.0])             # around the cone
-        # x = tangential (the long axis), y = radial, z = axis. Right-handed:
-        # tangential x radial = axis, checked by test_rotation_is_a_rotation.
-        return torch.stack([tangential, radial, z_v], dim=1)
+        # x = tangential (the long axis), y = INWARD radial, z = axis.
+        # The inward sign is what makes it right-handed: tangential x radial
+        # = -axis, so the image's +v must point toward the cone's centre.
+        # det(R) = -1 otherwise, which is a mirror, and every view would be
+        # sampled flipped -- checked by test_rotation_is_a_rotation.
+        return torch.stack([tangential, -radial, z_v], dim=1)
 
 
 @dataclass
