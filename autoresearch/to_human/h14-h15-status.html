@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>H14 与 H15 实验台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600&display=swap">
+<style>
+:root{
+  --ground:#F6F7F5; --surface:#FFFFFF; --surface-2:#FBFBFA;
+  --ink:#16191B; --ink-soft:#4A5157; --ink-faint:#767E82;
+  --rule:#DCE0DD; --rule-strong:#C2C8C4;
+  --accent:#0E7C86; --accent-soft:#E2EFEF; --accent-ink:#0B5B62;
+  --neg:#A6412F; --neg-soft:#F6E7E3;
+  --pos:#35694A; --pos-soft:#E4EFE7;
+  --amber:#8A6A16; --amber-soft:#F6EEDA;
+  --shadow:0 1px 2px rgba(20,30,28,.06), 0 8px 24px -16px rgba(20,30,28,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F1213; --surface:#161A1C; --surface-2:#1B2022;
+    --ink:#E9ECEB; --ink-soft:#A3ADAE; --ink-faint:#7C8688;
+    --rule:#29302F; --rule-strong:#3A4342;
+    --accent:#4FB8C0; --accent-soft:#12302F; --accent-ink:#8AD3D8;
+    --neg:#E5947F; --neg-soft:#33201C;
+    --pos:#84C199; --pos-soft:#1B2A21;
+    --amber:#D8B565; --amber-soft:#2C2515;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px -18px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F1213; --surface:#161A1C; --surface-2:#1B2022;
+  --ink:#E9ECEB; --ink-soft:#A3ADAE; --ink-faint:#7C8688;
+  --rule:#29302F; --rule-strong:#3A4342;
+  --accent:#4FB8C0; --accent-soft:#12302F; --accent-ink:#8AD3D8;
+  --neg:#E5947F; --neg-soft:#33201C;
+  --pos:#84C199; --pos-soft:#1B2A21;
+  --amber:#D8B565; --amber-soft:#2C2515;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px -18px rgba(0,0,0,.9);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  font-size:16px; line-height:1.75; letter-spacing:.005em;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px 96px}
+.col{max-width:800px}
+h1,h2,h3{font-family:"Noto Serif SC","Songti SC",serif;font-weight:600;text-wrap:balance;line-height:1.35}
+h1{font-size:2.05rem;margin:0 0 8px}
+h2{font-size:1.32rem;margin:0 0 14px}
+h3{font-size:1.02rem;margin:0 0 6px}
+p{margin:0 0 14px}
+a{color:var(--accent-ink)}
+.eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.72rem;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+code{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.88em;
+  background:var(--surface-2);border:1px solid var(--rule);border-radius:4px;padding:.05em .32em}
+
+/* header */
+header{padding:56px 0 30px;border-bottom:1px solid var(--rule);margin-bottom:34px}
+.lede{font-size:1.06rem;color:var(--ink-soft);max-width:62ch;margin:14px 0 0}
+.meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:20px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.78rem;color:var(--ink-faint)}
+
+/* section rhythm */
+section{margin:0 0 52px}
+.section-head{display:flex;align-items:baseline;gap:14px;margin-bottom:16px}
+.section-head .eyebrow{flex:none}
+.section-head h2{margin:0}
+
+/* status chips */
+.chip{display:inline-flex;align-items:center;gap:6px;flex:none;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.72rem;
+  letter-spacing:.04em;padding:.18em .6em;border-radius:3px;border:1px solid transparent;white-space:nowrap}
+.chip.run{background:var(--amber-soft);color:var(--amber);border-color:var(--amber)}
+.chip.done{background:var(--pos-soft);color:var(--pos);border-color:var(--pos)}
+.chip.wait{background:var(--surface-2);color:var(--ink-faint);border-color:var(--rule-strong)}
+.chip.kill{background:var(--neg-soft);color:var(--neg);border-color:var(--neg)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+
+/* two experiment cards */
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:18px}
+.exp{background:var(--surface);border:1px solid var(--rule);border-radius:8px;
+  padding:22px 22px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+.exp .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.exp .name{font-family:"Noto Serif SC",serif;font-weight:600;font-size:1.08rem}
+.exp p{margin:0;color:var(--ink-soft);font-size:.94rem}
+.stages{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:0}
+.stages li{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--rule);
+  font-size:.88rem}
+.stages li:first-child{border-top:0}
+.stages .s-name{flex:1;color:var(--ink-soft)}
+.stages .s-mark{width:1.5em;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:.8rem}
+.s-done{color:var(--pos)} .s-run{color:var(--amber)} .s-wait{color:var(--ink-faint)}
+
+/* tables */
+.scroll{overflow-x:auto;margin:0 0 8px;border:1px solid var(--rule);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:9px 14px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-weight:500;font-size:.76rem;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-faint);border-bottom:1px solid var(--rule-strong);background:var(--surface-2)}
+tbody tr+tr td{border-top:1px solid var(--rule)}
+td.num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.good{color:var(--pos);font-weight:500}
+.bad{color:var(--neg);font-weight:500}
+tr.flip td{background:var(--neg-soft)}
+caption{caption-side:bottom;text-align:left;padding:10px 14px;font-size:.82rem;
+  color:var(--ink-faint);border-top:1px solid var(--rule)}
+
+/* chart */
+figure{margin:0 0 26px}
+figcaption{font-size:.84rem;color:var(--ink-faint);margin-top:10px;max-width:64ch}
+.chartbox{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:12px 8px 4px;
+  box-shadow:var(--shadow);overflow-x:auto}
+svg{display:block;max-width:100%;height:auto}
+
+/* callout */
+.note{border-left:3px solid var(--accent);background:var(--accent-soft);
+  padding:14px 18px;border-radius:0 6px 6px 0;margin:0 0 18px}
+.note.warn{border-left-color:var(--neg);background:var(--neg-soft)}
+.note p:last-child{margin-bottom:0}
+.note .eyebrow{color:var(--accent-ink);display:block;margin-bottom:4px}
+.note.warn .eyebrow{color:var(--neg)}
+
+/* definition list for gaps / risks */
+.stack{display:flex;flex-direction:column;gap:2px}
+.row{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;padding:16px 0;border-top:1px solid var(--rule)}
+.row:last-child{border-bottom:1px solid var(--rule)}
+.row .who{font-family:"IBM Plex Mono",monospace;font-size:.74rem;color:var(--ink-faint);letter-spacing:.06em}
+.row p{margin:0;color:var(--ink-soft);font-size:.94rem}
+@media(min-width:720px){.row{grid-template-columns:180px minmax(0,1fr);gap:8px 26px;align-items:start}}
+
+/* criteria */
+.crit{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:4px 20px;box-shadow:var(--shadow)}
+.crit .row:first-child{border-top:0}
+.crit .row:last-child{border-bottom:0}
+.crit .who{color:var(--accent-ink);font-weight:500}
+
+ul.plain{margin:0 0 14px;padding-left:1.2em}
+ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
+.files{font-size:.88rem}
+.files td:first-child{font-family:"IBM Plex Mono",monospace;font-size:.82rem}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">vggt-omega · 研究现场 · 2026-09-02</div>
+  <h1>H14 与 H15 实验台</h1>
+  <p class="lede">
+    上一轮讨论里排在最前面的两条（P1 蒸馏、P2 跨镜头留出）已经落成代码、跑通测试、正在 lambda_63 上训练。
+    这一页说明：计划是什么、今天做完了什么、途中量到的一个关键结果、还缺什么、以及接下来的判据和风险。
+  </p>
+  <div class="meta">
+    <span>61 项 CPU 测试全绿</span>
+    <span>两条流水线在跑</span>
+    <span>结论尚未产生</span>
+    <span>分支 organized / results</span>
+  </div>
+</header>
+
+<section>
+  <div class="section-head"><span class="eyebrow">01</span><h2>两个实验，现在的状态</h2></div>
+  <div class="pair">
+
+    <article class="exp">
+      <div class="top">
+        <span class="name">H14 · 透视教师蒸馏</span>
+        <span class="chip run"><span class="dot"></span>训练中</span>
+      </div>
+      <p>把冻结模型<strong>在透视图里已经给出的答案</strong>搬回鱼眼域，用它当监督信号。全程<strong>不用任何深度真值</strong>。</p>
+      <ul class="stages">
+        <li><span class="s-mark s-done">✓</span><span class="s-name">几何原语 + 15 项测试</span><span class="chip done">完成</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">前提预检（FOV 扫描）</span><span class="chip done">前提成立</span></li>
+        <li><span class="s-mark s-run">▸</span><span class="s-name">教师缓存 ×8（2 臂 × 4 序列）</span><span class="chip run">进行中</span></li>
+        <li><span class="s-mark s-wait">·</span><span class="s-name">三臂训练 rect / roundtrip / gt</span><span class="chip wait">排队</span></li>
+        <li><span class="s-mark s-wait">·</span><span class="s-name">留出评测 ×6（含姿态）</span><span class="chip wait">排队</span></li>
+      </ul>
+    </article>
+
+    <article class="exp">
+      <div class="top">
+        <span class="name">H15 · 跨镜头留出</span>
+        <span class="chip run"><span class="dot"></span>训练中 1/4</span>
+      </div>
+      <p>把 H12 的问题搬到<strong>能判定它的场景</strong>：在一族镜头上训练，用一只<strong>训练时从未见过的镜头</strong>做判据。</p>
+      <ul class="stages">
+        <li><span class="s-mark s-done">✓</span><span class="s-name">镜头族 + 形变 + 20 项测试</span><span class="chip done">完成</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">jac 臂训练（474 秒）</span><span class="chip done">完成</span></li>
+        <li><span class="s-mark s-run">▸</span><span class="s-name">mismatched 臂</span><span class="chip run">进行中</span></li>
+        <li><span class="s-mark s-wait">·</span><span class="s-name">shuffled / none 两臂</span><span class="chip wait">排队</span></li>
+        <li><span class="s-mark s-wait">·</span><span class="s-name">评测 ×8（每臂 × 每镜头）</span><span class="chip wait">排队</span></li>
+      </ul>
+    </article>
+
+  </div>
+</section>
+
+<section class="col">
+  <div class="section-head"><span class="eyebrow">02</span><h2>为什么是这两个</h2></div>
+  <p>
+    项目已经有<strong>五个受控否定</strong>：H5 的边缘损失输给普通 LoRA、H6 的边缘 KV 输给全 token、中心／边缘 MoE 被自家证据杀死、
+    H7 的 θ 门是平的、H12 的镜头雅可比 FiLM 输给打乱场。共同点是：凡「哪里症状重就在哪儿加力气」的设计都输，凡作用于全图的操作都赢。
+  </p>
+  <p>
+    这两个新实验不再发明第六个边缘机制，而是各自接住上面这条规律的一端：
+  </p>
+  <ul class="plain">
+    <li><strong>H14</strong> 接住「全局镜头操作有效」。024A 已经量到：同一套权重，在<strong>矫正过的输入</strong>上边缘惩罚从 1.25–1.81× 塌到 ≈1.0。
+      信息本来就在，模型只是隔着鱼眼读不出来 —— 那就别再设计机制让它读得更好，直接把它自己在透视图里的答案当标签喂回去。</li>
+    <li><strong>H15</strong> 接住 H12 的失败本身。<strong>在单只镜头上，真实几何场和位置打乱场是构造上等价的</strong>：
+      场是位置的固定函数，打乱后仍是位置的固定函数，网络照背不误。H12 的判据是诚实的，但那个场景无法判定它 ——
+      而 H12 的全部卖点（焦距会消掉、所以能迁移到没见过的镜头）从来就不是关于单只镜头的。</li>
+  </ul>
+  <div class="note">
+    <span class="eyebrow">可测量的说法，不是修辞</span>
+    <p>
+      测出来的数：同一组 token 位置上，两只不同镜头的<strong>真实场</strong>相关系数 <span class="mono">0.870</span>，
+      而各自独立打乱后 <span class="mono">&lt;0.2</span>。这个差别在单只镜头上完全不可见 —— 这正是判据必须换到未见镜头上的原因。
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="section-head"><span class="eyebrow">03</span><h2>途中量到的关键结果：教师能做多宽</h2></div>
+  <div class="col">
+    <p>
+      H14 的设计里预留了一个<strong>能在训练前杀死整个前提</strong>的预检：先拿教师和原始模型在同一批像素上对分。第一次跑，它就开火了 ——
+      110° 的教师在<strong>每一个 zone 都比原模型差</strong>，近中心 +107%。
+    </p>
+    <p>
+      两种解释都成立，于是做了一次 FOV 扫描把它们分开。方形透视画幅的角落射线是
+      <span class="mono">atan(√2·tan(fov/2))</span>，而 Aria 的锥体在 54.7° 就结束了：所以视场越宽，画幅里<strong>落在锥体外的黑角</strong>越大。
+    </p>
+  </div>
+
+  <figure>
+    <div class="chartbox">
+      <svg viewBox="0 0 660 300" role="img" aria-label="随视场角变化的近边缘误差曲线：85 至 95 度时教师比原模型好 35 至 41 个百分点，110 度时反转为差 15 个百分点。">
+        <rect x="516" y="40" width="104" height="180" fill="var(--neg-soft)"></rect>
+        <text x="568" y="34" text-anchor="middle" fill="var(--neg)" font-family="IBM Plex Mono, monospace" font-size="11">画幅 22.5% 变黑</text>
+        <g stroke="var(--rule)" stroke-width="1">
+          <line x1="96" y1="40" x2="620" y2="40"></line>
+          <line x1="96" y1="150.8" x2="620" y2="150.8"></line>
+          <line x1="96" y1="206.2" x2="620" y2="206.2"></line>
+        </g>
+        <line x1="96" y1="95.4" x2="620" y2="95.4" stroke="var(--rule-strong)" stroke-width="1.5"></line>
+        <g fill="var(--ink-faint)" font-family="IBM Plex Mono, monospace" font-size="11" text-anchor="end">
+          <text x="86" y="44">+20%</text>
+          <text x="86" y="99">0</text>
+          <text x="86" y="155">−20%</text>
+          <text x="86" y="210">−40%</text>
+        </g>
+        <polyline points="96,209.2 264,198.2 432,193.3 600,53.1" fill="none"
+                  stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"></polyline>
+        <g>
+          <circle cx="96"  cy="209.2" r="5.5" fill="var(--pos)"></circle>
+          <circle cx="264" cy="198.2" r="5.5" fill="var(--pos)"></circle>
+          <circle cx="432" cy="193.3" r="7"   fill="var(--pos)" stroke="var(--surface)" stroke-width="2"></circle>
+          <circle cx="600" cy="53.1"  r="5.5" fill="var(--neg)"></circle>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="12" text-anchor="middle">
+          <text x="96"  y="230" fill="var(--pos)">−41.1</text>
+          <text x="264" y="219" fill="var(--pos)">−37.1</text>
+          <text x="432" y="214" fill="var(--pos)">−35.3</text>
+          <text x="600" y="44"  fill="var(--neg)">+15.3</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink)" text-anchor="middle">
+          <text x="96"  y="262">85°</text>
+          <text x="264" y="262">89°</text>
+          <text x="432" y="262">95°</text>
+          <text x="600" y="262">110°</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-faint)" text-anchor="middle">
+          <text x="96"  y="279">画幅 100%</text>
+          <text x="264" y="279">100%</text>
+          <text x="432" y="279">98.7%</text>
+          <text x="600" y="279">77.5%</text>
+        </g>
+        <text x="432" y="180" text-anchor="middle" fill="var(--accent-ink)"
+              font-family="IBM Plex Mono, monospace" font-size="11">← 采用</text>
+      </svg>
+    </div>
+    <figcaption>
+      纵轴：教师相对原始鱼眼模型的近边缘 AbsRel 变化（负=更好）。seq131，60 帧，两者<strong>在同一批像素上</strong>打分。
+    </figcaption>
+  </figure>
+
+  <div class="scroll">
+    <table>
+      <caption>各行的像素集不同（视场越窄覆盖越少），所以<strong>不能跨行比绝对值</strong>，只能读每行内部的「教师 − 原模型」。</caption>
+      <thead>
+        <tr><th>视场</th><th>锥体覆盖</th><th>画幅真实内容</th><th>近边缘</th><th>近中心</th><th>中心</th><th>远场</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">85°</td><td class="num">0.666</td><td class="num">100.0%</td><td class="num good">−41.07%</td><td class="num bad">+50.86%</td><td class="num good">−1.55%</td><td class="num good">−15.12%</td></tr>
+        <tr><td class="mono">89°</td><td class="num">0.735</td><td class="num">100.0%</td><td class="num good">−37.10%</td><td class="num bad">+49.39%</td><td class="num good">−4.30%</td><td class="num good">−15.14%</td></tr>
+        <tr><td class="mono">95°</td><td class="num">0.837</td><td class="num">98.7%</td><td class="num good">−35.33%</td><td class="num bad">+34.36%</td><td class="num good">−5.44%</td><td class="num good">−13.64%</td></tr>
+        <tr class="flip"><td class="mono">110°</td><td class="num">1.000</td><td class="num">77.5%</td><td class="num bad">+15.27%</td><td class="num bad">+33.48%</td><td class="num bad">+13.07%</td><td class="num bad">+13.28%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <p style="margin-top:18px">
+      结论很干净：<strong>只要画幅里是真实内容，024A 就复现</strong> —— 教师在近边缘好 35–41%，远场好 13–15%。
+      一旦画幅 22.5% 变黑，教师在<strong>每个 zone 都翻负</strong>。黑边不是小瑕疵，它是模型没见过的图像统计，代价超过多覆盖那点边缘。
+    </p>
+    <div class="note warn">
+      <span class="eyebrow">顺带排除了一个看起来更好的方案</span>
+      <p>
+        很自然会想：那就用<strong>多个倾斜的温和视角</strong>拼起来。几何不允许 —— 倾斜 t、半视场 h 的方形视角要完全落在锥体内，需要
+        <span class="mono">t + atan(√2·tan h) ≤ 54.7°</span>。倾斜 40° 的视角要满足它，视场只能 ≤21°。
+        实测五视角装置的平均画幅填充率只有 <span class="mono">0.658</span>，<strong>比单个 110° 视角的 0.775 还黑</strong>。
+        这条已经写成测试留在代码里，免得以后有人再试一遍。
+      </p>
+    </div>
+    <p>
+      所以最终采用<strong>单个 95° 视角</strong>：画幅 98.7% 真实、覆盖锥体的 84%。覆盖不到的最外圈就<strong>不给监督</strong> ——
+      学生仍然看得见整张鱼眼图，得自己往外推。这是个诚实的设计，不是妥协掉的版本。
+    </p>
+  </div>
+</section>
+
+<section class="col">
+  <div class="section-head"><span class="eyebrow">04</span><h2>今天做完的</h2></div>
+  <div class="stack">
+    <div class="row"><span class="who">H14 代码</span><p><code>rect_teacher.py</code>（鱼眼↔透视搬运、Rig 多视角装置、视角间尺度对齐）、<code>cache_teacher.py</code>（教师缓存 + 预检）、<code>train_student.py</code>（三臂）。评测直接复用 h5 的 <code>eval_lora.py</code>，所以数字会落在 #35/#36 和 H12 的同一张表里，并且自带姿态轴。</p></div>
+    <div class="row"><span class="who">H15 代码</span><p><code>lens_family.py</code>（七种镜头形状、固定锥体构造、镜头间形变、逐镜头 token 场）、<code>arms.py</code>（四臂的定义，训练和评测共用同一条规则）、<code>train_multilens.py</code>、<code>eval_lens.py</code>。</p></div>
+    <div class="row"><span class="who">测试</span><p>61 项，纯 CPU、不用权重不用数据、6 秒跑完。其中几项是<strong>为了记录一个设计决定的理由</strong>而存在的：平面 z 在镜头重参数化下不变、形变后无空洞、倾斜视角填不满的几何约束。</p></div>
+    <div class="row"><span class="who">抓到的三个错</span><p>①我按猜的焦距算教师尺寸（实测 218.69，不是 0.487×size），测试打在相机对象上才抓到；②<code>--allow-partial-coverage</code> 没传到构造函数，扫描每行 2 秒就死；③盒子上 <code>git stash pop</code> 留下的四个冲突文件已解决，stash 保留未丢。</p></div>
+    <div class="row"><span class="who">与既有结论对齐</span><p>H13 关于蒸馏的警告（学生会继承教师的边缘毛病）针对的是<strong>鱼眼域教师</strong>，那正是 H14 的对照臂 —— 于是那条警告变成了对照臂的预测。教师置信度按 DAv2 的既有测量<strong>不缓存也不使用</strong>。</p></div>
+  </div>
+</section>
+
+<section class="col">
+  <div class="section-head"><span class="eyebrow">05</span><h2>还缺什么</h2></div>
+  <div class="stack">
+    <div class="row"><span class="who">结果本身</span><p>两条流水线都还在跑。<strong>现在没有任何可引用的结论</strong>，上面那张 FOV 表是唯一已完成的测量。</p></div>
+    <div class="row"><span class="who">误差棒</span><p>每臂一个种子，和 H12 一样。方向 + 预注册可以支持「停」，但要下<strong>结论</strong>需要按本项目的标准做逐帧配对自助法。</p></div>
+    <div class="row"><span class="who">近中心那 +34%</span><p>各视场都出现，但很可能是<strong>评测仿射的摆放</strong>而不是真损伤 —— 本项目已量过「seq131 近边缘惩罚的 82% 来自仿射摆放」。要用协议里的 alignment-robustness 行（冻结仿射／scale_only／限 zone）才能分开。</p></div>
+    <div class="row"><span class="who">外部验证</span><p>两个实验都还在一间公寓、一台设备上。H15 的自然下一步是 SynWoodScape 的<strong>四台真实相机</strong>（已在盒子上，depthfisheye 已能加载）；H14 的是任意鱼眼视频（它不需要标签，这正是卖点）。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head"><span class="eyebrow">06</span><h2>判据：跑之前就写死了</h2></div>
+  <div class="col"><p>两个 README 里的预注册条款，原样搬在这里，方便结果回来时直接对照，不给事后解释留空间。</p></div>
+  <div class="crit">
+    <div class="row"><span class="who">H14 · 主判据</span><p><code>rect</code> 必须在<strong>两个</strong>留出序列的近边缘上打赢 <code>roundtrip</code>。输了就是<strong>第六个受控否定</strong>，照实写。</p></div>
+    <div class="row"><span class="who">H14 · 成为方法</span><p>要拿回 <code>gt</code> 臂近边缘增益的 <strong>≥1/3</strong>。低于这个是真效应、弱方法。</p></div>
+    <div class="row"><span class="who">H14 · 不算数的赢法</span><p>全局缩放不算：评测按帧对齐 scale+shift，仿射增益按构造不可见；目标还预先对齐过冻结模型自己的尺度，所以 LoRA 容量不会花在那个常数上。</p></div>
+    <div class="row"><span class="who">H15 · 主判据</span><p>在<strong>未见镜头</strong>上，<code>jac</code> 要同时赢 <code>mismatched</code> 和 <code>shuffled</code>。两个对照：一个分布匹配，一个平滑度匹配，堵死「平滑的场更好拟合」这条解释。</p></div>
+    <div class="row"><span class="who">H15 · 和解条款</span><p>在<strong>训练镜头</strong>上必须复现 <code>jac ≈ shuffled</code>（H12 的零结果）。主判据成立 + 这条成立，H12 就从「无解释的失败」变成「关于可辨识性的测量」。主判据成立但这条不成立 → <strong>先别声称任何东西</strong>，说明有别的东西在两臂之间不同。</p></div>
+    <div class="row"><span class="who">H15 · 值不值</span><p><code>jac</code> 要赢 <code>none</code>（普通 LoRA）。输了说明这 25.5k 参数在<strong>它被设计的场景里</strong>都不值 —— 那是比 H12 更锋利的否定。</p></div>
+  </div>
+</section>
+
+<section class="col">
+  <div class="section-head"><span class="eyebrow">07</span><h2>风险与挑战</h2></div>
+  <div class="stack">
+    <div class="row"><span class="who">最可能的失败</span><p>H14 的教师只覆盖 84% 的锥体，而近边缘 zone 只被看到 <span class="mono">70.4%</span>。最外那圈完全没有监督，恰恰是问题最重的地方。如果学生学不会往外推，H14 会变成「把中场修好了，边缘没动」。</p></div>
+    <div class="row"><span class="who">对照可能太弱</span><p><code>roundtrip</code> 的教师和学生起点逐位相同，损失起步接近零，所以它天然动得少。这是设计意图（「蒸馏一个模糊的自己什么也学不到」），但它也意味着主判据接近「rect 赢过几乎不动」。<code>gt</code> 臂是防这一点的天花板参照。</p></div>
+    <div class="row"><span class="who">H15 的重采样</span><p>每只镜头对边缘的重采样密度不同。所有臂看的是<strong>同一批形变后的图</strong>，所以它不会混淆臂之间的比较，但<strong>跨镜头的绝对值不可比</strong>，只能读同一镜头内部的臂间差。</p></div>
+    <div class="row"><span class="who">合成镜头的外部效度</span><p>H15 的镜头族是解析形状（这同时消掉了 H12 事后分析里「KB4 拟合在边缘最不确定」那条解释，因为两只留出镜头都是解析的）。但真实镜头会更脏，所以 SynWoodScape 四相机那一步不是锦上添花。</p></div>
+    <div class="row"><span class="who">盒子</span><p>lambda_63 是共用的，会无预告重启，另有一个 llama-server 常驻约 27–34 GB。两条流水线各占一张卡、每张不到 4 GB，可续跑（每个 epoch 都存检查点），但要留意。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head"><span class="eyebrow">08</span><h2>怎么自己看</h2></div>
+  <div class="scroll">
+    <table class="files">
+      <thead><tr><th>位置</th><th style="text-align:left">内容</th></tr></thead>
+      <tbody>
+        <tr><td>autoresearch/experiments/h14-rect-distill/README.md</td><td style="text-align:left">H14 的完整协议与预注册</td></tr>
+        <tr><td>autoresearch/experiments/h15-lens-holdout/README.md</td><td style="text-align:left">H15 的完整协议与预注册</td></tr>
+        <tr><td>results/h14_run.log · results/h15_run.log</td><td style="text-align:left">两条流水线的实时进度（盒子上）</td></tr>
+        <tr><td>results/autoresearch-h14-rectdistill/sweep/</td><td style="text-align:left">FOV 扫描的原始 manifest</td></tr>
+        <tr><td>tmux: <span class="mono">h14</span> · <span class="mono">h15</span></td><td style="text-align:left">可直接 attach 看，不必经过我</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p style="margin-top:18px;color:var(--ink-faint);font-size:.9rem">
+      代码已推到 <code>organized</code>；结果产出后按惯例进 <code>results</code> 分支，并把结论消费进
+      <code>findings.md</code> / <code>research-state.yaml</code> / dashboard。
+    </p>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
