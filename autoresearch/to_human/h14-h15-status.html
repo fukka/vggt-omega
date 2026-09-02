@@ -446,7 +446,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
   </div>
   <div class="crit" style="margin-top:6px">
     <div class="row"><span class="who">P1 主判据 ✓</span><p>rect 在两个留出序列的近边缘都赢对照。通过，而且是压倒性的。</p></div>
-    <div class="row"><span class="who">P2 ≥1/3 ✗/✓</span><p>seq136 拿回 gt 增益的 <span class="mono">32.8%</span> —— <strong>差 0.5 个百分点没够到 1/3</strong>；seq132 <span class="mono">50.8%</span>，通过。一比一。</p></div>
+    <div class="row"><span class="who">P2 ≥1/3 ✗/✓</span><p>seq136 拿回 gt 增益的 <span class="mono">31.7%</span> —— <strong>差 0.5 个百分点没够到 1/3</strong>；seq132 <span class="mono">39.0%</span>，通过。一比一。（已按重训后的上限更正，见第 05 节）</p></div>
     <div class="row"><span class="who">P3 中心不塌 ✗</span><p>seq136 上 rect 把近中心弄坏 <span class="mono">+31.1%</span>，而 gt 是<strong>改善</strong> <span class="mono">−45.5%</span> —— 不及格。seq132 上两者持平（+20.7 vs +20.0）。这正是预检里那个四序列常数偏移，现在跟着进了学生。</p></div>
     <div class="row"><span class="who">P4 姿态 ~</span><p>rect 两个序列的旋转都<strong>变好</strong>（13.51→11.87°、9.54→8.87°），比 gt 还好；但 seq136 的平移方向变差（15.9→19.9° vs gt 的 17.3°）。混合。</p></div>
   </div>
@@ -679,8 +679,67 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
   </div>
 </section>
 
+
+<section>
+  <div class="section-head"><span class="eyebrow">05</span><h2>过拟合体检（以及一个必须更正的数）</h2></div>
+
+  <div class="col">
+    <p>
+      到这里为止所有数字都只在两个"留出序列"上。它们说不出<strong>有多少增益只是记住了这间公寓</strong>。
+      把同一批检查点拿回<strong>训练序列</strong>上跑一遍，差距就直接读出来了。
+    </p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <caption>近边缘 AbsRel 相对冻结模型的变化。左两列是模型训练时见过的序列，右两列是留出的。</caption>
+      <thead><tr><th>臂</th><th>seq131（训练）</th><th>seq133（训练）</th><th>seq136（留出）</th><th>dec_seq132（留出）</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">rect（无标签）</td><td class="num">−33.4%</td><td class="num">−25.1%</td><td class="num good">−26.0%</td><td class="num">−12.9%</td></tr>
+        <tr><td class="mono">rect_ring</td><td class="num">−21.3%</td><td class="num">−23.2%</td><td class="num">−19.1%</td><td class="num bad">+5.1%</td></tr>
+        <tr class="flip"><td class="mono">gt（有标签）</td><td class="num">−86.7%</td><td class="num">−86.6%</td><td class="num">−82.0%</td><td class="num">−33.0%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <p style="margin-top:16px">
+      读法只有一条，但它很重：<strong><code>seq136</code> 的表现几乎就是一个训练序列。</strong>
+      有标签那一臂在训练序列上 −86.7% / −86.6%，在 seq136 上 −82.0% —— 差 5 个点；而在 dec_seq132 上塌到 −33.0%，是 2.6 倍的落差。
+      seq136 是同一个房间、同样的家具，它<strong>不构成一个留出集</strong>。所有靠它撑起来的结论都比看上去弱。
+      dec_seq132 是那个房间的重新布置，它是两者里唯一能验出过拟合的。
+    </p>
+    <p>
+      一个反方向的观察，同样是量出来的：<strong>无标签那一臂的差距比有标签的小。</strong>
+      <code>rect</code> 从训练均值 −29.3% 到留出均值 −19.5%（1.5 倍），<code>gt</code> 的落差集中在重新布置上，达 2.6 倍。
+      这和它们各自被要求学的东西一致 —— <code>rect</code> 学的是"图像的一个确定函数"，<code>gt</code> 学的是"这个房间的真值"。
+    </p>
+    <div class="note warn">
+      <span class="eyebrow">必须更正的一个数</span>
+      <p>
+        我先前报的有标签上限 <strong>训练轮数是错的</strong>：第一次启动时两个蒸馏臂因缺缓存 2 秒内失败，而 <code>gt</code> 臂不需要缓存、
+        已经跑了约 3 分钟；重启时"有检查点就跳过"的守卫把它略过了。<strong>那是个只训了 8 轮而不是 20 轮的模型</strong>，
+        当时损失每 5 轮还在降 27.6%。重训后：seq136 −79.3% → <strong>−82.0%</strong>，seq132 −25.4% → <strong>−33.0%</strong>。
+        判据 P2（无标签要拿回有标签增益的 ≥1/3）随之变成 seq136 <strong>31.7%</strong>（仍未过）、seq132 <strong>39.0%</strong>（仍通过，
+        但远不是我先前报的 50.8%）。结论没变，<strong>先前那两个百分比不要引用</strong>。
+      </p>
+    </div>
+    <p>
+      其他几条也都不是刻意选的，是继承来的：<strong>没有验证集</strong>、检查点<strong>永远取最后一轮</strong>、
+      每个臂的损失在最后 5 轮还在降 9–11%。20 轮这个数来自 H5/H12，不来自任何判据。
+      训练规模是 4 序列 × 60 帧 = 240 帧，batch 1，20 轮 = 4800 步，训 12.3 万个 LoRA 参数。
+    </p>
+    <p>
+      <strong>该怎么修：</strong>①两个留出序列<strong>分开报</strong>，不要平均 —— 它们不是一个量级的测试；
+      ②补上真正的跨房间检验（#40 里 seq132 的卧室段，502 帧带标注，是现有数据里唯一真正不同的房间）；
+      ③加一个验证划分来选轮数（它抓不到"记住房间"，但能抓到"训过头"）；
+      ④跨数据集那一步（SynWoodScape 四台真实相机已经在盒子上）。
+    </p>
+  </div>
+</section>
+
 <section class="col">
-  <div class="section-head"><span class="eyebrow">05</span><h2>为什么是这两个</h2></div>
+  <div class="section-head"><span class="eyebrow">06</span><h2>为什么是这两个</h2></div>
   <p>
     项目已经有<strong>五个受控否定</strong>：H5 的边缘损失输给普通 LoRA、H6 的边缘 KV 输给全 token、中心／边缘 MoE 被自家证据杀死、
     H7 的 θ 门是平的、H12 的镜头雅可比 FiLM 输给打乱场。共同点是：凡「哪里症状重就在哪儿加力气」的设计都输，凡作用于全图的操作都赢。
@@ -705,7 +764,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">06</span><h2>途中量到的关键结果：教师能做多宽</h2></div>
+  <div class="section-head"><span class="eyebrow">07</span><h2>途中量到的关键结果：教师能做多宽</h2></div>
   <div class="col">
     <p>
       H14 的设计里预留了一个<strong>能在训练前杀死整个前提</strong>的预检：先拿教师和原始模型在同一批像素上对分。第一次跑，它就开火了 ——
@@ -832,7 +891,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">07</span><h2>今天做完的</h2></div>
+  <div class="section-head"><span class="eyebrow">08</span><h2>今天做完的</h2></div>
   <div class="stack">
     <div class="row"><span class="who">H14 代码</span><p><code>rect_teacher.py</code>（鱼眼↔透视搬运、Rig 多视角装置、视角间尺度对齐）、<code>cache_teacher.py</code>（教师缓存 + 预检）、<code>train_student.py</code>（三臂）。评测直接复用 h5 的 <code>eval_lora.py</code>，所以数字会落在 #35/#36 和 H12 的同一张表里，并且自带姿态轴。</p></div>
     <div class="row"><span class="who">H15 代码</span><p><code>lens_family.py</code>（七种镜头形状、固定锥体构造、镜头间形变、逐镜头 token 场）、<code>arms.py</code>（四臂的定义，训练和评测共用同一条规则）、<code>train_multilens.py</code>、<code>eval_lens.py</code>。</p></div>
@@ -843,7 +902,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">08</span><h2>还缺什么</h2></div>
+  <div class="section-head"><span class="eyebrow">09</span><h2>还缺什么</h2></div>
   <div class="stack">
     <div class="row"><span class="who">结果本身</span><p>两条流水线都还在跑。<strong>现在没有任何可引用的结论</strong>，上面那张 FOV 表是唯一已完成的测量。</p></div>
     <div class="row"><span class="who">误差棒</span><p>每臂一个种子，和 H12 一样。方向 + 预注册可以支持「停」，但要下<strong>结论</strong>需要按本项目的标准做逐帧配对自助法。</p></div>
@@ -853,7 +912,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">09</span><h2>判据：跑之前就写死了</h2></div>
+  <div class="section-head"><span class="eyebrow">10</span><h2>判据：跑之前就写死了</h2></div>
   <div class="col"><p>两个 README 里的预注册条款，原样搬在这里，方便结果回来时直接对照，不给事后解释留空间。</p></div>
   <div class="crit">
     <div class="row"><span class="who">H14 · 主判据</span><p><code>rect</code> 必须在<strong>两个</strong>留出序列的近边缘上打赢 <code>roundtrip</code>。输了就是<strong>第六个受控否定</strong>，照实写。</p></div>
@@ -866,7 +925,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">10</span><h2>风险与挑战</h2></div>
+  <div class="section-head"><span class="eyebrow">11</span><h2>风险与挑战</h2></div>
   <div class="stack">
     <div class="row"><span class="who">最可能的失败</span><p>H14 的教师只覆盖 84% 的锥体，而近边缘 zone 只被看到 <span class="mono">70.4%</span>。最外那圈完全没有监督，恰恰是问题最重的地方。如果学生学不会往外推，H14 会变成「把中场修好了，边缘没动」。</p></div>
     <div class="row"><span class="who">对照可能太弱</span><p><code>roundtrip</code> 的教师和学生起点逐位相同，损失起步接近零，所以它天然动得少。这是设计意图（「蒸馏一个模糊的自己什么也学不到」），但它也意味着主判据接近「rect 赢过几乎不动」。<code>gt</code> 臂是防这一点的天花板参照。</p></div>
@@ -877,7 +936,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">11</span><h2>怎么自己看</h2></div>
+  <div class="section-head"><span class="eyebrow">12</span><h2>怎么自己看</h2></div>
   <div class="scroll">
     <table class="files">
       <thead><tr><th>位置</th><th style="text-align:left">内容</th></tr></thead>
