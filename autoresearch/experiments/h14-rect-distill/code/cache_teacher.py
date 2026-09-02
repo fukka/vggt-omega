@@ -116,6 +116,17 @@ def main(argv=None) -> None:
     p.add_argument("--depth-max-m", type=float, default=10.0)
     p.add_argument("--score-teacher", action="store_true",
                    help="also score the teacher against GT (diagnostic only)")
+    p.add_argument("--precheck-only", action="store_true",
+                   help="run the pre-check and write no cache -- for sweeps")
+    p.add_argument("--allow-partial-coverage", action="store_true",
+                   help="permit a pinhole narrower than the cone. ONLY for the "
+                        "FOV sweep: a teacher that cannot see the rim cannot "
+                        "teach it, so a cache built this way is a diagnostic, "
+                        "never a training target. Teacher and raw are still "
+                        "scored on identical pixels within one FOV, but the "
+                        "pixel SET differs between FOVs, so zone levels are "
+                        "not comparable across the sweep -- only the "
+                        "teacher-minus-raw delta within a row is.")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     a = p.parse_args(argv)
 
@@ -129,12 +140,22 @@ def main(argv=None) -> None:
     cov = float((covered & cone).sum()) / float(cone.sum())
     print(f"[h14/{a.arm}] {s.name}: {len(s.frames)} frames, pinhole "
           f"{a.teacher_size}px @ {a.teacher_fov} deg, cone coverage {cov:.4f}")
-    if cov < 0.999:
+    # How much of the PINHOLE frame carries real content. A square pinhole
+    # whose corner rays exceed theta_max has black corners, and a large black
+    # vignette is an image statistic DA3 has never seen -- a candidate
+    # explanation for a teacher that is worse than the model it came from,
+    # separate from coverage. corner theta = atan(sqrt(2) tan(fov/2)).
+    _, fill_valid = RT.grid_fisheye_to_pinhole(cam, pin)
+    fill = float(fill_valid.float().mean())
+    print(f"[h14/{a.arm}] pinhole frame is {fill * 100:.1f}% real content "
+          f"({(1 - fill) * 100:.1f}% black outside the cone)")
+    if cov < 0.999 and not a.allow_partial_coverage:
         raise SystemExit(
             f"[h14] the pinhole covers only {cov:.4f} of the imaged cone. A "
             f"teacher that cannot see the rim cannot teach it -- that is "
             f"Center-PH's measured failure (49.6% near-rim coverage), not a "
-            f"design this experiment may repeat.")
+            f"design this experiment may repeat. Pass "
+            f"--allow-partial-coverage only for a diagnostic sweep.")
 
     from raytun3r.backbones import build_backbone
     bb = build_backbone("da3", weights="pretrained", device=a.device,
@@ -217,10 +238,11 @@ def main(argv=None) -> None:
                 acc[key][1] += np.bincount(flat, minlength=THETA_BINS * nb_d
                                            ).reshape(THETA_BINS, nb_d)
 
-    for stem, d in teacher.items():
-        np.savez_compressed(out / "npz" / f"{stem}.npz",
-                            depth=d.astype(np.float16))
-    np.save(out / "covered.npy", cov_np)
+    if not a.precheck_only:
+        for stem, d in teacher.items():
+            np.savez_compressed(out / "npz" / f"{stem}.npz",
+                                depth=d.astype(np.float16))
+        np.save(out / "covered.npy", cov_np)
 
     manifest = {
         "arm": a.arm, "seq": s.name, "seq_dir": a.seq, "frames": len(s.frames),
@@ -228,6 +250,7 @@ def main(argv=None) -> None:
         "size": a.size, "teacher_fov_deg": a.teacher_fov,
         "teacher_size": a.teacher_size, "backbone": f"da3-{a.variant}",
         "depth_convention": "range", "cone_coverage": cov,
+        "pinhole_fill_fraction": fill, "precheck_only": a.precheck_only,
         "git": git_rev(), "used_gt_for_targets": False,
         "log_offset_vs_raw": offsets,
         "log_offset_median": float(np.median(list(offsets.values()))),
@@ -259,8 +282,8 @@ def main(argv=None) -> None:
                       "on it cannot help. Record this and stop.")
 
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1))
-    print(f"[h14/{a.arm}] wrote {len(teacher)} maps -> {out} "
-          f"({manifest['seconds']}s)")
+    print(f"[h14/{a.arm}] {'pre-check only, no cache written' if a.precheck_only else f'wrote {len(teacher)} maps'}"
+          f" -> {out} ({manifest['seconds']}s)")
 
 
 if __name__ == "__main__":
