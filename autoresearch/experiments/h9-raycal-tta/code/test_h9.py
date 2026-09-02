@@ -31,13 +31,16 @@ def synthetic_scene(n: int = 900, seed: int = 0, dtype=torch.float64):
     """
     g = torch.Generator().manual_seed(seed)
     c = cam()
-    # Sample bearings inside the cone, then push each out to its own range.
-    th = torch.rand(n, generator=g) * (c.theta_max * 0.97)
-    ph = torch.rand(n, generator=g) * 2 * math.pi
+    # The trigonometry is done in the TARGET dtype, not cast afterwards: a
+    # bearing built in float32 is 1e-7 off unit and 1e-7 off direction, and
+    # this module's own amplifier turns that into 1e-4 of range -- which is
+    # what an "exact" test would then be measuring.
+    th = (torch.rand(n, generator=g) * (c.theta_max * 0.97)).to(dtype)
+    ph = (torch.rand(n, generator=g) * 2 * math.pi).to(dtype)
     d = torch.stack([torch.sin(th) * torch.cos(ph),
                      torch.sin(th) * torch.sin(ph), torch.cos(th)], dim=-1)
-    rng = 0.4 + 6.0 * torch.rand(n, generator=g)
-    d, rng = d.to(dtype), rng.to(dtype)
+    d = torch.nn.functional.normalize(d, dim=-1)
+    rng = (0.4 + 6.0 * torch.rand(n, generator=g)).to(dtype)
     return c, d, rng, d * rng[:, None]
 
 
@@ -118,8 +121,8 @@ def test_float32_bearings_cost_three_decimals_and_why():
     e64 = ((AN.triangulate(d, u2_64, R, t)[0] - rng).abs() / rng).max()
     e32 = ((AN.triangulate(d.float(), u2_64.float(), R, t)[0] - rng).abs() / rng).max()
     assert float(e64) < 1e-9
-    assert 1e-4 < float(e32) < 1e-2
-    assert float(e32) > 1e4 * float(e64)
+    assert 1e-5 < float(e32) < 1e-2
+    assert float(e32) > 1e3 * float(e64)
 
 
 def test_pure_rotation_gives_no_parallax_and_is_rejected():
