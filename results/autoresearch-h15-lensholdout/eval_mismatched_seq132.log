@@ -1,0 +1,45 @@
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+[h15/mismatched] train    aria_kb4
+    near_rim(<=2m,>=38deg): 0.5932 -> 0.2886 (-51.35%)
+    near_center(<=2m,<=11deg): 0.1806 -> 0.3831 (+112.17%)
+    center(<=11deg): 0.2173 -> 0.3003 (+38.20%)
+    far(>=3m): 0.2487 -> 0.1464 (-41.14%)
+[h15/mismatched] train    equidistant
+    near_rim(<=2m,>=38deg): 0.6588 -> 0.3159 (-52.05%)
+    near_center(<=2m,<=11deg): 0.1803 -> 0.3751 (+108.05%)
+    center(<=11deg): 0.2103 -> 0.2977 (+41.58%)
+    far(>=3m): 0.2529 -> 0.1509 (-40.34%)
+[h15/mismatched] train    orthographic
+    near_rim(<=2m,>=38deg): 0.7668 -> 0.3485 (-54.56%)
+    near_center(<=2m,<=11deg): 0.1894 -> 0.3428 (+81.03%)
+    center(<=11deg): 0.2082 -> 0.2803 (+34.63%)
+    far(>=3m): 0.2635 -> 0.1558 (-40.86%)
+[h15/mismatched] train    rectilinear
+    near_rim(<=2m,>=38deg): 0.5063 -> 0.2816 (-44.38%)
+    near_center(<=2m,<=11deg): 0.1840 -> 0.4134 (+124.65%)
+    center(<=11deg): 0.2203 -> 0.3183 (+44.47%)
+    far(>=3m): 0.2398 -> 0.1524 (-36.46%)
+[h15/mismatched] train    kb4x0.5
+    near_rim(<=2m,>=38deg): 0.6197 -> 0.2992 (-51.73%)
+    near_center(<=2m,<=11deg): 0.1741 -> 0.3794 (+117.87%)
+    center(<=11deg): 0.2099 -> 0.3011 (+43.45%)
+    far(>=3m): 0.2515 -> 0.1493 (-40.63%)
+[h15/mismatched] train    kb4x1.5
+    near_rim(<=2m,>=38deg): 0.5690 -> 0.2828 (-50.31%)
+    near_center(<=2m,<=11deg): 0.1728 -> 0.3920 (+126.86%)
+    center(<=11deg): 0.2055 -> 0.2993 (+45.65%)
+    far(>=3m): 0.2430 -> 0.1438 (-40.84%)
+[h15/mismatched] HELD-OUT stereographic
+    near_rim(<=2m,>=38deg): 0.6115 -> 0.3015 (-50.70%)
+    near_center(<=2m,<=11deg): 0.1802 -> 0.3814 (+111.64%)
+    center(<=11deg): 0.2188 -> 0.3038 (+38.85%)
+    far(>=3m): 0.2524 -> 0.1514 (-40.01%)
+[h15/mismatched] HELD-OUT equisolid
+    near_rim(<=2m,>=38deg): 0.6997 -> 0.3223 (-53.93%)
+    near_center(<=2m,<=11deg): 0.1895 -> 0.3652 (+92.73%)
+    center(<=11deg): 0.2146 -> 0.2950 (+37.49%)
+    far(>=3m): 0.2594 -> 0.1529 (-41.04%)
+[h15/mismatched] wrote /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h15-lensholdout/eval_mismatched_seq132.json
+MARKER_eval_mismatched_seq132=0

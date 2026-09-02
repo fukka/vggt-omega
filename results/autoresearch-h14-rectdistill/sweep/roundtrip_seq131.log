@@ -1,0 +1,13 @@
+[h14/roundtrip] Apartment_release_clean_seq131_M1292: 60 frames, pinhole 630px @ 110.0 deg, cone coverage 1.0000
+[h14/roundtrip] pinhole frame is 77.5% real content (22.5% black outside the cone)
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+[h14/roundtrip] median log-offset vs raw fisheye: +0.0000 (roundtrip should be ~0 by construction)
+[h14/roundtrip] PRE-CHECK (teacher vs raw, same pixels):
+    near_rim(<=2m,>=38deg): raw 1.2656 -> teacher 1.2664 (+0.06%)
+    near_center(<=2m,<=11deg): raw 0.4551 -> teacher 0.4583 (+0.71%)
+    center(<=11deg): raw 0.3228 -> teacher 0.3224 (-0.14%)
+    far(>=3m): raw 0.2305 -> teacher 0.2305 (-0.04%)
+[h14/roundtrip] pre-check only, no cache written -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-rectdistill/sweep/roundtrip_seq131 (14.3s)
+MARKER_roundtrip_seq131=0

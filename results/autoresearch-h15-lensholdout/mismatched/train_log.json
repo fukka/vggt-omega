@@ -1,0 +1,562 @@
+[
+ {
+  "epoch": 0,
+  "depth": 0.40467268725236255,
+  "n": 240,
+  "sec": 44.7,
+  "per_lens": {
+   "aria_kb4": 48,
+   "equidistant": 36,
+   "orthographic": 40,
+   "rectilinear": 41,
+   "kb4x0.5": 30,
+   "kb4x1.5": 45
+  }
+ },
+ {
+  "epoch": 1,
+  "depth": 0.292772837014248,
+  "n": 240,
+  "sec": 19.0,
+  "per_lens": {
+   "aria_kb4": 39,
+   "equidistant": 39,
+   "orthographic": 43,
+   "rectilinear": 48,
+   "kb4x0.5": 33,
+   "kb4x1.5": 38
+  }
+ },
+ {
+  "epoch": 2,
+  "depth": 0.27643120707944036,
+  "n": 240,
+  "sec": 16.0,
+  "per_lens": {
+   "aria_kb4": 38,
+   "equidistant": 41,
+   "orthographic": 40,
+   "rectilinear": 34,
+   "kb4x0.5": 37,
+   "kb4x1.5": 50
+  }
+ },
+ {
+  "epoch": 3,
+  "depth": 0.2589583070638279,
+  "n": 240,
+  "sec": 16.0,
+  "per_lens": {
+   "aria_kb4": 47,
+   "equidistant": 42,
+   "orthographic": 39,
+   "rectilinear": 45,
+   "kb4x0.5": 34,
+   "kb4x1.5": 33
+  }
+ },
+ {
+  "epoch": 4,
+  "depth": 0.23931927836189668,
+  "n": 240,
+  "sec": 17.6,
+  "per_lens": {
+   "aria_kb4": 39,
+   "equidistant": 47,
+   "orthographic": 29,
+   "rectilinear": 51,
+   "kb4x0.5": 42,
+   "kb4x1.5": 32
+  }
+ },
+ {
+  "epoch": 5,
+  "depth": 0.22886045792450507,
+  "n": 240,
+  "sec": 16.2,
+  "per_lens": {
+   "aria_kb4": 34,
+   "equidistant": 48,
+   "orthographic": 39,
+   "rectilinear": 41,
+   "kb4x0.5": 39,
+   "kb4x1.5": 39
+  }
+ },
+ {
+  "epoch": 6,
+  "depth": 0.21145371707777183,
+  "n": 240,
+  "sec": 14.4,
+  "per_lens": {
+   "aria_kb4": 27,
+   "equidistant": 49,
+   "orthographic": 40,
+   "rectilinear": 32,
+   "kb4x0.5": 46,
+   "kb4x1.5": 46
+  }
+ },
+ {
+  "epoch": 7,
+  "depth": 0.20342881539836527,
+  "n": 240,
+  "sec": 12.3,
+  "per_lens": {
+   "aria_kb4": 41,
+   "equidistant": 37,
+   "orthographic": 44,
+   "rectilinear": 43,
+   "kb4x0.5": 36,
+   "kb4x1.5": 39
+  }
+ },
+ {
+  "epoch": 8,
+  "depth": 0.19308200388525923,
+  "n": 240,
+  "sec": 12.0,
+  "per_lens": {
+   "aria_kb4": 34,
+   "equidistant": 35,
+   "orthographic": 42,
+   "rectilinear": 38,
+   "kb4x0.5": 36,
+   "kb4x1.5": 55
+  }
+ },
+ {
+  "epoch": 9,
+  "depth": 0.1886022270967563,
+  "n": 240,
+  "sec": 11.6,
+  "per_lens": {
+   "aria_kb4": 40,
+   "equidistant": 41,
+   "orthographic": 41,
+   "rectilinear": 41,
+   "kb4x0.5": 39,
+   "kb4x1.5": 38
+  }
+ },
+ {
+  "epoch": 10,
+  "depth": 0.18573404892037312,
+  "n": 240,
+  "sec": 12.3,
+  "per_lens": {
+   "aria_kb4": 39,
+   "equidistant": 42,
+   "orthographic": 47,
+   "rectilinear": 32,
+   "kb4x0.5": 41,
+   "kb4x1.5": 39
+  }
+ },
+ {
+  "epoch": 11,
+  "depth": 0.1837465824559331,
+  "n": 240,
+  "sec": 11.4,
+  "per_lens": {
+   "aria_kb4": 39,
+   "equidistant": 44,
+   "orthographic": 47,
+   "rectilinear": 41,
+   "kb4x0.5": 42,
+   "kb4x1.5": 27
+  }
+ },
+ {
+  "epoch": 12,
+  "depth": 0.17015960005422434,
+  "n": 240,
+  "sec": 11.1,
+  "per_lens": {
+   "aria_kb4": 40,
+   "equidistant": 39,
+   "orthographic": 38,
+   "rectilinear": 48,
+   "kb4x0.5": 41,
+   "kb4x1.5": 34
+  }
+ },
+ {
+  "epoch": 13,
+  "depth": 0.16469602258875965,
+  "n": 240,
+  "sec": 10.9,
+  "per_lens": {
+   "aria_kb4": 44,
+   "equidistant": 35,
+   "orthographic": 37,
+   "rectilinear": 40,
+   "kb4x0.5": 40,
+   "kb4x1.5": 44
+  }
+ },
+ {
+  "epoch": 14,
+  "depth": 0.16570472192640107,
+  "n": 240,
+  "sec": 11.4,
+  "per_lens": {
+   "aria_kb4": 31,
+   "equidistant": 36,
+   "orthographic": 43,
+   "rectilinear": 46,
+   "kb4x0.5": 37,
+   "kb4x1.5": 47
+  }
+ },
+ {
+  "epoch": 15,
+  "depth": 0.15999282107998927,
+  "n": 240,
+  "sec": 11.4,
+  "per_lens": {
+   "aria_kb4": 43,
+   "equidistant": 48,
+   "orthographic": 36,
+   "rectilinear": 36,
+   "kb4x0.5": 42,
+   "kb4x1.5": 35
+  }
+ },
+ {
+  "epoch": 16,
+  "depth": 0.15961262018730243,
+  "n": 240,
+  "sec": 11.5,
+  "per_lens": {
+   "aria_kb4": 36,
+   "equidistant": 44,
+   "orthographic": 48,
+   "rectilinear": 41,
+   "kb4x0.5": 37,
+   "kb4x1.5": 34
+  }
+ },
+ {
+  "epoch": 17,
+  "depth": 0.15116761097063622,
+  "n": 240,
+  "sec": 11.2,
+  "per_lens": {
+   "aria_kb4": 37,
+   "equidistant": 34,
+   "orthographic": 49,
+   "rectilinear": 41,
+   "kb4x0.5": 40,
+   "kb4x1.5": 39
+  }
+ },
+ {
+  "epoch": 18,
+  "depth": 0.1447049987812837,
+  "n": 240,
+  "sec": 10.6,
+  "per_lens": {
+   "aria_kb4": 35,
+   "equidistant": 50,
+   "orthographic": 28,
+   "rectilinear": 41,
+   "kb4x0.5": 47,
+   "kb4x1.5": 39
+  }
+ },
+ {
+  "epoch": 19,
+  "depth": 0.1497530826056997,
+  "n": 240,
+  "sec": 10.8,
+  "per_lens": {
+   "aria_kb4": 32,
+   "equidistant": 44,
+   "orthographic": 38,
+   "rectilinear": 41,
+   "kb4x0.5": 42,
+   "kb4x1.5": 43
+  }
+ },
+ {
+  "epoch": 20,
+  "depth": 0.14923484933873019,
+  "n": 240,
+  "sec": 23.5,
+  "per_lens": {
+   "aria_kb4": 41,
+   "equidistant": 37,
+   "orthographic": 41,
+   "rectilinear": 41,
+   "kb4x0.5": 41,
+   "kb4x1.5": 39
+  }
+ },
+ {
+  "epoch": 21,
+  "depth": 0.13966830984378856,
+  "n": 240,
+  "sec": 25.2,
+  "per_lens": {
+   "aria_kb4": 48,
+   "equidistant": 40,
+   "orthographic": 34,
+   "rectilinear": 43,
+   "kb4x0.5": 40,
+   "kb4x1.5": 35
+  }
+ },
+ {
+  "epoch": 22,
+  "depth": 0.14005527103630205,
+  "n": 240,
+  "sec": 24.5,
+  "per_lens": {
+   "aria_kb4": 46,
+   "equidistant": 40,
+   "orthographic": 48,
+   "rectilinear": 37,
+   "kb4x0.5": 36,
+   "kb4x1.5": 33
+  }
+ },
+ {
+  "epoch": 23,
+  "depth": 0.14153971221918862,
+  "n": 240,
+  "sec": 24.7,
+  "per_lens": {
+   "aria_kb4": 46,
+   "equidistant": 37,
+   "orthographic": 30,
+   "rectilinear": 44,
+   "kb4x0.5": 45,
+   "kb4x1.5": 38
+  }
+ },
+ {
+  "epoch": 24,
+  "depth": 0.13531183990028997,
+  "n": 240,
+  "sec": 24.0,
+  "per_lens": {
+   "aria_kb4": 50,
+   "equidistant": 40,
+   "orthographic": 38,
+   "rectilinear": 45,
+   "kb4x0.5": 33,
+   "kb4x1.5": 34
+  }
+ },
+ {
+  "epoch": 25,
+  "depth": 0.13283038488589227,
+  "n": 240,
+  "sec": 24.5,
+  "per_lens": {
+   "aria_kb4": 34,
+   "equidistant": 35,
+   "orthographic": 46,
+   "rectilinear": 39,
+   "kb4x0.5": 40,
+   "kb4x1.5": 46
+  }
+ },
+ {
+  "epoch": 26,
+  "depth": 0.1334954411101838,
+  "n": 240,
+  "sec": 23.9,
+  "per_lens": {
+   "aria_kb4": 39,
+   "equidistant": 47,
+   "orthographic": 37,
+   "rectilinear": 40,
+   "kb4x0.5": 43,
+   "kb4x1.5": 34
+  }
+ },
+ {
+  "epoch": 27,
+  "depth": 0.12732578553259372,
+  "n": 240,
+  "sec": 23.4,
+  "per_lens": {
+   "aria_kb4": 37,
+   "equidistant": 43,
+   "orthographic": 30,
+   "rectilinear": 41,
+   "kb4x0.5": 42,
+   "kb4x1.5": 47
+  }
+ },
+ {
+  "epoch": 28,
+  "depth": 0.12918010245387754,
+  "n": 240,
+  "sec": 23.2,
+  "per_lens": {
+   "aria_kb4": 38,
+   "equidistant": 44,
+   "orthographic": 33,
+   "rectilinear": 54,
+   "kb4x0.5": 42,
+   "kb4x1.5": 29
+  }
+ },
+ {
+  "epoch": 29,
+  "depth": 0.1261478948717316,
+  "n": 240,
+  "sec": 23.6,
+  "per_lens": {
+   "aria_kb4": 52,
+   "equidistant": 44,
+   "orthographic": 34,
+   "rectilinear": 37,
+   "kb4x0.5": 35,
+   "kb4x1.5": 38
+  }
+ },
+ {
+  "epoch": 30,
+  "depth": 0.1255812193887929,
+  "n": 240,
+  "sec": 23.8,
+  "per_lens": {
+   "aria_kb4": 38,
+   "equidistant": 32,
+   "orthographic": 36,
+   "rectilinear": 43,
+   "kb4x0.5": 45,
+   "kb4x1.5": 46
+  }
+ },
+ {
+  "epoch": 31,
+  "depth": 0.12470409035061797,
+  "n": 240,
+  "sec": 23.8,
+  "per_lens": {
+   "aria_kb4": 33,
+   "equidistant": 36,
+   "orthographic": 44,
+   "rectilinear": 45,
+   "kb4x0.5": 48,
+   "kb4x1.5": 34
+  }
+ },
+ {
+  "epoch": 32,
+  "depth": 0.12521252787361542,
+  "n": 240,
+  "sec": 23.8,
+  "per_lens": {
+   "aria_kb4": 40,
+   "equidistant": 39,
+   "orthographic": 43,
+   "rectilinear": 32,
+   "kb4x0.5": 40,
+   "kb4x1.5": 46
+  }
+ },
+ {
+  "epoch": 33,
+  "depth": 0.12159533513089021,
+  "n": 240,
+  "sec": 24.9,
+  "per_lens": {
+   "aria_kb4": 39,
+   "equidistant": 44,
+   "orthographic": 50,
+   "rectilinear": 36,
+   "kb4x0.5": 35,
+   "kb4x1.5": 36
+  }
+ },
+ {
+  "epoch": 34,
+  "depth": 0.12282635335189601,
+  "n": 240,
+  "sec": 23.4,
+  "per_lens": {
+   "aria_kb4": 46,
+   "equidistant": 50,
+   "orthographic": 42,
+   "rectilinear": 40,
+   "kb4x0.5": 38,
+   "kb4x1.5": 24
+  }
+ },
+ {
+  "epoch": 35,
+  "depth": 0.11897212827267746,
+  "n": 240,
+  "sec": 18.8,
+  "per_lens": {
+   "aria_kb4": 49,
+   "equidistant": 29,
+   "orthographic": 42,
+   "rectilinear": 39,
+   "kb4x0.5": 37,
+   "kb4x1.5": 44
+  }
+ },
+ {
+  "epoch": 36,
+  "depth": 0.1174086533486843,
+  "n": 240,
+  "sec": 20.0,
+  "per_lens": {
+   "aria_kb4": 39,
+   "equidistant": 41,
+   "orthographic": 35,
+   "rectilinear": 37,
+   "kb4x0.5": 42,
+   "kb4x1.5": 46
+  }
+ },
+ {
+  "epoch": 37,
+  "depth": 0.12026597753477593,
+  "n": 240,
+  "sec": 23.0,
+  "per_lens": {
+   "aria_kb4": 42,
+   "equidistant": 39,
+   "orthographic": 53,
+   "rectilinear": 34,
+   "kb4x0.5": 43,
+   "kb4x1.5": 29
+  }
+ },
+ {
+  "epoch": 38,
+  "depth": 0.1151802487205714,
+  "n": 240,
+  "sec": 23.1,
+  "per_lens": {
+   "aria_kb4": 47,
+   "equidistant": 40,
+   "orthographic": 34,
+   "rectilinear": 36,
+   "kb4x0.5": 42,
+   "kb4x1.5": 41
+  }
+ },
+ {
+  "epoch": 39,
+  "depth": 0.11364406409362952,
+  "n": 240,
+  "sec": 22.3,
+  "per_lens": {
+   "aria_kb4": 38,
+   "equidistant": 36,
+   "orthographic": 41,
+   "rectilinear": 41,
+   "kb4x0.5": 46,
+   "kb4x1.5": 38
+  }
+ }
+]

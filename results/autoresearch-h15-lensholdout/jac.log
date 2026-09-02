@@ -1,0 +1,54 @@
+[h15/jac] 4 sequences, 240 frames, 6 training lenses: aria_kb4, equidistant, orthographic, rectilinear, kb4x0.5, kb4x1.5
+[h15/jac] held out and never seen: stereographic, equisolid
+    aria_kb4       log_area[+0.004,+0.581] log_aniso[-0.191,+0.077]
+    equidistant    log_area[+0.000,+0.158] log_aniso[-0.158,-0.000]
+    orthographic   log_area[-0.552,-0.001] log_aniso[-0.552,-0.001]
+    rectilinear    log_area[+0.006,+1.655] log_aniso[+0.002,+0.552]
+    kb4x0.5        log_area[+0.002,+0.368] log_aniso[-0.176,+0.016]
+    kb4x1.5        log_area[+0.007,+0.773] log_aniso[-0.205,+0.136]
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+[h15/jac] LoRA 122.9k + FiLM 25.5k params
+[h15/jac] ep00 depth 0.4043 (240 steps, 27.8s)
+[h15/jac] ep01 depth 0.2930 (240 steps, 9.8s)
+[h15/jac] ep02 depth 0.2762 (240 steps, 9.2s)
+[h15/jac] ep03 depth 0.2590 (240 steps, 9.2s)
+[h15/jac] ep04 depth 0.2381 (240 steps, 9.2s)
+[h15/jac] ep05 depth 0.2300 (240 steps, 9.4s)
+[h15/jac] ep06 depth 0.2152 (240 steps, 9.7s)
+[h15/jac] ep07 depth 0.2067 (240 steps, 9.3s)
+[h15/jac] ep08 depth 0.1918 (240 steps, 9.7s)
+[h15/jac] ep09 depth 0.1884 (240 steps, 9.3s)
+[h15/jac] ep10 depth 0.1836 (240 steps, 9.6s)
+[h15/jac] ep11 depth 0.1801 (240 steps, 9.4s)
+[h15/jac] ep12 depth 0.1690 (240 steps, 9.5s)
+[h15/jac] ep13 depth 0.1651 (240 steps, 9.3s)
+[h15/jac] ep14 depth 0.1634 (240 steps, 9.3s)
+[h15/jac] ep15 depth 0.1587 (240 steps, 9.4s)
+[h15/jac] ep16 depth 0.1598 (240 steps, 9.4s)
+[h15/jac] ep17 depth 0.1495 (240 steps, 9.9s)
+[h15/jac] ep18 depth 0.1463 (240 steps, 12.2s)
+[h15/jac] ep19 depth 0.1474 (240 steps, 12.6s)
+[h15/jac] ep20 depth 0.1498 (240 steps, 13.5s)
+[h15/jac] ep21 depth 0.1401 (240 steps, 13.2s)
+[h15/jac] ep22 depth 0.1391 (240 steps, 12.5s)
+[h15/jac] ep23 depth 0.1400 (240 steps, 13.6s)
+[h15/jac] ep24 depth 0.1355 (240 steps, 13.4s)
+[h15/jac] ep25 depth 0.1327 (240 steps, 13.7s)
+[h15/jac] ep26 depth 0.1333 (240 steps, 13.5s)
+[h15/jac] ep27 depth 0.1268 (240 steps, 12.4s)
+[h15/jac] ep28 depth 0.1295 (240 steps, 13.1s)
+[h15/jac] ep29 depth 0.1264 (240 steps, 11.6s)
+[h15/jac] ep30 depth 0.1266 (240 steps, 12.2s)
+[h15/jac] ep31 depth 0.1236 (240 steps, 12.2s)
+[h15/jac] ep32 depth 0.1253 (240 steps, 12.4s)
+[h15/jac] ep33 depth 0.1224 (240 steps, 14.1s)
+[h15/jac] ep34 depth 0.1210 (240 steps, 12.1s)
+[h15/jac] ep35 depth 0.1207 (240 steps, 11.7s)
+[h15/jac] ep36 depth 0.1168 (240 steps, 11.5s)
+[h15/jac] ep37 depth 0.1203 (240 steps, 12.5s)
+[h15/jac] ep38 depth 0.1165 (240 steps, 12.6s)
+[h15/jac] ep39 depth 0.1141 (240 steps, 12.4s)
+[h15/jac] done -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h15-lensholdout/jac
+MARKER_train_jac=0

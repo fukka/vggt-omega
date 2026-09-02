@@ -1,0 +1,54 @@
+[h15/shuffled] 4 sequences, 240 frames, 6 training lenses: aria_kb4, equidistant, orthographic, rectilinear, kb4x0.5, kb4x1.5
+[h15/shuffled] held out and never seen: stereographic, equisolid
+    aria_kb4       log_area[+0.004,+0.581] log_aniso[-0.191,+0.077]
+    equidistant    log_area[+0.000,+0.158] log_aniso[-0.158,-0.000]
+    orthographic   log_area[-0.552,-0.001] log_aniso[-0.552,-0.001]
+    rectilinear    log_area[+0.006,+1.655] log_aniso[+0.002,+0.552]
+    kb4x0.5        log_area[+0.002,+0.368] log_aniso[-0.176,+0.016]
+    kb4x1.5        log_area[+0.007,+0.773] log_aniso[-0.205,+0.136]
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+[h15/shuffled] LoRA 122.9k + FiLM 25.5k params
+[h15/shuffled] ep00 depth 0.4041 (240 steps, 40.6s)
+[h15/shuffled] ep01 depth 0.2922 (240 steps, 23.4s)
+[h15/shuffled] ep02 depth 0.2756 (240 steps, 22.9s)
+[h15/shuffled] ep03 depth 0.2589 (240 steps, 23.4s)
+[h15/shuffled] ep04 depth 0.2393 (240 steps, 23.2s)
+[h15/shuffled] ep05 depth 0.2307 (240 steps, 23.2s)
+[h15/shuffled] ep06 depth 0.2142 (240 steps, 23.4s)
+[h15/shuffled] ep07 depth 0.2065 (240 steps, 23.3s)
+[h15/shuffled] ep08 depth 0.1928 (240 steps, 24.8s)
+[h15/shuffled] ep09 depth 0.1886 (240 steps, 18.8s)
+[h15/shuffled] ep10 depth 0.1855 (240 steps, 23.8s)
+[h15/shuffled] ep11 depth 0.1783 (240 steps, 20.0s)
+[h15/shuffled] ep12 depth 0.1709 (240 steps, 21.6s)
+[h15/shuffled] ep13 depth 0.1676 (240 steps, 23.3s)
+[h15/shuffled] ep14 depth 0.1636 (240 steps, 22.7s)
+[h15/shuffled] ep15 depth 0.1600 (240 steps, 23.8s)
+[h15/shuffled] ep16 depth 0.1589 (240 steps, 23.7s)
+[h15/shuffled] ep17 depth 0.1510 (240 steps, 23.4s)
+[h15/shuffled] ep18 depth 0.1466 (240 steps, 23.1s)
+[h15/shuffled] ep19 depth 0.1478 (240 steps, 23.4s)
+[h15/shuffled] ep20 depth 0.1485 (240 steps, 23.3s)
+[h15/shuffled] ep21 depth 0.1414 (240 steps, 23.4s)
+[h15/shuffled] ep22 depth 0.1382 (240 steps, 23.9s)
+[h15/shuffled] ep23 depth 0.1413 (240 steps, 24.7s)
+[h15/shuffled] ep24 depth 0.1353 (240 steps, 21.4s)
+[h15/shuffled] ep25 depth 0.1334 (240 steps, 23.0s)
+[h15/shuffled] ep26 depth 0.1327 (240 steps, 23.6s)
+[h15/shuffled] ep27 depth 0.1276 (240 steps, 23.0s)
+[h15/shuffled] ep28 depth 0.1290 (240 steps, 18.2s)
+[h15/shuffled] ep29 depth 0.1251 (240 steps, 23.4s)
+[h15/shuffled] ep30 depth 0.1270 (240 steps, 23.9s)
+[h15/shuffled] ep31 depth 0.1248 (240 steps, 23.9s)
+[h15/shuffled] ep32 depth 0.1267 (240 steps, 23.6s)
+[h15/shuffled] ep33 depth 0.1233 (240 steps, 22.9s)
+[h15/shuffled] ep34 depth 0.1234 (240 steps, 23.6s)
+[h15/shuffled] ep35 depth 0.1190 (240 steps, 23.6s)
+[h15/shuffled] ep36 depth 0.1174 (240 steps, 24.2s)
+[h15/shuffled] ep37 depth 0.1193 (240 steps, 23.7s)
+[h15/shuffled] ep38 depth 0.1153 (240 steps, 23.6s)
+[h15/shuffled] ep39 depth 0.1140 (240 steps, 24.7s)
+[h15/shuffled] done -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h15-lensholdout/shuffled
+MARKER_train_shuffled=0

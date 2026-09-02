@@ -1,0 +1,13 @@
+[h14/rect] Apartment_release_clean_seq136_M1292: 60 frames, pinhole 630px @ 85.0 deg, cone coverage 0.6659
+[h14/rect] pinhole frame is 100.0% real content (0.0% black outside the cone)
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+[h14/rect] median log-offset vs raw fisheye: -0.0433 (roundtrip should be ~0 by construction)
+[h14/rect] PRE-CHECK (teacher vs raw, same pixels):
+    near_rim(<=2m,>=38deg): raw 1.4003 -> teacher 0.8820 (-37.02%)
+    near_center(<=2m,<=11deg): raw 0.4332 -> teacher 0.6529 (+50.72%)
+    center(<=11deg): raw 0.2782 -> teacher 0.2763 (-0.71%)
+    far(>=3m): raw 0.2360 -> teacher 0.2092 (-11.34%)
+[h14/rect] pre-check only, no cache written -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-rectdistill/sweep/fov85_seq136 (13.8s)
+MARKER_fov85_seq136=0

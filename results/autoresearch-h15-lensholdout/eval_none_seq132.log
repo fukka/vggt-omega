@@ -1,0 +1,45 @@
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+[h15/none] train    aria_kb4
+    near_rim(<=2m,>=38deg): 0.5932 -> 0.2793 (-52.91%)
+    near_center(<=2m,<=11deg): 0.1806 -> 0.3824 (+111.77%)
+    center(<=11deg): 0.2173 -> 0.2991 (+37.66%)
+    far(>=3m): 0.2487 -> 0.1441 (-42.08%)
+[h15/none] train    equidistant
+    near_rim(<=2m,>=38deg): 0.6588 -> 0.3112 (-52.77%)
+    near_center(<=2m,<=11deg): 0.1803 -> 0.3684 (+104.32%)
+    center(<=11deg): 0.2103 -> 0.2953 (+40.42%)
+    far(>=3m): 0.2529 -> 0.1503 (-40.55%)
+[h15/none] train    orthographic
+    near_rim(<=2m,>=38deg): 0.7668 -> 0.3425 (-55.33%)
+    near_center(<=2m,<=11deg): 0.1894 -> 0.3395 (+79.27%)
+    center(<=11deg): 0.2082 -> 0.2776 (+33.35%)
+    far(>=3m): 0.2635 -> 0.1545 (-41.34%)
+[h15/none] train    rectilinear
+    near_rim(<=2m,>=38deg): 0.5063 -> 0.2810 (-44.49%)
+    near_center(<=2m,<=11deg): 0.1840 -> 0.4125 (+124.16%)
+    center(<=11deg): 0.2203 -> 0.3173 (+44.01%)
+    far(>=3m): 0.2398 -> 0.1495 (-37.67%)
+[h15/none] train    kb4x0.5
+    near_rim(<=2m,>=38deg): 0.6197 -> 0.2920 (-52.88%)
+    near_center(<=2m,<=11deg): 0.1741 -> 0.3781 (+117.17%)
+    center(<=11deg): 0.2099 -> 0.2997 (+42.81%)
+    far(>=3m): 0.2515 -> 0.1469 (-41.59%)
+[h15/none] train    kb4x1.5
+    near_rim(<=2m,>=38deg): 0.5690 -> 0.2745 (-51.76%)
+    near_center(<=2m,<=11deg): 0.1728 -> 0.3947 (+128.40%)
+    center(<=11deg): 0.2055 -> 0.3005 (+46.22%)
+    far(>=3m): 0.2430 -> 0.1413 (-41.84%)
+[h15/none] HELD-OUT stereographic
+    near_rim(<=2m,>=38deg): 0.6115 -> 0.2948 (-51.79%)
+    near_center(<=2m,<=11deg): 0.1802 -> 0.3813 (+111.62%)
+    center(<=11deg): 0.2188 -> 0.3035 (+38.71%)
+    far(>=3m): 0.2524 -> 0.1486 (-41.12%)
+[h15/none] HELD-OUT equisolid
+    near_rim(<=2m,>=38deg): 0.6997 -> 0.3162 (-54.80%)
+    near_center(<=2m,<=11deg): 0.1895 -> 0.3590 (+89.45%)
+    center(<=11deg): 0.2146 -> 0.2922 (+36.19%)
+    far(>=3m): 0.2594 -> 0.1518 (-41.48%)
+[h15/none] wrote /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h15-lensholdout/eval_none_seq132.json
+MARKER_eval_none_seq132=0
