@@ -132,7 +132,8 @@ def main(argv=None) -> None:
 
     s = Seq(os.path.expanduser(a.seq), a.size, a.max_frames)
     cam = s.src.camera
-    pin = RT.virtual_pinhole(cam, a.teacher_fov, a.teacher_size)
+    pin = RT.virtual_pinhole(cam, a.teacher_fov, a.teacher_size,
+                             require_full_cone=not a.allow_partial_coverage)
     RT.assert_shared_axis(cam, pin)
     g_in, _ = RT.grid_fisheye_to_pinhole(cam, pin)
     g_out, covered = RT.grid_pinhole_to_fisheye(cam, pin)

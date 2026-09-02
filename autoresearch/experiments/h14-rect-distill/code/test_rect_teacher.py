@@ -61,6 +61,9 @@ def test_the_fovbench_85_deg_rectification_does_not_cover_the_cone():
     cam = aria()
     with pytest.raises(ValueError, match="does not image the whole cone"):
         RT.virtual_pinhole(cam, fov_deg=84.6, size=504)
+    # ...and the diagnostic sweep can still build one, deliberately.
+    pin = RT.virtual_pinhole(cam, fov_deg=84.6, size=504, require_full_cone=False)
+    assert RT.coverage(cam, pin) < 0.9
 
 
 def test_virtual_pinhole_refuses_a_non_patch_multiple_size():

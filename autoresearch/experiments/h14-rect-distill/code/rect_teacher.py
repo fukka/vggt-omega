@@ -61,7 +61,7 @@ OUT_OF_RANGE = -2.0
 
 
 def virtual_pinhole(fisheye: Camera, fov_deg: float, size: int,
-                    patch: int = 14) -> Pinhole:
+                    patch: int = 14, require_full_cone: bool = True) -> Pinhole:
     """A co-axial square pinhole that images the WHOLE fisheye cone.
 
     ``fov_deg`` is the horizontal field of view, so the imaged disc
@@ -97,12 +97,13 @@ def virtual_pinhole(fisheye: Camera, fov_deg: float, size: int,
             f"pinhole size {size} is not a multiple of patch {patch}; "
             f"Backbone.install would reject it after the data is loaded")
     need = 2.0 * math.degrees(fisheye.theta_max)
-    if fov_deg < need - 1e-6:
+    if require_full_cone and fov_deg < need - 1e-6:
         raise ValueError(
             f"fov_deg={fov_deg} does not image the whole cone: theta_max is "
             f"{math.degrees(fisheye.theta_max):.2f} deg, so at least "
             f"{need:.2f} deg is required. A narrower pinhole silently drops "
-            f"the rim -- which is the region this experiment exists to fix.")
+            f"the rim -- which is the region this experiment exists to fix. "
+            f"Pass require_full_cone=False only for a diagnostic sweep.")
     return fisheye.to_pinhole(fov_deg=fov_deg, width=size, height=size)
 
 
