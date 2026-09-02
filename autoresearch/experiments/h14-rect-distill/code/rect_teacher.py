@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List, Sequence, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -53,7 +53,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from raytun3r.cameras import Camera, Pinhole, pixel_grid  # noqa: E402
 
 __all__ = ["virtual_pinhole", "assert_shared_axis", "grid_fisheye_to_pinhole",
-           "grid_pinhole_to_fisheye", "warp", "coverage", "Rig", "OUT_OF_RANGE"]
+           "grid_pinhole_to_fisheye", "warp", "coverage", "Rig", "ViewSpec", "OUT_OF_RANGE"]
 
 #: Normalised grid value that lands outside [-1, 1] in both axes, so
 #: ``grid_sample(padding_mode="zeros")`` returns 0 and the companion mask says
@@ -223,7 +223,7 @@ def coverage(fisheye: Camera, pin: Pinhole) -> float:
 
 
 # ---------------------------------------------------------------------------
-# The multi-view rig, and the measurement that forced it
+# The view rig: what the teacher is actually shown
 # ---------------------------------------------------------------------------
 #
 # The FOV sweep on seq131 (60 frames, teacher vs raw on identical pixels):
@@ -234,47 +234,97 @@ def coverage(fisheye: Camera, pin: Pinhole) -> float:
 #    95     0.837       98.7%     -35.33%      +34.36%      -5.44%   -13.64%
 #   110     1.000       77.5%     +15.27%      +33.48%     +13.07%   +13.28%
 #
-# 024A reproduces as long as the pinhole frame is real content: the teacher is
-# 35-41% better at the near rim. It inverts -- worse in EVERY zone -- exactly
-# when the frame goes 22.5% black, because a square pinhole's corner ray is
-# atan(sqrt(2) tan(fov/2)) and at 110 deg that is 63.7 deg, outside Aria's
-# cone. A large black vignette is an image statistic the backbone has never
-# seen, and it costs more than the rim coverage buys.
+# 024A reproduces -- the teacher is 35-41% better at the near rim -- as long as
+# the pinhole frame is real content, and inverts in EVERY zone exactly when the
+# frame goes 22.5% black. A large black vignette is an image statistic the
+# backbone has never seen, and it costs more than the rim coverage buys.
 #
-# So a SINGLE co-axial pinhole cannot be both filled and cone-covering. A rig
-# of tilted mild views can: every view is a filled ~90 deg frame, and every
-# fisheye pixel is read near some view's axis. That is what `Rig` builds.
+# THE HIDDEN CONSTRAINT THAT COST A DESIGN
+# ----------------------------------------
+# The first reading of that sweep was "covering the cone and keeping the frame
+# filled are not simultaneously achievable", from
+#
+#     tilt + atan(sqrt(2) * tan(fov/2)) <= theta_max
+#
+# and the sqrt(2) in it is the diagonal OF A SQUARE. The frame being square was
+# never a requirement -- a ViT wants a patch-aligned rectangle, not a square --
+# and the whole impossibility was an artefact of assuming one. A view stretched
+# TANGENTIALLY and squeezed RADIALLY sweeps along the annulus instead of
+# reaching across it, and stays inside the cone while doing it:
+#
+#   layout        views  frame                 cone coverage   mean fill
+#   single 95      1     630 x 630 square      0.84            0.99
+#   square 5x90    5     630 x 630 square      1.00            0.66   <- worse
+#   ring           1+6   630^2 + 280 x 154     1.00            ~1.00
+#
+# `Rig.ring` is that layout: one 89 deg centre view for the middle of the cone,
+# and six tangentially-elongated views tilted to 36 deg that tile the annulus.
 #
 # Views are run independently, so their depths are only defined up to their own
-# scale. `Rig` aligns each view to the centre view on their overlap before
-# fusing, and records the seam magnitude both ways -- unaligned fusion would
-# stitch a discontinuity into the target exactly along the view boundaries, and
-# a student would learn it.
+# scale. `Rig` aligns each to the centre view on their overlap before fusing,
+# and unaligned fusion would stitch a step discontinuity into the target along
+# every view boundary that the student would then learn.
+
+
+@dataclass
+class ViewSpec:
+    """One virtual pinhole: where it points and what shape its frame is.
+
+    ``fov_x_deg`` fixes the focal length together with ``width``; ``height``
+    then fixes the vertical field, so the frame's aspect ratio IS the radial /
+    tangential trade-off. ``tilt_deg`` is the polar angle of the view axis and
+    ``azimuth_deg`` where it points around the cone. The view's own +x axis is
+    laid along the TANGENTIAL direction, so widening ``fov_x`` sweeps around
+    the annulus and does not reach further out of the cone.
+    """
+
+    fov_x_deg: float
+    width: int
+    height: int
+    tilt_deg: float = 0.0
+    azimuth_deg: float = 0.0
+
+    def focal(self) -> float:
+        return (self.width / 2.0) / math.tan(math.radians(self.fov_x_deg) / 2.0)
+
+    def fov_y_deg(self) -> float:
+        return 2.0 * math.degrees(math.atan((self.height / 2.0) / self.focal()))
+
+    def check_patch(self, patch: int = 14) -> None:
+        if self.width % patch or self.height % patch:
+            raise ValueError(
+                f"view {self.width}x{self.height} is not patch({patch})-aligned; "
+                f"Backbone.install would reject it after the data is loaded")
+
+    def rotation(self) -> Tensor:
+        """``R_vc``: view frame -> fisheye frame, columns (x_v, y_v, z_v)."""
+        t = math.radians(self.tilt_deg)
+        ph = math.radians(self.azimuth_deg)
+        if abs(t) < 1e-9:
+            return torch.eye(3)
+        st, ct, sp, cp = math.sin(t), math.cos(t), math.sin(ph), math.cos(ph)
+        z_v = torch.tensor([st * cp, st * sp, ct])            # the view axis
+        radial = torch.tensor([ct * cp, ct * sp, -st])        # increasing theta
+        tangential = torch.tensor([-sp, cp, 0.0])             # around the cone
+        # x = tangential (the long axis), y = radial, z = axis. Right-handed:
+        # tangential x radial = axis, checked by test_rotation_is_a_rotation.
+        return torch.stack([tangential, radial, z_v], dim=1)
+
 
 @dataclass
 class _View:
+    spec: ViewSpec
+    pin: Pinhole
     R_vc: Tensor                 # rotates a ray from view frame -> fisheye frame
-    grid_in: Tensor              # (S, S, 2) sample the fisheye to build this view
-    fill: Tensor                 # (S, S) bool: view pixels with real content
+    grid_in: Tensor              # (h, w, 2) sample the fisheye to build this view
+    fill: Tensor                 # (h, w) bool: view pixels with real content
     addr: Tensor                 # (Hf, Wf, 2) where each fisheye ray lands here
     cover: Tensor                # (Hf, Wf) bool: fisheye pixels this view sees
     cos_local: Tensor            # (Hf, Wf) cos of the angle to THIS view's axis
 
 
-def _axis_angle(axis: Tensor, angle: float) -> Tensor:
-    a = torch.nn.functional.normalize(axis.to(torch.float64), dim=0)
-    K = torch.tensor([[0, -a[2], a[1]], [a[2], 0, -a[0]], [-a[1], a[0], 0]],
-                     dtype=torch.float64)
-    return (torch.eye(3, dtype=torch.float64) + math.sin(angle) * K
-            + (1 - math.cos(angle)) * K @ K).float()
-
-
 class Rig:
     """A set of co-centred virtual pinholes covering a fisheye cone.
-
-    ``n_views=1`` reproduces the single co-axial pinhole (and then the tilt is
-    irrelevant); ``n_views=5`` adds four views tilted by ``tilt_deg`` about the
-    image axes, the same rig shape as `raytun3r.baselines.MultiPH`.
 
     The depth bookkeeping, once, explicitly. The backbone is installed with
     ``depth_convention="z"``, its native one, so nothing is converted inside
@@ -288,29 +338,28 @@ class Rig:
     scale alignment cannot absorb.
     """
 
-    def __init__(self, fisheye: Camera, fov_deg: float = 90.0, size: int = 630,
-                 n_views: int = 5, tilt_deg: float = 40.0, patch: int = 14):
-        if size % patch:
-            raise ValueError(f"rig size {size} is not a multiple of patch {patch}")
+    def __init__(self, fisheye: Camera, views: Sequence[ViewSpec],
+                 patch: int = 14):
+        if not views:
+            raise ValueError("a rig needs at least one view")
         self.fisheye = fisheye
-        self.pin = fisheye.to_pinhole(fov_deg=fov_deg, width=size, height=size)
-        assert_shared_axis(fisheye, self.pin)
-        rots = [torch.eye(3)]
-        if n_views > 1:
-            ang = math.radians(tilt_deg)
-            axes = [torch.tensor([0.0, 1.0, 0.0]), torch.tensor([0.0, -1.0, 0.0]),
-                    torch.tensor([1.0, 0.0, 0.0]), torch.tensor([-1.0, 0.0, 0.0])]
-            rots += [_axis_angle(a, ang) for a in axes[: n_views - 1]]
-
+        self.specs = list(views)
         hf, wf = fisheye.height, fisheye.width
         rays = fisheye.ray_grid(hf, wf)
         theta_f = torch.acos(rays[..., 2].clamp(-1.0, 1.0))
         in_cone = theta_f <= fisheye.theta_max
 
-        uv = pixel_grid(size, size, dtype=torch.float32)
         self.views: List[_View] = []
-        for R in rots:
-            vr = self.pin.unproject(uv) @ R.transpose(0, 1)      # view -> fisheye
+        for spec in self.specs:
+            spec.check_patch(patch)
+            f = spec.focal()
+            pin = Pinhole(fx=f, fy=f, cx=(spec.width - 1) / 2.0,
+                          cy=(spec.height - 1) / 2.0,
+                          width=spec.width, height=spec.height,
+                          theta_max=math.radians(89.0))
+            R = spec.rotation()
+            uv = pixel_grid(spec.height, spec.width, dtype=torch.float32)
+            vr = pin.unproject(uv) @ R.transpose(0, 1)        # view -> fisheye
             th = torch.acos(vr[..., 2].clamp(-1.0, 1.0))
             src = fisheye.project(vr)
             fill = (th <= fisheye.theta_max) & torch.isfinite(src).all(-1)
@@ -319,14 +368,14 @@ class Rig:
             gin = _normalise(src, wf, hf)
             gin = torch.where(fill[..., None], gin, torch.full_like(gin, OUT_OF_RANGE))
 
-            local = rays @ R                                     # fisheye -> view
-            at = self.pin.project(local)
+            local = rays @ R                                  # fisheye -> view
+            at = pin.project(local)
             cov = (in_cone & (local[..., 2] > 1e-6) & torch.isfinite(at).all(-1))
-            cov &= ((at[..., 0] >= 0) & (at[..., 0] <= size - 1)
-                    & (at[..., 1] >= 0) & (at[..., 1] <= size - 1))
-            addr = _normalise(at, size, size)
+            cov &= ((at[..., 0] >= 0) & (at[..., 0] <= spec.width - 1)
+                    & (at[..., 1] >= 0) & (at[..., 1] <= spec.height - 1))
+            addr = _normalise(at, spec.width, spec.height)
             addr = torch.where(cov[..., None], addr, torch.full_like(addr, OUT_OF_RANGE))
-            self.views.append(_View(R, gin, fill, addr, cov,
+            self.views.append(_View(spec, pin, R, gin, fill, addr, cov,
                                     local[..., 2].clamp_min(1e-6)))
 
         self.in_cone = in_cone
@@ -334,6 +383,48 @@ class Rig:
         for v in self.views:
             self.covered |= v.cover
         self.covered &= in_cone
+
+    # -- constructors ------------------------------------------------------
+    @classmethod
+    def single(cls, fisheye: Camera, fov_deg: float = 95.0, size: int = 630,
+               **kw) -> "Rig":
+        """One co-axial square view -- the H14 configuration."""
+        return cls(fisheye, [ViewSpec(fov_x_deg=fov_deg, width=size, height=size)], **kw)
+
+    @classmethod
+    def square_multi(cls, fisheye: Camera, fov_deg: float = 90.0, size: int = 630,
+                     n: int = 5, tilt_deg: float = 40.0, **kw) -> "Rig":
+        """The square tilted rig. Kept because its FAILURE is the measurement
+        that motivated the ring: at fov 90 / tilt 40 it fills only 66% of its
+        frames, worse than the 110 deg single view that already inverted."""
+        specs = [ViewSpec(fov_x_deg=fov_deg, width=size, height=size)]
+        for k in range(n - 1):
+            specs.append(ViewSpec(fov_x_deg=fov_deg, width=size, height=size,
+                                  tilt_deg=tilt_deg, azimuth_deg=90.0 * k))
+        return cls(fisheye, specs, **kw)
+
+    @classmethod
+    def ring(cls, fisheye: Camera, *, centre_fov_deg: float = 89.0,
+             centre_size: int = 630, n_ring: int = 6, tilt_deg: float = 36.0,
+             ring_fov_x_deg: float = 50.0, ring_width: int = 280,
+             ring_height: int = 154, **kw) -> "Rig":
+        """One centre view plus a ring of TANGENTIALLY ELONGATED views.
+
+        The defaults are derived, not tuned: 89 deg is the widest co-axial
+        square that still fills its frame on Aria (the sweep measured 100.0% at
+        89 and 98.7% at 95); the ring's tilt and radial half-field are the
+        largest that keep the outward corner inside the 54.7 deg cone; and six
+        views is what it takes to tile 360 deg of azimuth at that tangential
+        width with overlap to align on. `test_the_ring_fills_its_frames_and_
+        covers_the_cone` is what actually checks all of that.
+        """
+        specs = [ViewSpec(fov_x_deg=centre_fov_deg, width=centre_size,
+                          height=centre_size)]
+        for k in range(n_ring):
+            specs.append(ViewSpec(fov_x_deg=ring_fov_x_deg, width=ring_width,
+                                  height=ring_height, tilt_deg=tilt_deg,
+                                  azimuth_deg=360.0 * k / n_ring))
+        return cls(fisheye, specs, **kw)
 
     # -- reporting ---------------------------------------------------------
     @property
@@ -344,6 +435,20 @@ class Rig:
     def fill_fraction(self) -> float:
         """Mean fraction of each view's frame that is real content."""
         return float(torch.stack([v.fill.float().mean() for v in self.views]).mean())
+
+    def zone_coverage(self, theta: Tensor, lo_deg: float, hi_deg: float) -> float:
+        band = self.in_cone & (theta >= math.radians(lo_deg)) & (theta <= math.radians(hi_deg))
+        return float((self.covered & band).sum()) / max(float(band.sum()), 1.0)
+
+    @property
+    def sizes(self) -> List[Tuple[int, int]]:
+        """Distinct (h, w) frames, so a caller can install once per size."""
+        out = []
+        for v in self.views:
+            hw = (v.spec.height, v.spec.width)
+            if hw not in out:
+                out.append(hw)
+        return out
 
     # -- the two pipelines -------------------------------------------------
     def _fuse(self, per_view: List[Tensor], align: bool) -> Tuple[Tensor, Dict]:
@@ -384,12 +489,14 @@ class Rig:
               ) -> Tuple[Tensor, Dict]:
         """Run the backbone in every view and fuse onto the fisheye grid.
 
-        ``forward_z(img)`` must return planar z on the view's own grid.
+        ``forward_z(img, view)`` must return planar z on that view's own grid.
+        The view is passed because the rig's frames differ in size, and the
+        caller has to re-install the backbone when the size changes.
         """
         per_view = []
         for v in self.views:
             warped = warp(image, v.grid_in.to(image.device))
-            z_view = forward_z(warped)
+            z_view = forward_z(warped, v)
             samp = warp(z_view, v.addr.to(z_view.device), mode="bilinear")
             per_view.append(samp / v.cos_local.to(samp.device))
         return self._fuse(per_view, align)

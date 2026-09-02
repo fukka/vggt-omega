@@ -111,8 +111,16 @@ def main(argv=None) -> None:
                    help="95 is what the sweep picked: 98.7%% real content and "
                         "84%% cone coverage. 110 covers the cone but goes "
                         "22.5%% black and inverts the teacher in every zone.")
-    p.add_argument("--teacher-views", type=int, default=1)
-    p.add_argument("--teacher-tilt", type=float, default=40.0)
+    p.add_argument("--layout", default="single", choices=("single", "ring"),
+                   help="single = one co-axial square view (H14). ring = one "
+                        "89 deg centre view plus six tangentially elongated "
+                        "views tiling the annulus (H14.2): the only layout that "
+                        "covers the cone AND keeps every frame filled.")
+    p.add_argument("--ring-tilt", type=float, default=36.0)
+    p.add_argument("--ring-fov-x", type=float, default=50.0)
+    p.add_argument("--ring-width", type=int, default=280)
+    p.add_argument("--ring-height", type=int, default=154)
+    p.add_argument("--n-ring", type=int, default=6)
     p.add_argument("--teacher-size", type=int, default=630,
                    help="630 keeps centre sampling at parity with the fisheye "
                         "at 504 (ratio 1.009); see rect_teacher.virtual_pinhole")
@@ -137,14 +145,22 @@ def main(argv=None) -> None:
 
     s = Seq(os.path.expanduser(a.seq), a.size, a.max_frames)
     cam = s.src.camera
-    rig = RT.Rig(cam, fov_deg=a.teacher_fov, size=a.teacher_size,
-                 n_views=a.teacher_views, tilt_deg=a.teacher_tilt)
+    if a.layout == "ring":
+        rig = RT.Rig.ring(cam, centre_fov_deg=89.0, centre_size=a.teacher_size,
+                          n_ring=a.n_ring, tilt_deg=a.ring_tilt,
+                          ring_fov_x_deg=a.ring_fov_x, ring_width=a.ring_width,
+                          ring_height=a.ring_height)
+    else:
+        rig = RT.Rig.single(cam, fov_deg=a.teacher_fov, size=a.teacher_size)
     covered = rig.covered
     cone = cam.valid_mask(a.size, a.size)
     cov = rig.coverage
-    print(f"[h14/{a.arm}] {s.name}: {len(s.frames)} frames, {a.teacher_views} x "
-          f"{a.teacher_size}px @ {a.teacher_fov} deg, cone coverage {cov:.4f}, "
-          f"mean frame fill {rig.fill_fraction:.4f}")
+    theta_t = cam.incidence_grid(a.size, a.size)
+    rim_cov = rig.zone_coverage(theta_t, 38.0, 54.9)
+    print(f"[h14/{a.arm}] {s.name}: {len(s.frames)} frames, layout={a.layout} "
+          f"({len(rig.views)} views, sizes {rig.sizes}), cone coverage "
+          f"{cov:.4f}, rim-band coverage {rim_cov:.4f}, mean frame fill "
+          f"{rig.fill_fraction:.4f}")
     if rig.fill_fraction < 0.95:
         print(f"[h14] WARNING: {(1 - rig.fill_fraction) * 100:.1f}% of the "
               f"teacher's frame is black. The sweep measured the teacher "
@@ -182,8 +198,17 @@ def main(argv=None) -> None:
     teacher = {}
     scales = {}
     if a.arm == "rect":
-        install(rig.pin, (a.teacher_size, a.teacher_size))
-        def forward_z(warped):
+        # The rig's frames differ in size, so the backbone is re-installed when
+        # the size changes. `install` only re-registers hooks here (all the
+        # geometry flags are off), so paying it per view is cheap; feeding a
+        # 280x154 frame to a backbone installed for 630x630 would silently use
+        # the wrong patch grid.
+        installed = {"hw": None}
+        def forward_z(warped, view):
+            hw = (view.spec.height, view.spec.width)
+            if installed["hw"] != hw:
+                install(view.pin, hw)
+                installed["hw"] = hw
             with torch.no_grad():
                 return bb.forward(warped[None, None]).depth[0]
         for n in s.frames:
@@ -264,9 +289,11 @@ def main(argv=None) -> None:
         "arm": a.arm, "seq": s.name, "seq_dir": a.seq, "frames": len(s.frames),
         "stems": [s.stem(n) for n in s.frames],
         "size": a.size, "teacher_fov_deg": a.teacher_fov,
-        "teacher_size": a.teacher_size, "teacher_views": a.teacher_views,
-        "teacher_tilt_deg": a.teacher_tilt, "backbone": f"da3-{a.variant}",
+        "teacher_size": a.teacher_size, "layout": a.layout,
+        "n_views": len(rig.views), "view_sizes": rig.sizes,
+        "backbone": f"da3-{a.variant}",
         "depth_convention": "range", "cone_coverage": cov,
+        "rim_band_coverage": rim_cov,
         "mean_frame_fill": rig.fill_fraction, "precheck_only": a.precheck_only,
         "view_log_scales": scales, "git": git_rev(),
         "used_gt_for_targets": False,

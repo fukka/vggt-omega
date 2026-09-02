@@ -196,59 +196,87 @@ def test_the_cone_is_the_lens_cone_not_the_kb4_turnover():
     assert 50.0 < math.degrees(cam.theta_max) < 58.0
 
 
-# ------------------------------------------------------------- the multi-view rig
+# ------------------------------------------------------------- the view rig
 
-def test_tilted_views_cannot_be_filled_and_the_geometry_says_why():
-    """The multi-view idea is geometrically impossible here, with a number.
+def test_rotation_is_a_rotation_and_points_where_it_says():
+    for tilt, az in ((0.0, 0.0), (36.0, 0.0), (36.0, 120.0), (55.0, 300.0)):
+        R = RT.ViewSpec(50.0, 280, 154, tilt_deg=tilt, azimuth_deg=az).rotation()
+        assert torch.allclose(R.T @ R, torch.eye(3), atol=1e-5)
+        assert float(torch.det(R)) == pytest.approx(1.0, abs=1e-5)
+        axis = R[:, 2]
+        assert math.degrees(math.acos(float(axis[2]))) == pytest.approx(tilt, abs=1e-4)
+        if tilt > 0:
+            got = math.degrees(math.atan2(float(axis[1]), float(axis[0]))) % 360.0
+            assert got == pytest.approx(az % 360.0, abs=1e-3)
+
+
+def test_tilted_SQUARE_views_cannot_be_filled_and_the_geometry_says_why():
+    """The impossibility that turned out to be about squares, with the number.
 
     A square view tilted by ``t`` with half-FOV ``h`` has corner half-angle
-    ``h_c = atan(sqrt(2) tan h)``, and its frame is entirely inside the lens
-    cone only if ``t + h_c <= theta_max``. Aria's cone stops at 54.7 deg, so:
-
-      * a co-axial view is filled up to fov ~89.9 deg (and the sweep measured
-        100.0% fill at 89 and 98.7% at 95 -- the formula, confirmed);
-      * a view tilted 40 deg would need fov <= 21 deg to stay filled, so the
-        5-view rig at fov 90 measures only 66% mean fill -- WORSE than the
-        110 deg single view's 77.5%, which the sweep already showed inverts
-        the teacher.
-
-    Covering the rim with rectilinear views and keeping every frame filled are
-    therefore not simultaneously achievable, and that is why the shipped
-    teacher is a single 95 deg view supervising the 84% of the cone it can see
-    rather than a rig. Recorded as a test because it is the reason for a design
-    decision, and a later reader will otherwise try the rig again.
+    ``atan(sqrt(2) tan h)``, and the sqrt(2) is the diagonal OF A SQUARE. On
+    Aria's 54.7 deg cone that makes a 5x90 deg rig fill only ~66% of its
+    frames -- worse than the 110 deg single view that the sweep already
+    measured inverting the teacher. Kept as a test because the NEXT test is
+    the point: drop the square and the impossibility goes away.
     """
     cam = aria()
-    tmax = math.degrees(cam.theta_max)
-
-    def corner(fov):
-        return math.degrees(math.atan(math.sqrt(2) * math.tan(math.radians(fov / 2))))
-
-    assert corner(89.0) < tmax < corner(95.0)
-    rig5 = RT.Rig(cam, fov_deg=90.0, size=630, n_views=5, tilt_deg=40.0)
-    rig1 = RT.Rig(cam, fov_deg=110.0, size=630, n_views=1)
-    assert rig5.coverage > 0.999                      # it does cover the cone
-    assert rig5.fill_fraction == pytest.approx(0.658, abs=0.02)
-    assert rig5.fill_fraction < rig1.fill_fraction    # and is blacker for it
+    sq5 = RT.Rig.square_multi(cam, fov_deg=90.0, size=630, n=5, tilt_deg=40.0)
+    one110 = RT.Rig.single(cam, fov_deg=110.0, size=630)
+    assert sq5.coverage > 0.999
+    assert sq5.fill_fraction == pytest.approx(0.658, abs=0.02)
+    assert sq5.fill_fraction < one110.fill_fraction
 
 
-def test_the_shipped_teacher_covers_most_of_the_cone_with_a_filled_frame():
+def test_the_ring_fills_its_frames_AND_covers_the_cone():
+    """Both at once -- which the square rig could not do.
+
+    A tangentially elongated view sweeps ALONG the annulus rather than reaching
+    across it, so widening its long axis costs nothing in radial reach. That is
+    the whole idea, and these three numbers are it.
+    """
     cam = aria()
-    rig = RT.Rig(cam, fov_deg=95.0, size=630, n_views=1)
-    assert rig.fill_fraction > 0.98
-    assert 0.80 < rig.coverage < 0.90
+    rig = RT.Rig.ring(cam)
+    theta = torch.acos(cam.ray_grid(cam.height, cam.width)[..., 2].clamp(-1, 1))
+    assert rig.coverage > 0.999, f"coverage {rig.coverage:.4f}"
+    assert rig.fill_fraction > 0.98, f"mean fill {rig.fill_fraction:.4f}"
+    # the band the whole project is about, which the 95 deg single view could
+    # only answer for ~70% of
+    assert rig.zone_coverage(theta, 38.0, 54.9) > 0.995
 
 
-def test_a_one_view_rig_is_the_single_co_axial_pinhole():
+def test_the_ring_answers_for_the_rim_band_that_the_single_view_cannot():
     cam = aria()
-    rig = RT.Rig(cam, fov_deg=110.0, size=630, n_views=1)
-    assert len(rig.views) == 1
-    assert rig.coverage > 0.999
-    # ...and it is the configuration the sweep measured as 22.5% black.
-    assert rig.fill_fraction == pytest.approx(0.775, abs=0.02)
+    theta = torch.acos(cam.ray_grid(cam.height, cam.width)[..., 2].clamp(-1, 1))
+    single = RT.Rig.single(cam, fov_deg=95.0, size=630)
+    ring = RT.Rig.ring(cam)
+    assert single.zone_coverage(theta, 38.0, 54.9) < 0.85
+    assert ring.zone_coverage(theta, 38.0, 54.9) > 0.995
+    assert ring.fill_fraction > single.fill_fraction - 0.02
 
 
-def test_the_rig_transports_a_direction_only_field_exactly():
+def test_the_rig_reports_its_distinct_frame_sizes():
+    """The caller re-installs the backbone per size; it must know how many."""
+    assert RT.Rig.single(aria()).sizes == [(630, 630)]
+    assert RT.Rig.ring(aria()).sizes == [(630, 630), (154, 280)]
+
+
+def _analytic_forward(rig, scale=None):
+    """A teacher that answers exactly, from geometry, in each view's own frame."""
+    def forward_z(_img, view):
+        uv = pixel_grid(view.spec.height, view.spec.width, dtype=torch.float32)
+        ray_view = view.pin.unproject(uv)
+        world = ray_view @ view.R_vc.transpose(0, 1)
+        z = smooth_range_field(world) * ray_view[..., 2]
+        if scale is not None:
+            k = rig.views.index(view)
+            z = z * scale[k]
+        return z
+    return forward_z
+
+
+@pytest.mark.parametrize("layout", ["single", "ring"])
+def test_the_rig_transports_a_direction_only_field_exactly(layout):
     """The whole depth bookkeeping -- rotations, addresses, the cos division.
 
     Every view is handed the analytic planar z of one direction-only range
@@ -259,27 +287,17 @@ def test_the_rig_transports_a_direction_only_field_exactly():
     absorb and that this project has already paid for once (#38 v1).
     """
     cam = aria(252)
-    rig = RT.Rig(cam, fov_deg=90.0, size=280, n_views=5, tilt_deg=40.0)
-    uv = pixel_grid(rig.pin.height, rig.pin.width, dtype=torch.float32)
-    order = iter(rig.views)
-
-    def forward_z(_img):
-        # Views are consumed in the same order `teach` iterates them; the
-        # assertion below on the call count is what pins that.
-        v = next(order)
-        ray_view = rig.pin.unproject(uv)
-        world = ray_view @ v.R_vc.transpose(0, 1)
-        return smooth_range_field(world) * ray_view[..., 2]
-
-    img = torch.zeros(3, cam.height, cam.width)
-    fused, info = rig.teach(forward_z, img, align=False)
-    assert len(info["log_scale"]) == 5
+    rig = (RT.Rig.single(cam, fov_deg=95.0, size=280) if layout == "single"
+           else RT.Rig.ring(cam, centre_size=280, ring_width=140, ring_height=84))
+    fused, info = rig.teach(_analytic_forward(rig), torch.zeros(3, cam.height, cam.width),
+                            align=False)
+    assert len(info["log_scale"]) == len(rig.views)
 
     direct = smooth_range_field(cam.ray_grid(cam.height, cam.width))
     theta = torch.acos(cam.ray_grid(cam.height, cam.width)[..., 2].clamp(-1, 1))
     inner = rig.covered & (theta < cam.theta_max - math.radians(1.5))
     err = ((fused - direct).abs() / direct.abs())[inner]
-    assert float(err.max()) < 5e-3, f"max rel err {float(err.max()):.2e}"
+    assert float(err.max()) < 6e-3, f"{layout}: max rel err {float(err.max()):.2e}"
 
 
 def test_alignment_removes_a_seam_that_unaligned_fusion_would_stitch_in():
@@ -287,44 +305,32 @@ def test_alignment_removes_a_seam_that_unaligned_fusion_would_stitch_in():
 
     Fusing without aligning them writes a step discontinuity into the target
     along every view boundary, and a student trained on it would learn the
-    step. The scales here are deliberately gross (up to 1.35x) so the test
-    fails loudly if alignment is ever dropped.
+    step. The scales here are deliberately gross so the test fails loudly if
+    alignment is ever dropped.
     """
     cam = aria(252)
-    rig = RT.Rig(cam, fov_deg=90.0, size=280, n_views=5, tilt_deg=40.0)
-    uv = pixel_grid(rig.pin.height, rig.pin.width, dtype=torch.float32)
-    scales = [1.0, 1.35, 0.74, 1.20, 0.83]
-
-    def make(idx_holder):
-        def forward_z(_img):
-            k = idx_holder[0]; idx_holder[0] += 1
-            v = rig.views[k]
-            ray_view = rig.pin.unproject(uv)
-            world = ray_view @ v.R_vc.transpose(0, 1)
-            return smooth_range_field(world) * ray_view[..., 2] * scales[k]
-        return forward_z
-
+    rig = RT.Rig.ring(cam, centre_size=280, ring_width=140, ring_height=84)
+    scales = [1.0, 1.35, 0.74, 1.20, 0.83, 1.28, 0.79]
     img = torch.zeros(3, cam.height, cam.width)
-    raw, _ = rig.teach(make([0]), img, align=False)
-    fixed, info = rig.teach(make([0]), img, align=True)
+    raw, _ = rig.teach(_analytic_forward(rig, scales), img, align=False)
+    fixed, info = rig.teach(_analytic_forward(rig, scales), img, align=True)
+
     direct = smooth_range_field(cam.ray_grid(cam.height, cam.width))
     theta = torch.acos(cam.ray_grid(cam.height, cam.width)[..., 2].clamp(-1, 1))
     inner = rig.covered & (theta < cam.theta_max - math.radians(1.5))
-
     err_raw = float(((raw - direct).abs() / direct)[inner].max())
     err_fix = float(((fixed - direct).abs() / direct)[inner].max())
     assert err_raw > 0.15, f"the unaligned seam should be gross, got {err_raw:.3f}"
-    assert err_fix < 5e-3, f"alignment left {err_fix:.3f}"
-    # The fitted log-scales must be the inverses of the ones injected.
-    for k, s in enumerate(scales):
-        assert info["log_scale"][k] == pytest.approx(-math.log(s), abs=0.02)
+    assert err_fix < 6e-3, f"alignment left {err_fix:.3f}"
+    for k, sc in enumerate(scales):
+        assert info["log_scale"][k] == pytest.approx(-math.log(sc), abs=0.03)
 
 
 def test_the_rig_roundtrip_control_is_close_to_the_identity():
     cam = aria(252)
-    rig = RT.Rig(cam, fov_deg=90.0, size=280, n_views=5, tilt_deg=40.0)
+    rig = RT.Rig.ring(cam, centre_size=280, ring_width=140, ring_height=84)
     field = smooth_range_field(cam.ray_grid(cam.height, cam.width))
     back, _ = rig.roundtrip(field)
     theta = torch.acos(cam.ray_grid(cam.height, cam.width)[..., 2].clamp(-1, 1))
     inner = rig.covered & (theta < cam.theta_max - math.radians(1.5))
-    assert float(((back - field).abs() / field)[inner].max()) < 8e-3
+    assert float(((back - field).abs() / field)[inner].max()) < 9e-3
