@@ -408,18 +408,29 @@ class Rig:
 
     @classmethod
     def ring(cls, fisheye: Camera, *, centre_fov_deg: float = 89.0,
-             centre_size: int = 630, n_ring: int = 6, tilt_deg: float = 36.0,
-             ring_fov_x_deg: float = 50.0, ring_width: int = 280,
-             ring_height: int = 154, **kw) -> "Rig":
+             centre_size: int = 630, n_ring: int = 8, tilt_deg: float = 40.0,
+             ring_fov_x_deg: float = 38.0, ring_width: int = 280,
+             ring_height: int = 210, **kw) -> "Rig":
         """One centre view plus a ring of TANGENTIALLY ELONGATED views.
 
-        The defaults are derived, not tuned: 89 deg is the widest co-axial
-        square that still fills its frame on Aria (the sweep measured 100.0% at
-        89 and 98.7% at 95); the ring's tilt and radial half-field are the
-        largest that keep the outward corner inside the 54.7 deg cone; and six
-        views is what it takes to tile 360 deg of azimuth at that tangential
-        width with overlap to align on. `test_the_ring_fills_its_frames_and_
-        covers_the_cone` is what actually checks all of that.
+        The centre view's 89 deg is derived: it is the widest co-axial square
+        that still fills its frame on Aria (the sweep measured 100.0% fill at
+        89 and 98.7% at 95).
+
+        The ring's numbers were MEASURED, not derived, because the hand
+        trigonometry was wrong. It said six views at tilt 36 with a 50x29 deg
+        frame would tile the annulus; the rig measured 0.81 of the rim band,
+        because the azimuth a tangential view subtends shrinks as 1/sin(theta)
+        and its outer edge bows inward at the tangential extremes, so the gaps
+        open exactly where the band matters. A grid over
+        (n_ring, tilt, fov_x, height) picked these:
+
+            fill 0.981   cone coverage 0.998   rim-band (38-54.9 deg) 0.996
+
+        The objective was fill first: fill is the axis the sweep measured the
+        teacher INVERTING along (98.7% fine, 77.5% broken), so staying near the
+        known-good end of it beats squeezing the last 0.4% of coverage.
+        `test_the_ring_fills_its_frames_AND_covers_the_cone` pins all three.
         """
         specs = [ViewSpec(fov_x_deg=centre_fov_deg, width=centre_size,
                           height=centre_size)]

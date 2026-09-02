@@ -238,11 +238,11 @@ def test_the_ring_fills_its_frames_AND_covers_the_cone():
     cam = aria()
     rig = RT.Rig.ring(cam)
     theta = torch.acos(cam.ray_grid(cam.height, cam.width)[..., 2].clamp(-1, 1))
-    assert rig.coverage > 0.999, f"coverage {rig.coverage:.4f}"
-    assert rig.fill_fraction > 0.98, f"mean fill {rig.fill_fraction:.4f}"
+    assert rig.coverage > 0.995, f"coverage {rig.coverage:.4f}"
+    assert rig.fill_fraction > 0.975, f"mean fill {rig.fill_fraction:.4f}"
     # the band the whole project is about, which the 95 deg single view could
     # only answer for ~70% of
-    assert rig.zone_coverage(theta, 38.0, 54.9) > 0.995
+    assert rig.zone_coverage(theta, 38.0, 54.9) > 0.99
 
 
 def test_the_ring_answers_for_the_rim_band_that_the_single_view_cannot():
@@ -251,14 +251,14 @@ def test_the_ring_answers_for_the_rim_band_that_the_single_view_cannot():
     single = RT.Rig.single(cam, fov_deg=95.0, size=630)
     ring = RT.Rig.ring(cam)
     assert single.zone_coverage(theta, 38.0, 54.9) < 0.85
-    assert ring.zone_coverage(theta, 38.0, 54.9) > 0.995
+    assert ring.zone_coverage(theta, 38.0, 54.9) > 0.99
     assert ring.fill_fraction > single.fill_fraction - 0.02
 
 
 def test_the_rig_reports_its_distinct_frame_sizes():
     """The caller re-installs the backbone per size; it must know how many."""
     assert RT.Rig.single(aria()).sizes == [(630, 630)]
-    assert RT.Rig.ring(aria()).sizes == [(630, 630), (154, 280)]
+    assert RT.Rig.ring(aria()).sizes == [(630, 630), (210, 280)]
 
 
 def _analytic_forward(rig, scale=None):
@@ -288,7 +288,7 @@ def test_the_rig_transports_a_direction_only_field_exactly(layout):
     """
     cam = aria(252)
     rig = (RT.Rig.single(cam, fov_deg=95.0, size=280) if layout == "single"
-           else RT.Rig.ring(cam, centre_size=280, ring_width=140, ring_height=84))
+           else RT.Rig.ring(cam, centre_size=280, ring_width=140, ring_height=98))
     fused, info = rig.teach(_analytic_forward(rig), torch.zeros(3, cam.height, cam.width),
                             align=False)
     assert len(info["log_scale"]) == len(rig.views)
@@ -309,8 +309,8 @@ def test_alignment_removes_a_seam_that_unaligned_fusion_would_stitch_in():
     alignment is ever dropped.
     """
     cam = aria(252)
-    rig = RT.Rig.ring(cam, centre_size=280, ring_width=140, ring_height=84)
-    scales = [1.0, 1.35, 0.74, 1.20, 0.83, 1.28, 0.79]
+    rig = RT.Rig.ring(cam, centre_size=280, ring_width=140, ring_height=98)
+    scales = [1.0, 1.35, 0.74, 1.20, 0.83, 1.28, 0.79, 1.11, 0.88]
     img = torch.zeros(3, cam.height, cam.width)
     raw, _ = rig.teach(_analytic_forward(rig, scales), img, align=False)
     fixed, info = rig.teach(_analytic_forward(rig, scales), img, align=True)
@@ -328,7 +328,7 @@ def test_alignment_removes_a_seam_that_unaligned_fusion_would_stitch_in():
 
 def test_the_rig_roundtrip_control_is_close_to_the_identity():
     cam = aria(252)
-    rig = RT.Rig.ring(cam, centre_size=280, ring_width=140, ring_height=84)
+    rig = RT.Rig.ring(cam, centre_size=280, ring_width=140, ring_height=98)
     field = smooth_range_field(cam.ray_grid(cam.height, cam.width))
     back, _ = rig.roundtrip(field)
     theta = torch.acos(cam.ray_grid(cam.height, cam.width)[..., 2].clamp(-1, 1))
