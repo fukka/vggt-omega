@@ -1,0 +1,14 @@
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+[97m[INFO ] using MLP layer as FFN[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading pretrained dinov2_vitl14 from torch hub
+Using cache found in /user/f.zhang2/.cache/torch/hub/facebookresearch_dinov2_main
+[h9] Apartment_release_decoration_seq132_M1292: 60 frames, matcher=ufm, stride=10
+[h9] 48243 anchors from 118 pairs; median parallax 2.67 deg; rim share 50.6%
+[h9/raycal] near_rim 0.4554 (gap +0.4331)  near_center 0.2712 (gap +0.8393)  center 0.2372 (gap +0.6322)  far 0.2154 (gap +0.2822)
+[h9/global] near_rim 0.4999 (gap +0.4357)  near_center 0.2689 (gap +0.6644)  center 0.2556 (gap +0.4988)  far 0.2383 (gap +0.2407)
+[h9/shuffled] near_rim 0.5009 (gap +0.4328)  near_center 0.2679 (gap +0.6631)  center 0.2563 (gap +0.4976)  far 0.2385 (gap +0.2408)
+[h9/none] near_rim 0.3614 (gap +0.5244)  near_center 0.1728 (gap +0.3692)  center 0.1838 (gap +0.3150)  far 0.1997 (gap +0.2351)
+[h9] LOCKED BAR near_rim gap: none +0.5244 -> raycal +0.4331 (did NOT collapse)
+[h9] wrote /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h9-raycal/decoration_seq132.json  (33.7s)
+MARKER_decoration_seq132=0

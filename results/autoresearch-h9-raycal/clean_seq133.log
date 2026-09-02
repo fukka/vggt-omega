@@ -1,0 +1,14 @@
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+Loading pretrained dinov2_vitl14 from torch hub
+Using cache found in /user/f.zhang2/.cache/torch/hub/facebookresearch_dinov2_main
+[h9] Apartment_release_clean_seq133_M1292: 60 frames, matcher=ufm, stride=10
+[h9] 63641 anchors from 118 pairs; median parallax 3.15 deg; rim share 48.5%
+[h9/raycal] near_rim 1.2173 (gap +0.5781)  near_center 0.6885 (gap +0.7382)  center 0.2900 (gap +0.1637)  far 0.2259 (gap +0.0501)
+[h9/global] near_rim 1.5978 (gap +0.2733)  near_center 0.6938 (gap +0.6824)  center 0.3020 (gap +0.1588)  far 0.2457 (gap +0.0369)
+[h9/shuffled] near_rim 1.5986 (gap +0.2729)  near_center 0.6963 (gap +0.6813)  center 0.3012 (gap +0.1596)  far 0.2457 (gap +0.0369)
+[h9/none] near_rim 1.4814 (gap +0.3238)  near_center 0.3490 (gap +0.3998)  center 0.2808 (gap +0.1153)  far 0.2351 (gap +0.0478)
+[h9] LOCKED BAR near_rim gap: none +0.3238 -> raycal +0.5781 (did NOT collapse)
+[h9] wrote /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h9-raycal/clean_seq133.json  (33.1s)
+MARKER_clean_seq133=0

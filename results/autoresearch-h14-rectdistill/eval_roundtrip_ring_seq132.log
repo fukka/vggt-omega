@@ -1,0 +1,21 @@
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+[97m[INFO ] using MLP layer as FFN[0m
+[eval] loaded LoRA into 8 layers from /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-rectdistill/roundtrip_ring/lora_last.pt
+
+depth joint AbsRel BEFORE -> AFTER:
+   0- 1 m  0.160>0.160 0.180>0.180 0.217>0.217 0.347>0.347 0.446>0.447 0.507>0.508 0.529>0.529 0.711>0.711
+   1- 2 m  0.179>0.179 0.168>0.168 0.147>0.147 0.140>0.140 0.153>0.153 0.167>0.167 0.204>0.204 0.260>0.260
+   2- 3 m  0.191>0.191 0.194>0.194 0.182>0.182 0.163>0.164 0.153>0.153 0.171>0.171 0.208>0.208 0.271>0.271
+   3- 5 m  0.185>0.185 0.198>0.198 0.211>0.212 0.192>0.192 0.176>0.177 0.156>0.156 0.152>0.152 0.218>0.218
+   5-10 m  0.256>0.256 0.225>0.225 0.229>0.230 0.243>0.243 0.240>0.240 0.208>0.208 0.241>0.241 0.218>0.218
+near_rim(<=2m,>=38deg): 0.361 -> 0.362 (+0.0%)
+near_center(<=2m,<=11deg): 0.173 -> 0.173 (-0.1%)
+center(<=11deg): 0.184 -> 0.184 (+0.0%)
+far(>=3m): 0.200 -> 0.200 (+0.0%)
+
+pose (adjacent pairs, official calibration GT):
+  before: rot median 9.54 deg, RRA@15 0.678, tdir median 26.89, RTA@15 0.356 (n=59)
+  after : rot median 9.59 deg, RRA@15 0.678, tdir median 26.74, RTA@15 0.356 (n=59)
+
+[eval] wrote /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-rectdistill/eval_roundtrip_ring_seq132.json
+MARKER_eval_roundtrip_ring_seq132=0
