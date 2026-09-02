@@ -3,10 +3,18 @@
 Three arms, identical in architecture, parameter count, data, seed, optimiser
 and loss form. They differ only in what the student is asked to match:
 
-    --arm rect        the teacher run in a co-axial virtual pinhole  (NO GT)
-    --arm roundtrip   the SAME teacher run on the raw fisheye, put through the
-                      same pinhole resampling                        (NO GT)
-    --arm gt          the ground-truth depth map                     (reference)
+    --arm rect             teacher run in ONE co-axial 95 deg view      (NO GT)
+    --arm rect_ring        teacher run in a centre view + a ring of eight
+                           tangentially elongated views (H14.2)         (NO GT)
+    --arm roundtrip        the SAME teacher on the raw fisheye, put through the
+                           single view's resampling                     (NO GT)
+    --arm roundtrip_ring   likewise, through the ring's resampling      (NO GT)
+    --arm gt               the ground-truth depth map                (reference)
+
+`rect` sees only ~70% of the near-rim zone (a 95 deg co-axial view cannot reach
+further without going black at the corners); `rect_ring` sees 99.3% of it, at a
+lower average teacher gain because the 29% it adds is the hardest outermost
+annulus. Which makes the better STUDENT is the question H14.2 asks.
 
 `roundtrip` is the control that decides the experiment; `gt` is the ceiling and
 is exactly the plain-LoRA row that already beat every rim-targeted method in
@@ -132,7 +140,9 @@ class TeacherCache:
 
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--arm", required=True, choices=("rect", "roundtrip", "gt"))
+    p.add_argument("--arm", required=True,
+                   choices=("rect", "rect_ring", "roundtrip",
+                            "roundtrip_ring", "gt"))
     p.add_argument("--train-seqs", required=True)
     p.add_argument("--cache-root", default=None,
                    help="required for the two label-free arms")

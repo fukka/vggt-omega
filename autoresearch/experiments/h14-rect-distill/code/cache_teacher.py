@@ -102,7 +102,8 @@ def zone_table(absrel_sum, counts, t_mid) -> dict:
 
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--arm", required=True, choices=("rect", "roundtrip"))
+    p.add_argument("--arm", required=True,
+                   choices=("rect", "rect_ring", "roundtrip", "roundtrip_ring"))
     p.add_argument("--seq", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--size", type=int, default=504,
@@ -197,7 +198,7 @@ def main(argv=None) -> None:
     t0 = time.time()
     teacher = {}
     scales = {}
-    if a.arm == "rect":
+    if a.arm.startswith("rect"):
         # The rig's frames differ in size, so the backbone is re-installed when
         # the size changes. `install` only re-registers hooks here (all the
         # geometry flags are off), so paying it per view is cheap; feeding a
@@ -319,7 +320,7 @@ def main(argv=None) -> None:
         key = "near_rim(<=2m,>=38deg)"
         if key in tz:
             manifest["precheck"]["near_rim_teacher_beats_raw"] = bool(tz[key] < rz[key])
-            if a.arm == "rect" and tz[key] >= rz[key]:
+            if a.arm.startswith("rect") and tz[key] >= rz[key]:
                 print("[h14] PREMISE NOT CONFIRMED at this configuration: the "
                       "teacher is not better at the near rim than the raw "
                       "model. Do not train a student on this cache.")
