@@ -108,9 +108,9 @@ def main(argv=None) -> None:
     p.add_argument("--size", type=int, default=504,
                    help="the STUDENT's grid; the cache is written on it")
     p.add_argument("--teacher-fov", type=float, default=110.0)
-    p.add_argument("--teacher-size", type=int, default=700,
-                   help="700 keeps centre sampling at parity with the fisheye "
-                        "at 504; see rect_teacher.virtual_pinhole")
+    p.add_argument("--teacher-size", type=int, default=630,
+                   help="630 keeps centre sampling at parity with the fisheye "
+                        "at 504 (ratio 1.009); see rect_teacher.virtual_pinhole")
     p.add_argument("--max-frames", type=int, default=60)
     p.add_argument("--variant", default="small")
     p.add_argument("--depth-max-m", type=float, default=10.0)

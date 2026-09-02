@@ -42,9 +42,10 @@ frame ── frozen backbone + LoRA (student) ── depth ──── log-L1 �
 
 * **Teacher**: one forward pass of the *same frozen backbone* on a co-axial
   virtual pinhole that images the **whole** cone (110° ≥ 2·54.83°), rendered at
-  700 px so the centre is not downsampled (`rect_teacher.virtual_pinhole`
-  documents the 0.72× trap and `test_size_700_restores_centre_sampling_parity`
-  pins the arithmetic).
+  **630 px** so the centre is not downsampled (`rect_teacher.virtual_pinhole`
+  documents the 0.807× trap and
+  `test_630_restores_centre_sampling_parity_and_504_does_not` pins it against
+  the camera).
 * **Transport**: pure resampling, **no depth conversion**. For a co-axial lens
   re-parameterisation both planar z and euclidean range are functions of the
   ray alone, so both are invariant. That licence to convert nothing is exactly

@@ -73,14 +73,20 @@ def virtual_pinhole(fisheye: Camera, fov_deg: float, size: int,
     ``size`` is a free parameter with a real cost on both sides, so it is
     chosen rather than defaulted at the call site:
 
-      * a 110 deg pinhole has focal ``(size/2)/tan(55 deg) = 0.350 * size``,
-        against the fisheye's ``~0.487 * size`` at the same frame size, so
-        rendering at the SAME size DOWNSAMPLES the centre by ~0.72x. The centre
-        is the region every method in this project has had to protect; blurring
-        it in the teacher is the obvious way to poison the student there.
-      * ``size = 700`` restores centre parity (0.350*700 = 245 ~ the fisheye's
-        245 px at 504) and oversamples the rim ~3.3x, which is free accuracy:
-        upsampling loses nothing.
+      * a 110 deg pinhole has focal ``(size/2)/tan(55 deg) = 0.3501 * size``,
+        against the fisheye's measured ``fx = 218.69`` at 504 px, so rendering
+        at the SAME size gives 176.45 px and DOWNSAMPLES the centre by 0.807x.
+        The centre is the region every method in this project has had to
+        protect; blurring it in the teacher is the obvious way to poison the
+        student there.
+      * ``size = 630`` restores centre parity (0.3501*630 = 220.6, ratio
+        1.009) and oversamples the rim, which is free accuracy: upsampling
+        loses nothing. 630 = 45*14, so it is also patch-aligned.
+
+    An earlier draft of this docstring said 0.72x and 700 px, from a guessed
+    ``0.487*size`` focal. The real one is ``610.94 * size/1408`` (cam3r's
+    calibration of record); the test below pins the corrected numbers against
+    the camera itself rather than against arithmetic done in a comment.
 
     Size must stay a multiple of the ViT patch, or `Backbone.install` refuses
     it -- checked here so the failure lands at construction rather than a

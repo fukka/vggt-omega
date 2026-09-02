@@ -77,27 +77,27 @@ def test_the_real_aria_camera_passes_the_shared_axis_check():
     Co-axiality is about the AXIS, not about where the axis lands in the frame.
     """
     cam = aria(504)
-    pin = RT.virtual_pinhole(cam, fov_deg=110.0, size=700)
+    pin = RT.virtual_pinhole(cam, fov_deg=110.0, size=630)
     assert abs(cam.cx - (cam.width - 1) / 2.0) > 2.0, (
         "fixture no longer has the off-centre principal point this pins")
     RT.assert_shared_axis(cam, pin)          # must not raise
 
 
-def test_size_700_restores_centre_sampling_parity():
-    """The docstring's arithmetic, pinned.
+def test_630_restores_centre_sampling_parity_and_504_does_not():
+    """The teacher size, pinned against the camera rather than against a comment.
 
-    At 504 the fisheye's on-axis focal is ~245 px. A 110 deg pinhole has focal
-    0.350*size, so 504 gives 176 px (0.72x -- the centre is BLURRED) and 700
-    gives 245 px (parity). The centre is the region every method in this
-    project has had to protect, so a teacher that blurs it is a trap, and the
-    number that avoids it belongs in a test rather than in a comment.
+    Aria's measured focal at 504 px is 218.69. A 110 deg pinhole has focal
+    0.3501*size, so 504 gives 176.45 (0.807x -- the centre is BLURRED) and 630
+    gives 220.57 (1.009x, parity). The centre is the region every method in
+    this project has had to protect, so a teacher that blurs it is a trap, and
+    the number that avoids it belongs in a test. An earlier draft asserted
+    0.72x and 700 px from a guessed focal, and this test is what caught it.
     """
     cam = aria(504)
     f_fish = cam.fx
-    f_504 = RT.virtual_pinhole(cam, 110.0, 504).fx
-    f_700 = RT.virtual_pinhole(cam, 110.0, 700).fx
-    assert f_504 / f_fish == pytest.approx(0.72, abs=0.02)
-    assert f_700 / f_fish == pytest.approx(1.00, abs=0.03)
+    assert f_fish == pytest.approx(218.69, abs=0.05)
+    assert RT.virtual_pinhole(cam, 110.0, 504).fx / f_fish == pytest.approx(0.807, abs=0.005)
+    assert RT.virtual_pinhole(cam, 110.0, 630).fx / f_fish == pytest.approx(1.009, abs=0.005)
 
 
 # ------------------------------------------------------------------ transport
@@ -112,7 +112,7 @@ def test_range_and_z_are_both_invariant_under_the_transport():
     #38 v1 and cost a four-row re-run.
     """
     cam = aria(504)
-    pin = RT.virtual_pinhole(cam, fov_deg=110.0, size=700)
+    pin = RT.virtual_pinhole(cam, fov_deg=110.0, size=630)
     grid, covered = RT.grid_pinhole_to_fisheye(cam, pin)
 
     rays_f = cam.ray_grid(cam.height, cam.width)
@@ -154,7 +154,7 @@ def test_the_round_trip_returns_a_smooth_map_inside_the_cone():
     matched and any win for the treatment would be uninterpretable.
     """
     cam = aria(504)
-    pin = RT.virtual_pinhole(cam, fov_deg=110.0, size=700)
+    pin = RT.virtual_pinhole(cam, fov_deg=110.0, size=630)
     g_in, _ = RT.grid_fisheye_to_pinhole(cam, pin)
     g_out, covered = RT.grid_pinhole_to_fisheye(cam, pin)
 
