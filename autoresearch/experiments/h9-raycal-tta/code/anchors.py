@@ -84,7 +84,8 @@ def triangulate(u1: Tensor, u2_j: Tensor, R: Tensor, t: Tensor
                 ) -> Tuple[Tensor, Tensor, Tensor]:
     """Range in frame i for matched unit bearings.
 
-    ``u1`` (N, 3) bearings in frame i; ``u2_j`` (N, 3) bearings in frame j;
+    ``u1`` (N, 3) bearings in frame i; ``u2_j`` (N, 3) bearings in frame j
+    (both are normalised on the way in, so they need not arrive unit);
     ``R``, ``t`` take a point from frame i to frame j (``X_j = R X_i + t``).
 
     Returns ``(range_i, parallax_rad, ok)``. ``ok`` is the cheirality test --
@@ -100,6 +101,13 @@ def triangulate(u1: Tensor, u2_j: Tensor, R: Tensor, t: Tensor
     u2_j = u2_j.double()
     R = _orthonormalise(R.double())
     t = t.double().reshape(3)
+    # Normalised HERE, not assumed. The normal equations below are written for
+    # unit bearings (the (u.u) terms are dropped as 1), so a bearing that is
+    # 3e-7 off unit -- which is what float32 trigonometry produces -- is
+    # amplified by the same 1/(1 - c^2) into ~6e-4 of relative range. Same
+    # amplifier, same class of bug as the drifted rotation above; both were
+    # found by this module's own tests failing at exactly that magnitude.
+    u1 = torch.nn.functional.normalize(u1, dim=-1)
     C = -(R.transpose(0, 1) @ t)                 # camera j's centre, in frame i
     u2 = u2_j @ R                                # = (R^T d_j)^T, rows are rays
     u2 = torch.nn.functional.normalize(u2, dim=-1)
