@@ -107,7 +107,12 @@ def main(argv=None) -> None:
     p.add_argument("--out", required=True)
     p.add_argument("--size", type=int, default=504,
                    help="the STUDENT's grid; the cache is written on it")
-    p.add_argument("--teacher-fov", type=float, default=110.0)
+    p.add_argument("--teacher-fov", type=float, default=95.0,
+                   help="95 is what the sweep picked: 98.7%% real content and "
+                        "84%% cone coverage. 110 covers the cone but goes "
+                        "22.5%% black and inverts the teacher in every zone.")
+    p.add_argument("--teacher-views", type=int, default=1)
+    p.add_argument("--teacher-tilt", type=float, default=40.0)
     p.add_argument("--teacher-size", type=int, default=630,
                    help="630 keeps centre sampling at parity with the fisheye "
                         "at 504 (ratio 1.009); see rect_teacher.virtual_pinhole")
@@ -132,103 +137,105 @@ def main(argv=None) -> None:
 
     s = Seq(os.path.expanduser(a.seq), a.size, a.max_frames)
     cam = s.src.camera
-    pin = RT.virtual_pinhole(cam, a.teacher_fov, a.teacher_size,
-                             require_full_cone=not a.allow_partial_coverage)
-    RT.assert_shared_axis(cam, pin)
-    g_in, _ = RT.grid_fisheye_to_pinhole(cam, pin)
-    g_out, covered = RT.grid_pinhole_to_fisheye(cam, pin)
+    rig = RT.Rig(cam, fov_deg=a.teacher_fov, size=a.teacher_size,
+                 n_views=a.teacher_views, tilt_deg=a.teacher_tilt)
+    covered = rig.covered
     cone = cam.valid_mask(a.size, a.size)
-    cov = float((covered & cone).sum()) / float(cone.sum())
-    print(f"[h14/{a.arm}] {s.name}: {len(s.frames)} frames, pinhole "
-          f"{a.teacher_size}px @ {a.teacher_fov} deg, cone coverage {cov:.4f}")
-    # How much of the PINHOLE frame carries real content. A square pinhole
-    # whose corner rays exceed theta_max has black corners, and a large black
-    # vignette is an image statistic DA3 has never seen -- a candidate
-    # explanation for a teacher that is worse than the model it came from,
-    # separate from coverage. corner theta = atan(sqrt(2) tan(fov/2)).
-    _, fill_valid = RT.grid_fisheye_to_pinhole(cam, pin)
-    fill = float(fill_valid.float().mean())
-    print(f"[h14/{a.arm}] pinhole frame is {fill * 100:.1f}% real content "
-          f"({(1 - fill) * 100:.1f}% black outside the cone)")
-    if cov < 0.999 and not a.allow_partial_coverage:
+    cov = rig.coverage
+    print(f"[h14/{a.arm}] {s.name}: {len(s.frames)} frames, {a.teacher_views} x "
+          f"{a.teacher_size}px @ {a.teacher_fov} deg, cone coverage {cov:.4f}, "
+          f"mean frame fill {rig.fill_fraction:.4f}")
+    if rig.fill_fraction < 0.95:
+        print(f"[h14] WARNING: {(1 - rig.fill_fraction) * 100:.1f}% of the "
+              f"teacher's frame is black. The sweep measured the teacher "
+              f"INVERTING (near_rim -35% -> +15%) between 1.3% and 22.5% black.")
+    if cov < 0.80 and not a.allow_partial_coverage:
         raise SystemExit(
-            f"[h14] the pinhole covers only {cov:.4f} of the imaged cone. A "
-            f"teacher that cannot see the rim cannot teach it -- that is "
-            f"Center-PH's measured failure (49.6% near-rim coverage), not a "
-            f"design this experiment may repeat. Pass "
-            f"--allow-partial-coverage only for a diagnostic sweep.")
+            f"[h14] the rig covers only {cov:.4f} of the imaged cone. Below "
+            f"0.80 this is Center-PH's measured failure (49.6% near-rim "
+            f"coverage), not a teacher. Pass --allow-partial-coverage only "
+            f"for a diagnostic sweep.")
 
     from raytun3r.backbones import build_backbone
     bb = build_backbone("da3", weights="pretrained", device=a.device,
                         variant=a.variant)
-    # Installed for the camera the model is actually FED. `_finalize` converts
-    # native depth to `range` against `self.camera`, so installing the fisheye
-    # here and feeding a pinhole render would apply the wrong theta -- a smooth
-    # radial error, i.e. exactly the thing being measured.
-    if a.arm == "rect":
-        bb.install(None, pin, (a.teacher_size, a.teacher_size),
-                   patch_undistort=False, border_token=False, dpt_grid=False,
-                   depth_convention="range")
-    else:
-        bb.install(None, cam, (a.size, a.size),
-                   patch_undistort=False, border_token=False, dpt_grid=False,
-                   depth_convention="range")
+
+    theta = cam.incidence_grid(a.size, a.size)
+    cos_fish = torch.cos(theta).clamp_min(1e-6)
+    cos_dev = cos_fish.to(a.device)
+
+    # Everything is carried in planar z inside the backbone (DA3's native
+    # convention, so `_finalize` converts nothing) and turned into range
+    # exactly once, against the axis the value is defined by: `Rig.teach`
+    # divides by the VIEW's cos, the fisheye path by the fisheye's. Installing
+    # a camera and letting _finalize divide would use the wrong axis for any
+    # tilted view.
+    def install(camera, hw):
+        bb.install(None, camera, hw, patch_undistort=False, border_token=False,
+                   dpt_grid=False, depth_convention="z")
 
     out = Path(a.out)
     (out / "npz").mkdir(parents=True, exist_ok=True)
-    g_in_d = g_in.to(a.device)
-    g_out_d = g_out.to(a.device)
 
     # ---- pass 1: the teacher --------------------------------------------
     t0 = time.time()
     teacher = {}
-    for n in s.frames:
-        img = s.src.image(n).to(a.device)
-        with torch.no_grad():
-            if a.arm == "rect":
-                d_pin = bb.forward(RT.warp(img, g_in_d)[None, None]).depth[0]
-                d_fish = RT.warp(d_pin, g_out_d)
-            else:
-                d_raw = bb.forward(img[None, None]).depth[0]
-                d_fish = RT.warp(RT.warp(d_raw, g_in_d), g_out_d)
-        teacher[s.stem(n)] = d_fish.float().cpu().numpy()
+    scales = {}
+    if a.arm == "rect":
+        install(rig.pin, (a.teacher_size, a.teacher_size))
+        def forward_z(warped):
+            with torch.no_grad():
+                return bb.forward(warped[None, None]).depth[0]
+        for n in s.frames:
+            d, info = rig.teach(forward_z, s.src.image(n).to(a.device))
+            teacher[s.stem(n)] = d.float().cpu().numpy()
+            scales[s.stem(n)] = info["log_scale"]
+    else:
+        install(cam, (a.size, a.size))
+        for n in s.frames:
+            with torch.no_grad():
+                z = bb.forward(s.src.image(n)[None, None].to(a.device)).depth[0]
+            d, info = rig.roundtrip(z / cos_dev)
+            teacher[s.stem(n)] = d.float().cpu().numpy()
+            scales[s.stem(n)] = info["log_scale"]
 
     # ---- pass 2: the raw-fisheye reference -------------------------------
-    # Always run, not only under --score-teacher, because the per-frame log
-    # offset below is part of the TARGET and not a diagnostic. Re-installing
-    # per frame instead of once per pass would re-hook the model 60 times.
-    bb.install(None, cam, (a.size, a.size), patch_undistort=False,
-               border_token=False, dpt_grid=False, depth_convention="range")
+    # Always run, not only under --score-teacher: the per-frame log offset
+    # below is part of the TARGET, not a diagnostic.
+    install(cam, (a.size, a.size))
     cov_np = covered.numpy()
-    cos_t = torch.cos(cam.incidence_grid(a.size, a.size))
     offsets = {}
     if a.score_teacher:
-        theta_np = cam.incidence_grid(a.size, a.size).numpy()
+        theta_np = theta.numpy()
         t_edges = np.linspace(0.0, float(cam.theta_max), THETA_BINS + 1)
         t_idx = np.clip(np.digitize(theta_np, t_edges) - 1, 0, THETA_BINS - 1)
         t_mid = 0.5 * (t_edges[:-1] + t_edges[1:]) * 180 / np.pi
         nb_d = len(GT_DEPTH_EDGES) - 1
         acc = {k: [np.zeros((THETA_BINS, nb_d)), np.zeros((THETA_BINS, nb_d))]
                for k in ("teacher", "raw")}
+        # How much of each zone the teacher can actually answer for. A zone
+        # gain on 40% of its pixels is not the same claim as one on 95%, and
+        # pooled numbers do not say which.
+        zone_cov = {}
         from finetune.eval.metrics import align_depth
 
     for n in s.frames:
         stem = s.stem(n)
         with torch.no_grad():
-            raw = bb.forward(s.src.image(n)[None, None].to(a.device)
-                             ).depth[0].float().cpu().numpy()
+            zr = bb.forward(s.src.image(n)[None, None].to(a.device)).depth[0]
+        raw = (zr / cos_dev).float().cpu().numpy()
         tea = teacher[stem]
         both = cov_np & (raw > 1e-6) & (tea > 1e-6)
-        # Median, not mean: a handful of saturated pixels at the cone edge
-        # would drag a mean and silently rescale every target in the frame.
-        offsets[stem] = float(np.median(np.log(tea[both]) - np.log(raw[both]))
-                              ) if both.sum() > 1000 else 0.0
+        # Median, not mean: a few saturated pixels at the cone edge would drag
+        # a mean and silently rescale every target in the frame.
+        offsets[stem] = (float(np.median(np.log(tea[both]) - np.log(raw[both])))
+                         if both.sum() > 1000 else 0.0)
         if a.score_teacher:
-            gr = s.gt_range(n, cos_t).numpy()
+            gr = s.gt_range(n, cos_fish).numpy()
+            valid = both & (gr > 0) & (gr <= a.depth_max_m)
+            if valid.sum() < 1000:
+                continue
             for key, d in (("teacher", tea), ("raw", raw)):
-                valid = both & (gr > 0) & (gr <= a.depth_max_m)
-                if valid.sum() < 1000:
-                    continue
                 al = align_depth(d, gr, valid, mode="scale_shift")
                 ar = (np.abs(al - gr) / np.clip(gr, 1e-6, None))[valid]
                 di = np.clip(np.digitize(gr[valid], GT_DEPTH_EDGES) - 1, 0, nb_d - 1)
@@ -238,6 +245,14 @@ def main(argv=None) -> None:
                                            ).reshape(THETA_BINS, nb_d)
                 acc[key][1] += np.bincount(flat, minlength=THETA_BINS * nb_d
                                            ).reshape(THETA_BINS, nb_d)
+            in_zone = (gr > 0) & (gr <= a.depth_max_m) & cone.numpy()
+            for zn, keep in (("near_rim(<=2m,>=38deg)",
+                              (np.rad2deg(theta_np) >= 38) & (gr <= 2.0)),
+                             ("center(<=11deg)", np.rad2deg(theta_np) <= 11)):
+                m = in_zone & keep
+                if m.sum():
+                    p_, q_ = zone_cov.get(zn, (0.0, 0.0))
+                    zone_cov[zn] = (p_ + float((m & cov_np).sum()), q_ + float(m.sum()))
 
     if not a.precheck_only:
         for stem, d in teacher.items():
@@ -249,38 +264,38 @@ def main(argv=None) -> None:
         "arm": a.arm, "seq": s.name, "seq_dir": a.seq, "frames": len(s.frames),
         "stems": [s.stem(n) for n in s.frames],
         "size": a.size, "teacher_fov_deg": a.teacher_fov,
-        "teacher_size": a.teacher_size, "backbone": f"da3-{a.variant}",
+        "teacher_size": a.teacher_size, "teacher_views": a.teacher_views,
+        "teacher_tilt_deg": a.teacher_tilt, "backbone": f"da3-{a.variant}",
         "depth_convention": "range", "cone_coverage": cov,
-        "pinhole_fill_fraction": fill, "precheck_only": a.precheck_only,
-        "git": git_rev(), "used_gt_for_targets": False,
+        "mean_frame_fill": rig.fill_fraction, "precheck_only": a.precheck_only,
+        "view_log_scales": scales, "git": git_rev(),
+        "used_gt_for_targets": False,
         "log_offset_vs_raw": offsets,
         "log_offset_median": float(np.median(list(offsets.values()))),
-        "seconds": round(time.time() - t0, 1),
-        "config": vars(a),
+        "seconds": round(time.time() - t0, 1), "config": vars(a),
     }
     print(f"[h14/{a.arm}] median log-offset vs raw fisheye: "
           f"{manifest['log_offset_median']:+.4f} "
           f"(roundtrip should be ~0 by construction)")
 
     if a.score_teacher:
-        # Both scored on the SAME pixels (`both` & the same validity rule), so
-        # the comparison is not a coverage artefact -- the failure mode that
-        # made Center-PH look reasonable until its 49.6% was measured.
         tz = zone_table(acc["teacher"][0], acc["teacher"][1], t_mid)
         rz = zone_table(acc["raw"][0], acc["raw"][1], t_mid)
-        manifest["precheck"] = {"teacher": tz, "raw_fisheye": rz}
+        zc = {k: (v[0] / v[1] if v[1] else 0.0) for k, v in zone_cov.items()}
+        manifest["precheck"] = {"teacher": tz, "raw_fisheye": rz,
+                                "zone_coverage": zc}
         print(f"[h14/{a.arm}] PRE-CHECK (teacher vs raw, same pixels):")
         for k in tz:
+            extra = f"  [teacher sees {zc[k] * 100:.1f}% of this zone]" if k in zc else ""
             print(f"    {k}: raw {rz[k]:.4f} -> teacher {tz[k]:.4f} "
-                  f"({(tz[k] - rz[k]) / rz[k] * 100:+.2f}%)")
+                  f"({(tz[k] - rz[k]) / rz[k] * 100:+.2f}%){extra}")
         key = "near_rim(<=2m,>=38deg)"
         if key in tz:
             manifest["precheck"]["near_rim_teacher_beats_raw"] = bool(tz[key] < rz[key])
             if a.arm == "rect" and tz[key] >= rz[key]:
-                print("[h14] PREMISE NOT CONFIRMED on this backbone/config: the "
-                      "rect teacher is not better at the near rim than the raw "
-                      "model. 024A does not transfer here; training a student "
-                      "on it cannot help. Record this and stop.")
+                print("[h14] PREMISE NOT CONFIRMED at this configuration: the "
+                      "teacher is not better at the near rim than the raw "
+                      "model. Do not train a student on this cache.")
 
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1))
     print(f"[h14/{a.arm}] {'pre-check only, no cache written' if a.precheck_only else f'wrote {len(teacher)} maps'}"

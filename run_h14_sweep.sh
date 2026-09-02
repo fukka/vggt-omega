@@ -42,7 +42,7 @@ for seq in Apartment_release_clean_seq131_M1292 Apartment_release_clean_seq136_M
     ( CUDA_VISIBLE_DEVICES=$GPU python \
         autoresearch/experiments/h14-rect-distill/code/cache_teacher.py \
         --arm rect --seq "$A/$seq" --out "$OUT/$tag" \
-        --teacher-fov "$fov" --score-teacher --precheck-only \
+        --teacher-fov "$fov" --teacher-views 1 --score-teacher --precheck-only \
         --allow-partial-coverage
       echo "MARKER_$tag=$?" ) > "$OUT/$tag.log" 2>&1
     echo "[$tag] $(grep -o "MARKER_$tag=[0-9]*" "$OUT/$tag.log" | tail -1) after $(( $(date +%s)-t0 ))s"

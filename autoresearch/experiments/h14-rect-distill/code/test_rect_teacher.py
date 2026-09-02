@@ -198,17 +198,45 @@ def test_the_cone_is_the_lens_cone_not_the_kb4_turnover():
 
 # ------------------------------------------------------------- the multi-view rig
 
-def test_a_five_view_rig_covers_the_cone_with_filled_frames():
-    """What the single pinhole could not do: cover the cone AND stay filled.
+def test_tilted_views_cannot_be_filled_and_the_geometry_says_why():
+    """The multi-view idea is geometrically impossible here, with a number.
 
-    The FOV sweep measured the teacher inverting from -41% to +15% on near_rim
-    exactly when the frame went 22.5% black. A rig of tilted mild views has
-    neither problem, and this is the assertion that it actually has neither.
+    A square view tilted by ``t`` with half-FOV ``h`` has corner half-angle
+    ``h_c = atan(sqrt(2) tan h)``, and its frame is entirely inside the lens
+    cone only if ``t + h_c <= theta_max``. Aria's cone stops at 54.7 deg, so:
+
+      * a co-axial view is filled up to fov ~89.9 deg (and the sweep measured
+        100.0% fill at 89 and 98.7% at 95 -- the formula, confirmed);
+      * a view tilted 40 deg would need fov <= 21 deg to stay filled, so the
+        5-view rig at fov 90 measures only 66% mean fill -- WORSE than the
+        110 deg single view's 77.5%, which the sweep already showed inverts
+        the teacher.
+
+    Covering the rim with rectilinear views and keeping every frame filled are
+    therefore not simultaneously achievable, and that is why the shipped
+    teacher is a single 95 deg view supervising the 84% of the cone it can see
+    rather than a rig. Recorded as a test because it is the reason for a design
+    decision, and a later reader will otherwise try the rig again.
     """
     cam = aria()
-    rig = RT.Rig(cam, fov_deg=90.0, size=630, n_views=5, tilt_deg=40.0)
-    assert rig.coverage > 0.999, f"coverage {rig.coverage:.4f}"
-    assert rig.fill_fraction > 0.90, f"mean fill {rig.fill_fraction:.4f}"
+    tmax = math.degrees(cam.theta_max)
+
+    def corner(fov):
+        return math.degrees(math.atan(math.sqrt(2) * math.tan(math.radians(fov / 2))))
+
+    assert corner(89.0) < tmax < corner(95.0)
+    rig5 = RT.Rig(cam, fov_deg=90.0, size=630, n_views=5, tilt_deg=40.0)
+    rig1 = RT.Rig(cam, fov_deg=110.0, size=630, n_views=1)
+    assert rig5.coverage > 0.999                      # it does cover the cone
+    assert rig5.fill_fraction == pytest.approx(0.658, abs=0.02)
+    assert rig5.fill_fraction < rig1.fill_fraction    # and is blacker for it
+
+
+def test_the_shipped_teacher_covers_most_of_the_cone_with_a_filled_frame():
+    cam = aria()
+    rig = RT.Rig(cam, fov_deg=95.0, size=630, n_views=1)
+    assert rig.fill_fraction > 0.98
+    assert 0.80 < rig.coverage < 0.90
 
 
 def test_a_one_view_rig_is_the_single_co_axial_pinhole():
