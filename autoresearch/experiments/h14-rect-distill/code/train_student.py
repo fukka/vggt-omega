@@ -92,9 +92,13 @@ class TeacherCache:
         self.dir = Path(root) / arm / seq_name
         man = self.dir / "manifest.json"
         if not man.exists():
+            have = sorted(q.name for q in (Path(root) / arm).glob("*")
+                          if q.is_dir()) if (Path(root) / arm).exists() else []
             raise SystemExit(
                 f"[h14] no teacher cache at {self.dir} -- run cache_teacher.py "
-                f"--arm {arm} for {seq_name} first.")
+                f"--arm {arm} for {seq_name} first. Present under "
+                f"{Path(root) / arm}: {have or 'nothing'}. The key is the FULL "
+                f"sequence directory name, which is what Seq.name gives.")
         self.manifest = json.loads(man.read_text())
         if self.manifest["arm"] != arm:
             raise SystemExit(f"[h14] cache at {self.dir} says arm "

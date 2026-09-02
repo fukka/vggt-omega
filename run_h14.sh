@@ -42,10 +42,14 @@ step () {  # step <tag> <logfile> <cmd...>
 for arm in rect roundtrip; do
   for s in seq131 seq133 seq134 seq135; do
     d=$A/Apartment_release_clean_${s}_M1292
-    [ -s "$CACHE/$arm/$s/manifest.json" ] && { echo "[cache_${arm}_$s] skip"; continue; }
+    # Keyed by the FULL sequence name, because that is what Seq.name gives the
+    # trainer to look the cache up by. A short key here builds a cache the
+    # student cannot find, which is how the first launch died.
+    n=$(basename "$d")
+    [ -s "$CACHE/$arm/$n/manifest.json" ] && { echo "[cache_${arm}_$s] skip"; continue; }
     step "cache_${arm}_$s" "$CACHE/${arm}_${s}.log" \
       python autoresearch/experiments/h14-rect-distill/code/cache_teacher.py \
-        --arm "$arm" --seq "$d" --out "$CACHE/$arm/$s" --score-teacher
+        --arm "$arm" --seq "$d" --out "$CACHE/$arm/$n" --score-teacher
   done
 done
 
