@@ -161,7 +161,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
   <p class="lede">
     上一轮讨论里排在最前面的两条（P1 蒸馏、P2 跨镜头留出）已经跑完。<strong>结果方向相反</strong>：
     H14 的主判据通过 —— 无标签蒸馏真的把边缘修好了；H15 的主判据未通过 —— 而且它否定的是<em>我自己提出的那个补救假设</em>。
-    这一页记录：两边各自的数、判据逐条对照、以及这两个结果各自指向哪里。
+    这一页先讲清楚<strong>这两个实验各自在做什么</strong>（第 02 节，含图和臂的对照表），再给数和逐条判据。
   </p>
   <div class="meta">
     <span>61 项 CPU 测试全绿</span>
@@ -209,8 +209,190 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 
+
 <section>
-  <div class="section-head"><span class="eyebrow">02</span><h2>结果</h2></div>
+  <div class="section-head"><span class="eyebrow">02</span><h2>这两个实验到底在做什么</h2></div>
+
+  <div class="col">
+    <h3>H14：让模型自己给自己出标签</h3>
+    <p>
+      起点是一个已经量到的事实（ticket 024A）：<strong>同一套权重、同一个场景、同一批像素</strong>，
+      喂原始鱼眼图时边缘误差是中心的 1.25–1.81 倍；把图先<strong>矫正成普通透视图</strong>再喂进去，这个倍数塌到约 1.0。
+      也就是说 —— 模型其实"知道"边缘那里是什么，它只是隔着鱼眼的成像方式读不出来。
+    </p>
+    <p>
+      所以 H14 不再设计新机制去让它读得更好，而是：<strong>把它在透视图里已经给出的答案，搬回鱼眼坐标系，当成标签来训练它自己。</strong>
+      整个过程<strong>不需要任何深度真值</strong> —— 老师和学生是同一个冻结模型，只是看的图不一样。
+    </p>
+  </div>
+
+  <figure>
+    <div class="chartbox">
+      <svg viewBox="0 0 760 250" role="img" aria-label="两条教师路径的对比：上路先把鱼眼帧变成 95 度透视图再送进模型，下路直接把鱼眼帧送进模型；两路之后的重采样步骤完全相同，最终都产生同一张鱼眼网格上的伪标签。">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"></path>
+          </marker>
+        </defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)" opacity="0.75">
+          <path d="M 132 112 L 156 52"></path>
+          <path d="M 132 138 L 156 198"></path>
+          <line x1="284" y1="48" x2="322" y2="48"></line>
+          <line x1="284" y1="202" x2="322" y2="202"></line>
+          <line x1="436" y1="48" x2="474" y2="48"></line>
+          <line x1="436" y1="202" x2="474" y2="202"></line>
+          <path d="M 588 48 L 618 112"></path>
+          <path d="M 588 202 L 618 138"></path>
+        </g>
+        <g stroke="currentColor" stroke-width="1.3" fill="none">
+          <rect x="24" y="99" width="108" height="52" rx="4"></rect>
+          <rect x="156" y="26" width="128" height="44" rx="4" stroke="var(--accent)" stroke-width="2.2"></rect>
+          <rect x="322" y="26" width="114" height="44" rx="4"></rect>
+          <rect x="474" y="26" width="114" height="44" rx="4"></rect>
+          <rect x="156" y="180" width="128" height="44" rx="4" stroke-dasharray="5 4" opacity="0.6"></rect>
+          <rect x="322" y="180" width="114" height="44" rx="4"></rect>
+          <rect x="474" y="180" width="114" height="44" rx="4"></rect>
+          <rect x="618" y="99" width="118" height="52" rx="4"></rect>
+        </g>
+        <g fill="currentColor" font-family="Noto Sans SC, sans-serif" font-size="12.5" text-anchor="middle">
+          <text x="78" y="121">这一帧</text><text x="78" y="139">鱼眼原图</text>
+          <text x="220" y="52" fill="var(--accent-ink)">变成 95° 透视图</text>
+          <text x="379" y="45">冻结模型</text><text x="379" y="61">（不训练）</text>
+          <text x="531" y="45">深度搬回</text><text x="531" y="61">鱼眼网格</text>
+          <text x="220" y="206" opacity="0.7">图像不变换</text>
+          <text x="379" y="199">冻结模型</text><text x="379" y="215">（同一个）</text>
+          <text x="531" y="199">深度搬出</text><text x="531" y="215">再搬回</text>
+          <text x="677" y="121">伪标签</text><text x="677" y="139">（无真值）</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="12" font-weight="500">
+          <text x="156" y="18" fill="var(--pos)">rect ── 处理臂</text>
+          <text x="156" y="245" fill="var(--ink-faint)">roundtrip ── 对照臂</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>
+      两条路唯一的差别是<strong>左边那个框</strong>：模型有没有看到透视图。之后的重采样、覆盖范围、损失、参数量全部相同。
+      得到伪标签后，两条路都用<strong>同一个学生</strong>（冻结模型 + LoRA，看原始鱼眼图）去拟合它。
+    </figcaption>
+  </figure>
+
+  <div class="scroll">
+    <table>
+      <caption>H14 的三条臂。名字就是代码里的 <code>--arm</code> 取值。</caption>
+      <thead><tr><th>臂</th><th style="text-align:left">它的"老师"是什么</th><th style="text-align:left">为什么需要它</th><th>用真值</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="mono">rect</td>
+          <td style="text-align:left">同一个冻结模型，但先把这帧<strong>变成 95° 透视图</strong>再看，然后把它给出的深度搬回鱼眼网格</td>
+          <td style="text-align:left">被检验的想法本身</td>
+          <td>否</td>
+        </tr>
+        <tr>
+          <td class="mono">roundtrip</td>
+          <td style="text-align:left">同一个冻结模型，<strong>直接看原始鱼眼图</strong>；它的深度再经过完全相同的两次重采样</td>
+          <td style="text-align:left"><strong>对照组。</strong>把"重采样本身"和"换了成像方式"分开。如果它也变好，说明增益来自重采样或自训练，跟镜头先验无关 —— 那这个想法就死了</td>
+          <td>否</td>
+        </tr>
+        <tr>
+          <td class="mono">gt</td>
+          <td style="text-align:left"><strong>真实深度图</strong></td>
+          <td style="text-align:left"><strong>上限参照。</strong>它就是 #35 里赢过所有边缘定向方法的那条 plain LoRA —— 所以"无标签能拿回有标签的百分之多少"是个可读的比例</td>
+          <td>是</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:36px">
+    <h3>H15：把同一帧用不同镜头重新成像</h3>
+    <p>
+      H12 想验证的是：把<strong>镜头的局部几何</strong>（每个位置上镜头把画面拉伸了多少、朝哪个方向拉）直接喂给网络，会不会有用。
+      它的判据是「真实几何场必须打赢把位置打乱的假场」，结果输了。
+    </p>
+    <p>
+      但 H12 只在<strong>一只镜头</strong>上训练和测试，而在单只镜头上这两者是等价的 ——
+      场是"位置→数值"的固定映射，打乱之后仍然是"位置→数值"的固定映射，网络照背不误。
+      H15 因此把每一帧<strong>用一族不同的镜头重新成像</strong>，并留出两只训练时从未出现的镜头当判据。
+    </p>
+  </div>
+
+  <figure>
+    <div class="chartbox">
+      <svg viewBox="0 0 760 230" role="img" aria-label="三种镜头把同样的入射角映射到同一个圆盘上的不同半径：直线投影把中心压缩、边缘拉伸，等距投影线性分布，Aria 鱼眼介于两者之间。">
+        <g font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--ink-faint)" text-anchor="middle">
+          <text x="150" y="26">0°</text><text x="283.3" y="26">15°</text>
+          <text x="431.5" y="26">30°</text><text x="599.9" y="26">45°</text><text x="710" y="26">54.7°</text>
+        </g>
+        <g stroke="currentColor" stroke-width="0.8" opacity="0.25" stroke-dasharray="3 4">
+          <line x1="150" y1="34" x2="150" y2="196"></line>
+          <line x1="710" y1="34" x2="710" y2="196"></line>
+        </g>
+        <g stroke="currentColor" stroke-width="1.6">
+          <line x1="150" y1="70" x2="710" y2="70"></line>
+          <line x1="150" y1="125" x2="710" y2="125"></line>
+          <line x1="150" y1="180" x2="710" y2="180"></line>
+        </g>
+        <g stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round">
+          <line x1="150" y1="60" x2="150" y2="80"></line>
+          <line x1="283.3" y1="60" x2="283.3" y2="80"></line>
+          <line x1="431.5" y1="60" x2="431.5" y2="80"></line>
+          <line x1="599.9" y1="60" x2="599.9" y2="80"></line>
+          <line x1="710" y1="60" x2="710" y2="80"></line>
+
+          <line x1="150" y1="115" x2="150" y2="135"></line>
+          <line x1="303.7" y1="115" x2="303.7" y2="135"></line>
+          <line x1="457.3" y1="115" x2="457.3" y2="135"></line>
+          <line x1="610.9" y1="115" x2="610.9" y2="135"></line>
+          <line x1="710" y1="115" x2="710" y2="135"></line>
+
+          <line x1="150" y1="170" x2="150" y2="190"></line>
+          <line x1="256.3" y1="170" x2="256.3" y2="190"></line>
+          <line x1="379.2" y1="170" x2="379.2" y2="190"></line>
+          <line x1="547.0" y1="170" x2="547.0" y2="190"></line>
+          <line x1="710" y1="170" x2="710" y2="190"></line>
+        </g>
+        <g fill="currentColor" font-family="Noto Sans SC, sans-serif" font-size="12.5" text-anchor="end">
+          <text x="136" y="66">Aria 鱼眼</text><text x="136" y="82">（真机）</text>
+          <text x="136" y="121">等距</text><text x="136" y="137">（合成）</text>
+          <text x="136" y="176">直线／透视</text><text x="136" y="192">（合成）</text>
+        </g>
+        <text x="430" y="219" fill="var(--ink-faint)" font-family="Noto Sans SC, sans-serif"
+              font-size="12" text-anchor="middle">横轴 = 落在图像上的半径 · 角度标在第一行上，三行的刻度是同样那五条光线</text>
+      </svg>
+    </div>
+    <figcaption>
+      镜头族的构造：焦距由锥体反推（<span class="mono">f = 圆盘半径 / d(θ<sub>max</sub>)</span>），所以每只镜头成像<strong>同样的光线</strong>、
+      填满<strong>同样的圆盘</strong>，只有半径上的分布不同 —— 没有空洞，深度不用转换，唯一变的就是被条件化的那个量本身。
+    </figcaption>
+  </figure>
+
+  <div class="scroll">
+    <table>
+      <caption>H15 的四条臂。四者的架构、参数量、数据、种子、优化器、损失全部相同，<strong>只差 FiLM 被喂了什么</strong>。</caption>
+      <thead><tr><th>臂</th><th style="text-align:left">喂给 FiLM 的几何场</th><th style="text-align:left">为什么需要它</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">jac</td><td style="text-align:left">当前这只镜头<strong>自己的真实场</strong></td><td style="text-align:left">被检验的想法本身</td></tr>
+        <tr><td class="mono">mismatched</td><td style="text-align:left"><strong>另一只</strong>训练镜头的真实场</td><td style="text-align:left"><strong>对照组一。</strong>一样平滑、一样有结构、只是描述的是错的镜头 —— 堵死"平滑的场只是更好拟合"这条解释</td></tr>
+        <tr><td class="mono">shuffled</td><td style="text-align:left">这只镜头的场，但 <strong>token 位置被打乱</strong>（每只镜头一个固定排列）</td><td style="text-align:left"><strong>对照组二。</strong>数值分布完全相同、容量完全相同，只有"位置↔几何"的对应关系被破坏。这是 H12 用的那个对照</td></tr>
+        <tr><td class="mono">none</td><td style="text-align:left">不喂，没有 FiLM</td><td style="text-align:left"><strong>基线。</strong>就是普通 LoRA —— 任何新方法必须先赢它</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:34px">
+    <h3>表里出现的其他词</h3>
+  </div>
+  <div class="stack">
+    <div class="row"><span class="who">near_rim</span><p><strong>近边缘</strong>：入射角 ≥38°、真实距离 ≤2 米的那些像素。这是本项目全部结论的主战场 —— 手、身体、伸手可及的工作区都落在这里，而它恰好是标定最差的地方。</p></div>
+    <div class="row"><span class="who">near_center / center / far</span><p>近中心（≤11°、≤2m）、中心（≤11°，不限距离）、远场（≥3m）。分开报是因为<strong>合在一起会盖住损伤</strong> —— run_010 的近中心塌陷在池化数字里完全看不见。</p></div>
+    <div class="row"><span class="who">AbsRel</span><p>相对绝对误差，越小越好。每帧先做一次 scale+shift 对齐再分区统计（这也意味着<strong>纯全局缩放的"改进"按构造不可见</strong>）。</p></div>
+    <div class="row"><span class="who">留出序列</span><p>seq136 和 decoration_seq132，训练时完全没见过，和 #35/#36、H12 用的是同一套划分 —— 所以这些数字能和它们放进同一张表。</p></div>
+    <div class="row"><span class="who">对照臂 / 预注册</span><p>对照臂是"除了被检验的那一点之外全都一样"的孪生实验。预注册＝<strong>跑之前就把判赢判输的条件写死</strong>，写在 README 里。本项目已经有五个方法死在自己的对照组手上，这个规矩是那么来的。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head"><span class="eyebrow">03</span><h2>结果</h2></div>
 
   <div class="col">
     <h3>H14 · 无标签的透视教师蒸馏 —— 主判据通过</h3>
@@ -277,7 +459,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">03</span><h2>为什么是这两个</h2></div>
+  <div class="section-head"><span class="eyebrow">04</span><h2>为什么是这两个</h2></div>
   <p>
     项目已经有<strong>五个受控否定</strong>：H5 的边缘损失输给普通 LoRA、H6 的边缘 KV 输给全 token、中心／边缘 MoE 被自家证据杀死、
     H7 的 θ 门是平的、H12 的镜头雅可比 FiLM 输给打乱场。共同点是：凡「哪里症状重就在哪儿加力气」的设计都输，凡作用于全图的操作都赢。
@@ -302,7 +484,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">04</span><h2>途中量到的关键结果：教师能做多宽</h2></div>
+  <div class="section-head"><span class="eyebrow">05</span><h2>途中量到的关键结果：教师能做多宽</h2></div>
   <div class="col">
     <p>
       H14 的设计里预留了一个<strong>能在训练前杀死整个前提</strong>的预检：先拿教师和原始模型在同一批像素上对分。第一次跑，它就开火了 ——
@@ -429,7 +611,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">05</span><h2>今天做完的</h2></div>
+  <div class="section-head"><span class="eyebrow">06</span><h2>今天做完的</h2></div>
   <div class="stack">
     <div class="row"><span class="who">H14 代码</span><p><code>rect_teacher.py</code>（鱼眼↔透视搬运、Rig 多视角装置、视角间尺度对齐）、<code>cache_teacher.py</code>（教师缓存 + 预检）、<code>train_student.py</code>（三臂）。评测直接复用 h5 的 <code>eval_lora.py</code>，所以数字会落在 #35/#36 和 H12 的同一张表里，并且自带姿态轴。</p></div>
     <div class="row"><span class="who">H15 代码</span><p><code>lens_family.py</code>（七种镜头形状、固定锥体构造、镜头间形变、逐镜头 token 场）、<code>arms.py</code>（四臂的定义，训练和评测共用同一条规则）、<code>train_multilens.py</code>、<code>eval_lens.py</code>。</p></div>
@@ -440,7 +622,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">06</span><h2>还缺什么</h2></div>
+  <div class="section-head"><span class="eyebrow">07</span><h2>还缺什么</h2></div>
   <div class="stack">
     <div class="row"><span class="who">结果本身</span><p>两条流水线都还在跑。<strong>现在没有任何可引用的结论</strong>，上面那张 FOV 表是唯一已完成的测量。</p></div>
     <div class="row"><span class="who">误差棒</span><p>每臂一个种子，和 H12 一样。方向 + 预注册可以支持「停」，但要下<strong>结论</strong>需要按本项目的标准做逐帧配对自助法。</p></div>
@@ -450,7 +632,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">07</span><h2>判据：跑之前就写死了</h2></div>
+  <div class="section-head"><span class="eyebrow">08</span><h2>判据：跑之前就写死了</h2></div>
   <div class="col"><p>两个 README 里的预注册条款，原样搬在这里，方便结果回来时直接对照，不给事后解释留空间。</p></div>
   <div class="crit">
     <div class="row"><span class="who">H14 · 主判据</span><p><code>rect</code> 必须在<strong>两个</strong>留出序列的近边缘上打赢 <code>roundtrip</code>。输了就是<strong>第六个受控否定</strong>，照实写。</p></div>
@@ -463,7 +645,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">08</span><h2>风险与挑战</h2></div>
+  <div class="section-head"><span class="eyebrow">09</span><h2>风险与挑战</h2></div>
   <div class="stack">
     <div class="row"><span class="who">最可能的失败</span><p>H14 的教师只覆盖 84% 的锥体，而近边缘 zone 只被看到 <span class="mono">70.4%</span>。最外那圈完全没有监督，恰恰是问题最重的地方。如果学生学不会往外推，H14 会变成「把中场修好了，边缘没动」。</p></div>
     <div class="row"><span class="who">对照可能太弱</span><p><code>roundtrip</code> 的教师和学生起点逐位相同，损失起步接近零，所以它天然动得少。这是设计意图（「蒸馏一个模糊的自己什么也学不到」），但它也意味着主判据接近「rect 赢过几乎不动」。<code>gt</code> 臂是防这一点的天花板参照。</p></div>
@@ -474,7 +656,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">09</span><h2>怎么自己看</h2></div>
+  <div class="section-head"><span class="eyebrow">10</span><h2>怎么自己看</h2></div>
   <div class="scroll">
     <table class="files">
       <thead><tr><th>位置</th><th style="text-align:left">内容</th></tr></thead>
