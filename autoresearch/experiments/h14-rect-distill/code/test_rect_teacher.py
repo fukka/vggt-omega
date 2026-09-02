@@ -194,3 +194,109 @@ def test_the_cone_is_the_lens_cone_not_the_kb4_turnover():
     """
     cam = aria(504)
     assert 50.0 < math.degrees(cam.theta_max) < 58.0
+
+
+# ------------------------------------------------------------- the multi-view rig
+
+def test_a_five_view_rig_covers_the_cone_with_filled_frames():
+    """What the single pinhole could not do: cover the cone AND stay filled.
+
+    The FOV sweep measured the teacher inverting from -41% to +15% on near_rim
+    exactly when the frame went 22.5% black. A rig of tilted mild views has
+    neither problem, and this is the assertion that it actually has neither.
+    """
+    cam = aria()
+    rig = RT.Rig(cam, fov_deg=90.0, size=630, n_views=5, tilt_deg=40.0)
+    assert rig.coverage > 0.999, f"coverage {rig.coverage:.4f}"
+    assert rig.fill_fraction > 0.90, f"mean fill {rig.fill_fraction:.4f}"
+
+
+def test_a_one_view_rig_is_the_single_co_axial_pinhole():
+    cam = aria()
+    rig = RT.Rig(cam, fov_deg=110.0, size=630, n_views=1)
+    assert len(rig.views) == 1
+    assert rig.coverage > 0.999
+    # ...and it is the configuration the sweep measured as 22.5% black.
+    assert rig.fill_fraction == pytest.approx(0.775, abs=0.02)
+
+
+def test_the_rig_transports_a_direction_only_field_exactly():
+    """The whole depth bookkeeping -- rotations, addresses, the cos division.
+
+    Every view is handed the analytic planar z of one direction-only range
+    field IN ITS OWN FRAME. If the rotations, the sampling addresses or the
+    `cos_local` division were wrong for any view, the fused map would disagree
+    with the same field evaluated directly on the fisheye grid, and it would
+    disagree in a radially smooth way -- the error class no scale alignment can
+    absorb and that this project has already paid for once (#38 v1).
+    """
+    cam = aria(252)
+    rig = RT.Rig(cam, fov_deg=90.0, size=280, n_views=5, tilt_deg=40.0)
+    uv = pixel_grid(rig.pin.height, rig.pin.width, dtype=torch.float32)
+    order = iter(rig.views)
+
+    def forward_z(_img):
+        # Views are consumed in the same order `teach` iterates them; the
+        # assertion below on the call count is what pins that.
+        v = next(order)
+        ray_view = rig.pin.unproject(uv)
+        world = ray_view @ v.R_vc.transpose(0, 1)
+        return smooth_range_field(world) * ray_view[..., 2]
+
+    img = torch.zeros(3, cam.height, cam.width)
+    fused, info = rig.teach(forward_z, img, align=False)
+    assert len(info["log_scale"]) == 5
+
+    direct = smooth_range_field(cam.ray_grid(cam.height, cam.width))
+    theta = torch.acos(cam.ray_grid(cam.height, cam.width)[..., 2].clamp(-1, 1))
+    inner = rig.covered & (theta < cam.theta_max - math.radians(1.5))
+    err = ((fused - direct).abs() / direct.abs())[inner]
+    assert float(err.max()) < 5e-3, f"max rel err {float(err.max()):.2e}"
+
+
+def test_alignment_removes_a_seam_that_unaligned_fusion_would_stitch_in():
+    """Views are run independently, so their scales are their own.
+
+    Fusing without aligning them writes a step discontinuity into the target
+    along every view boundary, and a student trained on it would learn the
+    step. The scales here are deliberately gross (up to 1.35x) so the test
+    fails loudly if alignment is ever dropped.
+    """
+    cam = aria(252)
+    rig = RT.Rig(cam, fov_deg=90.0, size=280, n_views=5, tilt_deg=40.0)
+    uv = pixel_grid(rig.pin.height, rig.pin.width, dtype=torch.float32)
+    scales = [1.0, 1.35, 0.74, 1.20, 0.83]
+
+    def make(idx_holder):
+        def forward_z(_img):
+            k = idx_holder[0]; idx_holder[0] += 1
+            v = rig.views[k]
+            ray_view = rig.pin.unproject(uv)
+            world = ray_view @ v.R_vc.transpose(0, 1)
+            return smooth_range_field(world) * ray_view[..., 2] * scales[k]
+        return forward_z
+
+    img = torch.zeros(3, cam.height, cam.width)
+    raw, _ = rig.teach(make([0]), img, align=False)
+    fixed, info = rig.teach(make([0]), img, align=True)
+    direct = smooth_range_field(cam.ray_grid(cam.height, cam.width))
+    theta = torch.acos(cam.ray_grid(cam.height, cam.width)[..., 2].clamp(-1, 1))
+    inner = rig.covered & (theta < cam.theta_max - math.radians(1.5))
+
+    err_raw = float(((raw - direct).abs() / direct)[inner].max())
+    err_fix = float(((fixed - direct).abs() / direct)[inner].max())
+    assert err_raw > 0.15, f"the unaligned seam should be gross, got {err_raw:.3f}"
+    assert err_fix < 5e-3, f"alignment left {err_fix:.3f}"
+    # The fitted log-scales must be the inverses of the ones injected.
+    for k, s in enumerate(scales):
+        assert info["log_scale"][k] == pytest.approx(-math.log(s), abs=0.02)
+
+
+def test_the_rig_roundtrip_control_is_close_to_the_identity():
+    cam = aria(252)
+    rig = RT.Rig(cam, fov_deg=90.0, size=280, n_views=5, tilt_deg=40.0)
+    field = smooth_range_field(cam.ray_grid(cam.height, cam.width))
+    back, _ = rig.roundtrip(field)
+    theta = torch.acos(cam.ray_grid(cam.height, cam.width)[..., 2].clamp(-1, 1))
+    inner = rig.covered & (theta < cam.theta_max - math.radians(1.5))
+    assert float(((back - field).abs() / field)[inner].max()) < 8e-3
