@@ -116,11 +116,11 @@ def main(argv=None) -> None:
                         "89 deg centre view plus six tangentially elongated "
                         "views tiling the annulus (H14.2): the only layout that "
                         "covers the cone AND keeps every frame filled.")
-    p.add_argument("--ring-tilt", type=float, default=36.0)
-    p.add_argument("--ring-fov-x", type=float, default=50.0)
+    p.add_argument("--ring-tilt", type=float, default=40.0)
+    p.add_argument("--ring-fov-x", type=float, default=38.0)
     p.add_argument("--ring-width", type=int, default=280)
-    p.add_argument("--ring-height", type=int, default=154)
-    p.add_argument("--n-ring", type=int, default=6)
+    p.add_argument("--ring-height", type=int, default=210)
+    p.add_argument("--n-ring", type=int, default=8)
     p.add_argument("--teacher-size", type=int, default=630,
                    help="630 keeps centre sampling at parity with the fisheye "
                         "at 504 (ratio 1.009); see rect_teacher.virtual_pinhole")
