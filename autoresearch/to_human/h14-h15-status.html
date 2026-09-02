@@ -205,13 +205,41 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       </ul>
     </article>
 
+    <article class="exp">
+      <div class="top">
+        <span class="name">H14.2 · 环形视角</span>
+        <span class="chip kill"><span class="dot"></span>预测被否定</span>
+      </div>
+      <p>拆掉"虚拟视角必须是方形"这条隐藏约束，让教师<strong>看得到整条边缘环带</strong>（70% → 99.3%）。</p>
+      <ul class="stages">
+        <li><span class="s-mark s-done">✓</span><span class="s-name">非方形视角 + 环形排布</span><span class="chip done">完成</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">几何参数由实测搜索确定</span><span class="chip done">完成</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">覆盖 99.3%、画幅 98% 满</span><span class="chip done">达成</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">学生反而更差</span><span class="chip kill">准 &gt; 广</span></li>
+      </ul>
+    </article>
+
+    <article class="exp">
+      <div class="top">
+        <span class="name">H9 · 视差锚点</span>
+        <span class="chip kill"><span class="dot"></span>主判据未通过</span>
+      </div>
+      <p>让边缘的<strong>视差盈余</strong>三角化出它自己缺的深度。全程无深度真值，逐序列 TTA。</p>
+      <ul class="stages">
+        <li><span class="s-mark s-done">✓</span><span class="s-name">方向空间三角化 + 运动门</span><span class="chip done">完成</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">6 序列 × 约 5 万锚点</span><span class="chip done">完成</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">打赢 global / shuffled 两个对照</span><span class="chip done">6/6</span></li>
+        <li><span class="s-mark s-done">✓</span><span class="s-name">仿射差距塌缩（主判据）</span><span class="chip kill">0/6</span></li>
+      </ul>
+    </article>
+
   </div>
 </section>
 
 
 
 <section>
-  <div class="section-head"><span class="eyebrow">02</span><h2>这两个实验到底在做什么</h2></div>
+  <div class="section-head"><span class="eyebrow">02</span><h2>前两个实验在做什么</h2></div>
 
   <div class="col">
     <h3>H14：让模型自己给自己出标签</h3>
@@ -458,8 +486,201 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
   </div>
 </section>
 
+
+<section>
+  <div class="section-head"><span class="eyebrow">04</span><h2>这一轮的两个新想法，和它们的下场</h2></div>
+
+  <div class="col">
+    <p>
+      上面那批结果跑完后做了一次创造性思维梳理，得到两个新方向。<strong>都实现了、都跑了、都被自己的预注册判据判负</strong> ——
+      但两个负得很不一样，其中一个给出了本项目至今最强的对照组胜率。
+    </p>
+  </div>
+
+  <h3 style="margin-top:8px">想法① · 虚拟视角不必是方的</h3>
+  <div class="col">
+    <p>
+      H14 的教师有个硬缺口：它只能看到近边缘 zone 的 <strong>70%</strong>。原因是那条几何约束 ——
+      一个倾斜 t、半视场 h 的<strong>方形</strong>画幅要完全落在锥体内，需要
+      <span class="mono">t + atan(√2·tan h) ≤ 54.7°</span>，倾斜 40° 时视场只能 ≤21°。我当时据此判定"多视角不可行"。
+    </p>
+    <p>
+      那个 <span class="mono">√2</span> 是<strong>正方形的对角线</strong>。ViT 要的是 patch 对齐的矩形，从来没要求是正方形 ——
+      "画幅是方的"是一条从没被质疑过的隐藏约束。把视角<strong>沿切向拉长、沿径向压扁</strong>，它就沿着环带扫，而不是朝锥体外伸；
+      加宽长边完全不消耗径向余量。
+    </p>
+  </div>
+
+  <figure>
+    <div class="chartbox">
+      <svg viewBox="0 0 720 300" role="img" aria-label="左：一个 110 度方形视角，圆锥内切于画幅，四个角落在锥体外因而全黑，占画幅 22.5%。右：同一个圆锥，由一个中心方形视角和八个沿切向拉长的环形视角铺满，每个画幅都在锥体内。">
+        <g stroke="currentColor" stroke-width="1.4" fill="none">
+          <rect x="80" y="45" width="200" height="200" rx="2"></rect>
+        </g>
+        <path d="M 80 45 h 200 v 200 h -200 Z M 180 45 A 100 100 0 1 0 180 245 A 100 100 0 1 0 180 45"
+              fill="var(--neg-soft)" fill-rule="evenodd"></path>
+        <circle cx="180" cy="145" r="100" fill="none" stroke="var(--accent)" stroke-width="2"></circle>
+        <text x="180" y="150" text-anchor="middle" fill="var(--accent-ink)"
+              font-family="Noto Sans SC, sans-serif" font-size="13">成像锥体</text>
+        <text x="112" y="70" fill="var(--neg)" font-family="IBM Plex Mono, monospace" font-size="11">黑角</text>
+        <text x="180" y="278" text-anchor="middle" fill="currentColor"
+              font-family="Noto Sans SC, sans-serif" font-size="12.5">一个 110° 方形视角</text>
+        <text x="180" y="294" text-anchor="middle" fill="var(--neg)"
+              font-family="IBM Plex Mono, monospace" font-size="11">画幅 22.5% 全黑 → 教师全面变差</text>
+
+        <g stroke="var(--accent)" stroke-width="1.6" fill="var(--accent-soft)" opacity="0.95">
+          <path d="M 492.7 56.9 A 100.0 100.0 0 0 1 587.3 56.9 L 562.2 103.6 A 47.0 47.0 0 0 0 517.8 103.6 Z"></path>
+          <path d="M 568.9 49.3 A 100.0 100.0 0 0 1 635.7 116.1 L 585.0 131.4 A 47.0 47.0 0 0 0 553.6 100.0 Z"></path>
+          <path d="M 628.1 97.7 A 100.0 100.0 0 0 1 628.1 192.3 L 581.4 167.2 A 47.0 47.0 0 0 0 581.4 122.8 Z"></path>
+          <path d="M 635.7 173.9 A 100.0 100.0 0 0 1 568.9 240.7 L 553.6 190.0 A 47.0 47.0 0 0 0 585.0 158.6 Z"></path>
+          <path d="M 587.3 233.1 A 100.0 100.0 0 0 1 492.7 233.1 L 517.8 186.4 A 47.0 47.0 0 0 0 562.2 186.4 Z"></path>
+          <path d="M 511.1 240.7 A 100.0 100.0 0 0 1 444.3 173.9 L 495.0 158.6 A 47.0 47.0 0 0 0 526.4 190.0 Z"></path>
+          <path d="M 451.9 192.3 A 100.0 100.0 0 0 1 451.9 97.7 L 498.6 122.8 A 47.0 47.0 0 0 0 498.6 167.2 Z"></path>
+          <path d="M 444.3 116.1 A 100.0 100.0 0 0 1 511.1 49.3 L 526.4 100.0 A 47.0 47.0 0 0 0 495.0 131.4 Z"></path>
+        </g>
+        <circle cx="540" cy="145" r="100" fill="none" stroke="currentColor" stroke-width="1.4"></circle>
+        <rect x="459" y="64" width="162" height="162" fill="none" stroke="currentColor"
+              stroke-width="1.4" stroke-dasharray="4 3"></rect>
+        <text x="540" y="150" text-anchor="middle" fill="currentColor"
+              font-family="Noto Sans SC, sans-serif" font-size="12">中心视角</text>
+        <text x="540" y="278" text-anchor="middle" fill="currentColor"
+              font-family="Noto Sans SC, sans-serif" font-size="12.5">1 个中心 + 8 个切向视角</text>
+        <text x="540" y="294" text-anchor="middle" fill="var(--pos)"
+              font-family="IBM Plex Mono, monospace" font-size="11">每个画幅 98% 是真内容，环带覆盖 99.3%</text>
+      </svg>
+    </div>
+    <figcaption>
+      左边是 H14 当初撞上的墙：方形画幅要装下整个圆锥，四角必然伸到锥体外。右边是绕过它的办法 ——
+      切向长条沿环带扫，径向只占一小段，所以既铺满环带又不出锥。
+    </figcaption>
+  </figure>
+
+  <div class="scroll">
+    <table>
+      <caption>教师"看得多"和"看得准"是两回事，而且它们互相冲突。</caption>
+      <thead><tr><th>教师</th><th>能回答近边缘 zone 的</th><th>它在那里的增益</th><th>学生 seq136</th><th>学生 seq132</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">rect（单个 95°）</td><td class="num">70.4%</td><td class="num good">−35.3%</td><td class="num good">−26.0%</td><td class="num good">−12.9%</td></tr>
+        <tr class="flip"><td class="mono">rect_ring（环形）</td><td class="num">99.3%</td><td class="num">−16.0%</td><td class="num">−19.1%</td><td class="num bad">+5.1%</td></tr>
+        <tr><td class="mono">gt（有标签上限）</td><td class="num">100%</td><td class="num">—</td><td class="num good">−79.3%</td><td class="num good">−25.4%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p style="margin-top:16px">
+      <strong>想法①被否定。</strong>环形教师把边缘覆盖从 70% 提到 99%，学生却更差 —— 在装饰序列上甚至比不训练还差（+5.1%）。
+      预检其实提前说了：环形新覆盖的那 29% 是最外圈、最难的一段，教师在重叠区的增益从 −35% 掉到 −16%。
+      <strong>学生跟的是教师的"准"，不是教师的"广"。</strong>
+    </p>
+    <div class="note">
+      <span class="eyebrow">被否定的是预测，不是那个动作</span>
+      <p>
+        "画幅必须是方的"确实是一条隐藏约束，把它拆掉确实解锁了几何上原本不可能的排布 —— 这个动作是对的，代码和测试都留着。
+        错的是我预测"覆盖会赢"。这两件事要分开记。
+      </p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:38px">想法② · 让边缘的"给"去付边缘的"债"（H9）</h3>
+  <div class="col">
+    <p>
+      项目量到过一对看似对立的事实：<strong>边缘给对齐</strong>（放宽视场，17/17 帧对姿态变好；删掉边缘模型姿态崩），
+      <strong>边缘不收融合</strong>（多帧上下文买到的是中心；六次让边缘接收的尝试全败）。
+      六次尝试都在"让边缘接收"这一边。这个想法两边都不选：<strong>让信息反向流动</strong> ——
+      用边缘的视差盈余，三角化出边缘缺的那个深度。
+    </p>
+    <p>
+      具体做法：取 t−10、t、t+10 三帧（相邻帧没有基线，#22 已量过），稠密匹配，在<strong>方向空间</strong>（不是像素空间 ——
+      鱼眼上像素度量不是角度度量）三角化出<strong>米制</strong>距离锚点，再用锚点拟合并反解那条压缩曲线
+      <span class="mono">log(pred) = c(θ) + g(θ)·log(true)</span>。<strong>全程不用任何深度真值</strong>：
+      位姿来自设备自带的 SLAM 轨迹，匹配来自图像本身。
+    </p>
+  </div>
+
+  <figure>
+    <div class="chartbox">
+      <svg viewBox="0 0 720 280" role="img" aria-label="左：静态点，来自前后两个伙伴帧的两次独立三角化落在参考射线上的同一位置，保留为锚点。右：移动的手，两次三角化落在射线上相距很远的两点，被一致性门丢弃。">
+        <g font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-faint)">
+          <text x="40" y="248">t−10</text><text x="112" y="248">t</text><text x="176" y="248">t+10</text>
+          <text x="410" y="248">t−10</text><text x="482" y="248">t</text><text x="546" y="248">t+10</text>
+        </g>
+        <g fill="currentColor">
+          <circle cx="48" cy="225" r="5"></circle><circle cx="118" cy="225" r="5"></circle><circle cx="188" cy="225" r="5"></circle>
+          <circle cx="418" cy="225" r="5"></circle><circle cx="488" cy="225" r="5"></circle><circle cx="558" cy="225" r="5"></circle>
+        </g>
+        <g stroke="var(--accent)" stroke-width="2" fill="none">
+          <line x1="118" y1="225" x2="338" y2="60"></line>
+          <line x1="488" y1="225" x2="708" y2="60"></line>
+        </g>
+        <text x="250" y="128" fill="var(--accent-ink)" font-family="Noto Sans SC, sans-serif"
+              font-size="11.5" transform="rotate(-36.9 250 128)">参考帧这个像素的射线</text>
+
+        <g stroke="currentColor" stroke-width="1.3" fill="none" opacity="0.8">
+          <line x1="48" y1="225" x2="261" y2="118"></line>
+          <line x1="188" y1="225" x2="261" y2="118"></line>
+        </g>
+        <circle cx="261" cy="118" r="6.5" fill="var(--pos)"></circle>
+        <text x="278" y="106" fill="var(--pos)" font-family="Noto Sans SC, sans-serif" font-size="12">静态点</text>
+        <text x="176" y="278" text-anchor="middle" fill="var(--pos)"
+              font-family="IBM Plex Mono, monospace" font-size="11">两次独立三角化落在同一处 → 保留</text>
+
+        <g stroke="var(--neg)" stroke-width="1.3" fill="none" stroke-dasharray="5 4">
+          <line x1="418" y1="225" x2="576" y2="159"></line>
+          <line x1="558" y1="225" x2="664" y2="92"></line>
+          <line x1="576" y1="159" x2="664" y2="92"></line>
+        </g>
+        <circle cx="576" cy="159" r="6" fill="none" stroke="var(--neg)" stroke-width="2"></circle>
+        <circle cx="664" cy="92" r="6" fill="none" stroke="var(--neg)" stroke-width="2"></circle>
+        <text x="600" y="140" fill="var(--neg)" font-family="Noto Sans SC, sans-serif" font-size="12">手动了</text>
+        <text x="546" y="278" text-anchor="middle" fill="var(--neg)"
+              font-family="IBM Plex Mono, monospace" font-size="11">两次结果差 &gt;10% → 丢弃</text>
+      </svg>
+    </div>
+    <figcaption>
+      运动门：一个像素要成为锚点，必须让<strong>前后两个伙伴帧独立算出的距离互相同意</strong>。
+      动过的手不可能和自己同意 —— 而手正好 80% 以上落在 41° 以外、中位距离 0.26–0.94 m，即最差的那些格子。
+    </figcaption>
+  </figure>
+
+  <div class="scroll">
+    <table>
+      <caption>每个序列用自己的视频适应自己（TTA），无深度真值。约 5 万个锚点／序列，中位视差 3.3°，近一半在 38° 以外。</caption>
+      <thead><tr><th>序列</th><th>不修正</th><th>raycal</th><th>global 对照</th><th>shuffled 对照</th><th>vs 不修正</th><th>判据：仿射差距塌缩</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">clean_seq131</td><td class="num">1.2656</td><td class="num good">0.9934</td><td class="num">1.2759</td><td class="num">1.2734</td><td class="num good">−21.5%</td><td class="num bad">否 (+0.42→+0.52)</td></tr>
+        <tr><td class="mono">clean_seq133</td><td class="num">1.4814</td><td class="num good">1.2173</td><td class="num">1.5978</td><td class="num">1.5986</td><td class="num good">−17.8%</td><td class="num bad">否 (+0.32→+0.58)</td></tr>
+        <tr><td class="mono">clean_seq134</td><td class="num">1.2756</td><td class="num good">1.1498</td><td class="num">1.3622</td><td class="num">1.3634</td><td class="num good">−9.9%</td><td class="num bad">否 (+0.17→+0.43)</td></tr>
+        <tr><td class="mono">clean_seq135</td><td class="num">1.5615</td><td class="num good">1.2573</td><td class="num">1.6862</td><td class="num">1.6777</td><td class="num good">−19.5%</td><td class="num bad">否 (+0.21→+0.52)</td></tr>
+        <tr><td class="mono">clean_seq136</td><td class="num">1.3595</td><td class="num good">1.0792</td><td class="num">1.3798</td><td class="num">1.3845</td><td class="num good">−20.6%</td><td class="num bad">否 (+0.20→+0.36)</td></tr>
+        <tr><td class="mono">decoration_seq132</td><td class="num">0.3614</td><td class="num bad">0.4554</td><td class="num">0.4999</td><td class="num">0.5009</td><td class="num bad">+26.0%</td><td class="num bad">否 (+0.52→+0.43)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <p style="margin-top:16px">
+      这是本项目<strong>唯一一个 6/6 打赢两个对照组</strong>的方法。<code>global</code>（一条全图共用的曲线）和 <code>shuffled</code>（θ 标签打乱）
+      在六个序列上无一例外地输给按 θ 分档的 <code>raycal</code> —— 说明<strong>锚点确实看见了径向结构</strong>，那是单一全局重标定表达不了的东西。
+      它也在 5/6 个序列上打赢了不修正的冻结模型（−10% ~ −22%）。
+    </p>
+    <p>
+      <strong>但它 6/6 输掉了自己的预注册主判据。</strong>那条判据是"per-frame 对齐与单一冻结仿射之间的差距必须塌缩"，
+      因为本项目已经量过：seq131 近边缘惩罚的 82% 来自评测仿射的摆放。结果这个差距不但没塌缩，<strong>每个序列都变得更大</strong>。
+      P3 也没过：近中心 +72.5% / +56.9%。也就是说，这个修正<strong>拿中心换边缘，并且让整幅图更难被一个仿射服务</strong> —— 和主张恰好相反。
+    </p>
+    <div class="note warn">
+      <span class="eyebrow">失败的机制是可诊断的，不是谜</span>
+      <p>
+        小 θ 处的锚点几乎全是远处内容（墙面），所以中心那几档的直线是在<strong>很窄的远距离区间</strong>上拟合出来的，外推到近处内容就错。
+        单调性解决了 H2.1 的"多对一"死因，但它解决不了<strong>采样</strong>问题。修法是把拟合同时对 (θ, 深度) 条件化，
+        或只在锚点深度跨度足够的档位上施加修正 —— 但这两条都不是预注册的内容，所以这里不作任何声称。
+      </p>
+    </div>
+  </div>
+</section>
+
 <section class="col">
-  <div class="section-head"><span class="eyebrow">04</span><h2>为什么是这两个</h2></div>
+  <div class="section-head"><span class="eyebrow">05</span><h2>为什么是这两个</h2></div>
   <p>
     项目已经有<strong>五个受控否定</strong>：H5 的边缘损失输给普通 LoRA、H6 的边缘 KV 输给全 token、中心／边缘 MoE 被自家证据杀死、
     H7 的 θ 门是平的、H12 的镜头雅可比 FiLM 输给打乱场。共同点是：凡「哪里症状重就在哪儿加力气」的设计都输，凡作用于全图的操作都赢。
@@ -484,7 +705,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">05</span><h2>途中量到的关键结果：教师能做多宽</h2></div>
+  <div class="section-head"><span class="eyebrow">06</span><h2>途中量到的关键结果：教师能做多宽</h2></div>
   <div class="col">
     <p>
       H14 的设计里预留了一个<strong>能在训练前杀死整个前提</strong>的预检：先拿教师和原始模型在同一批像素上对分。第一次跑，它就开火了 ——
@@ -611,7 +832,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">06</span><h2>今天做完的</h2></div>
+  <div class="section-head"><span class="eyebrow">07</span><h2>今天做完的</h2></div>
   <div class="stack">
     <div class="row"><span class="who">H14 代码</span><p><code>rect_teacher.py</code>（鱼眼↔透视搬运、Rig 多视角装置、视角间尺度对齐）、<code>cache_teacher.py</code>（教师缓存 + 预检）、<code>train_student.py</code>（三臂）。评测直接复用 h5 的 <code>eval_lora.py</code>，所以数字会落在 #35/#36 和 H12 的同一张表里，并且自带姿态轴。</p></div>
     <div class="row"><span class="who">H15 代码</span><p><code>lens_family.py</code>（七种镜头形状、固定锥体构造、镜头间形变、逐镜头 token 场）、<code>arms.py</code>（四臂的定义，训练和评测共用同一条规则）、<code>train_multilens.py</code>、<code>eval_lens.py</code>。</p></div>
@@ -622,7 +843,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">07</span><h2>还缺什么</h2></div>
+  <div class="section-head"><span class="eyebrow">08</span><h2>还缺什么</h2></div>
   <div class="stack">
     <div class="row"><span class="who">结果本身</span><p>两条流水线都还在跑。<strong>现在没有任何可引用的结论</strong>，上面那张 FOV 表是唯一已完成的测量。</p></div>
     <div class="row"><span class="who">误差棒</span><p>每臂一个种子，和 H12 一样。方向 + 预注册可以支持「停」，但要下<strong>结论</strong>需要按本项目的标准做逐帧配对自助法。</p></div>
@@ -632,7 +853,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">08</span><h2>判据：跑之前就写死了</h2></div>
+  <div class="section-head"><span class="eyebrow">09</span><h2>判据：跑之前就写死了</h2></div>
   <div class="col"><p>两个 README 里的预注册条款，原样搬在这里，方便结果回来时直接对照，不给事后解释留空间。</p></div>
   <div class="crit">
     <div class="row"><span class="who">H14 · 主判据</span><p><code>rect</code> 必须在<strong>两个</strong>留出序列的近边缘上打赢 <code>roundtrip</code>。输了就是<strong>第六个受控否定</strong>，照实写。</p></div>
@@ -645,7 +866,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">09</span><h2>风险与挑战</h2></div>
+  <div class="section-head"><span class="eyebrow">10</span><h2>风险与挑战</h2></div>
   <div class="stack">
     <div class="row"><span class="who">最可能的失败</span><p>H14 的教师只覆盖 84% 的锥体，而近边缘 zone 只被看到 <span class="mono">70.4%</span>。最外那圈完全没有监督，恰恰是问题最重的地方。如果学生学不会往外推，H14 会变成「把中场修好了，边缘没动」。</p></div>
     <div class="row"><span class="who">对照可能太弱</span><p><code>roundtrip</code> 的教师和学生起点逐位相同，损失起步接近零，所以它天然动得少。这是设计意图（「蒸馏一个模糊的自己什么也学不到」），但它也意味着主判据接近「rect 赢过几乎不动」。<code>gt</code> 臂是防这一点的天花板参照。</p></div>
@@ -656,7 +877,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">10</span><h2>怎么自己看</h2></div>
+  <div class="section-head"><span class="eyebrow">11</span><h2>怎么自己看</h2></div>
   <div class="scroll">
     <table class="files">
       <thead><tr><th>位置</th><th style="text-align:left">内容</th></tr></thead>
