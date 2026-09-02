@@ -60,6 +60,26 @@ from torch import Tensor
 __all__ = ["triangulate", "AnchorSet", "anchors_from_pairs"]
 
 
+def _orthonormalise(R: Tensor) -> Tensor:
+    """Nearest rotation to ``R``, by SVD.
+
+    This function uses ``R^T`` as ``R^-1`` twice -- for camera j's centre and
+    for its ray directions -- so a rotation that is not quite orthonormal is
+    not a small error, it is amplified by the same ``1/(1 - c^2)`` that
+    amplifies everything else here. A rotation composed in float32 is off by
+    ~1e-7, which arrives as ~1e-3 of relative range at one degree of parallax:
+    found by this experiment's own test fixture building its rotations in
+    float32, where it looked exactly like a solver bug.
+    """
+    U, _, Vh = torch.linalg.svd(R)
+    out = U @ Vh
+    if float(torch.det(out)) < 0:
+        U = U.clone()
+        U[:, -1] *= -1
+        out = U @ Vh
+    return out
+
+
 def triangulate(u1: Tensor, u2_j: Tensor, R: Tensor, t: Tensor
                 ) -> Tuple[Tensor, Tensor, Tensor]:
     """Range in frame i for matched unit bearings.
@@ -78,7 +98,7 @@ def triangulate(u1: Tensor, u2_j: Tensor, R: Tensor, t: Tensor
     dt = u1.dtype
     u1 = u1.double()
     u2_j = u2_j.double()
-    R = R.double()
+    R = _orthonormalise(R.double())
     t = t.double().reshape(3)
     C = -(R.transpose(0, 1) @ t)                 # camera j's centre, in frame i
     u2 = u2_j @ R                                # = (R^T d_j)^T, rows are rays

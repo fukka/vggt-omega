@@ -41,16 +41,37 @@ def synthetic_scene(n: int = 900, seed: int = 0, dtype=torch.float64):
     return c, d, rng, d * rng[:, None]
 
 
-def pose(rx=0.03, ry=-0.02, rz=0.01, tx=0.12, ty=0.02, tz=0.03):
-    """A small rotation and a real translation -- i.e. an actual baseline."""
+def pose(rx=0.03, ry=-0.02, rz=0.01, tx=0.12, ty=0.02, tz=0.03, dtype=torch.float64):
+    """A small rotation and a real translation -- i.e. an actual baseline.
+
+    Built in float64. Composing these in float32 leaves the product 1e-7 off
+    orthonormal, which `triangulate` amplifies into 1e-3 of range error -- that
+    is how `_orthonormalise` came to exist.
+    """
     def Rx(a): return torch.tensor([[1, 0, 0], [0, math.cos(a), -math.sin(a)],
-                                    [0, math.sin(a), math.cos(a)]])
+                                    [0, math.sin(a), math.cos(a)]], dtype=dtype)
     def Ry(a): return torch.tensor([[math.cos(a), 0, math.sin(a)], [0, 1, 0],
-                                    [-math.sin(a), 0, math.cos(a)]])
+                                    [-math.sin(a), 0, math.cos(a)]], dtype=dtype)
     def Rz(a): return torch.tensor([[math.cos(a), -math.sin(a), 0],
-                                    [math.sin(a), math.cos(a), 0], [0, 0, 1]])
-    R = (Rz(rz) @ Ry(ry) @ Rx(rx)).double()
-    return R, torch.tensor([tx, ty, tz], dtype=torch.float64)
+                                    [math.sin(a), math.cos(a), 0], [0, 0, 1]], dtype=dtype)
+    return (Rz(rz) @ Ry(ry) @ Rx(rx)).double(), torch.tensor([tx, ty, tz], dtype=torch.float64)
+
+
+def test_a_rotation_that_is_not_quite_orthonormal_is_repaired():
+    """Regression: GT poses are composed, and composition drifts.
+
+    `Seq.rel_pose` multiplies stored rotations, so what reaches `triangulate`
+    is not exactly orthonormal. Without the SVD repair a float32-composed
+    rotation costs ~1e-3 of relative range -- the size of the effect the
+    anchors exist to measure.
+    """
+    c, d, rng, X = synthetic_scene(n=1200, seed=11)
+    R64, t = pose()
+    R32 = pose(dtype=torch.float32)[0]
+    assert float((R32.T @ R32 - torch.eye(3, dtype=torch.float64)).abs().max()) > 1e-9
+    u2 = torch.nn.functional.normalize(X @ R64.transpose(0, 1) + t, dim=-1)
+    got, _, ok = AN.triangulate(d, u2, R32, t)
+    assert float(((got - rng).abs() / rng)[ok].max()) < 1e-6
 
 
 # ------------------------------------------------------------------ geometry
