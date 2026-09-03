@@ -61,13 +61,26 @@ Both devices are Aria Gen 1 RGB, but the units are not interchangeable:
 
 (both KB4-fitted from each device's own FISHEYE624 by `tools/adt_camera.py`)
 
-**Focal differs by −2.68%.** Scoring LiteOffice frames through the Apartment
-camera would carry a **6.4 px radial error at the rim** at 504 px — 0.56 px of
-it from the lens shape and the rest from the focal. In an experiment whose
-entire subject is radial behaviour, that is not a rounding error; it is the
-smooth radial error that reads as "the model is bad at the rim". So the camera
-must come from the sequence, which is what `camera.json` and
-`tools/adt_camera.py` are for.
+**Corrected 2026-09-03.** The −2.68% figure above came from
+`mps/slam/online_calibration.jsonl`, which is expressed at raw sensor resolution
+and which I scaled by the wrong native width. The **factory** calibration the
+provider reports for the delivered 1408 frames — the one the depth was rendered
+with — says the two devices are much closer:
+
+| | focal @504 | k1 | k2 | k3 | k4 |
+|---|---|---|---|---|---|
+| Apartment `M1292` | 218.689 | 0.4147 | −0.6293 | 0.9011 | −0.5185 |
+| LiteOffice `61283` | 217.671 | 0.4243 | −0.6693 | 0.9713 | −0.5575 |
+
+Focal differs by **−0.47%**, and scoring LiteOffice frames through the Apartment
+camera costs **0.76 px** at the rim at 504 px, not 6.4 px. That is the same
+order as the KB4 fit error itself, so the cross-device difference is small.
+
+Per-sequence calibration is still what the extractor writes and what
+`tools/adt_camera.py` builds from — it costs nothing now that it exists, and
+`theta_max` does differ materially (56.63° against 54.83°) — but the earlier
+claim that the apartment camera would be a *serious* error on LiteOffice was
+wrong, and the 6.4 px figure should not be cited.
 
 ### And a check that came out clean
 
@@ -164,3 +177,49 @@ can be fetched.
 - Aria Gen 2 Pilot: <https://arxiv.org/abs/2510.16134>, <https://www.projectaria.com/datasets/gen2pilot/>
 - HOT3D: <https://www.projectaria.com/datasets/hot3D/>
 - Local: `ADT_download_urls.json` on lambda_63, `docs/data/ego-synth-5b-sparse-depth.md`
+
+
+## 6. The rotation finding (2026-09-03) — read this before using any number above
+
+The human, looking at example frames, noticed the images were sideways. They
+are, and it changes the scale of everything this repo has measured through
+`AriaLocalPairs`.
+
+ADT stores frames in **native sensor orientation**. `AriaLocalPairs` says so
+("frames are used exactly as stored") and pairs them with the matching
+`rotated=False` intrinsics, which is self-consistent and passed H1.3's hand-eye
+gate. What no one checked is whether the *backbone* wants a sideways image. It
+does not:
+
+| input rotation | whole image | near_rim | near_ctr | center | far |
+|---|---|---|---|---|---|
+| 0° (what every run used) | 0.5503 | 1.3925 | 0.5420 | 0.3241 | 0.2558 |
+| 90° | 0.6132 | 1.4843 | 0.9461 | 0.3562 | 0.2774 |
+| 180° | 0.5505 | 1.3669 | 0.5529 | 0.3199 | 0.2614 |
+| **270° (upright)** | **0.1975** | **0.4101** | **0.3230** | **0.2051** | **0.1148** |
+
+seq136, 30 frames, frozen DA3-Small, per-frame scale_shift. The image is
+rotated, the model is run, and the prediction is rotated BACK, so every row is
+scored on identical pixels, GT and masks.
+
+Upright costs **−64% whole-image** and **−71% near-rim** — an order of
+magnitude more than any method effect this project has measured. The four rows
+are internally consistent with a model that has an up-prior: 0° and 180° are the
+two sideways orientations and are equal to the fourth decimal, 90° is
+upside-down and worst, 270° is upright and best.
+
+**What survives:** every within-experiment arm comparison. All arms ran at the
+same wrong orientation, so "rect beats roundtrip", "shuffled beats jac 16/16"
+and "raycal beats both controls 6/6" are unaffected.
+
+**What does not:** every absolute AbsRel in the H1/H5/H12/H14/H15/H9 line is
+inflated ~2.8x, and — the part that matters — **the rim penalty itself roughly
+halves**. near_rim/center is 4.30x sideways and 2.00x upright, so a large part
+of the radial error field this project has been studying is an artefact of the
+input orientation. The remaining 2.00x is still large and still points the same
+way as ticket 024A's controlled ratios (1.25–1.81, measured through a different
+pipeline), but the magnitude has to be re-established.
+
+**Next:** re-run at least H14's pre-check and its three arms upright before any
+absolute number is quoted again. `fovbench` defaults to `rotated=True` and is
+therefore probably not affected; that needs confirming rather than assuming.
