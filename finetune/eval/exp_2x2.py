@@ -23,15 +23,22 @@ Cells
 
     id  projection  fill        focal_out_norm  hFoV     black
     1   raw         black       -               fisheye  14.7% px (sensor corners)
-    2   rect        black       0.262           124.7    21.6% px / 6.7% sr
+    2   rect        black       0.262           124.7    32.3% px / 12.2% sr
     3   raw         filled      -               fisheye  filled
     4   rect        filled      0.262           124.7    filled      <- the hypothesis
     5   rect        black       0.371           106.9     0.0%       <- inscribed, free alternative
     0   rect        black       0.550            84.6     0.0%       <- the repo's historical default
 
-Cell 5 is the alternative cell 4 must beat: black-free by construction, costing
-16.7% of the imaged cone. Cell 0 shows where the repo has been standing all
-along -- it keeps only ~56% of the cone.
+Cell 5 is the alternative cell 4 must beat: black-free by construction, keeping
+83.3% of the imaged cone. Cell 0 shows where the repo has been standing all
+along -- it keeps only 55.8%.
+
+Note the invalid region of a circumscribed frame is 32.3% of pixels, not the
+21.5% an ideal disc would give: the Aria disc (radius ~271 px at 512) is clipped
+by the square sensor, so cell 2 recovers 94.1% of the cone rather than 100%.
+Going from focal_out_norm 0.33 to 0.262 buys +3.7 points of cone for +28.5 points
+of invalid pixels -- a bad deal in practice, but 0.262 is kept here on purpose as
+the strongest dose of the variable under test.
 
 Comparability
 -------------
@@ -109,7 +116,7 @@ def make_cells(fill: str = "replicate") -> "OrderedDict[str, dict]":
         ("2_rect_black", dict(
             label="② RECT·BLACK", rectify=True, fill="black",
             focal_out_norm=FOCAL_OUT_CIRCUMSCRIBED,
-            blurb="circumscribed rectification, 21.6% black wedges")),
+            blurb="circumscribed rectification, 32.3% invalid")),
         ("3_raw_filled", dict(
             label="③ RAW·FILLED", rectify=False, fill=fill, focal_out_norm=None,
             blurb=f"raw fisheye, corners filled ({fill})")),
