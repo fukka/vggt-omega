@@ -1,0 +1,266 @@
+{
+  "1_raw_black": {
+    "cell": {
+      "label": "\u2460 RAW\u00b7BLACK",
+      "rectify": false,
+      "fill": "black",
+      "focal_out_norm": null,
+      "blurb": "raw fisheye, sensor corners left black"
+    },
+    "metrics": {
+      "none": {
+        "AbsRel": 0.31646206387976933,
+        "SqRel": 0.4667505254242205,
+        "RMSE": 1.320120769269302,
+        "RMSElog": 0.6555403552927337,
+        "log10": 0.19830625293496154,
+        "delta1": 0.29887014324855427,
+        "delta2": 0.6467521732294982,
+        "delta3": 0.8490001460403404,
+        "scale_ratio": 1.4914607331011516,
+        "n_frames": 96,
+        "n_valid_total": 21049260
+      },
+      "scale_shift": {
+        "AbsRel": 0.31764158692714256,
+        "SqRel": 0.24917936620928008,
+        "RMSE": 0.7002334305461081,
+        "RMSElog": 0.46724001707634333,
+        "log10": 0.1268480005064282,
+        "delta1": 0.5738958990346869,
+        "delta2": 0.7744886047816433,
+        "delta3": 0.8995807443456932,
+        "scale_ratio": 0.934735096978359,
+        "n_frames": 96,
+        "n_valid_total": 21011295
+      }
+    },
+    "fov_probe": {
+      "fov_h_deg_mean": 86.64752197265625,
+      "fov_h_deg_std": 1.2771660089492798,
+      "fov_w_deg_mean": 86.92524719238281,
+      "fov_w_deg_std": 1.2595362663269043,
+      "n": 64
+    }
+  },
+  "2_rect_black": {
+    "cell": {
+      "label": "\u2461 RECT\u00b7BLACK",
+      "rectify": true,
+      "fill": "black",
+      "focal_out_norm": 0.262,
+      "blurb": "circumscribed rectification, 32.3% invalid"
+    },
+    "metrics": {
+      "none": {
+        "AbsRel": 0.4626204714694284,
+        "SqRel": 0.7633676665733738,
+        "RMSE": 1.643090678318145,
+        "RMSElog": 0.9140506773959512,
+        "log10": 0.32088381482388495,
+        "delta1": 0.17556497422008058,
+        "delta2": 0.23143376117439196,
+        "delta3": 0.4801006905603776,
+        "scale_ratio": 2.0859412341771377,
+        "n_frames": 96,
+        "n_valid_total": 15483518
+      },
+      "scale_shift": {
+        "AbsRel": 0.32090435666601297,
+        "SqRel": 0.22615817033997976,
+        "RMSE": 0.5715503690706824,
+        "RMSElog": 0.5088261533498838,
+        "log10": 0.12970519348808873,
+        "delta1": 0.6132795238241548,
+        "delta2": 0.7356637157271514,
+        "delta3": 0.8746831994885055,
+        "scale_ratio": 0.9722272479486979,
+        "n_frames": 96,
+        "n_valid_total": 15368982
+      }
+    },
+    "fov_probe": {
+      "fov_h_deg_mean": 108.63788604736328,
+      "fov_h_deg_std": 3.236149787902832,
+      "fov_w_deg_mean": 108.71430969238281,
+      "fov_w_deg_std": 3.039163589477539,
+      "n": 64
+    }
+  },
+  "3_raw_filled": {
+    "cell": {
+      "label": "\u2462 RAW\u00b7FILLED",
+      "rectify": false,
+      "fill": "replicate",
+      "focal_out_norm": null,
+      "blurb": "raw fisheye, corners filled (replicate)"
+    },
+    "metrics": {
+      "none": {
+        "AbsRel": 0.37646425376322573,
+        "SqRel": 0.5299877179251536,
+        "RMSE": 1.4297142556341207,
+        "RMSElog": 0.5651027363127774,
+        "log10": 0.21908796118821602,
+        "delta1": 0.13512062907528488,
+        "delta2": 0.3715727242378442,
+        "delta3": 0.8020693171496155,
+        "scale_ratio": 1.7125803303867073,
+        "n_frames": 96,
+        "n_valid_total": 21049260
+      },
+      "scale_shift": {
+        "AbsRel": 0.12499507396032912,
+        "SqRel": 0.05716617151930862,
+        "RMSE": 0.39929690374410437,
+        "RMSElog": 0.23841575952727548,
+        "log10": 0.05721871742034581,
+        "delta1": 0.8434331367157318,
+        "delta2": 0.961506015200679,
+        "delta3": 0.9778938605926575,
+        "scale_ratio": 0.9611030865480291,
+        "n_frames": 96,
+        "n_valid_total": 21036447
+      }
+    },
+    "fov_probe": {
+      "fov_h_deg_mean": 86.40699768066406,
+      "fov_h_deg_std": 1.2655118703842163,
+      "fov_w_deg_mean": 86.56869506835938,
+      "fov_w_deg_std": 1.2431223392486572,
+      "n": 64
+    }
+  },
+  "4_rect_filled": {
+    "cell": {
+      "label": "\u2463 RECT\u00b7FILLED",
+      "rectify": true,
+      "fill": "replicate",
+      "focal_out_norm": 0.262,
+      "blurb": "circumscribed rectification, wedges filled (replicate)"
+    },
+    "metrics": {
+      "none": {
+        "AbsRel": 0.4577155733017615,
+        "SqRel": 0.7403766246710916,
+        "RMSE": 1.6427119474646144,
+        "RMSElog": 0.7854434584698762,
+        "log10": 0.2940512979115765,
+        "delta1": 0.1604817710996196,
+        "delta2": 0.23711435016184176,
+        "delta3": 0.33350195314870446,
+        "scale_ratio": 2.1105707226521173,
+        "n_frames": 96,
+        "n_valid_total": 15483518
+      },
+      "scale_shift": {
+        "AbsRel": 0.17915113351793163,
+        "SqRel": 0.09474179474660471,
+        "RMSE": 0.3884178150151274,
+        "RMSElog": 0.4069010743577559,
+        "log10": 0.08164336262285211,
+        "delta1": 0.759609938685705,
+        "delta2": 0.8924960988605011,
+        "delta3": 0.9639464927643283,
+        "scale_ratio": 0.9814021771863327,
+        "n_frames": 96,
+        "n_valid_total": 15332204
+      }
+    },
+    "fov_probe": {
+      "fov_h_deg_mean": 109.34736633300781,
+      "fov_h_deg_std": 3.55507755279541,
+      "fov_w_deg_mean": 109.37174224853516,
+      "fov_w_deg_std": 3.3568637371063232,
+      "n": 64
+    }
+  },
+  "5_rect_inscribed": {
+    "cell": {
+      "label": "\u2464 RECT\u00b7INSCRIBED",
+      "rectify": true,
+      "fill": "black",
+      "focal_out_norm": 0.371,
+      "blurb": "inscribed crop, black-free by construction"
+    },
+    "metrics": {
+      "none": {
+        "AbsRel": 0.5270605430775666,
+        "SqRel": 0.8087259964211165,
+        "RMSE": 1.716603194302671,
+        "RMSElog": 0.7987590037895359,
+        "log10": 0.33432692313912565,
+        "delta1": 0.0036372912856872577,
+        "delta2": 0.034413022253830285,
+        "delta3": 0.2749400447308348,
+        "scale_ratio": 2.277869574362904,
+        "n_frames": 96,
+        "n_valid_total": 24578426
+      },
+      "scale_shift": {
+        "AbsRel": 0.08271267390779347,
+        "SqRel": 0.0313885518473468,
+        "RMSE": 0.2590476103727085,
+        "RMSElog": 0.21757132109579513,
+        "log10": 0.03943969658326948,
+        "delta1": 0.917537147322189,
+        "delta2": 0.970589817801737,
+        "delta3": 0.9799344799645101,
+        "scale_ratio": 0.9907518445979059,
+        "n_frames": 96,
+        "n_valid_total": 24578425
+      }
+    },
+    "fov_probe": {
+      "fov_h_deg_mean": 103.29324340820312,
+      "fov_h_deg_std": 1.3017289638519287,
+      "fov_w_deg_mean": 103.47994995117188,
+      "fov_w_deg_std": 1.3305662870407104,
+      "n": 64
+    }
+  },
+  "0_rect_default": {
+    "cell": {
+      "label": "\u24ea RECT\u00b7DEFAULT",
+      "rectify": true,
+      "fill": "black",
+      "focal_out_norm": null,
+      "blurb": "the repo's historical default (focal_out_norm=0.55)"
+    },
+    "metrics": {
+      "none": {
+        "AbsRel": 0.5210963400161811,
+        "SqRel": 0.8037767823938116,
+        "RMSE": 1.742656151793353,
+        "RMSElog": 0.7764521002299413,
+        "log10": 0.32936892346437113,
+        "delta1": 0.0012806359481737797,
+        "delta2": 0.049851330934646255,
+        "delta3": 0.38450733369489004,
+        "scale_ratio": 2.1845064316596594,
+        "n_frames": 96,
+        "n_valid_total": 25158431
+      },
+      "scale_shift": {
+        "AbsRel": 0.07313709892336001,
+        "SqRel": 0.030008823505020394,
+        "RMSE": 0.29832200749851767,
+        "RMSElog": 0.15226218043892403,
+        "log10": 0.03316605235113087,
+        "delta1": 0.9597503208178901,
+        "delta2": 0.9794248935317121,
+        "delta3": 0.9857053195787117,
+        "scale_ratio": 0.9830956161359539,
+        "n_frames": 96,
+        "n_valid_total": 25158431
+      }
+    },
+    "fov_probe": {
+      "fov_h_deg_mean": 85.0338363647461,
+      "fov_h_deg_std": 0.5220969915390015,
+      "fov_w_deg_mean": 84.95677185058594,
+      "fov_w_deg_std": 0.5714638233184814,
+      "n": 64
+    }
+  }
+}
