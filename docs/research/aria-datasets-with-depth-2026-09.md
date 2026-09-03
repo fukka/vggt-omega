@@ -27,17 +27,70 @@ So they carry the **full ADT ground-truth stack, dense depth included**, and the
 much smaller `main_groundtruth` is consistent with "a single room with minimal
 furniture" rather than a four-room apartment.
 
-**Not verified, and here is why.** I tried to pull one sequence's trajectory and
-ground truth to confirm the room, and every URL returned **403**: the signed
-links in `ADT_download_urls.json` have expired (`oe=` in the query string is an
-expiry stamp). Re-download the CDN file from
-<https://www.projectaria.com/datasets/adt/> — it needs a browser and a licence
-click, so it is a human step — and then one 12 MB fetch settles it.
+**VERIFIED, 2026-09-03.** With a fresh CDN file the metadata pulls in seconds:
 
-If it holds, this is a **cross-room + cross-device** test with our existing
-loader, our existing depth convention, and no new code. That is a stronger
-external-validity probe than the within-sequence bedroom segment #40 fell back
-to, and it was available the whole time.
+```json
+{ "scene": "LiteOffice", "serial": "1WM09380061283", "dataset_name": "ADT_2023" }
+```
+
+and its 27 object instances are `LiteOffice_Table`, `LiteOffice_Desk_A`,
+`LiteOffice_Sofa_Pleather`, `LiteOffice_Door`, `LiteOffice_Window_Shade_A`,
+`LiteOffice_Wall_A`, … — an office, not an apartment. **`research-state.yaml`'s
+"ADT has NO non-Apartment scene" is wrong**, and #40 was pushed down to a
+within-sequence bedroom segment for no reason.
+
+What LiteOffice is and is not:
+
+* ✅ **a different room**, with ADT's full dense-depth ground truth;
+* ✅ **a different device** — serial `…061283` against the Apartment's `…011944`;
+* ⚠️ **almost no camera motion**: the wearer's trajectory over 2783 frames spans
+  1.24 m × 0.19 m × 0.61 m. These are object-recognition clips, someone looking
+  at one object. That is fine for "does the method transfer to another room" and
+  bad for anything needing baseline — H9's parallax anchors will starve here.
+* ⚠️ **27 instances against the Apartment's hundreds**, so it is a sparser scene
+  as well as a different one.
+
+### The calibration is genuinely different, and it matters
+
+Both devices are Aria Gen 1 RGB, but the units are not interchangeable:
+
+| | focal @504 | k1 | k2 | k3 | k4 |
+|---|---|---|---|---|---|
+| Apartment `M1292` | 218.689 | 0.4147 | −0.6293 | 0.9011 | −0.5185 |
+| LiteOffice `61283` | 212.834 | 0.4243 | −0.6693 | 0.9713 | −0.5575 |
+
+(both KB4-fitted from each device's own FISHEYE624 by `tools/adt_camera.py`)
+
+**Focal differs by −2.68%.** Scoring LiteOffice frames through the Apartment
+camera would carry a **6.4 px radial error at the rim** at 504 px — 0.56 px of
+it from the lens shape and the rest from the focal. In an experiment whose
+entire subject is radial behaviour, that is not a rounding error; it is the
+smooth radial error that reads as "the model is bad at the rim". So the camera
+must come from the sequence, which is what `camera.json` and
+`tools/adt_camera.py` are for.
+
+### And a check that came out clean
+
+Refitting the **Apartment's** own FISHEYE624 gives k = (0.4147, −0.6293,
+0.9011, −0.5185) against the repo's constant (0.3852, −0.4442, 0.5591,
+−0.3254). The coefficients look different, so the fits were compared where it
+matters — in pixels, against the true lens, over the whole cone at 504 px:
+
+| | max error | rms | at 54.8° |
+|---|---|---|---|
+| repo `_ARIA_KB4` | **0.226 px** | 0.102 px | +0.172 px |
+| refit here | 0.118 px | 0.018 px | −0.118 px |
+
+The repo's constant is a quarter-pixel approximation of the real lens across the
+entire imaged cone. **No existing result needs revisiting.** The two coefficient
+sets are different parameterisations of nearly the same curve, and the
+cross-device gap above is a real difference while this one is not.
+
+The extractor was also validated the only way that settles it: it re-derives
+frames from the raw VRS and compares them byte-for-byte against the existing
+extraction — 8 frames, 0 mismatched — and the calibration it reads from the
+provider (`f=610.941, cx=715.115, cy=716.715` at 1408) matches the repo's
+hard-coded constants to three decimals.
 
 ## 2. The strongest answer: Aria Synthetic Environments (ASE)
 
