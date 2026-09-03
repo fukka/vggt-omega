@@ -1,0 +1,35 @@
+project: fisheye-inpaint
+question: >
+  When a fisheye image is rectified into a single perspective image, does
+  inpainting the resulting black border wedges recover VGGT-Omega's accuracy,
+  by restoring the model's ability to estimate its own camera (FoV)?
+status: planning-only        # user scoped: ideas + plan, no code yet
+owner: this-account
+
+premise:
+  camera: ADT / Aria KB4 fisheye, theta_max = 62.33 deg
+  geometry:
+    circumscribed_hfov_deg: 124.7
+    circumscribed_black_pixel_frac: 0.215
+    circumscribed_black_solid_angle_frac: 0.067
+    inscribed_hfov_deg: 106.9
+    inscribed_cone_solid_angle_kept: 0.833
+    rim_area_magnification: 9.99
+
+prior_evidence_in_repo:
+  - commit: 04b6d4f
+    finding: >
+      VGGT's inferred FoV misaligns on fisheye-derived crops; DAv2 (relative
+      depth) is fine on the SAME crop. VGGT jointly infers camera + 3D, so a bad
+      camera estimate bends its geometry. VGGT is fine on native pinhole.
+  - commit: 4b83c35
+    finding: anti-aliased tangent render; blur/domain confound flagged
+  - file: VGGT-360-fisheye/README.md
+    finding: "DPT decodes garbage near cone-clipped black corners; --erode-valid-px ~7 (half a ViT patch)"
+
+competing_hypotheses:
+  H_A: black wedges are OOD tokens that mislead the camera head   # inpainting fixes
+  H_B: ~10x peripheral resampling stretch is OOD                  # inpainting does NOT fix
+  H_C: 124.7 deg is outside VGGT's trained focal distribution     # inpainting does NOT fix
+
+next_action: literature synthesis + written plan (to_human/)

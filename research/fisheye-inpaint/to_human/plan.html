@@ -1,0 +1,509 @@
+<title>鱼眼补全与可标定性</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#f2f6f5; --surface:#ffffff; --sunk:#e9efee;
+  --ink:#101a1c; --body:#26383a; --muted:#5f7376; --line:#d2dedd; --line-soft:#e2eae9;
+  --accent:#0b6b6e; --accent-soft:#d9eceb;
+  --warn:#a86a15; --warn-soft:#f4e6cd;
+  --bad:#98362f; --bad-soft:#f3dcd9;
+  --good:#33704a; --good-soft:#d9ebdf;
+  --serif:"Noto Serif SC",Songti SC,STSong,serif;
+  --sans:"Noto Sans SC",-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0d1516; --surface:#141f20; --sunk:#101a1b;
+  --ink:#e8efed; --body:#c2d1d0; --muted:#8ba09f; --line:#26383a; --line-soft:#1c2b2c;
+  --accent:#4fb6b3; --accent-soft:#12302f;
+  --warn:#d69a41; --warn-soft:#33260f;
+  --bad:#d47f74; --bad-soft:#341916;
+  --good:#72b489; --good-soft:#162a1e;
+}}
+:root[data-theme="dark"]{
+  --paper:#0d1516; --surface:#141f20; --sunk:#101a1b;
+  --ink:#e8efed; --body:#c2d1d0; --muted:#8ba09f; --line:#26383a; --line-soft:#1c2b2c;
+  --accent:#4fb6b3; --accent-soft:#12302f;
+  --warn:#d69a41; --warn-soft:#33260f;
+  --bad:#d47f74; --bad-soft:#341916;
+  --good:#72b489; --good-soft:#162a1e;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--body);font-family:var(--sans);
+  font-size:16px;line-height:1.85;-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding:0 28px 120px}
+.col{max-width:70ch}
+
+/* ---------- masthead ---------- */
+.mast{padding:72px 0 34px;border-bottom:2px solid var(--ink);margin-bottom:0}
+.kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;color:var(--accent);
+  margin:0 0 18px;text-transform:uppercase}
+h1{font-family:var(--serif);font-weight:900;font-size:clamp(34px,6vw,52px);line-height:1.15;
+  color:var(--ink);margin:0 0 20px;text-wrap:balance;letter-spacing:.01em}
+.standfirst{font-size:17.5px;line-height:1.8;color:var(--body);margin:0;max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:26px;
+  font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+
+/* ---------- sections ---------- */
+section{padding-top:60px}
+h2{font-family:var(--serif);font-weight:600;font-size:27px;line-height:1.4;color:var(--ink);
+  margin:0 0 6px;text-wrap:balance}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--accent);
+  margin:0 0 10px}
+h3{font-family:var(--sans);font-weight:700;font-size:17px;color:var(--ink);margin:34px 0 8px}
+h4{font-family:var(--sans);font-weight:700;font-size:14.5px;color:var(--ink);margin:20px 0 4px}
+p{margin:0 0 16px}
+a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
+strong{color:var(--ink);font-weight:700}
+code,.m{font-family:var(--mono);font-size:.87em;color:var(--ink);
+  background:var(--sunk);padding:1px 5px;border-radius:3px}
+.rule{height:1px;background:var(--line);border:0;margin:52px 0 0}
+
+/* ---------- verdict ---------- */
+.verdict{margin-top:40px;background:var(--surface);border:1px solid var(--line);
+  border-left:4px solid var(--accent);padding:26px 30px}
+.verdict h2{font-size:20px;margin-bottom:14px}
+.verdict p:last-child{margin-bottom:0}
+.vlist{list-style:none;margin:0;padding:0;display:grid;gap:16px}
+.vlist li{display:grid;grid-template-columns:26px 1fr;gap:14px;align-items:start}
+.vnum{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent);
+  border:1px solid var(--accent);border-radius:50%;width:22px;height:22px;
+  display:grid;place-items:center;margin-top:4px}
+
+/* ---------- figure ---------- */
+figure{margin:30px 0 8px;background:var(--surface);border:1px solid var(--line);padding:24px}
+.figgrid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(210px,.72fr);
+  gap:26px;align-items:center}
+@media(max-width:700px){.figgrid{grid-template-columns:1fr}}
+svg{display:block;width:100%;height:auto}
+.s-frame{fill:none;stroke:var(--ink);stroke-width:1.6}
+.s-wedge{fill:var(--warn-soft)}
+.s-seg{fill:var(--accent-soft)}
+.s-keep{fill:var(--surface)}
+.s-disc{fill:none;stroke:var(--accent);stroke-width:1.6}
+.s-insc{fill:none;stroke:var(--accent);stroke-width:1.3;stroke-dasharray:5 4}
+.s-lab{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.s-labi{font-family:var(--mono);font-size:12px;font-weight:600;fill:var(--ink)}
+.key{display:grid;gap:13px;margin:0;padding:0;list-style:none}
+.key li{display:grid;grid-template-columns:15px 1fr;gap:11px;align-items:start;
+  font-size:13.5px;line-height:1.6}
+.sw{width:13px;height:13px;margin-top:5px;border:1px solid var(--line)}
+.sw.w{background:var(--warn-soft);border-color:var(--warn)}
+.sw.s{background:var(--accent-soft);border-color:var(--accent)}
+.sw.k{background:var(--surface);border-color:var(--ink)}
+figcaption{font-size:12.5px;color:var(--muted);margin-top:18px;padding-top:14px;
+  border-top:1px solid var(--line-soft);line-height:1.7}
+
+/* ---------- tables ---------- */
+.scroll{overflow-x:auto;margin:24px 0;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
+th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--line-soft);
+  vertical-align:top;line-height:1.65}
+thead th{background:var(--sunk);color:var(--ink);font-weight:700;font-size:12px;
+  letter-spacing:.03em;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td.n,th.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hl{background:var(--accent-soft)}
+.ref{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+
+/* ---------- debate ---------- */
+.debate{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin:28px 0}
+@media(max-width:760px){.debate{grid-template-columns:1fr}}
+.side{background:var(--surface);border:1px solid var(--line);padding:22px 24px}
+.side.pro{border-top:3px solid var(--good)}
+.side.con{border-top:3px solid var(--bad)}
+.side h3{margin:0 0 4px;font-size:15.5px}
+.side.pro h3{color:var(--good)} .side.con h3{color:var(--bad)}
+.side .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
+  color:var(--muted);display:block;margin-bottom:16px}
+.arg{margin:0 0 18px}
+.arg:last-child{margin-bottom:0}
+.arg b{display:block;color:var(--ink);font-size:14px;margin-bottom:3px}
+.arg span{display:block;font-size:13.5px;line-height:1.72}
+
+/* ---------- phases ---------- */
+.phase{background:var(--surface);border:1px solid var(--line);padding:24px 26px;margin:20px 0}
+.phead{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin-bottom:4px}
+.pid{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--surface);
+  background:var(--accent);padding:3px 9px;border-radius:2px}
+.ptitle{font-family:var(--sans);font-weight:700;font-size:17px;color:var(--ink)}
+.pcost{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-left:auto}
+.prow{display:grid;grid-template-columns:70px 1fr;gap:8px 16px;margin-top:16px;font-size:14px}
+.prow dt{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--muted);
+  padding-top:5px}
+.prow dd{margin:0;line-height:1.75}
+.gate{margin-top:18px;padding:14px 16px;background:var(--sunk);border-left:3px solid var(--warn);
+  font-size:13.5px;line-height:1.7}
+.gate b{color:var(--warn);font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  display:block;margin-bottom:5px}
+
+/* ---------- misc ---------- */
+.note{border-left:3px solid var(--line);padding:2px 0 2px 20px;margin:24px 0;
+  font-size:14px;color:var(--muted);line-height:1.75}
+ul.plain{padding-left:20px;margin:0 0 16px}
+ul.plain li{margin-bottom:8px;line-height:1.75}
+.badge{font-family:var(--mono);font-size:10.5px;padding:2px 6px;border-radius:2px;
+  white-space:nowrap;border:1px solid}
+.b-ok{color:var(--good);border-color:var(--good);background:var(--good-soft)}
+.b-un{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
+  font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.9}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="kicker">研究计划 · VGGT-Omega · ADT / Aria KB4</p>
+  <h1>鱼眼补全与可标定性</h1>
+  <p class="standfirst">把鱼眼矫正成单张透视图后,边角会留下黑色楔形区域。用 diffusion 或其他方式把它补全,让图像回到 VGGT-Omega 的训练域 —— 这个想法能不能成立?本文汇总文献、正反辩论,并给出一个分四阶段、每阶段带否决判据的验证计划。</p>
+  <div class="meta">
+    <span>2026-09-03</span>
+    <span>状态:仅规划,未开始编码</span>
+    <span>θ_max = 62.33°</span>
+    <span>分支 egocentric-selfsup-finetune</span>
+  </div>
+</header>
+
+<div class="verdict">
+  <h2>判断摘要</h2>
+  <ul class="vlist">
+    <li><span class="vnum">1</span><div><strong>机制方向是对的,但可能不是一篇独立论文。</strong>本仓库 commit <code>04b6d4f</code> 已经定位到:VGGT 在鱼眼派生的裁剪图上<em>相机估计错误</em>,而 DAv2(纯相对深度)在同一张裁剪图上正常。补全边角确实瞄准了这个机制。问题在于,2026 年已有四篇工作(Fisheye3R、Wid3R、RayTun3R、CAM3R)全部收敛到"把相机模型喂给模型",而不是"把像素补回去"。</div></li>
+    <li><span class="vnum">2</span><div><strong>有一个反例必须先排除。</strong>RayTun3R(<span class="m">arXiv:2607.02711</span>)把鱼眼退化归因于<em>位置编码里固化的针孔偏置</em>,用 10,752 个参数的适配器在 FoV 110°–200° 上把旋转误差降低 2–12 倍。如果根因在位置编码,补全像素完全碰不到它。</div></li>
+    <li><span class="vnum">3</span><div><strong>先做诊断,再做补全。</strong>下面的 P0 用<em>干净的针孔图</em>(完全不涉及鱼眼)就能判定 VGGT 是否单纯地在宽 FoV 上失效。如果是,这个想法当场死亡,成本是一个下午。</div></li>
+    <li><span class="vnum">4</span><div><strong>更有防御力的变体:用真实像素而非幻觉。</strong>ADT 是带 6DoF 位姿的第一人称视频,第 <em>t</em> 帧边角缺的内容在 <em>t±k</em> 帧里是<em>真实拍到过的</em>。把它 warp 进来,透视天然正确、无幻觉风险、不需要生成模型。文献检索确认这一操作在 Aria/ADT 上<strong>无人做过</strong>。</div></li>
+  </ul>
+</div>
+
+<hr class="rule">
+
+<section id="geometry">
+  <p class="eyebrow">几何</p>
+  <h2>到底在补什么:21.5% 的像素,6.7% 的场景</h2>
+  <div class="col">
+    <p>ADT 的 Aria KB4 鱼眼成像锥为 θ_max = 62.33°。把整个锥矫正到针孔平面,有效区域是一个半径 R = tan(62.33°) = 1.907<em>f</em> 的圆盘。要完整保留它,输出方框必须外接这个圆盘 —— 四个角就是黑楔形。</p>
+    <p>关键在于这两个数字并不一致:<strong>黑角占了 21.5% 的像素,却只占 6.7% 的立体角。</strong>边缘区域的面积放大率接近 10 倍,所以这些楔形在像素空间是巨人,在场景内容上几乎什么都不是。</p>
+  </div>
+
+  <figure>
+    <div class="figgrid">
+      <svg viewBox="0 0 440 412" role="img" aria-label="矫正后画幅、成像圆盘与内接裁剪的几何关系图">
+        <path class="s-wedge" fill-rule="evenodd"
+          d="M70,40 H370 V340 H70 Z M220,190 m-150,0 a150,150 0 1,0 300,0 a150,150 0 1,0 -300,0"/>
+        <path class="s-seg" fill-rule="evenodd"
+          d="M220,190 m-150,0 a150,150 0 1,0 300,0 a150,150 0 1,0 -300,0 M113.93,83.93 H326.07 V296.07 H113.93 Z"/>
+        <rect class="s-keep" x="113.93" y="83.93" width="212.14" height="212.14"/>
+        <rect class="s-frame" x="70" y="40" width="300" height="300"/>
+        <circle class="s-disc" cx="220" cy="190" r="150"/>
+        <rect class="s-insc" x="113.93" y="83.93" width="212.14" height="212.14"/>
+        <text class="s-labi" x="100" y="66" text-anchor="middle">21.5%</text>
+        <text class="s-lab" x="100" y="79" text-anchor="middle">像素</text>
+        <text class="s-labi" x="220" y="66" text-anchor="middle">16.7%</text>
+        <text class="s-lab" x="220" y="78" text-anchor="middle">锥损失</text>
+        <text class="s-labi" x="220" y="188" text-anchor="middle">内接裁剪</text>
+        <text class="s-lab" x="220" y="204" text-anchor="middle">106.9° · 无黑边</text>
+        <text class="s-lab" x="220" y="360" text-anchor="middle">外接画幅 124.7° 水平 FoV</text>
+        <text class="s-lab" x="220" y="378" text-anchor="middle">成像锥圆盘 R = tan(62.33°) = 1.907 f</text>
+        <text class="s-lab" x="220" y="400" text-anchor="middle">边缘面积放大率 1/cos³θ ≈ 10×</text>
+      </svg>
+      <ul class="key">
+        <li><span class="sw w"></span><div><strong>黑楔形</strong> —— 保留整锥的代价。21.5% 像素,仅 6.7% 立体角。补全的目标就是它。</div></li>
+        <li><span class="sw s"></span><div><strong>内接裁剪丢掉的部分</strong> —— 16.7% 的成像立体角。这是"不补、直接裁"的代价。</div></li>
+        <li><span class="sw k"></span><div><strong>内接方框</strong> —— 106.9° 水平 FoV,零黑边,完全在训练域内。这是想法必须打败的基线。</div></li>
+      </ul>
+    </div>
+    <figcaption>裁剪系数 <em>c</em> = 半宽/R 是一个连续旋钮:<em>c</em> = 0.707 得到内接方框(0% 黑边,保留 83.3% 成像锥),<em>c</em> = 1.0 得到外接画幅(21.5% 黑边,保留 99.9% 成像锥)。单参数同时扫过"黑边比例"和"FoV",这正是 P1 实验的设计。</figcaption>
+  </figure>
+
+  <div class="scroll">
+    <table>
+      <thead><tr>
+        <th class="n">c = 半宽/R</th><th class="n">水平 FoV</th><th class="n">黑边(像素)</th>
+        <th class="n">黑边(立体角)</th><th class="n">保留成像锥</th><th>含义</th>
+      </tr></thead>
+      <tbody>
+        <tr class="hl"><td class="n">0.707</td><td class="n">106.9°</td><td class="n">0.0%</td><td class="n">0.0%</td><td class="n">83.3%</td><td>内接裁剪 —— 零黑边基线</td></tr>
+        <tr><td class="n">0.75</td><td class="n">110.1°</td><td class="n">0.7%</td><td class="n">0.2%</td><td class="n">87.3%</td><td></td></tr>
+        <tr><td class="n">0.80</td><td class="n">113.5°</td><td class="n">2.8%</td><td class="n">0.8%</td><td class="n">91.3%</td><td></td></tr>
+        <tr><td class="n">0.85</td><td class="n">116.7°</td><td class="n">6.1%</td><td class="n">1.7%</td><td class="n">94.6%</td><td></td></tr>
+        <tr><td class="n">0.90</td><td class="n">119.5°</td><td class="n">10.3%</td><td class="n">3.0%</td><td class="n">97.1%</td><td></td></tr>
+        <tr><td class="n">0.95</td><td class="n">122.2°</td><td class="n">15.3%</td><td class="n">4.6%</td><td class="n">99.0%</td><td></td></tr>
+        <tr class="hl"><td class="n">1.000</td><td class="n">124.7°</td><td class="n">21.5%</td><td class="n">6.7%</td><td class="n">99.9%</td><td>外接画幅 —— 补全的目标</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <p class="note">这张表本身有两个推论。其一:补全内容的<em>信息量</em>几乎不重要 —— 只有 6.7% 的立体角,没人会因为你把边角纹理猜得好而深度变准。补全的全部价值在<strong>域匹配</strong>,不在恢复信息。其二:替代方案很便宜 —— 内接裁剪只花 16.7% 的成像锥就换来一张零黑边、完全在域内的图。这个想法必须打败它。</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<section id="hypotheses">
+  <p class="eyebrow">根因诊断</p>
+  <h2>三个竞争假设,补全只能解决其中一个</h2>
+  <div class="col">
+    <p>commit <code>04b6d4f</code> 记录的证据是:合成(锐利)与真实(模糊)的切平面裁剪都让 VGGT 深度失准,而 <strong>Depth-Anything-v2 在同一张裁剪图上是对齐的</strong>;VGGT 在原生针孔图上正常。由于 DAv2 是纯相对深度、VGGT 联合推断相机与三维,结论是相机估计出错弯曲了 VGGT 的几何。</p>
+    <p>但"相机估计出错"还有三种互斥的下游解释,而补全只碰得到第一种。</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr>
+        <th>假设</th><th>机制</th><th>补全能修吗</th><th>支持证据</th>
+      </tr></thead>
+      <tbody>
+        <tr class="hl">
+          <td><strong>A · 黑楔形</strong></td>
+          <td>21.5% 的 OOD token 误导相机头,使其输出偏离真实 FoV</td>
+          <td><span class="badge b-ok">能 —— 这就是本想法</span></td>
+          <td>Missingness Bias(ICLR'22)证明置黑不是中性信号;Kayhan &amp; van Gemert(CVPR'20)证明网络利用边界效应编码绝对位置</td>
+        </tr>
+        <tr>
+          <td><strong>B · 边缘拉伸</strong></td>
+          <td>边缘重采样面积放大约 10 倍,产生任何自然照片都没有的模糊/混叠特征</td>
+          <td><span class="badge b-un">不能</span></td>
+          <td>本仓库 commit <code>4b83c35</code> 已标记 blur/domain 混淆;Fisheye3R 明言矫正"引入极端重采样伪影与边缘拉伸"</td>
+        </tr>
+        <tr>
+          <td><strong>C · FoV 超出训练分布</strong></td>
+          <td>124.7° 根本不在 VGGT 训练语料的焦距分布内,与黑边无关</td>
+          <td><span class="badge b-un">不能</span></td>
+          <td>VGGT 原文 Limitations 直接写明"当前模型不支持鱼眼或全景图像";RayTun3R 把退化归因于位置编码中的针孔偏置</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p><strong>C 是最致命的。</strong>如果 VGGT 在一张完全干净、无黑边、无拉伸的 125° 图上仍然估错 FoV,那么补全边角救不了它 —— 无论边角填什么,这张图的 FoV 都在分布之外。而这一点用<em>纯针孔数据</em>就能判定,不需要碰鱼眼。</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<section id="lit">
+  <p class="eyebrow">文献综述</p>
+  <h2>领域已经给出了答案,只是不是这个答案</h2>
+
+  <h3>甲 · 主流路线:根本不要矫正</h3>
+  <p>2026 年这一年里,至少四篇工作独立地把"喂鱼眼原图 + 条件化相机模型"确立为标准解法,并全部明确<em>拒绝</em>矫正。</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>工作</th><th class="ref">编号</th><th>做法与关键结论</th></tr></thead>
+      <tbody>
+        <tr><td><strong>VGGT</strong><br>CVPR 2025 best paper</td><td class="ref">2503.11651</td><td>相机头预测 <code>g = [q, t, f]</code>(四元数、平移、二维 FoV)。<strong>Limitations 明写:"当前模型不支持鱼眼或全景图像"</strong>。作者自己承认了这个失效模式。</td></tr>
+        <tr><td><strong>Fisheye3R</strong><br>本仓库已复现</td><td class="ref">2603.28896</td><td>在 VGGT / π³ / MapAnything 上加可学习 calibration token。明言矫正"要么牺牲场景覆盖,要么引入极端重采样伪影";undistortion 会"切断关键的跨视图共视性……导致结构漂移"。同时改善位姿、深度、点图与 <strong>FoV 估计</strong>。</td></tr>
+        <tr><td><strong>RayTun3R</strong><br>TUM, 2026-07</td><td class="ref">2607.02711</td><td>把 DUSt3R/MASt3R/VGGT/π³/DA3 的鱼眼退化归因于<strong>位置编码里固化的针孔偏置</strong>。10,752 参数的位置编码适配器,FoV 110°–200° 上旋转误差降低 2–12 倍;深度上仅"有竞争力"。</td></tr>
+        <tr><td><strong>Wid3R</strong><br>UMD / NAVER LABS</td><td class="ref">2602.05321</td><td>射线 + 球谐表示 + 相机模型 token。因"既有方法假设已矫正或针孔输入"而作。Zip-NeRF(鱼眼)AUC@30° +33.67,Stanford2D3D(360°)+77.33。</td></tr>
+        <tr><td><strong>CAM3R</strong></td><td class="ref">2603.22631</td><td>架构上把逐像素射线方向估计与径向距离估计耦合起来,支持"相机几何与深度纠缠"的观察。</td></tr>
+        <tr><td><strong>Calibration Tokens</strong></td><td class="ref">2508.04928</td><td>冻结的 MiDaS / DepthAnything / UniDepth 在鱼眼上系统性出错,原因是输入分布失配;用潜空间 token 修正,不微调骨干,对输入"完全无损"。LogL1 优于 L1,"尤其在边界区域"。</td></tr>
+        <tr><td><strong>Depth Any Camera</strong><br>CVPR 2025</td><td class="ref">2501.02464</td><td>ERP 规范空间 + pitch-aware 增强,鱼眼/360° 上 δ₁ 最高提升 50%。</td></tr>
+        <tr><td><strong>VGGT-360</strong><br>本仓库已移植</td><td class="ref">2603.18943</td><td>把问题定性为<em>域差</em>,用训练无关的重投影解决。<strong>没有</strong>把它归因于相机参数估计失败,<strong>也没有</strong>与 DAv2 对比 —— 所以 <code>04b6d4f</code> 的诊断相对于它是新的。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>乙 · 补全鱼眼无效区的先例:存在,但没测下游</h3>
+  <ul class="plain">
+    <li><strong>FisheyeEX</strong>(<span class="m">2206.05844</span>)—— 极坐标外绘,配 spiral distortion-aware 感知模块,使生成内容符合<em>鱼眼</em>畸变模型而非针孔先验,恢复约 27% 更多有效内容。注意:它作用在<strong>矫正之前</strong>的鱼眼域。</li>
+    <li><strong>FishDreamer</strong>(CVPRW 2023 OmniCV,<span class="m">2303.13842</span>,有代码)—— ViT + Polar-aware Cross Attention,联合外绘与语义分割,提出 Cityscapes-BF / KITTI360-BF。这是"补全喂给识别任务"最接近的一例。</li>
+  </ul>
+  <p>两者都只评估<em>自身补全质量</em>,没有报告冻结的下游几何模型精度变化。<strong>这就是空白。</strong></p>
+
+  <h3>丙 · 风险面:生成内容会误导几何</h3>
+  <ul class="plain">
+    <li><strong>3D Perspective Geometry Constraints</strong>(SIGGRAPH Asia 2023 / TOG 42(6),<span class="m">2312.00944</span>)—— <em>本计划最关键的风险引用</em>。在 diffusion 训练中加入透视几何损失,使生成图具有一致的消失点与 FoV,并<strong>提升下游模型表现</strong>。反过来说:未加约束的 diffusion 输出透视不一致,且可测量地损害下游任务。</li>
+    <li><strong>HAD</strong>(CVPR 2026,<span class="m">2605.16873</span>)—— diffusion 增广视图"不可避免地引入幻觉内容";用逐像素幻觉分数图在重建中屏蔽不可靠像素。</li>
+    <li><strong>GaMO</strong>(<span class="m">2512.25073</span>)—— 从<em>已有位姿</em>外绘而非合成新视角,以此在结构上规避幻觉;用 Plücker 射线条件化,焦距按扩大后的 FoV 缩放。</li>
+    <li><strong>Missingness Bias in Model Debugging</strong>(ICLR 2022,<span class="m">2204.08945</span>)—— 置黑像素<strong>不是</strong>中性的"无信息"信号,会引入可测量的偏置;Transformer 可以直接丢 token,那才是"自然的缺失"。</li>
+  </ul>
+
+  <h3>丁 · 如果要做,可用的透视一致生成工具</h3>
+  <ul class="plain">
+    <li><strong>PreciseCam</strong>(<span class="m">2501.12910</span>)—— ControlNet 式显式控制 vFoV、roll/pitch <em>与镜头畸变</em>。这正是把生成器强制到指定 125° FoV 的机制。</li>
+    <li><strong>ControlVP</strong>(<span class="m">2512.07504</span>)—— 消失点一致性损失。</li>
+    <li><strong>CameraCtrl</strong>(<span class="m">2404.02101</span>)—— Plücker 位姿编码器,相机条件化生成的范式参考。</li>
+  </ul>
+
+  <h3>戊 · 真实像素替代幻觉:flow / 位姿 warp</h3>
+  <ul class="plain">
+    <li>Deep Flow-Guided Video Inpainting(CVPR 2019)、E²FGVI、Flow-Guided Diffusion(<span class="m">2311.15368</span>)—— 先从可见邻帧传播真实像素,生成只作为兜底。</li>
+    <li>检索确认:<strong>没有任何工作</strong>用 Aria / ADT / Ego4D 的 6DoF 位姿把时序邻帧 warp 进矫正鱼眼图的黑边,再喂给基础模型。相关的 Aria 重建工作(<span class="m">2506.04444</span>、EgoLifter <span class="m">2403.18118</span>)都不做这个操作。</li>
+  </ul>
+
+  <h3>己 · 为什么黑区可能破坏相机头</h3>
+  <ul class="plain">
+    <li><strong>Kayhan &amp; van Gemert</strong>(CVPR 2020,<span class="m">2003.07064</span>)—— 网络利用 zero-padding 造成的图像边界效应学习绝对空间位置。</li>
+    <li><strong>Islam, Jia, Bruce</strong>(ICLR 2020,<span class="m">2001.08248</span>)—— CNN 编码了大量绝对位置信息。</li>
+    <li><strong>RSPC</strong>(CVPR 2023)—— 用噪声遮挡约 10% 的 patch 就会造成严重精度下降并扰乱中间层自注意力。(是噪声 patch 而非黑色,引用时须注明这一差别。)</li>
+    <li><strong>Perspective Fields</strong>(CVPR 2023 Highlight,<span class="m">2212.03239</span>)与 <strong>Tame a Wild Camera</strong>(NeurIPS 2023,<span class="m">2306.10988</span>)—— 稠密逐像素的相机表示<em>被设计成</em>对裁剪/缩放不变。反过来暗示:VGGT 这样的<strong>全局</strong> FoV 回归头在构造上并不具备这种不变性。</li>
+    <li><strong>MAE</strong>(<span class="m">2111.06377</span>)—— 编码器<em>丢弃</em>被遮 token 而非置零,只有解码器用可学习 mask token。既是设计教训,也是"ViT 天生能容忍空洞"这一说法的反例。</li>
+  </ul>
+
+  <h3>庚 · 反向证据:知道相机参数本身收益有限</h3>
+  <p><strong>MapAnything</strong>(<span class="m">2509.13414</span>)的 Table 2(双视图)给出了这个模型家族里少有的定量消融:</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>输入条件</th><th class="n">rel ↓</th><th class="n">τ ↑</th><th>解读</th></tr></thead>
+      <tbody>
+        <tr><td>仅图像</td><td class="n">0.20</td><td class="n">43.9</td><td>基线</td></tr>
+        <tr><td>+ 已知内参</td><td class="n">0.19</td><td class="n">45.3</td><td><strong>提升很小</strong></td></tr>
+        <tr><td>+ 内参 + 位姿</td><td class="n">0.10</td><td class="n">63.2</td><td>提升很大 —— 但来自位姿</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">这对本想法是不利的。如果<em>直接告诉</em>模型正确内参都只把 rel 从 0.20 推到 0.19,那么"通过补全边角让模型自己把内参猜对"的收益上限恐怕也在同一量级。必须在 P1 中直接测量本设置下的这一上限,而不能假设它大。<br><span class="badge b-un">注意</span> 该消融是双视图、域内针孔设置,未必外推到 124.7° 鱼眼矫正图;这是需要自行验证的关键不确定性。</p>
+</section>
+
+<hr class="rule">
+
+<section id="debate">
+  <p class="eyebrow">辩论</p>
+  <h2>这是不是一个好主意</h2>
+  <div class="debate">
+    <div class="side pro">
+      <h3>支持</h3>
+      <span class="tag">FOR</span>
+      <div class="arg"><b>置黑不是中性操作</b><span>Missingness Bias(ICLR'22)与 Kayhan &amp; van Gemert(CVPR'20)共同支持:黑区是一种独特的、会引入偏置的输入模式,而不是"没有信息"。21.5% 的画幅是很大的足迹。</span></div>
+      <div class="arg"><b>VGGT 的相机头在构造上就不抗裁剪</b><span>Perspective Fields 与 incidence field 明确把"对裁剪/缩放不变"做进表示里。VGGT 的全局 <code>[q,t,f]</code> 回归头没有这层保护,理论上正是最容易被边界内容带偏的那一类。</span></div>
+      <div class="arg"><b>训练无关、模型无关</b><span>Fisheye3R 要训 40k 步 token,RayTun3R 要训适配器,Wid3R 要换架构。修输入不需要训练任何东西,而且能直接套到任意冻结的下游模型上。这是一个真实且罕见的定位。</span></div>
+      <div class="arg"><b>诊断本身是新的</b><span>"VGGT 崩而 DAv2 在同一裁剪图上不崩"这个对照,VGGT-360 原文没做,Fisheye3R 没做。它把失效精确定位到相机头,而不是笼统的"域差"。</span></div>
+      <div class="arg"><b>空白是真的</b><span>五路检索都没找到:把鱼眼/矫正无效区补全<em>作为冻结几何模型的预处理</em>并报告受控精度差值的工作。FisheyeEX 与 FishDreamer 最接近,但只评自己。</span></div>
+    </div>
+    <div class="side con">
+      <h3>反对</h3>
+      <span class="tag">AGAINST</span>
+      <div class="arg"><b>VGGT 作者已经写明不支持鱼眼</b><span>原文 Limitations 直说"不支持鱼眼或全景图像"。这不是一个被忽视的 bug,而是一个已知的、设计范围之外的输入。</span></div>
+      <div class="arg"><b>RayTun3R 给出了不同的根因</b><span>如果退化真的来自<em>位置编码里的针孔偏置</em>,补全像素完全触碰不到它。而他们用 10,752 个参数就在 FoV 110°–200° 上取得 2–12 倍旋转误差改善 —— 便宜且已验证。</span></div>
+      <div class="arg"><b>知道内参本身收益可能很小</b><span>MapAnything 的消融里,给定已知内参只把 rel 从 0.20 推到 0.19。补全的收益上限很可能被这个数字压住。</span></div>
+      <div class="arg"><b>补全碰不到边缘拉伸</b><span>边缘面积放大约 10 倍带来的重采样特征,是任何自然照片都没有的。补黑角对它毫无作用,而 Fisheye3R 恰恰把它列为矫正的两大代价之一。</span></div>
+      <div class="arg"><b>只有 6.7% 的立体角</b><span>把一个 diffusion 模型花在几乎不含场景的区域上。若最终结论是"填什么都差不多,只要不是黑的",那这是一个工程技巧,不是一篇论文。</span></div>
+      <div class="arg"><b>通用 diffusion 会画错透视</b><span>其先验是"普通照片"(约 50–60° FoV)。在 125° 图的边角上作画,它会画出与真实 FoV 矛盾的透视线索,<em>把相机头往错的方向拉得更远</em>。黑色至少是中性的,错误透视是主动误导 —— <span class="m">2312.00944</span> 正是这一效应的证据。</span></div>
+      <div class="arg"><b>基线太便宜</b><span>内接裁剪只花 16.7% 的成像锥,就得到零黑边、完全在域内的图。这个想法必须显著超过它才有意义。</span></div>
+    </div>
+  </div>
+  <div class="col">
+    <p><strong>综合判断。</strong>作为独立论文,这个想法的风险偏高:四篇 2026 年的工作已经从另一个方向解决了同一问题,而"相机估计"这条因果链上还挂着 MapAnything 的不利消融。但作为一条<em>诊断路径</em>,它极有价值 —— 因为要证伪它,必须先把 A / B / C 三个假设分离干净,而这件事目前<strong>没有任何一篇论文做过</strong>,包括本仓库正在复现的两篇。分离本身就是可发表的贡献,无论补全是否有效。</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<section id="plan">
+  <p class="eyebrow">验证计划</p>
+  <h2>四个阶段,每个阶段都能杀死这个想法</h2>
+  <div class="col">
+    <p>按成本从低到高排列,前一阶段的否决判据不通过就不进入下一阶段。P0 与 P1 完全不需要生成模型,也不需要训练。</p>
+  </div>
+
+  <div class="phase">
+    <div class="phead"><span class="pid">P0</span><span class="ptitle">FoV 阶梯 —— 在干净针孔图上判定假设 C</span><span class="pcost">约半天 · 无需训练</span></div>
+    <dl class="prow">
+      <dt>目的</dt><dd>在完全不涉及鱼眼、黑边、拉伸的条件下,测出 VGGT-Omega 的相机头在多宽的 FoV 上开始失效。</dd>
+      <dt>操作</dt><dd>取原生针孔图(ADT 之外的干净透视数据即可),用裁剪+缩放合成 FoV 阶梯:40° / 60° / 80° / 100° / 110° / 125°。每级读出 <code>pose_enc[7:9]</code> 解码的推断 FoV(<code>vggt_single_image.py</code> 已实现),与真值 FoV 对比。同时记录深度对齐误差。</dd>
+      <dt>预测</dt><dd>若假设 C 成立,推断 FoV 误差会在某个阈值(推测 90–110°)之后急剧发散。</dd>
+    </dl>
+    <div class="gate"><b>否决判据</b>若 VGGT 在干净的 125° 图上就已经估错 FoV,则 124.7° 本身超出分布,补全边角无法挽救 —— <strong>整个想法在此终止</strong>,转向条件化路线(Fisheye3R / RayTun3R 风格)。若 FoV 一路跟得住,则假设 C 排除,进入 P1。</div>
+  </div>
+
+  <div class="phase">
+    <div class="phead"><span class="pid">P1</span><span class="ptitle">裁剪系数扫描 —— 分离假设 A 与 B</span><span class="pcost">约一天 · 无需训练</span></div>
+    <dl class="prow">
+      <dt>目的</dt><dd>在真实 ADT 鱼眼上,把"黑边比例"作为唯一变量扫过去,看相机估计误差是否跟着走。</dd>
+      <dt>操作</dt><dd>按上表把 <em>c</em> 从 0.707 扫到 1.00(七个点),黑边比例 0% → 21.5%,水平 FoV 106.9° → 124.7°。每个点记录:推断 FoV 误差、深度 AbsRel / δ₁(仅在成像锥 ∧ GT 有效掩膜内评估,scale-shift 对齐)、以及 DAv2 在同一张图上的对照。</dd>
+      <dt>预测</dt><dd>假设 A 成立 → FoV 误差随黑边比例单调上升;假设 B 成立 → 误差随 <em>c</em> 平坦或随边缘拉伸而非黑边变化。</dd>
+      <dt>混淆</dt><dd><em>c</em> 同时改变 FoV 与黑边,两者纠缠。需加一组对照:固定输出 FoV,只改变黑边(把内接裁剪图人为贴上假黑角),以此纯化 A。</dd>
+    </dl>
+    <div class="gate"><b>否决判据</b>若曲线平坦,黑边不是问题,补全无从谈起 —— 转向 B(边缘拉伸)或条件化路线。若单调上升,假设 A 确立,且曲线斜率直接给出补全的收益上限。</div>
+  </div>
+
+  <div class="phase">
+    <div class="phead"><span class="pid">P2</span><span class="ptitle">填充阶梯 —— 便宜的填充能走多远</span><span class="pcost">约两天 · 无需训练</span></div>
+    <dl class="prow">
+      <dt>目的</dt><dd>在承认假设 A 之后,判断这是"低层 patch 统计"问题还是"语义/透视"问题。这决定了要不要生成模型。</dd>
+      <dt>操作</dt><dd>固定 <em>c</em> = 1.0,只换填充:黑 → 全图均值 → 逐通道均值 → 边缘复制 → 镜像 → 匹配统计的高斯噪声 → 从<strong>时序邻帧 warp 的真实像素</strong>(用 ADT 的 6DoF 位姿) → 通用 diffusion inpaint → 透视条件化 inpaint(PreciseCam 风格,强制 vFoV = 124.7°)。全部对齐到 P1 曲线上的同一 <em>c</em>。</dd>
+      <dt>预测</dt><dd>若曲线在"边缘复制"就饱和 → 低层效应,diffusion 无收益,这是一个干净的<strong>负结果</strong>,目前文献中没有。若不饱和 → 语义/透视确实重要,生成路线成立。</dd>
+      <dt>关键对照</dt><dd>通用 diffusion <em>对比</em> 透视条件化 diffusion。若前者比均值填充<em>更差</em>,就直接验证了 <span class="m">2312.00944</span> 预言的"错误透视主动误导相机头"效应 —— 这本身是一个有价值的发现。</dd>
+    </dl>
+    <div class="gate"><b>否决判据</b>若最好的填充仍显著低于 P1 的内接裁剪基线(<em>c</em> = 0.707),则补全整体不划算,应当直接用内接裁剪。</div>
+  </div>
+
+  <div class="phase">
+    <div class="phead"><span class="pid">P3</span><span class="ptitle">对阵真正的替代方案</span><span class="pcost">数天 · 需训练对照组</span></div>
+    <dl class="prow">
+      <dt>目的</dt><dd>把"训练无关的输入修复"放到与"训练一个条件化模块"的同一张表上,这是论文的核心表格。</dd>
+      <dt>操作</dt><dd>同一 VGGT-Omega 骨干、同一 ADT 测试集、同一评估协议,横向对比:① 原始鱼眼直接喂;② 内接裁剪;③ 外接+黑边;④ 外接+最佳填充(P2 冠军);⑤ Fisheye3R calibration tokens(仓库已复现);⑥ RayTun3R 风格位置编码适配器(若可复现)。</dd>
+      <dt>指标</dt><dd>推断 FoV 误差(hErr / vErr)、AbsRel / RMSE / δ₁(scale-shift 对齐)、RRA / RTA / AUC@30、ATE,外加训练成本(参数量、训练步数)一列。</dd>
+    </dl>
+    <div class="gate"><b>结论形态</b>若 ④ 接近 ⑤/⑥ 而训练成本为零 → 论文成立,卖点是"训练无关的输入空间修复"。若 ④ 明显落后 → 论文改为诊断性负结果:分离 A/B/C 并说明为什么条件化才是正解。两种结局都可发表。</div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<section id="protocol">
+  <p class="eyebrow">评估协议</p>
+  <h2>先锁死,再开跑</h2>
+  <div class="col">
+    <p>为避免无意识的指标操纵,以下在跑任何实验前锁定,并按 autoresearch 的规范先提交 protocol commit,再提交结果 commit。</p>
+    <ul class="plain">
+      <li><strong>数据</strong> —— ADT / Aria RGB 鱼眼(KB4,θ_max = 62.33°),稠密 GT 深度。测试帧集合一次性固定,P0–P3 全程不变。</li>
+      <li><strong>有效掩膜</strong> —— 一律用<em>解析</em>成像锥掩膜 ∧ GT 有效,不用 <code>rgb.sum() &gt; 0</code>(暗场景与渐晕会误判)。补全区域<strong>永远排除在评估之外</strong> —— 补全的作用是域匹配,不是产生可评估的深度。</li>
+      <li><strong>对齐</strong> —— 深度用 scale-shift(affine-invariant)对齐,与 <code>utils/metrics_adt.py</code> 现有口径一致。</li>
+      <li><strong>主指标</strong> —— 推断 FoV 误差(度)。这是因果链上离假设最近的量,而不是深度误差。深度指标作为下游确认。</li>
+      <li><strong>对照模型</strong> —— 每一格都同时跑 Depth-Anything-v2。它是纯相对深度,不推断相机,因此充当"这一处退化是否由相机估计引起"的探针。这正是 <code>04b6d4f</code> 里已经奏效的设计。</li>
+      <li><strong>混淆控制</strong> —— 所有变体渲染分辨率、超采样、抗锯齿设置一致(参见 <code>4b83c35</code> 的 blur 混淆记录);比较必须在同一 <code>--fisheye-size</code> 下进行。</li>
+    </ul>
+  </div>
+</section>
+
+<hr class="rule">
+
+<section id="risks">
+  <p class="eyebrow">风险与备选</p>
+  <h2>已知会出问题的地方</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>风险</th><th>后果</th><th>备选</th></tr></thead>
+      <tbody>
+        <tr><td>P0 直接判定假设 C 成立</td><td>想法在第一天终止</td><td>转向 Fisheye3R token(已复现)或 RayTun3R 位置编码适配器;把 P0 的 FoV 阶梯曲线本身作为贡献发表 —— 目前没有 VGGT 家族的 FoV 敏感度曲线</td></tr>
+        <tr><td>通用 diffusion 的 50–60° FoV 先验画出错误透视</td><td>比黑色<em>更差</em></td><td>改用 PreciseCam 风格显式 vFoV 条件化;或干脆放弃生成,走时序 warp</td></tr>
+        <tr><td>收益被 MapAnything 式的天花板压住</td><td>提升太小,不足以成文</td><td>在 P1 就直接测这个上限(把真值内参喂给模型看能涨多少),不要等到 P3</td></tr>
+        <tr><td>裁剪系数把 FoV 与黑边纠缠在一起</td><td>P1 结论不可解释</td><td>加"固定 FoV、人为贴假黑角"的纯化对照(已写入 P1)</td></tr>
+        <tr><td>时序 warp 需要精确位姿与动态物体处理</td><td>warp 区域含鬼影</td><td>ADT 自带 6DoF 位姿与实例标注;鬼影区域退回到便宜填充,并记录覆盖率</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>最有防御力的变体</h3>
+  <div class="col">
+    <p>如果 P0 与 P1 都通过,<strong>优先做时序 warp 而不是 diffusion</strong>。理由是结构性的:第 <em>t</em> 帧边角缺的内容在 <em>t±k</em> 帧里被真实拍到过,warp 进来的像素透视天然正确、无幻觉、不需要生成模型,也就绕开了整条"错误透视误导相机头"的风险链。这与 GaMO 规避幻觉的思路一致,而检索确认<strong>没有人在 Aria / ADT 上做过这个操作</strong>。diffusion 退居为剩余空洞的兜底。</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<section id="close">
+  <p class="eyebrow">下一步</p>
+  <h2>建议的执行顺序</h2>
+  <div class="col">
+    <ul class="plain">
+      <li><strong>先跑 P0。</strong>半天,纯针孔数据,不碰鱼眼,不写补全代码。它单独决定后面三个阶段值不值得做。</li>
+      <li><strong>通读三篇全文。</strong>RayTun3R(<span class="m">2607.02711</span>)—— 因为它是最强的反例;PanoVGGT(<span class="m">2603.17571</span>)—— 检索时 PDF 过大未取到,其无效区处理方式未知;<span class="m">2512.11508</span> —— 探测 DUSt3R/VGGT 内部机制,可能已经回答了内参与深度的耦合问题。</li>
+      <li><strong>核实那篇"均值填充优于黑色"的记忆。</strong>五路检索都没有找到。最可能藏在 WoodScape / OmniDet / SVDistNet 的实现细节或补充材料里,建议直接查源码,不要在没有确认前引用。</li>
+      <li><strong>P2 与 P3 暂不启动</strong>,等 P0 / P1 的判据结果。</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  引用状态:本文所列 arXiv 编号均来自检索结果,未经全文核实的条目已在正文中标注。<br>
+  未能证实:「均值填充优于黑色」的原始出处;PanoDiffusion / PanFusion 的独立核实;FS-Depth(2307.14624)正文。<br>
+  工作区 research/fisheye-inpaint/ · 文献 literature/survey.md · 状态 research-state.yaml
+</footer>
+
+</div>
