@@ -178,6 +178,24 @@ def make_cells(fill: str = "replicate") -> "OrderedDict[str, dict]":
     ])
 
 
+def input_fingerprint(cell: dict, seq_dirs: List[str], res: int,
+                     rgb_subdir: str) -> str:
+    """Hash of the first frame a cell actually feeds the model.
+
+    Guard against silent no-ops. An arm whose config fails to reach the dataset
+    still runs, still produces plausible numbers, and is indistinguishable from a
+    real null result -- exactly how the first oracle run reported five identical
+    AbsRel values (a missing ``synth_hole_inscribed`` kwarg at the call site meant
+    no hole was ever imposed, so every fill was a no-op). Fingerprints make that
+    failure loud instead of silent.
+    """
+    import hashlib
+    ds = _dataset_for(cell, seq_dirs, res, seq_len=1, max_frames=1,
+                      rgb_subdir=rgb_subdir)
+    arr = ds[0]["images"][0].numpy()
+    return hashlib.sha1(arr.tobytes()).hexdigest()[:12]
+
+
 def _dataset_for(cell: dict, seq_dirs: List[str], res: int, seq_len: int,
                  max_frames: Optional[int], rgb_subdir: str):
     from .adt_depth import ADTWindowDataset
@@ -311,6 +329,20 @@ def main() -> None:
     model = _load_vggt_base(args.vggt_checkpoint, device)
     predict = make_vggt_predict(model, device)
 
+    # Fingerprint every arm BEFORE spending GPU time: distinct configs must
+    # produce distinct inputs, or the comparison is meaningless.
+    fps = {cid: input_fingerprint(cell, seq_dirs, args.resolution, args.rgb_subdir)
+           for cid, cell in cells.items()}
+    print("\n[exp2x2] input fingerprints:")
+    for cid, fp in fps.items():
+        print(f"    {cid:<18} {fp}")
+    dupes = [(a, b) for i, a in enumerate(fps) for b in list(fps)[i + 1:]
+             if fps[a] == fps[b]]
+    if dupes:
+        raise SystemExit("[exp2x2] ABORT: these arms feed IDENTICAL input — the "
+                         "config is not reaching the dataset: "
+                         + "; ".join(f"{a}=={b}" for a, b in dupes))
+
     results: Dict[str, dict] = {}
     for cid, cell in cells.items():
         print(f"\n{'=' * 74}\n[exp2x2] {cell['label']}  --  {cell['blurb']}\n{'=' * 74}")
@@ -320,11 +352,12 @@ def main() -> None:
             align_modes=("none", "scale_shift"), max_frames=args.max_frames,
             rgb_subdir=args.rgb_subdir, rectify=cell["rectify"],
             focal_out_norm=cell["focal_out_norm"], fill=cell["fill"],
+            synth_hole_inscribed=cell.get("synth_hole_inscribed", False),
         )
         fov = probe_fov(model, cell, seq_dirs, args.resolution, args.seq_len,
                         device, args.rgb_subdir)
         results[cid] = {"cell": {k: v for k, v in cell.items()},
-                        "metrics": m, "fov_probe": fov}
+                        "metrics": m, "fov_probe": fov, "input_sha1": fps[cid]}
         with open(os.path.join(args.out, "results.json"), "w") as fh:
             json.dump(results, fh, indent=2, default=str)
         print(f"[exp2x2] {cell['label']} inferred FoV: {fov}")
