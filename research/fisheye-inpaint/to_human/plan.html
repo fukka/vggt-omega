@@ -123,6 +123,20 @@ td.n,th.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:
 .arg b{display:block;color:var(--ink);font-size:14px;margin-bottom:3px}
 .arg span{display:block;font-size:13.5px;line-height:1.72}
 
+/* ---------- 2x2 matrix ---------- */
+.mtx{display:grid;grid-template-columns:auto 1fr 1fr;gap:1px;background:var(--line);
+  border:1px solid var(--line);margin:28px 0;font-size:13.5px}
+@media(max-width:700px){.mtx{grid-template-columns:1fr;font-size:13px}}
+.mtx>div{background:var(--surface);padding:15px 17px;line-height:1.65}
+.mtx .hd{background:var(--sunk);font-weight:700;color:var(--ink);font-size:12px;
+  letter-spacing:.03em;display:flex;align-items:center}
+.mtx .rh{background:var(--sunk);font-weight:700;color:var(--ink);font-size:12.5px;
+  display:flex;align-items:center;min-width:112px}
+.cellid{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600;
+  display:block;margin-bottom:5px}
+.cellname{color:var(--ink);font-weight:700;display:block;margin-bottom:6px;font-size:14px}
+.mtx .pred{display:block;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);
+  font-size:12.5px;color:var(--muted)}
 /* ---------- phases ---------- */
 .phase{background:var(--surface);border:1px solid var(--line);padding:24px 26px;margin:20px 0}
 .phead{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin-bottom:4px}
@@ -173,7 +187,7 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
   <ul class="vlist">
     <li><span class="vnum">1</span><div><strong>机制方向是对的,但可能不是一篇独立论文。</strong>本仓库 commit <code>04b6d4f</code> 已经定位到:VGGT 在鱼眼派生的裁剪图上<em>相机估计错误</em>,而 DAv2(纯相对深度)在同一张裁剪图上正常。补全边角确实瞄准了这个机制。问题在于,2026 年已有四篇工作(Fisheye3R、Wid3R、RayTun3R、CAM3R)全部收敛到"把相机模型喂给模型",而不是"把像素补回去"。</div></li>
     <li><span class="vnum">2</span><div><strong>有一个反例必须先排除。</strong>RayTun3R(<span class="m">arXiv:2607.02711</span>)把鱼眼退化归因于<em>位置编码里固化的针孔偏置</em>,用 10,752 个参数的适配器在 FoV 110°–200° 上把旋转误差降低 2–12 倍。如果根因在位置编码,补全像素完全碰不到它。</div></li>
-    <li><span class="vnum">3</span><div><strong>先做诊断,再做补全。</strong>下面的 P0 用<em>干净的针孔图</em>(完全不涉及鱼眼)就能判定 VGGT 是否单纯地在宽 FoV 上失效。如果是,这个想法当场死亡,成本是一个下午。</div></li>
+    <li><span class="vnum">3</span><div><strong>主实验是一个 2×2:投影方式 × 是否补全。</strong>它同时回答"矫正是赚是亏"与"补全是赚是亏",并给出关键的<em>交互项</em>。而且 <code>finetune/eval/diagnose_dav2_rectify.py</code> 已经是这个实验的一半 —— 它已经在 ADT 上跑 raw-vs-rectified,并用<em>同一套 remap</em> 把 GT 深度一起矫正。</div></li>
     <li><span class="vnum">4</span><div><strong>更有防御力的变体:用真实像素而非幻觉。</strong>ADT 是带 6DoF 位姿的第一人称视频,第 <em>t</em> 帧边角缺的内容在 <em>t±k</em> 帧里是<em>真实拍到过的</em>。把它 warp 进来,透视天然正确、无幻觉风险、不需要生成模型。文献检索确认这一操作在 Aria/ADT 上<strong>无人做过</strong>。</div></li>
   </ul>
 </div>
@@ -394,52 +408,145 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
 <hr class="rule">
 
 <section id="plan">
-  <p class="eyebrow">验证计划</p>
-  <h2>四个阶段,每个阶段都能杀死这个想法</h2>
+  <p class="eyebrow">主实验</p>
+  <h2>2×2:投影方式 × 是否补全</h2>
   <div class="col">
-    <p>按成本从低到高排列,前一阶段的否决判据不通过就不进入下一阶段。P0 与 P1 完全不需要生成模型,也不需要训练。</p>
+    <p>把「投影方式」与「是否补全」拆成两个正交因子,四个格子跑同一个 VGGT-Omega、同一批帧、同一套评估掩膜。这比单独扫黑边比例更强,因为它同时回答两个问题 —— <em>矫正本身是赚是亏</em>、<em>补全是赚是亏</em> —— 并给出真正想要的<strong>交互项</strong>:补全在矫正图上的收益是否显著大于在原始鱼眼上的收益。</p>
+    <p>预测很明确:只有格子 ④ 长得像一张普通照片。如果补全的价值真的来自域匹配,那么增益应当<strong>集中在 ④,而不是均匀分布在 ③ 和 ④</strong>。若 ③ 和 ④ 提升幅度相当,说明起作用的是"别让画面里有大片纯黑"这种低层效应,与透视域无关 —— 那是另一个(更弱的)故事。</p>
+  </div>
+
+  <div class="mtx">
+    <div class="hd"></div>
+    <div class="hd">保留黑区(基线)</div>
+    <div class="hd">黑区已补全</div>
+
+    <div class="rh">原始鱼眼</div>
+    <div>
+      <span class="cellid">① RAW · BLACK</span>
+      <span class="cellname">未矫正 + 圆形视场外黑角</span>
+      Aria KB4 原图直接喂入。VGGT 原文 Limitations 明写不支持鱼眼,因此这一格预期最差。它的作用是提供"完全不做任何处理"的地板。
+      <span class="pred">预测:FoV 误差最大;DAv2 相对深度尚可 —— 该对比即 <code>04b6d4f</code> 的探针。</span>
+    </div>
+    <div>
+      <span class="cellid">③ RAW · FILLED</span>
+      <span class="cellname">未矫正 + 角落已填</span>
+      同上,但把成像圆之外的角落填上。注意这些方向是镜头<em>物理上没拍到</em>的(θ &gt; θ_max),所以"填什么"必须显式定义,见下方数据来源一节。
+      <span class="pred">预测:小幅提升或无变化。鱼眼投影本身仍在域外,填角落救不了投影。</span>
+    </div>
+
+    <div class="rh">矫正为透视</div>
+    <div>
+      <span class="cellid">② RECT · BLACK</span>
+      <span class="cellname">外接矫正 + 21.5% 黑楔形</span>
+      <em>c</em> = 1.0 外接画幅,124.7° 水平 FoV,完整保留成像锥,四角为黑。这是本想法要修复的那一格。
+      <span class="pred">预测:比 ① 好(透视投影在域内),但被黑楔形拖累。</span>
+    </div>
+    <div>
+      <span class="cellid">④ RECT · FILLED</span>
+      <span class="cellname">外接矫正 + 楔形已补</span>
+      唯一一格在视觉上是一张完整的矩形透视照片 —— 正是 VGGT-Omega 的训练域。<strong>这是假设的落点。</strong>
+      <span class="pred">预测:若假设 A 成立,④ 显著优于 ②,且 ④−② 的差值明显大于 ③−①。</span>
+    </div>
+  </div>
+
+  <div class="col">
+    <p class="note"><strong>交互项才是结论。</strong>主效应(矫正好不好、补全好不好)各自都已经有文献给出过答案。没人测过的是两者的交互 —— 即"补全只在透视域里有意义"这一命题。报告时务必给出 (④−②) − (③−①),而不只是四个绝对值。</p>
+  </div>
+
+  <h3>必须补上的三行,否则结论不可解释</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>补充条件</th><th>为什么非要不可</th></tr></thead>
+      <tbody>
+        <tr><td><strong>⑤ 内接裁剪</strong><br><span class="ref">c = 0.707,零黑边</span></td><td>天然无黑区、无需补全、完全在域内,代价是 16.7% 的成像锥。这是<em>免费的替代方案</em>。若 ④ 打不过 ⑤,整个补全路线就不划算 —— 直接裁就好。</td></tr>
+        <tr><td><strong>⑥ 真值补全(oracle)</strong><br><span class="ref">用真实内容填角落</span></td><td>补全质量的<strong>上界</strong>。没有它,一个"补全没用"的负结果是二义的:究竟是补全帮不上忙,还是你的填充器不够好?有了 oracle 就能分开。这也是下面推荐全景图数据源的唯一理由。</td></tr>
+        <tr><td><strong>DAv2 对照模型</strong><br><span class="ref">跑遍每一格</span></td><td>DAv2 是纯相对深度、不推断相机。若某一格的退化在 VGGT 上出现而在 DAv2 上不出现,该退化就是<em>相机中介</em>的 —— 这正是 <code>04b6d4f</code> 已验证有效的探针逻辑,而 <code>diagnose_dav2_rectify.py</code> 已经内置 DAv2 双模型。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>加起来:2 投影 × 2 填充 + 内接裁剪 = 5 个条件;填充轴再展开为 <span class="m">黑 / 边缘复制 / diffusion / oracle</span> 后为 9 个条件;每个条件跑 VGGT-Omega 与 DAv2 两个模型 = <strong>18 次评估</strong>。规模完全可控。</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<section id="data">
+  <p class="eyebrow">数据来源</p>
+  <h2>Blender 值不值得:建议先不用</h2>
+  <div class="col">
+    <p>你提到可能需要 Blender 造测试数据。Blender 确实能给出完全可控的镜头模型、完美 GT 深度,以及<em>超出成像锥的真实内容</em>(即上面的 oracle)。但在动手之前有三点需要权衡。</p>
+  </div>
+
+  <h3>反对立刻上 Blender 的三条理由</h3>
+  <ul class="plain">
+    <li><strong>你已经被这个混淆咬过一次。</strong>commit <code>acae063</code> 处理的正是 <span class="m">videos_synthetic</span> 与 <span class="m">videos_rgb</span> 之间的数据流不一致,<code>4b83c35</code> 又专门标记了 blur/domain 混淆。渲染图本身对 VGGT 就是一种域偏移。它是四个格子的共模效应,组内比较仍然有效,但结论会变成"关于 Blender 渲染图的结论",而 VGGT 是照片训练出来的模型。</li>
+    <li><strong>ADT 已经自带渲染流。</strong><span class="m">videos_synthetic/</span> 就是与 GT 深度像素对齐的渲染 RGB,并且 <code>datasets/adt.py</code> 里的 <code>common_frame_ids</code> 已经支持把 synthetic 与 rgb 锁到<em>同一帧集合</em>做公平 A/B。真实与渲染两条流都现成。</li>
+    <li><strong>一半的实验代码已经存在。</strong><code>finetune/eval/diagnose_dav2_rectify.py</code> 已经在 ADT 上跑 raw-vs-rectified,并且明确用<em>同一套 remap</em> 把 GT 深度一起矫正,以保证 pred 与 GT 在针孔空间对齐。要做的只是把它的第二根轴从"模型大小"换成"是否补全"。</li>
+  </ul>
+
+  <h3>拿 oracle 的更便宜路线:全景图,而不是渲染器</h3>
+  <div class="col">
+    <p>唯一真正需要 Blender 的东西是 oracle —— 角落里的真实内容。但从一张<strong>等距柱状全景(ERP)+ 全景深度</strong>出发,只用 <code>cv2.remap</code> 就能合成任意相机模型:任意 KB4 鱼眼、任意 FoV 的透视图、以及超出成像锥的真实角落内容。不需要渲染器,不需要建场景,没有渲染时间。</p>
+    <p>而且本仓库已经有大部分零件:</p>
+    <ul class="plain">
+      <li><code>finetune/eval/baselines/erp_utils.py</code> —— ERP 几何、采样网格与掩膜(封装 Depth-Any-Camera 的几何)</li>
+      <li><code>aria_fisheye_ray_lut(cam, max_fov_deg=95.0)</code> —— 逐像素射线 LUT,<strong>已经支持到 95°</strong>,远超 θ_max = 62.33°,正是角落外推所需</li>
+      <li><code>VGGT-360-fisheye/utils/fisheye_cam.py</code> —— KB4 正向/逆向,及 <code>kb4_max_incidence</code></li>
+      <li><code>utils/ERP_utils.py::ERP2Persp</code> —— 上游 VGGT-360 的 ERP→透视投影,已在本仓库跑通</li>
+    </ul>
+    <p>候选数据源:Stanford2D3D(上游 VGGT-360 原本就用它)、Matterport3D、Replica —— 都提供全景 RGB 与全景深度。</p>
   </div>
 
   <div class="phase">
-    <div class="phead"><span class="pid">P0</span><span class="ptitle">FoV 阶梯 —— 在干净针孔图上判定假设 C</span><span class="pcost">约半天 · 无需训练</span></div>
+    <div class="phead"><span class="pid">注意</span><span class="ptitle">θ &gt; θ_max 的角落不是"真值",是建模选择</span></div>
     <dl class="prow">
-      <dt>目的</dt><dd>在完全不涉及鱼眼、黑边、拉伸的条件下,测出 VGGT-Omega 的相机头在多宽的 FoV 上开始失效。</dd>
-      <dt>操作</dt><dd>取原生针孔图(ADT 之外的干净透视数据即可),用裁剪+缩放合成 FoV 阶梯:40° / 60° / 80° / 100° / 110° / 125°。每级读出 <code>pose_enc[7:9]</code> 解码的推断 FoV(<code>vggt_single_image.py</code> 已实现),与真值 FoV 对比。同时记录深度对齐误差。</dd>
-      <dt>预测</dt><dd>若假设 C 成立,推断 FoV 误差会在某个阈值(推测 90–110°)之后急剧发散。</dd>
+      <dt>问题</dt><dd>KB4 多项式在 θ_max 处发生转折,之后不可逆。原始鱼眼画幅四角对应的方向,在这个相机模型下<em>没有定义</em>。</dd>
+      <dt>做法</dt><dd>为角落显式指定一个单调延拓(例如等距映射 θ = r/f 延续到约 75–80°),从全景图按该延拓渲染。</dd>
+      <dt>纪律</dt><dd>论文里必须写明这是<strong>延拓假设</strong>而非真值 —— 格子 ③ 的 oracle 依赖于它。格子 ④(矫正后)不受影响:那里的角落方向仍在成像锥内,是货真价实的 GT。</dd>
     </dl>
-    <div class="gate"><b>否决判据</b>若 VGGT 在干净的 125° 图上就已经估错 FoV,则 124.7° 本身超出分布,补全边角无法挽救 —— <strong>整个想法在此终止</strong>,转向条件化路线(Fisheye3R / RayTun3R 风格)。若 FoV 一路跟得住,则假设 C 排除,进入 P1。</div>
+  </div>
+
+  <h3>建议的三级数据策略</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th class="n">层级</th><th>数据</th><th>能得到</th><th>成本</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td class="n">T1</td><td>真实 ADT 鱼眼 + 稠密 GT 深度(现有)</td><td>完整的 2×2,填充轴为 黑 / 边缘复制 / diffusion。<strong>无 oracle</strong>。</td><td>低 —— 复用 <code>diagnose_dav2_rectify.py</code> 的骨架</td></tr>
+        <tr><td class="n">T2</td><td>ERP 全景 + 全景深度(Stanford2D3D / Matterport3D / Replica)</td><td>加上 <strong>oracle 补全</strong>与任意 FoV 控制;仅需 remap</td><td>中 —— 主要是写 ERP→KB4 渲染器,零件已在仓库里</td></tr>
+        <tr><td class="n">T3</td><td>Blender</td><td>任意镜头模型、任意场景、完美 GT</td><td>高 —— 且引入自身的渲染域偏移</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p><strong>建议:先跑 T1 拿到 2×2 的形状,再用 T2 补上 oracle。</strong>只有当 T2 也无法提供你需要的镜头模型或场景时,才动 T3。若 T1 就显示 ④ 相对 ② 毫无提升,那么 oracle 也救不了它 —— Blender 一行代码都不用写。</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<section id="followup">
+  <p class="eyebrow">后续</p>
+  <h2>2×2 之后</h2>
+
+  <div class="phase">
+    <div class="phead"><span class="pid">E2</span><span class="ptitle">填充阶梯 —— 便宜的填充能走多远</span><span class="pcost">约两天 · 无需训练</span></div>
+    <dl class="prow">
+      <dt>触发</dt><dd>仅当 2×2 显示 ④ 显著优于 ② 时才做。</dd>
+      <dt>目的</dt><dd>判断这是"低层 patch 统计"问题还是"语义/透视"问题 —— 这决定了要不要生成模型。</dd>
+      <dt>操作</dt><dd>固定投影为矫正外接,只换填充:黑 → 全图均值 → 逐通道均值 → 边缘复制 → 镜像 → 匹配统计的高斯噪声 → 从<strong>时序邻帧 warp 的真实像素</strong>(ADT 自带 6DoF 位姿) → 通用 diffusion inpaint → 透视条件化 inpaint(PreciseCam 风格,强制 vFoV = 124.7°) → oracle。</dd>
+      <dt>预测</dt><dd>若曲线在"边缘复制"就饱和 → 低层效应,diffusion 无收益。这是一个干净的<strong>负结果</strong>,目前文献中没有。</dd>
+      <dt>关键对照</dt><dd>通用 diffusion <em>对比</em> 透视条件化 diffusion。若前者比均值填充<em>更差</em>,就直接验证了 <span class="m">2312.00944</span> 预言的"错误透视主动误导相机头"效应 —— 这本身是有价值的发现。</dd>
+    </dl>
   </div>
 
   <div class="phase">
-    <div class="phead"><span class="pid">P1</span><span class="ptitle">裁剪系数扫描 —— 分离假设 A 与 B</span><span class="pcost">约一天 · 无需训练</span></div>
+    <div class="phead"><span class="pid">E3</span><span class="ptitle">对阵真正的替代方案</span><span class="pcost">数天 · 需训练对照组</span></div>
     <dl class="prow">
-      <dt>目的</dt><dd>在真实 ADT 鱼眼上,把"黑边比例"作为唯一变量扫过去,看相机估计误差是否跟着走。</dd>
-      <dt>操作</dt><dd>按上表把 <em>c</em> 从 0.707 扫到 1.00(七个点),黑边比例 0% → 21.5%,水平 FoV 106.9° → 124.7°。每个点记录:推断 FoV 误差、深度 AbsRel / δ₁(仅在成像锥 ∧ GT 有效掩膜内评估,scale-shift 对齐)、以及 DAv2 在同一张图上的对照。</dd>
-      <dt>预测</dt><dd>假设 A 成立 → FoV 误差随黑边比例单调上升;假设 B 成立 → 误差随 <em>c</em> 平坦或随边缘拉伸而非黑边变化。</dd>
-      <dt>混淆</dt><dd><em>c</em> 同时改变 FoV 与黑边,两者纠缠。需加一组对照:固定输出 FoV,只改变黑边(把内接裁剪图人为贴上假黑角),以此纯化 A。</dd>
+      <dt>目的</dt><dd>把"训练无关的输入修复"与"训练一个条件化模块"放到同一张表上 —— 这是论文的核心表格。</dd>
+      <dt>操作</dt><dd>同一骨干、同一测试集、同一协议,横向对比:① 原始鱼眼;② 内接裁剪;③ 外接+黑边;④ 外接+最佳填充;⑤ Fisheye3R calibration tokens(仓库已复现);⑥ RayTun3R 风格位置编码适配器(若可复现)。附加一列训练成本(参数量、训练步数)。</dd>
     </dl>
-    <div class="gate"><b>否决判据</b>若曲线平坦,黑边不是问题,补全无从谈起 —— 转向 B(边缘拉伸)或条件化路线。若单调上升,假设 A 确立,且曲线斜率直接给出补全的收益上限。</div>
-  </div>
-
-  <div class="phase">
-    <div class="phead"><span class="pid">P2</span><span class="ptitle">填充阶梯 —— 便宜的填充能走多远</span><span class="pcost">约两天 · 无需训练</span></div>
-    <dl class="prow">
-      <dt>目的</dt><dd>在承认假设 A 之后,判断这是"低层 patch 统计"问题还是"语义/透视"问题。这决定了要不要生成模型。</dd>
-      <dt>操作</dt><dd>固定 <em>c</em> = 1.0,只换填充:黑 → 全图均值 → 逐通道均值 → 边缘复制 → 镜像 → 匹配统计的高斯噪声 → 从<strong>时序邻帧 warp 的真实像素</strong>(用 ADT 的 6DoF 位姿) → 通用 diffusion inpaint → 透视条件化 inpaint(PreciseCam 风格,强制 vFoV = 124.7°)。全部对齐到 P1 曲线上的同一 <em>c</em>。</dd>
-      <dt>预测</dt><dd>若曲线在"边缘复制"就饱和 → 低层效应,diffusion 无收益,这是一个干净的<strong>负结果</strong>,目前文献中没有。若不饱和 → 语义/透视确实重要,生成路线成立。</dd>
-      <dt>关键对照</dt><dd>通用 diffusion <em>对比</em> 透视条件化 diffusion。若前者比均值填充<em>更差</em>,就直接验证了 <span class="m">2312.00944</span> 预言的"错误透视主动误导相机头"效应 —— 这本身是一个有价值的发现。</dd>
-    </dl>
-    <div class="gate"><b>否决判据</b>若最好的填充仍显著低于 P1 的内接裁剪基线(<em>c</em> = 0.707),则补全整体不划算,应当直接用内接裁剪。</div>
-  </div>
-
-  <div class="phase">
-    <div class="phead"><span class="pid">P3</span><span class="ptitle">对阵真正的替代方案</span><span class="pcost">数天 · 需训练对照组</span></div>
-    <dl class="prow">
-      <dt>目的</dt><dd>把"训练无关的输入修复"放到与"训练一个条件化模块"的同一张表上,这是论文的核心表格。</dd>
-      <dt>操作</dt><dd>同一 VGGT-Omega 骨干、同一 ADT 测试集、同一评估协议,横向对比:① 原始鱼眼直接喂;② 内接裁剪;③ 外接+黑边;④ 外接+最佳填充(P2 冠军);⑤ Fisheye3R calibration tokens(仓库已复现);⑥ RayTun3R 风格位置编码适配器(若可复现)。</dd>
-      <dt>指标</dt><dd>推断 FoV 误差(hErr / vErr)、AbsRel / RMSE / δ₁(scale-shift 对齐)、RRA / RTA / AUC@30、ATE,外加训练成本(参数量、训练步数)一列。</dd>
-    </dl>
-    <div class="gate"><b>结论形态</b>若 ④ 接近 ⑤/⑥ 而训练成本为零 → 论文成立,卖点是"训练无关的输入空间修复"。若 ④ 明显落后 → 论文改为诊断性负结果:分离 A/B/C 并说明为什么条件化才是正解。两种结局都可发表。</div>
+    <div class="gate"><b>结论形态</b>若 ④ 接近 ⑤/⑥ 而训练成本为零 → 论文成立,卖点是"训练无关的输入空间修复"。若 ④ 明显落后 → 论文改为诊断性负结果:说明为什么条件化才是正解。两种结局都可发表。</div>
   </div>
 </section>
 
@@ -492,10 +599,11 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
   <h2>建议的执行顺序</h2>
   <div class="col">
     <ul class="plain">
-      <li><strong>先跑 P0。</strong>半天,纯针孔数据,不碰鱼眼,不写补全代码。它单独决定后面三个阶段值不值得做。</li>
-      <li><strong>通读三篇全文。</strong>RayTun3R(<span class="m">2607.02711</span>)—— 因为它是最强的反例;PanoVGGT(<span class="m">2603.17571</span>)—— 检索时 PDF 过大未取到,其无效区处理方式未知;<span class="m">2512.11508</span> —— 探测 DUSt3R/VGGT 内部机制,可能已经回答了内参与深度的耦合问题。</li>
-      <li><strong>核实那篇"均值填充优于黑色"的记忆。</strong>五路检索都没有找到。最可能藏在 WoodScape / OmniDet / SVDistNet 的实现细节或补充材料里,建议直接查源码,不要在没有确认前引用。</li>
-      <li><strong>P2 与 P3 暂不启动</strong>,等 P0 / P1 的判据结果。</li>
+      <li><strong>先跑 T1 的 2×2。</strong>真实 ADT,现有数据,不碰 Blender。把 <code>diagnose_dav2_rectify.py</code> 的第二根轴从"模型大小"换成"是否补全",填充先用最便宜的边缘复制。若 ④ 相对 ② 毫无提升,后面全部不用做。</li>
+      <li><strong>把 <code>pose_enc[7:9]</code> 的推断 FoV 接进评估表。</strong><code>vggt_single_image.py</code> 里已经实现了解码,主指标应该是它而不是深度 —— 它离假设最近。</li>
+      <li><strong>T2 只在 T1 出现正向信号后再做。</strong>oracle 需要 ERP 全景源,零件(<code>erp_utils.py</code>、95° 射线 LUT、<code>ERP2Persp</code>)都已在仓库里。</li>
+      <li><strong>通读三篇全文。</strong>RayTun3R(<span class="m">2607.02711</span>)—— 最强反例;PanoVGGT(<span class="m">2603.17571</span>)—— 检索时 PDF 过大未取到,其无效区处理方式未知;<span class="m">2512.11508</span> —— 探测 DUSt3R/VGGT 内部,可能已回答内参与深度的耦合。</li>
+      <li><strong>核实那篇「均值填充优于黑色」的记忆。</strong>五路检索都没找到。最可能藏在 WoodScape / OmniDet / SVDistNet 的实现细节或补充材料里,建议直接查源码,不要在确认前引用。</li>
     </ul>
   </div>
 </section>
