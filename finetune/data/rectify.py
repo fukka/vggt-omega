@@ -74,7 +74,8 @@ class FisheyeRectifier:
     """Callable HWC-float -> HWC-float pinhole rectifier with per-size map cache."""
 
     def __init__(self, preset: str = "none", fisheye_k: str = "", fisheye_d: str = "",
-                 focal_out_norm: Optional[float] = None, fill: str = "black") -> None:
+                 focal_out_norm: Optional[float] = None, fill: str = "black",
+                 synth_hole_inscribed: bool = False) -> None:
         self.preset = preset
         self.fisheye_k = fisheye_k
         self.fisheye_d = fisheye_d
@@ -84,6 +85,13 @@ class FisheyeRectifier:
         # What goes in the invalid region. "black" reproduces the historical
         # behaviour exactly; see finetune.data.fill for the alternatives.
         self.fill = fill
+        # Impose an ARTIFICIAL invalid region: everything outside the disc
+        # inscribed in the output frame. On a frame that is entirely real content
+        # this reproduces the exact four-corner wedge pattern of a circumscribed
+        # rectification (1 - pi/4 = 21.5% of pixels) while the true content is
+        # still available underneath -- which is what makes a ground-truth-fill
+        # (oracle) arm possible without a renderer or a panorama source.
+        self.synth_hole_inscribed = synth_hole_inscribed
         self._maps: Dict[Tuple[int, int], tuple] = {}
         self._valid: Dict[tuple, np.ndarray] = {}
 
@@ -162,11 +170,17 @@ class FisheyeRectifier:
             inv = np.divide(1.0, r, out=np.zeros_like(r), where=r > 1e-12)
             u = K[0, 2] + K[0, 0] * theta_d * xn * inv
             v = K[1, 2] + K[1, 1] * theta_d * yn * inv
-            self._valid[(H, W)] = (
+            ok = (
                 (theta <= theta_max)
                 & (u > -0.5) & (u < W - 0.5)
                 & (v > -0.5) & (v < H - 0.5)
             )
+            if self.synth_hole_inscribed:
+                # Disc inscribed in the frame, in PIXEL radius about the output
+                # principal point -- so the hole is exactly the four corners.
+                rp = np.hypot(xs - Knew[0, 2], ys - Knew[1, 2])
+                ok &= rp <= min(W, H) / 2.0
+            self._valid[(H, W)] = ok
         return self._valid[(H, W)]
 
     def source_valid_mask(self, H: int, W: int) -> np.ndarray:

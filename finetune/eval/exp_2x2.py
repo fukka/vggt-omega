@@ -102,6 +102,50 @@ import torch
 
 from ..data.rectify import FOCAL_OUT_CIRCUMSCRIBED, FOCAL_OUT_INSCRIBED
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Oracle suite: the ground-truth-fill test.
+#
+# The 2x2's fill arms answer "does ANY non-black fill help", not "does the IDEAL
+# fill help" -- replicate paints radial smear, which is unnatural content and
+# could mislead the model on its own. The question that matters is the upper
+# bound: given the TRUE content in the hole, does the model improve over black?
+#
+# There is no renderer and no panorama source on this machine, but the geometry
+# supplies an exact oracle anyway. At focal_out_norm=0.371 the whole output
+# square is real imaged content (measured real-invalid = 0.000%). The disc
+# INSCRIBED in that square has half-angle 53.4 deg and the square's corners reach
+# 62.3 deg = theta_max. So masking outside the inscribed disc reproduces the exact
+# four-corner wedge pattern of an ideal circumscribed rectification
+# (1 - pi/4 = 21.5% of pixels, measured 21.47%) -- on a frame where the true
+# content in those corners IS available, because it was really imaged.
+#
+# Every arm is scored on the identical pixel set (inside the disc, GT valid), so
+# the comparison isolates how much the CONTENT OF THE HOLE damages or helps
+# prediction in the retained region. The oracle arm is the upper bound; black is
+# the floor; the rest of the ladder says how much of that gap a real filler buys.
+# ─────────────────────────────────────────────────────────────────────────────
+FOCAL_OUT_ORACLE = 0.371
+
+
+def make_oracle_cells() -> "OrderedDict[str, dict]":
+    def c(label, fill, blurb):
+        return dict(label=label, rectify=True, fill=fill,
+                    focal_out_norm=FOCAL_OUT_ORACLE, synth_hole_inscribed=True,
+                    blurb=blurb)
+    return OrderedDict([
+        ("o1_oracle", c("Ⓞ ORACLE", "oracle",
+                        "true content in the corners (upper bound)")),
+        ("o2_black", c("Ⓑ BLACK", "black",
+                       "same frame, corners blacked (floor)")),
+        ("o3_replicate", c("Ⓡ REPLICATE", "replicate",
+                           "nearest-valid smear — the 2x2's fill")),
+        ("o4_mean", c("Ⓜ MEAN", "mean",
+                      "flat per-image mean")),
+        ("o5_telea", c("Ⓣ TELEA", "telea",
+                       "cv2 inpainting — the closest thing here to a natural fill")),
+    ])
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Cell definitions. `fill` is the strategy for the out-of-cone region; the
 # default "replicate" is the strongest fill that invents no content at all
@@ -141,6 +185,7 @@ def _dataset_for(cell: dict, seq_dirs: List[str], res: int, seq_len: int,
         seq_dirs, seq_len=seq_len, image_resolution=res, max_frames=max_frames,
         rgb_subdir=rgb_subdir, rectify=cell["rectify"], camera_preset="aria-214-1",
         focal_out_norm=cell["focal_out_norm"], fill=cell["fill"],
+        synth_hole_inscribed=cell.get("synth_hole_inscribed", False),
     )
 
 
@@ -148,7 +193,7 @@ def _dataset_for(cell: dict, seq_dirs: List[str], res: int, seq_len: int,
 # Example dumper -- writes exactly the tensors the model is fed
 # ─────────────────────────────────────────────────────────────────────────────
 def dump_examples(out_dir: str, seq_dirs: List[str], res: int, rgb_subdir: str,
-                  fill: str, frame: int = 0) -> Dict[str, str]:
+                  fill: str, frame: int = 0, suite: str = "2x2") -> Dict[str, str]:
     """Render one ADT frame through every cell and save PNGs + a labelled montage.
 
     Pulls the image out of ``ADTWindowDataset`` rather than re-deriving it, so
@@ -156,7 +201,7 @@ def dump_examples(out_dir: str, seq_dirs: List[str], res: int, rgb_subdir: str,
     """
     from PIL import Image, ImageDraw
     os.makedirs(out_dir, exist_ok=True)
-    cells = make_cells(fill)
+    cells = make_oracle_cells() if suite == "oracle" else make_cells(fill)
     tiles, paths = [], {}
 
     for cid, cell in cells.items():
@@ -234,6 +279,7 @@ def main() -> None:
     ap.add_argument("--out", default="runs/exp2x2")
     ap.add_argument("--dump-examples", default="")
     ap.add_argument("--fill", default="replicate")
+    ap.add_argument("--suite", default="2x2", choices=["2x2", "oracle"])
     ap.add_argument("--resolution", type=int, default=512)
     ap.add_argument("--seq-len", type=int, default=8)
     ap.add_argument("--max-frames", type=int, default=100)
@@ -250,12 +296,12 @@ def main() -> None:
 
     if args.dump_examples:
         dump_examples(args.dump_examples, seq_dirs, args.resolution,
-                      args.rgb_subdir, args.fill)
+                      args.rgb_subdir, args.fill, suite=args.suite)
         return
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs(args.out, exist_ok=True)
-    cells = make_cells(args.fill)
+    cells = make_oracle_cells() if args.suite == "oracle" else make_cells(args.fill)
     if args.cells:
         want = set(args.cells.split(","))
         cells = OrderedDict((k, v) for k, v in cells.items() if k in want)
@@ -303,6 +349,17 @@ def _report(results: Dict[str, dict], out: str) -> None:
                      f"{ss.get('delta1', float('nan')):>10.4f}"
                      f"{fv.get('fov_h_deg_mean', float('nan')):>10.1f}"
                      f"{fv.get('fov_w_deg_mean', float('nan')):>10.1f}")
+    if "o2_black" in results and "o1_oracle" in results:
+        base = absrel("o2_black")
+        orac = absrel("o1_oracle")
+        lines += ["", f"black floor      : {base:.4f}",
+                  f"oracle upper bound: {orac:.4f}   (gap {base - orac:+.4f})"]
+        for cid in results:
+            if cid in ("o1_oracle", "o2_black"):
+                continue
+            got = base - absrel(cid)
+            frac = got / (base - orac) if abs(base - orac) > 1e-9 else float("nan")
+            lines.append(f"  {cid:<14} {absrel(cid):.4f}  recovers {frac:6.1%} of the oracle gap")
     need = ["1_raw_black", "2_rect_black", "3_raw_filled", "4_rect_filled"]
     if all(c in results for c in need):
         d_rect = absrel("4_rect_filled") - absrel("2_rect_black")   # fill effect, rectified

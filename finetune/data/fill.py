@@ -29,8 +29,8 @@ from typing import Tuple
 
 import numpy as np
 
-FILL_MODES: Tuple[str, ...] = ("black", "mean", "chanmean", "replicate", "mirror",
-                               "noise", "telea", "ns")
+FILL_MODES: Tuple[str, ...] = ("oracle", "black", "mean", "chanmean", "replicate",
+                               "mirror", "noise", "telea", "ns")
 
 
 def _as_u8(img: np.ndarray) -> np.ndarray:
@@ -80,8 +80,18 @@ def apply_fill(img_hwc: np.ndarray, valid_hw: np.ndarray, mode: str = "black",
     # Nothing to do: no hole, or (degenerate) no valid pixel to fill from.
     if not hole.any() or not valid.any():
         out = img.copy()
-        out[hole] = 0.0
+        if mode != "oracle":
+            out[hole] = 0.0
         return out
+
+    if mode == "oracle":
+        # Leave the region exactly as it is. Only meaningful when the "hole" is a
+        # SYNTHETIC mask imposed on a frame that really does hold image content
+        # there (see FisheyeRectifier(synth_hole_inscribed=True)) -- then this arm
+        # is the ground-truth fill, the upper bound every other mode is measured
+        # against. On a genuinely unimaged region it would leave garbage, so the
+        # caller is responsible for using it only in the synthetic-hole setting.
+        return img.copy()
 
     if mode == "black":
         out = img.copy()

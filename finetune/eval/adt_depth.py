@@ -315,6 +315,7 @@ class ADTWindowDataset(Dataset):
         fisheye_d: str = "",
         focal_out_norm: Optional[float] = None,  # rectified crop factor; None = preset default
         fill: str = "black",                     # what goes in the out-of-cone region
+        synth_hole_inscribed: bool = False,      # impose an artificial corner hole
     ) -> None:
         self.seq_len = seq_len
         self.resolution = image_resolution
@@ -332,7 +333,8 @@ class ADTWindowDataset(Dataset):
         from ..data.rectify import FisheyeRectifier
         if rectify:
             self.rectifier = FisheyeRectifier(camera_preset, fisheye_k, fisheye_d,
-                                              focal_out_norm=focal_out_norm, fill=fill)
+                                              focal_out_norm=focal_out_norm, fill=fill,
+                                              synth_hole_inscribed=synth_hole_inscribed)
             g = self.rectifier.geometry(image_resolution, image_resolution)
             print(f"  [ADT] rectifying fisheye→pinhole (preset={camera_preset!r}, "
                   f"focal_out_norm={focal_out_norm}, fill={fill!r}) "
@@ -491,6 +493,7 @@ def run_adt_eval(
     fisheye_d: str = "",
     focal_out_norm: Optional[float] = None,
     fill: str = "black",
+    synth_hole_inscribed: bool = False,
 ) -> Dict[str, dict]:
     """Run depth evaluation against ADT with dense GT.
 
@@ -535,6 +538,7 @@ def run_adt_eval(
         camera_preset=camera_preset,
         focal_out_norm=focal_out_norm,
         fill=fill,
+        synth_hole_inscribed=synth_hole_inscribed,
         fisheye_k=fisheye_k,
         fisheye_d=fisheye_d,
     )
