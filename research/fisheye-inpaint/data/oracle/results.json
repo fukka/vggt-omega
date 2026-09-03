@@ -1,0 +1,232 @@
+{
+  "o1_oracle": {
+    "cell": {
+      "label": "\u24c4 ORACLE",
+      "rectify": true,
+      "fill": "oracle",
+      "focal_out_norm": 0.371,
+      "synth_hole_inscribed": true,
+      "blurb": "true content in the corners (upper bound)"
+    },
+    "metrics": {
+      "none": {
+        "AbsRel": 0.5240054948514664,
+        "SqRel": 0.8275133722941789,
+        "RMSE": 1.7632099560915326,
+        "RMSElog": 0.7881302674346049,
+        "log10": 0.3308884656834159,
+        "delta1": 0.0033055773565820574,
+        "delta2": 0.03606214498622281,
+        "delta3": 0.2935470748676364,
+        "scale_ratio": 2.270034325652405,
+        "n_frames": 96,
+        "n_valid_total": 19758378
+      },
+      "scale_shift": {
+        "AbsRel": 0.0781711224339261,
+        "SqRel": 0.02994610517626531,
+        "RMSE": 0.2660851830926463,
+        "RMSElog": 0.18952465157763498,
+        "log10": 0.03634086890226563,
+        "delta1": 0.9309863891162932,
+        "delta2": 0.9740327712355579,
+        "delta3": 0.9834565359112238,
+        "scale_ratio": 0.9910570924778286,
+        "n_frames": 96,
+        "n_valid_total": 19758378
+      }
+    },
+    "fov_probe": {
+      "fov_h_deg_mean": 103.29324340820312,
+      "fov_h_deg_std": 1.3017289638519287,
+      "fov_w_deg_mean": 103.47994995117188,
+      "fov_w_deg_std": 1.3305662870407104,
+      "n": 64
+    },
+    "input_sha1": "ebe2c5b3e855"
+  },
+  "o2_black": {
+    "cell": {
+      "label": "\u24b7 BLACK",
+      "rectify": true,
+      "fill": "black",
+      "focal_out_norm": 0.371,
+      "synth_hole_inscribed": true,
+      "blurb": "same frame, corners blacked (floor)"
+    },
+    "metrics": {
+      "none": {
+        "AbsRel": 0.4415977592282178,
+        "SqRel": 0.6477662696621587,
+        "RMSE": 1.5558108197336455,
+        "RMSElog": 0.6887603036240817,
+        "log10": 0.26887459464103663,
+        "delta1": 0.07939823408014916,
+        "delta2": 0.26859095000599265,
+        "delta3": 0.5880905820786572,
+        "scale_ratio": 1.9586347361297778,
+        "n_frames": 96,
+        "n_valid_total": 19758378
+      },
+      "scale_shift": {
+        "AbsRel": 0.10341518907013109,
+        "SqRel": 0.047198074902707866,
+        "RMSE": 0.32672544530653197,
+        "RMSElog": 0.30383833714732406,
+        "log10": 0.050226034001869556,
+        "delta1": 0.8578030343172994,
+        "delta2": 0.9700972889404964,
+        "delta3": 0.9805663397640566,
+        "scale_ratio": 0.9833638045859431,
+        "n_frames": 96,
+        "n_valid_total": 19727459
+      }
+    },
+    "fov_probe": {
+      "fov_h_deg_mean": 102.77629089355469,
+      "fov_h_deg_std": 1.637593150138855,
+      "fov_w_deg_mean": 103.09580993652344,
+      "fov_w_deg_std": 1.631937861442566,
+      "n": 64
+    },
+    "input_sha1": "3d4a3feebbda"
+  },
+  "o3_replicate": {
+    "cell": {
+      "label": "\u24c7 REPLICATE",
+      "rectify": true,
+      "fill": "replicate",
+      "focal_out_norm": 0.371,
+      "synth_hole_inscribed": true,
+      "blurb": "nearest-valid smear \u2014 the 2x2's fill"
+    },
+    "metrics": {
+      "none": {
+        "AbsRel": 0.4381792982118366,
+        "SqRel": 0.6290569895024762,
+        "RMSE": 1.5316570986495506,
+        "RMSElog": 0.6374868315051648,
+        "log10": 0.26180073815284227,
+        "delta1": 0.05127759760535191,
+        "delta2": 0.18075775276315076,
+        "delta3": 0.6099596777043187,
+        "scale_ratio": 1.9505626445557869,
+        "n_frames": 96,
+        "n_valid_total": 19758378
+      },
+      "scale_shift": {
+        "AbsRel": 0.0811858269705918,
+        "SqRel": 0.03153403579925267,
+        "RMSE": 0.2812100440054884,
+        "RMSElog": 0.18302240903167355,
+        "log10": 0.037186016148330496,
+        "delta1": 0.9306775907077866,
+        "delta2": 0.9758571458580944,
+        "delta3": 0.9845801734445382,
+        "scale_ratio": 0.9870917964996236,
+        "n_frames": 96,
+        "n_valid_total": 19758378
+      }
+    },
+    "fov_probe": {
+      "fov_h_deg_mean": 103.57887268066406,
+      "fov_h_deg_std": 1.4435632228851318,
+      "fov_w_deg_mean": 103.60684967041016,
+      "fov_w_deg_std": 1.4478358030319214,
+      "n": 64
+    },
+    "input_sha1": "18fef8c26217"
+  },
+  "o4_mean": {
+    "cell": {
+      "label": "\u24c2 MEAN",
+      "rectify": true,
+      "fill": "mean",
+      "focal_out_norm": 0.371,
+      "synth_hole_inscribed": true,
+      "blurb": "flat per-image mean"
+    },
+    "metrics": {
+      "none": {
+        "AbsRel": 0.42136904825053706,
+        "SqRel": 0.597208823698152,
+        "RMSE": 1.4939396092799224,
+        "RMSElog": 0.6101141880630502,
+        "log10": 0.24919633599065338,
+        "delta1": 0.0894834382629351,
+        "delta2": 0.2741506887274592,
+        "delta3": 0.6346623280844746,
+        "scale_ratio": 1.8950124244798712,
+        "n_frames": 96,
+        "n_valid_total": 19758378
+      },
+      "scale_shift": {
+        "AbsRel": 0.08101180350580843,
+        "SqRel": 0.03108078082168077,
+        "RMSE": 0.27840409610228734,
+        "RMSElog": 0.18630420925339208,
+        "log10": 0.03733001643214285,
+        "delta1": 0.9181878762443402,
+        "delta2": 0.9762532257036337,
+        "delta3": 0.9854348345177429,
+        "scale_ratio": 0.9881535394517597,
+        "n_frames": 96,
+        "n_valid_total": 19758378
+      }
+    },
+    "fov_probe": {
+      "fov_h_deg_mean": 103.20857238769531,
+      "fov_h_deg_std": 1.6769572496414185,
+      "fov_w_deg_mean": 103.29212951660156,
+      "fov_w_deg_std": 1.6492336988449097,
+      "n": 64
+    },
+    "input_sha1": "ba39b085c850"
+  },
+  "o5_telea": {
+    "cell": {
+      "label": "\u24c9 TELEA",
+      "rectify": true,
+      "fill": "telea",
+      "focal_out_norm": 0.371,
+      "synth_hole_inscribed": true,
+      "blurb": "cv2 inpainting \u2014 the closest thing here to a natural fill"
+    },
+    "metrics": {
+      "none": {
+        "AbsRel": 0.43091479463670695,
+        "SqRel": 0.6167655421143329,
+        "RMSE": 1.5142698748527608,
+        "RMSElog": 0.6310276004604449,
+        "log10": 0.25737971305480883,
+        "delta1": 0.05942160655361255,
+        "delta2": 0.19603818969441247,
+        "delta3": 0.5863262049068422,
+        "scale_ratio": 1.9249425472537993,
+        "n_frames": 96,
+        "n_valid_total": 19758378
+      },
+      "scale_shift": {
+        "AbsRel": 0.08759489575724388,
+        "SqRel": 0.035747992907831955,
+        "RMSE": 0.3093790744562476,
+        "RMSElog": 0.19594008367272386,
+        "log10": 0.04017544430385352,
+        "delta1": 0.9153018092458094,
+        "delta2": 0.9738762156826191,
+        "delta3": 0.9834533234767352,
+        "scale_ratio": 0.9835584371566913,
+        "n_frames": 96,
+        "n_valid_total": 19758378
+      }
+    },
+    "fov_probe": {
+      "fov_h_deg_mean": 103.61549377441406,
+      "fov_h_deg_std": 1.3235995769500732,
+      "fov_w_deg_mean": 103.713134765625,
+      "fov_w_deg_std": 1.3512190580368042,
+      "n": 64
+    },
+    "input_sha1": "0792747d0795"
+  }
+}

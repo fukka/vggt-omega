@@ -1,0 +1,16 @@
+
+==============================================================================
+2x2 RESULTS  (AbsRel, scale-shift aligned, lower is better)
+==============================================================================
+cell                  AbsRel    delta1    fov_h°    fov_w°
+o1_oracle             0.0782    0.9310     103.3     103.5
+o2_black              0.1034    0.8578     102.8     103.1
+o3_replicate          0.0812    0.9307     103.6     103.6
+o4_mean               0.0810    0.9182     103.2     103.3
+o5_telea              0.0876    0.9153     103.6     103.7
+
+black floor      : 0.1034
+oracle upper bound: 0.0782   (gap +0.0252)
+  o3_replicate   0.0812  recovers  88.1% of the oracle gap
+  o4_mean        0.0810  recovers  88.7% of the oracle gap
+  o5_telea       0.0876  recovers  62.7% of the oracle gap
