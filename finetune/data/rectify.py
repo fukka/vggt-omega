@@ -125,22 +125,48 @@ class FisheyeRectifier:
         return self._maps[(H, W)]
 
     def valid_mask(self, H: int, W: int) -> np.ndarray:
-        """``(H, W)`` bool: output pixels whose ray falls inside the imaged cone.
+        """``(H, W)`` bool: output pixels that have a real source pixel behind them.
 
-        Computed **analytically** from the ray angle rather than by testing the
-        remapped pixel for blackness. Past the KB4 turnover the undistort map
-        does not run off the frame -- it folds back and samples real (wrong)
-        pixels -- so an ``rgb.sum() > 0`` test would mark garbage as valid. It
-        would also misfire on genuinely dark scene content and on vignetting.
+        Two conditions, and BOTH matter:
+
+        1. the ray is inside the imaged cone (``theta <= theta_max``);
+        2. the source pixel it maps to is inside the source frame.
+
+        Condition 2 is not redundant. The Aria disc has radius
+        ``f * theta_d(theta_max)`` ~= 271 px on a 512 px frame, so the disc is
+        *clipped by the sensor's square edges*: along the axes the image stops at
+        256 px, well before theta_max. Directions between those two radii are
+        inside the cone yet were never imaged. Dropping this check leaves ~10% of
+        a circumscribed frame marked valid-but-black -- which a fill would then
+        skip, silently leaving black in the cell that is supposed to have none.
+        (``VGGT-360-fisheye/utils/fisheye_views.py`` guards the same way, with the
+        same half-pixel tolerance for the off-centre principal point.)
+
+        Computed analytically rather than by testing the remapped pixel for
+        blackness: past the KB4 turnover the undistort map folds back and samples
+        real-but-wrong pixels instead of leaving the frame, so an ``rgb.sum() > 0``
+        test would mark garbage as valid -- and would also misfire on genuinely
+        dark scene content and on vignetting.
         """
         if (H, W) not in self._valid:
-            _, D4, Knew = self._intrinsics(H, W)
-            theta_max = kb4_max_incidence(D4.reshape(-1))
+            K, D4, Knew = self._intrinsics(H, W)
+            D = D4.reshape(-1)
+            theta_max = kb4_max_incidence(D)
             ys, xs = np.mgrid[0:H, 0:W].astype(np.float64)
             xn = (xs - Knew[0, 2]) / Knew[0, 0]
             yn = (ys - Knew[1, 2]) / Knew[1, 1]
-            theta = np.arctan(np.sqrt(xn * xn + yn * yn))
-            self._valid[(H, W)] = theta <= theta_max
+            r = np.sqrt(xn * xn + yn * yn)
+            theta = np.arctan(r)
+            # KB4 forward -> source pixel, so we can bounds-check it.
+            theta_d = _kb4_theta_d(theta, D)
+            inv = np.divide(1.0, r, out=np.zeros_like(r), where=r > 1e-12)
+            u = K[0, 2] + K[0, 0] * theta_d * xn * inv
+            v = K[1, 2] + K[1, 1] * theta_d * yn * inv
+            self._valid[(H, W)] = (
+                (theta <= theta_max)
+                & (u > -0.5) & (u < W - 0.5)
+                & (v > -0.5) & (v < H - 0.5)
+            )
         return self._valid[(H, W)]
 
     def source_valid_mask(self, H: int, W: int) -> np.ndarray:
