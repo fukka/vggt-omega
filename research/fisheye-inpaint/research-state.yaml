@@ -32,4 +32,31 @@ competing_hypotheses:
   H_B: ~10x peripheral resampling stretch is OOD                  # inpainting does NOT fix
   H_C: 124.7 deg is outside VGGT's trained focal distribution     # inpainting does NOT fix
 
-next_action: literature synthesis + written plan (to_human/)
+main_experiment: 2x2 factorial (user-specified 2026-09-03)
+  factors:
+    projection: [raw_fisheye, rectified_circumscribed]
+    fill:       [black, filled]
+  cells:
+    1: raw fisheye + black corners outside image circle
+    2: rectified c=1.0, 124.7 deg hFoV, 21.5% black wedges
+    3: raw fisheye + corners filled   (needs KB4 extension past theta_max - modelling choice)
+    4: rectified + wedges filled      (the hypothesis: only cell that looks like a normal photo)
+  key_readout: interaction term (4-2) - (3-1), NOT the four absolute values
+  mandatory_extras:
+    - cell 5: inscribed crop c=0.707, black-free by construction, the free alternative to beat
+    - cell 6: ORACLE fill (true corner content) - upper bound; without it a null result is ambiguous
+    - DAv2 run on every cell: relative-depth probe for whether degradation is camera-mediated
+  primary_metric: inferred FoV error from pose_enc[7:9], depth AbsRel/delta1 as downstream confirm
+  eval_mask: analytic imaged cone AND GT-valid; filled pixels NEVER scored
+
+data_strategy:
+  T1: real ADT fisheye + dense GT depth (existing) - full 2x2, no oracle. REUSE
+      finetune/eval/diagnose_dav2_rectify.py (already raw-vs-rectified, rectifies GT with
+      the SAME remap); swap its second axis from model-size to fill.
+  T2: ERP panorama + panoramic depth (Stanford2D3D / Matterport3D / Replica) -> adds ORACLE
+      via cv2.remap only, no renderer. Parts already in repo: erp_utils.py,
+      aria_fisheye_ray_lut(max_fov_deg=95.0), fisheye_cam.py KB4, ERP_utils.ERP2Persp.
+  T3: Blender - only if T2 cannot supply the lens model or scene. Deferred: it adds its own
+      render-domain shift, the confound already hit in acae063 (synthetic vs rgb) and 4b83c35.
+
+next_action: T1 2x2 on real ADT; abandon if cell 4 shows no gain over cell 2
