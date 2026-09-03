@@ -313,6 +313,8 @@ class ADTWindowDataset(Dataset):
         camera_preset: str = "aria-214-1",
         fisheye_k: str = "",
         fisheye_d: str = "",
+        focal_out_norm: Optional[float] = None,  # rectified crop factor; None = preset default
+        fill: str = "black",                     # what goes in the out-of-cone region
     ) -> None:
         self.seq_len = seq_len
         self.resolution = image_resolution
@@ -325,10 +327,26 @@ class ADTWindowDataset(Dataset):
 
         # Fisheye→pinhole rectifier (same class training uses); None = raw fisheye.
         self.rectifier = None
+        self.raw_filler = None
+        self.fill = fill
+        from ..data.rectify import FisheyeRectifier
         if rectify:
-            from ..data.rectify import FisheyeRectifier
-            self.rectifier = FisheyeRectifier(camera_preset, fisheye_k, fisheye_d)
-            print(f"  [ADT] rectifying fisheye→pinhole (preset={camera_preset!r})")
+            self.rectifier = FisheyeRectifier(camera_preset, fisheye_k, fisheye_d,
+                                              focal_out_norm=focal_out_norm, fill=fill)
+            g = self.rectifier.geometry(image_resolution, image_resolution)
+            print(f"  [ADT] rectifying fisheye→pinhole (preset={camera_preset!r}, "
+                  f"focal_out_norm={focal_out_norm}, fill={fill!r}) "
+                  f"hFoV={g['hfov_deg']:.1f}° black={g['black_frac_px']:.1%}px/"
+                  f"{g['black_frac_sr']:.1%}sr cone_kept={g['cone_kept']:.1%}")
+        else:
+            # Raw fisheye: the sensor corners outside the imaged disc are still
+            # invalid, so the same fill question applies -- it is just a different
+            # mask. This filler is used for the mask + fill only, never to remap.
+            self.raw_filler = FisheyeRectifier(camera_preset, fisheye_k, fisheye_d)
+            m = self.raw_filler.source_valid_mask(image_resolution, image_resolution)
+            print(f"  [ADT] raw fisheye (no rectify, fill={fill!r}) "
+                  f"disc covers {m.mean():.1%} of the frame, "
+                  f"corners={1 - m.mean():.1%}")
 
         self.depth_subdir = depth_subdir
 
@@ -395,6 +413,15 @@ class ADTWindowDataset(Dataset):
                 # Rectify after resize (mirrors training: resize → rectify), HWC float.
                 img_np = self.rectifier(img_t.permute(1, 2, 0).contiguous().numpy())
                 img_t = torch.from_numpy(img_np).permute(2, 0, 1).contiguous()
+            elif self.raw_filler is not None:
+                # Raw fisheye: zero the out-of-disc corners (they are not reliably
+                # black in the source) and then apply the same fill strategy, so the
+                # raw row of the 2x2 differs from the rectified row ONLY in projection.
+                from ..data.fill import apply_fill
+                hwc = img_t.permute(1, 2, 0).contiguous().numpy()
+                vm = self.raw_filler.source_valid_mask(hwc.shape[0], hwc.shape[1])
+                img_t = torch.from_numpy(
+                    apply_fill(hwc, vm, self.fill)).permute(2, 0, 1).contiguous()
             images.append(img_t)
 
             # ── Depth ─────────────────────────────────────────────────────────
@@ -415,6 +442,15 @@ class ADTWindowDataset(Dataset):
             if self.rectifier is not None:
                 # Same maps as RGB (nearest) → depth stays pixel-aligned; out-of-FOV → 0.
                 d_t = torch.from_numpy(self.rectifier.rectify_depth(d_t.numpy()))
+                # Past the KB4 turnover the undistort map folds back and samples real
+                # (wrong) pixels rather than leaving the frame, so BORDER_CONSTANT does
+                # not zero them. Zero them analytically, otherwise filled-in wedges
+                # would carry GT depth and get scored.
+                vm = self.rectifier.valid_mask(d_t.shape[0], d_t.shape[1])
+                d_t = d_t * torch.from_numpy(vm.astype("float32"))
+            elif self.raw_filler is not None:
+                vm = self.raw_filler.source_valid_mask(d_t.shape[0], d_t.shape[1])
+                d_t = d_t * torch.from_numpy(vm.astype("float32"))
             depths.append(d_t)
             masks.append((d_t > 0) & (d_t <= self.depth_max_m))
 
@@ -453,6 +489,8 @@ def run_adt_eval(
     camera_preset: str = "aria-214-1",
     fisheye_k: str = "",
     fisheye_d: str = "",
+    focal_out_norm: Optional[float] = None,
+    fill: str = "black",
 ) -> Dict[str, dict]:
     """Run depth evaluation against ADT with dense GT.
 
@@ -495,6 +533,8 @@ def run_adt_eval(
         depth_subdir=depth_subdir,
         rectify=rectify,
         camera_preset=camera_preset,
+        focal_out_norm=focal_out_norm,
+        fill=fill,
         fisheye_k=fisheye_k,
         fisheye_d=fisheye_d,
     )

@@ -12,7 +12,7 @@ Operates on HWC float images in [0,1] (RGB). Remap maps are cached per (H, W).
 """
 from __future__ import annotations
 
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 
@@ -32,15 +32,60 @@ from finetune.aria_calibration import KB4 as _ARIA_214_1_KB4, intrinsics as _ari
 _ARIA_214_1_D_KB4 = np.array(_ARIA_214_1_KB4, np.float64)
 _ARIA_214_1_FOCAL_OUT_NORM = 0.55  # output focal / max(H,W): avoids black borders
 
+# Output-focal presets, as focal/max(H,W). The KB4 imaged cone is theta_max =
+# 62.33 deg, i.e. a disc of radius tan(62.33 deg) = 1.907 focal lengths in the
+# pinhole plane, so this single number sweeps the whole crop/black trade-off:
+#
+#   focal_out_norm   hFoV     black px   imaged cone kept
+#   0.262            124.7    21.5%      99.9%   <- circumscribed: keeps the cone,
+#                                                   pays with four black wedges
+#   0.371            106.9     0.0%      83.3%   <- inscribed: black-free by
+#                                                   construction, drops the rim
+#   0.55 (default)    84.6     0.0%      ~55%    <- the historical default, chosen
+#                                                   to "avoid black borders"
+#
+# The default is therefore already a black-free crop -- a conservative one. Any
+# comparison that wants a rectified frame WITH black regions must set 0.262.
+FOCAL_OUT_CIRCUMSCRIBED = 0.262
+FOCAL_OUT_INSCRIBED = 0.371
+
+
+def _kb4_theta_d(theta: np.ndarray, D: np.ndarray) -> np.ndarray:
+    """KB4 forward: theta -> distorted radius (in focal-length units)."""
+    t2 = theta * theta
+    return theta * (1.0 + D[0] * t2 + D[1] * t2**2 + D[2] * t2**3 + D[3] * t2**4)
+
+
+def kb4_max_incidence(D: np.ndarray, n: int = 8192) -> float:
+    """Largest incidence angle the lens actually images, in radians.
+
+    The KB4 polynomial is only invertible up to its turnover -- the first theta
+    where d(theta_d)/d(theta) <= 0. Past it the mapping folds back on itself and
+    "rectifying" those directions produces garbage rather than a wider view, so
+    the turnover is the true edge of the imaged cone.
+    """
+    th = np.linspace(0.0, np.pi / 2.0, n)
+    td = _kb4_theta_d(th, D)
+    drop = np.nonzero(np.diff(td) <= 0)[0]
+    return float(th[drop[0]]) if len(drop) else float(th[-1])
+
 
 class FisheyeRectifier:
     """Callable HWC-float -> HWC-float pinhole rectifier with per-size map cache."""
 
-    def __init__(self, preset: str = "none", fisheye_k: str = "", fisheye_d: str = "") -> None:
+    def __init__(self, preset: str = "none", fisheye_k: str = "", fisheye_d: str = "",
+                 focal_out_norm: Optional[float] = None, fill: str = "black") -> None:
         self.preset = preset
         self.fisheye_k = fisheye_k
         self.fisheye_d = fisheye_d
+        # focal_out_norm overrides the preset's output focal (see the table above).
+        # Lower = wider = more of the imaged cone kept = more black to fill.
+        self.focal_out_norm = focal_out_norm
+        # What goes in the invalid region. "black" reproduces the historical
+        # behaviour exactly; see finetune.data.fill for the alternatives.
+        self.fill = fill
         self._maps: Dict[Tuple[int, int], tuple] = {}
+        self._valid: Dict[tuple, np.ndarray] = {}
 
     def _intrinsics(self, H: int, W: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         if self.fisheye_k:
@@ -62,7 +107,10 @@ class FisheyeRectifier:
         else:
             D = np.zeros(4, np.float64)
 
-        focal_out = (_ARIA_214_1_FOCAL_OUT_NORM if self.preset == "aria-214-1" else 0.5) * max(H, W)
+        fon = self.focal_out_norm
+        if fon is None:
+            fon = _ARIA_214_1_FOCAL_OUT_NORM if self.preset == "aria-214-1" else 0.5
+        focal_out = fon * max(H, W)
         Knew = np.array([[focal_out, 0, W / 2.0], [0, focal_out, H / 2.0], [0, 0, 1.0]], np.float64)
         return K, D.reshape(4, 1), Knew
 
@@ -76,13 +124,84 @@ class FisheyeRectifier:
             )
         return self._maps[(H, W)]
 
+    def valid_mask(self, H: int, W: int) -> np.ndarray:
+        """``(H, W)`` bool: output pixels whose ray falls inside the imaged cone.
+
+        Computed **analytically** from the ray angle rather than by testing the
+        remapped pixel for blackness. Past the KB4 turnover the undistort map
+        does not run off the frame -- it folds back and samples real (wrong)
+        pixels -- so an ``rgb.sum() > 0`` test would mark garbage as valid. It
+        would also misfire on genuinely dark scene content and on vignetting.
+        """
+        if (H, W) not in self._valid:
+            _, D4, Knew = self._intrinsics(H, W)
+            theta_max = kb4_max_incidence(D4.reshape(-1))
+            ys, xs = np.mgrid[0:H, 0:W].astype(np.float64)
+            xn = (xs - Knew[0, 2]) / Knew[0, 0]
+            yn = (ys - Knew[1, 2]) / Knew[1, 1]
+            theta = np.arctan(np.sqrt(xn * xn + yn * yn))
+            self._valid[(H, W)] = theta <= theta_max
+        return self._valid[(H, W)]
+
+    def source_valid_mask(self, H: int, W: int) -> np.ndarray:
+        """``(H, W)`` bool: validity in the RAW fisheye frame (before rectification).
+
+        The sensor is square but the lens images a disc, so the four corners hold
+        no image. The disc's pixel radius is ``f * theta_d(theta_max)`` about the
+        principal point -- note this uses the *distorted* radius, since that is
+        where the imaged cone actually lands on the sensor.
+        """
+        key = ("src", H, W)
+        if key not in self._valid:
+            K, D4, _ = self._intrinsics(H, W)
+            D = D4.reshape(-1)
+            theta_max = kb4_max_incidence(D)
+            r_max = float(K[0, 0] * _kb4_theta_d(np.array([theta_max]), D)[0])
+            ys, xs = np.mgrid[0:H, 0:W].astype(np.float64)
+            r = np.hypot(xs - K[0, 2], ys - K[1, 2])
+            self._valid[key] = r <= r_max
+        return self._valid[key]
+
+    def geometry(self, H: int, W: int) -> Dict[str, float]:
+        """Reportable geometry of this rectification: FoV, black fraction, cone kept."""
+        _, D4, Knew = self._intrinsics(H, W)
+        theta_max = kb4_max_incidence(D4.reshape(-1))
+        valid = self.valid_mask(H, W)
+        fx, fy = Knew[0, 0], Knew[1, 1]
+        ys, xs = np.mgrid[0:H, 0:W].astype(np.float64)
+        xn = (xs - Knew[0, 2]) / fx
+        yn = (ys - Knew[1, 2]) / fy
+        # Solid angle of one pinhole pixel: dA_normalised / (1 + xn^2 + yn^2)^(3/2),
+        # with dA_normalised = (1/fx)(1/fy). The 1/cos^3 factor is why the black
+        # wedges are 21.5% of the PIXELS but only ~6.7% of the SOLID ANGLE.
+        w = (1.0 / (fx * fy)) / (1.0 + xn * xn + yn * yn) ** 1.5
+        cone_sr = 2.0 * np.pi * (1.0 - np.cos(theta_max))
+        return {
+            "theta_max_deg": float(np.degrees(theta_max)),
+            "hfov_deg": float(np.degrees(2.0 * np.arctan(0.5 * W / fx))),
+            "diag_fov_deg": float(np.degrees(2.0 * np.arctan(0.5 * np.hypot(W, H) / fx))),
+            "black_frac_px": float(1.0 - valid.mean()),
+            "black_frac_sr": float(1.0 - w[valid].sum() / w.sum()),
+            "cone_kept": float(w[valid].sum() / cone_sr),
+        }
+
     def __call__(self, img_hwc: np.ndarray) -> np.ndarray:
-        """img_hwc: float32 HxWx3 in [0,1] -> rectified float32 HxWx3 in [0,1]."""
+        """img_hwc: float32 HxWx3 in [0,1] -> rectified float32 HxWx3 in [0,1].
+
+        Invalid pixels (outside the imaged cone) are filled per ``self.fill``.
+        """
         import cv2
 
         H, W = img_hwc.shape[:2]
         map1, map2 = self._get_maps(H, W)
         out = cv2.remap(img_hwc, map1, map2, cv2.INTER_LINEAR, cv2.BORDER_CONSTANT)
+        out = np.ascontiguousarray(out, dtype=np.float32)
+        # Applied unconditionally: even for fill="black" this is not a no-op, since
+        # BORDER_CONSTANT only zeroes rays that leave the frame, while rays past the
+        # KB4 turnover fold back and sample real (wrong) pixels. The analytic mask
+        # catches those; the remap's own border handling cannot.
+        from .fill import apply_fill
+        out = apply_fill(out, self.valid_mask(H, W), self.fill)
         return np.ascontiguousarray(out, dtype=np.float32)
 
     def rectify_depth(self, depth_hw: np.ndarray) -> np.ndarray:
