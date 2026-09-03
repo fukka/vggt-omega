@@ -47,6 +47,25 @@ Every cell scores only pixels inside the analytic imaged cone with valid GT, so
 filled pixels are never compared against ground truth: the fill changes what the
 encoder sees, never what the metric measures.
 
+Stream choice
+-------------
+Defaults to ``videos_rgb`` (real footage), NOT ``videos_synthetic``. This repo's
+own standing result is that the synthetic stream is "unsuitable as a
+counterfactual -- domain gap swamps the effect" (autoresearch/research-state.yaml,
+the refuted GT-provenance hypothesis). Since the fill effect we are chasing is
+plausibly small, running it on the synthetic stream would put a known-large
+confound on top of a small signal.
+
+Prior from this repo's own programme
+------------------------------------
+H3, Center-PH and H8 form an "input-surgery-hurts" pattern: remap-only surgery on
+the input degrades every zone (H8 Probe A: +16..+31% at equal tokens) while
+feature-side and loss-side fixes help. Filling the black region is input surgery,
+so the standing prior predicts cells 3 and 4 do NOT beat 1 and 2. That makes this
+a pre-registered test of an established pattern rather than an open-ended probe:
+a null result strengthens the pattern, and a positive one is a genuine exception
+that would need explaining.
+
 Usage
 -----
 ::
@@ -203,7 +222,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--adt-root", required=True)
-    ap.add_argument("--rgb-subdir", default="videos_synthetic")
+    ap.add_argument("--rgb-subdir", default="videos_rgb")
     ap.add_argument("--vggt-checkpoint", default="")
     ap.add_argument("--out", default="runs/exp2x2")
     ap.add_argument("--dump-examples", default="")
