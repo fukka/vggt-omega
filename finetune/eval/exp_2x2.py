@@ -235,8 +235,8 @@ def main() -> None:
     ap.add_argument("--skip-dav2", action="store_true")
     args = ap.parse_args()
 
-    from .run_eval import _find_adt_seq_dirs
-    seq_dirs = _find_adt_seq_dirs(args.adt_root, args.rgb_subdir)
+    from .run_eval import _find_seq_dirs
+    seq_dirs = _find_seq_dirs(args.adt_root, args.rgb_subdir, "depth_npy")
     if args.max_seqs:
         seq_dirs = seq_dirs[: args.max_seqs]
     print(f"[exp2x2] {len(seq_dirs)} ADT sequence(s), rgb_subdir={args.rgb_subdir!r}")
