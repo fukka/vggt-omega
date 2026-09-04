@@ -294,6 +294,82 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       这比本项目量过的任何方法效应都大一个量级。四个角度的形状也自洽：0° 和 180° 几乎相等（两个"侧躺"方向），
       90° 最差（上下颠倒），270° 最好（正立）—— 正是一个有"上方向"先验的模型该有的样子。
     </p>
+    <h3 style="margin-top:30px">为什么会发生</h3>
+    <p>
+      仓库里有<strong>两个 ADT 加载器，约定相反</strong>，而这条实验线用的是那个"对但用错地方"的。
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>两个加载器都不是随手写的，各自的注释都写清了自己的约定 —— 问题在于它们从没被放在一起看过。</caption>
+      <thead><tr><th>加载器</th><th style="text-align:left">它怎么说</th><th style="text-align:left">谁在用</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="mono">raytun3r.data.<br>ADTSequence</td>
+          <td style="text-align:left">"帧在 Aria 上是转过 90° CW 存的；<strong>RGB 和深度都施加 270° CCW 旋转</strong>"，配 <code>rotated=True</code> 内参</td>
+          <td style="text-align:left">depthfisheye、fovbench、bench 各行</td>
+        </tr>
+        <tr class="flip">
+          <td class="mono">AriaLocalPairs</td>
+          <td style="text-align:left">"帧按存储原样使用（原生传感器朝向），所以相机用原生 <code>rotated=False</code> 内参"</td>
+          <td style="text-align:left"><strong>H1 → H5 → H12 → H14 → H15 → H9 整条线</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p style="margin-top:16px">
+      关键在于：<strong>对 H1.3 来说下面那条是对的。</strong> <code>AriaLocalPairs</code> 是为 H1.3 写的，
+      那是个<strong>经典几何</strong>实验 —— SIFT 匹配 + MAGSAC 求位姿。只要相机模型和像素对得上，
+      转不转四分之一圈完全无所谓，而它们确实对得上：手眼标定门就是在它上面以 0.77–0.96° 通过的。
+    </p>
+    <p>
+      <strong>错的是它被原封不动继承进了"预训练深度网络"的场景。</strong>
+      H5 的 <code>Seq</code> 包着 <code>AriaLocalPairs</code>，H12 / H14 / H15 / H9 又都 import H5 的 <code>Seq</code> ——
+      六个假设就这么全跑在侧躺的帧上。而深度基础模型<strong>恰恰不是旋转不变的</strong>。
+    </p>
+    <p>
+      为什么一直没被发现：<strong>每一项内部检查都是自洽的</strong>。相机确实匹配像素，所以手眼门过了、
+      zone 表看着正常、对照组该赢的赢该输的输。没有任何东西会报错。
+      <strong>要看一眼图才能发现。</strong>
+    </p>
+
+    <h3 style="margin-top:30px">修在哪、怎么验证的</h3>
+    <p>
+      修在<strong>模型边界</strong>，不在加载器。转 <code>image()</code> 的返回值会破坏所有"图像—相机配对"的东西 ——
+      H14 的 rig 采样栅格、H15 的镜头形变、θ 分档、真值和位姿共轭，全都在存储帧里，而且都不在乎朝向。
+      只有 backbone 在乎。
+    </p>
+    <p>
+      而且是以<strong>平面 z</strong> 而不是 range 进出：否则 <code>_finalize</code> 会拿相机栅格上的 cos(θ)
+      去除一张位于<strong>旋转帧</strong>里的预测，而 Aria 的主点在 504 下偏离画幅中心 4.5 px —— 边缘处约 1° 的 θ，
+      即 2.5% 的径向误差，正好在本项目测量的那个方向上。z 在绕光轴滚转下不变，所以转回来是精确的，
+      换算在之后只做一次。<code>forward_z</code> 遇到 range 安装会<strong>直接报错</strong>而不是信任调用方。
+    </p>
+    <p>
+      位姿也要转回来。共轭不改变旋转的<strong>角度</strong>，但会移动<strong>轴</strong>，
+      而误差是拿存储帧里的真值比的。方向靠实测钉死，因为搞反了是静默的：
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>seq136，40 对相邻帧，冻结 DA3-Small。两个错误选择都比不转还差 —— 所以这个符号是量出来的，不是推出来的。</caption>
+      <thead><tr><th>配置</th><th>旋转误差中位数</th><th>RRA@15</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">未旋转（一直在跑的）</td><td class="num">12.07°</td><td class="num">0.550</td></tr>
+        <tr><td class="mono">正立，不转回位姿</td><td class="num bad">28.93°</td><td class="num bad">0.125</td></tr>
+        <tr><td class="mono">正立，unroll sign=+1</td><td class="num bad">40.68°</td><td class="num bad">0.075</td></tr>
+        <tr class="flip"><td class="mono"><b>正立，unroll sign=−1</b></td><td class="num good">5.77°</td><td class="num good">0.925</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p style="margin-top:16px">
+      所以转正<strong>把位姿误差也砍掉一半以上</strong>（12.07° → 5.77°，RRA@15 0.55 → 0.93），不只是深度。
+      端到端验证：修复后冻结模型在 seq136 上的近边缘是 <span class="mono">0.427</span>，
+      和上面那张表 k=3 那一行的 <span class="mono">0.4101</span> 吻合（60 帧 vs 30 帧）。
+      80 项 CPU 测试全绿，其中 5 项是新写的，专门盯这个边界。
+    </p>
     <div class="note warn">
       <span class="eyebrow">这动摇了什么，没动摇什么</span>
       <p>
