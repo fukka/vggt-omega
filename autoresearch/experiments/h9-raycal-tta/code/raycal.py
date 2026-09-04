@@ -61,7 +61,7 @@ import numpy as np
 __all__ = ["fit_field", "apply_field", "ARMS"]
 
 ARMS = ("raycal", "raycal_bal", "raycal_inv", "raycal_quad",
-        "global", "shuffled", "none")
+        "raycal_shrunk", "global", "shuffled", "none")
 
 #: A bin whose fitted gain leaves this range is not describing a compression;
 #: it is describing noise, and it would invert or explode the correction.
@@ -75,7 +75,23 @@ G_MIN, G_MAX = 0.15, 3.0
 #: a straight line in log-log. One line per theta bin cannot represent that,
 #: which is a model-class failure, not a sampling one -- `raycal_bal` was built
 #: for the sampling reading and its own test refuted it.
-INV_ARMS = ("raycal_inv", "raycal_quad")
+INV_ARMS = ("raycal_inv", "raycal_quad", "raycal_shrunk")
+
+#: `raycal_shrunk` pulls each bin's fit toward the IDENTITY map by how much
+#: evidence that bin actually has, rather than by where it is. The upright run
+#: left one blocker: raycal_inv is the best arm on 6/6 and beats the frozen
+#: model on 5/6 at the rim, while making near_centre 21-52% worse. The centre
+#: bins are where the anchors are fewest and where their depths span least
+#: (they are walls), so a fit there is extrapolating; shrinking it toward
+#: "change nothing" costs the rim nothing and should cost the centre nothing
+#: either.
+#:
+#: This is deliberately NOT a theta gate. Six region-targeted interventions have
+#: lost to their own controls in this project (H5, H6, H7, MoE, H12, H15), and
+#: "correct only the rim" would be the seventh. The shrinkage is driven by the
+#: ANCHORS: a centre bin with rich, well-spread anchors is corrected in full.
+SHRINK_N0 = 400.0        # anchors at which a bin is half-trusted
+SHRINK_SPREAD = 1.2      # log-depth span (nats) at which a bin is fully trusted
 
 
 def _fit_line(log_pred: np.ndarray, log_true: np.ndarray) -> Tuple[float, float]:
@@ -138,16 +154,26 @@ def fit_field(arm: str, theta: np.ndarray, pred: np.ndarray, true: np.ndarray,
     if arm in INV_ARMS:
         deg = 2 if arm == "raycal_quad" else 1
         a0, b0, q0 = _fit_inverse(lp, lt, deg)
-        A, B, Q, ns = [], [], [], []
+        A, B, Q, ns, ws = [], [], [], [], []
         for b in range(n_bins):
             m = idx == b
             if int(m.sum()) < min_per_bin:
-                A.append(a0); B.append(b0); Q.append(q0); ns.append(int(m.sum()))
+                A.append(a0); B.append(b0); Q.append(q0)
+                ns.append(int(m.sum())); ws.append(1.0)
                 continue
             aa, bb, qq = _fit_inverse(lp[m], lt[m], deg)
-            A.append(aa); B.append(bb); Q.append(qq); ns.append(int(m.sum()))
+            w = 1.0
+            if arm == "raycal_shrunk":
+                n_b = float(m.sum())
+                spread = float(np.percentile(lt[m], 95) - np.percentile(lt[m], 5))
+                w = (n_b / (n_b + SHRINK_N0)) * min(1.0, spread / SHRINK_SPREAD)
+                # toward identity: log(true) = log(pred)
+                aa, bb, qq = w * aa, w * bb + (1.0 - w) * 1.0, w * qq
+            A.append(aa); B.append(bb); Q.append(qq)
+            ns.append(int(m.sum())); ws.append(float(w))
         return {"arm": arm, "direction": "inverse", "edges": edges.tolist(),
-                "a": A, "b": B, "q": Q, "n": ns, "n_anchors": int(theta.size)}
+                "a": A, "b": B, "q": Q, "n": ns, "shrink": ws,
+                "n_anchors": int(theta.size)}
 
     # Depth-balancing weights: inside each theta bin, weight anchors so the
     # depth histogram is flat in log-depth. Computed against a COMMON set of

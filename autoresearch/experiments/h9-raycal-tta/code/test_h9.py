@@ -314,3 +314,37 @@ def test_every_arm_stays_monotone():
         f = RC.fit_field(arm, theta, pred, true_r, 0.95)
         out = RC.apply_field(np.linspace(0.2, 9.0, 500), np.full(500, 0.5), f)
         assert bool(np.all(np.diff(out) > 0)), f"{arm} is not monotone"
+
+
+def test_shrinkage_protects_a_thin_bin_without_touching_a_rich_one():
+    """The centre damage, addressed by evidence rather than by position.
+
+    `raycal_inv` is the best arm on 6/6 upright and beats the frozen model on
+    5/6 at the rim, while making near_centre 21-52% worse. The centre bins are
+    exactly where the anchors are fewest and span least depth. Shrinking a bin's
+    fit toward the identity by how much evidence it has should leave a rich bin
+    alone and pull a thin one back.
+
+    NOT a theta gate: six region-targeted interventions have lost to their own
+    controls here, and "correct only the rim" would be the seventh.
+    """
+    theta, true_r, pred, field = _curved_scene()
+    inv = RC.fit_field("raycal_inv", theta, pred, true_r, 0.95)
+    shr = RC.fit_field("raycal_shrunk", theta, pred, true_r, 0.95)
+    w = shr["shrink"]
+    n = shr["n"]
+    thin = int(np.argmin(n)); rich = int(np.argmax(n))
+    assert w[thin] < w[rich], f"shrink {w[thin]:.3f} (n={n[thin]}) vs {w[rich]:.3f} (n={n[rich]})"
+    # a fully-trusted bin must be left where the unshrunk fit put it
+    if w[rich] > 0.9:
+        assert abs(shr["b"][rich] - inv["b"][rich]) < 0.12
+
+
+def test_shrinkage_reduces_the_near_centre_damage():
+    theta, true_r, pred, field = _curved_scene()
+    th_t, tr_t, pr_t = _near_centre_probe(field)
+    e = {}
+    for arm in ("raycal_inv", "raycal_shrunk"):
+        f = RC.fit_field(arm, theta, pred, true_r, 0.95)
+        e[arm] = float(np.abs(RC.apply_field(pr_t, th_t, f) / tr_t - 1).mean())
+    assert e["raycal_shrunk"] <= e["raycal_inv"] * 1.02, e
