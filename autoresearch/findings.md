@@ -103,6 +103,28 @@ teacher's near-rim advantage falls from **−35.3% to −14.7%**. So more than h
 of what the rect teacher was buying was compensating for the orientation, not
 for the lens. The premise (024A) survives at less than half its apparent size.
 
+**A SECOND defect, found while diagnosing the first (2026-09-04).** Three ADT
+loaders were in play, each internally self-consistent:
+
+| loader | quarter turns | orientation | used by |
+|---|---|---|---|
+| `AriaLocalPairs` | k=0 | sideways | H1/H5/H12/H14/H15/H9 |
+| `raytun3r.data.ADTSequence` | k=1 | **upside down** | `depthfisheye`'s ADT arm, `raytun3r` train/eval on ADT |
+| `fovbench.run` | k=3 | **upright ✓** | fovbench, and therefore **ticket 024A** |
+
+`ADTSequence`'s map is `{0:0, 90:3, 180:2, 270:1}` — degrees the stored frame is
+from upright, mapped to the turns that undo it — and its default said `270`,
+i.e. k=1. Rendered and looked at: the floor comes out at the top. The stored
+frame is 90° off, not 270°; the default is now `90`. k=1 is not a near miss, it
+is the **worst of the four** orientations, worse than not turning at all.
+
+**fovbench was right all along, so ticket 024A — the premise H14 rests on — is
+unaffected.** `depthfisheye`'s ADT arms (`results/depthfisheye/{depthfisheye,
+full,lora}`) ran upside down and would need re-running before citation; its
+SynWoodScape arms use a different loader and are unaffected.
+`tests/test_orientation_convention.py` now pins all three declared defaults to
+one quarter turn, with no data and no GPU.
+
 **Fix:** `autoresearch/experiments/common/upright.py`, applied at the backbone
 boundary only — the loader keeps returning stored-frame images because the rig
 grids, lens warps, θ binning, GT and pose conjugation all live there and none of
