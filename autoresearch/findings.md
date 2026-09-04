@@ -54,6 +54,64 @@ rim penalty (1.81×) and no camera-input channel — the highest-headroom, and
 hardest, adapter target; the eval of record is `finetune/eval/metrics.py`
 scale_shift, range domain, full joint tables (zone pools hide collateral).
 
+## THE INPUT WAS SIDEWAYS (2026-09-03/04) — read before citing any number below
+
+Every run of the **H1 / H5 / H12 / H14 / H15 / H9** line fed the backbone frames
+in ADT's native sensor orientation, a quarter turn off upright. Measured on
+seq136, 30 frames, frozen DA3-Small, with the prediction rotated back so every
+row scores identical pixels, GT and masks:
+
+| input rotation | whole | near_rim | near_ctr | center | far |
+|---|---|---|---|---|---|
+| k=0 (what ran) | 0.5503 | 1.3925 | 0.5420 | 0.3241 | 0.2558 |
+| k=1 | 0.6132 | 1.4843 | 0.9461 | 0.3562 | 0.2774 |
+| k=2 | 0.5505 | 1.3669 | 0.5529 | 0.3199 | 0.2614 |
+| **k=3 (upright)** | **0.1975** | **0.4101** | **0.3230** | **0.2051** | **0.1148** |
+
+k=0 and k=2 agree to the fourth decimal (the two sideways orientations), k=1 is
+upside-down and worst, k=3 upright and best — the shape of a model with an
+up-prior. Pose too: median rotation error 12.07° → **5.77°**, RRA@15 0.550 →
+**0.925** (40 pairs, once the predicted pose is un-rolled; both wrong unroll
+choices are worse than not turning at all, which is why the sign is pinned by
+measurement in `common/upright.py`).
+
+**How it happened.** The repo has two ADT loaders. `raytun3r.data.ADTSequence`
+— behind depthfisheye, fovbench and the bench rows — documents the turn and
+applies it (`rotation=270`, `aria_intrinsics(rotated=True)`). `AriaLocalPairs`
+was written for **H1.3**, a *classical* pose experiment where a quarter turn is
+irrelevant provided the camera matches the pixels; it did, and the hand-eye gate
+passed at 0.77–0.96° on it. It was then inherited unexamined when the line
+crossed into a **pretrained depth network**, which is not rotation-invariant.
+H5's `Seq` wraps it and H12/H14/H15/H9 all import H5's `Seq`. Every internal
+check stayed self-consistent, so nothing ever failed. It took the human looking
+at an example image.
+
+**What survives:** every *within-experiment* arm comparison — all arms ran at
+the same wrong orientation. `rect` beat `roundtrip`; `shuffled` beat `jac`
+16/16; `raycal` beat both controls 6/6.
+
+**What does not:** every absolute AbsRel in that line (inflated ~2.8×), and —
+the load-bearing one — **the size of the rim penalty itself**:
+near_rim/center is **4.30× sideways and 2.00× upright**. A large part of the
+radial error field this line has been studying is an orientation artefact. The
+remaining 2.00× is still large and still agrees in direction with ticket 024A's
+controlled ratios (1.25–1.81, measured through a different pipeline), but the
+magnitude has to be re-established.
+
+**Already re-measured upright:** H14's teacher pre-check on seq131 — the rect
+teacher's near-rim advantage falls from **−35.3% to −14.7%**. So more than half
+of what the rect teacher was buying was compensating for the orientation, not
+for the lens. The premise (024A) survives at less than half its apparent size.
+
+**Fix:** `autoresearch/experiments/common/upright.py`, applied at the backbone
+boundary only — the loader keeps returning stored-frame images because the rig
+grids, lens warps, θ binning, GT and pose conjugation all live there and none of
+them care about orientation. Depth crosses the boundary as planar **z**, because
+`_finalize` would otherwise divide a rotated prediction by the camera's cos map
+and Aria's principal point is 4.5 px off centre (≈1° of θ at the rim, a 2.5%
+radial error). `forward_z` refuses a `range` install rather than trusting the
+caller.
+
 ## Method-phase status (post-pivot, 2026-08-27)
 
 - **H5 (rim-targeted LoRA): REFUTED BY ITS OWN CONTROL (2026-08-22, #35 evals).**

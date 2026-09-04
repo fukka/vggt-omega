@@ -55,6 +55,27 @@ literature:
     - "Dynamic hand regions in egocentric fisheye: no adapter paper handles them; ADT has GT to measure it."
     - "Radial metrics in the wild are confounded by depth-vs-eccentricity; this repo has the only control (slambench/fov.py) we know of."
 
+known_defects:
+  - id: sideways-input
+    found: "2026-09-03, by the human looking at an example frame"
+    scope: "every run of H1/H5/H12/H14/H15/H9 -- anything built on AriaLocalPairs"
+    what: >
+      ADT stores Aria RGB a quarter turn off upright. AriaLocalPairs (written for
+      H1.3, a classical-pose experiment where the turn is irrelevant) used frames
+      as stored, and H5's Seq wraps it, so six learned-depth hypotheses ran on
+      sideways frames. raytun3r.data.ADTSequence -- the loader behind
+      depthfisheye/fovbench/bench -- documents the turn and applies it, so those
+      lines are probably unaffected (CONFIRM, do not assume).
+    size: >
+      frozen DA3-Small on seq136: whole-image AbsRel 0.5503 -> 0.1975 (-64%),
+      near_rim 1.3925 -> 0.4101 (-71%), pose median 12.07 -> 5.77 deg and
+      RRA@15 0.550 -> 0.925. near_rim/center ratio 4.30x -> 2.00x, so roughly
+      half of the studied radial field was orientation.
+    survives: "within-experiment arm comparisons; all arms shared the orientation"
+    invalidated: "every absolute number in that line, and the magnitude of the rim penalty"
+    fix: "autoresearch/experiments/common/upright.py, at the backbone boundary, in planar z"
+    reruns: "results/autoresearch-{h14,h15,h9}-upright/ (2026-09-04)"
+
 hypotheses:
   - id: H5
     statement: >
