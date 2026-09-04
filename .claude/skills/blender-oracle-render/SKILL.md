@@ -170,6 +170,45 @@ principal-point offset, an off-by-one in the ERP sampling grid, or a stale LUT.
 - a sanity render of the *unextended* fisheye alongside, so the corner content
   the extension bought is visible as a difference rather than asserted
 
+### Photometric acceptance test — as binding as the geometric one
+
+A geometrically perfect render can still be useless as an oracle. The first run
+passed every geometric check and was **~13x too dark in linear light, with a 40x
+spread across materials** — which disqualified its RGB, because a fill that is
+4-60x too dark in a material-dependent way is just a different biasing input
+pattern, not ground truth. An oracle-vs-black comparison run on it would have
+measured a lighting bug.
+
+Report **median linear luminance, render vs the real frame, per ADT GT instance
+region** (use `seg_npy/`, not hand-drawn regions). The shape of the result is the
+diagnosis:
+
+- **one ratio across all materials** → a pure exposure constant; fix and move on
+- **a spread** → missing indirect/bounce light. Low-albedo, bounce-lit surfaces
+  fail worst; high-albedo directly-lit ones survive. In the first run:
+  CoatRackShoeBench 0.015, ExtendableTable 0.045, ApartmentEnv 0.075,
+  WhiteChair 0.623.
+
+Bar: the ratios collapse toward a single value near 1.0. Known contributors to
+check first — `blender_render_scene.py` sets `view_settings.exposure = -0.8`, and
+`render_from_poses_blender_lambda_.py` enables only **2** ceiling area lights
+where the README documents **6** (four are commented out); 64 Cycles samples also
+under-resolves indirect bounce.
+
+Before concluding a texture or material failed to import, **gamma-lift the render
+and look again**. The first run's "featureless black tabletop" had 123 distinct
+8-bit levels and a *higher* relative variation than the real one — the texture
+was there, compressed into the bottom 5% of the range where 8-bit quantisation
+destroyed it.
+
+### Aggregates hide localised errors — segment before you summarise
+
+"97.9% of pixels within 5%" is compatible with one large surface being completely
+wrong. Report per-region statistics against **ADT's own GT instance
+segmentation**, and for any suspected silhouette error run a ring test: sample
+rings at +3/+6/+10/+16 px outside the GT contour and check the residual does not
+grow outward. A real overhang grows; boundary resampling noise does not.
+
 ### Cross-checks worth doing even though the brief does not demand them
 
 The alignment test compares two routes through *your own* code, so it cannot catch
