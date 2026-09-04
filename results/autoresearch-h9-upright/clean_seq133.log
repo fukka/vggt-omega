@@ -1,0 +1,17 @@
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+Loading pretrained dinov2_vitl14 from torch hub
+Using cache found in /user/f.zhang2/.cache/torch/hub/facebookresearch_dinov2_main
+[h9] Apartment_release_clean_seq133_M1292: 60 frames, matcher=ufm, stride=10
+[h9] 63641 anchors from 118 pairs; median parallax 3.15 deg; rim share 48.5%
+[h9/raycal] near_rim 0.5033 (gap +0.1617)  near_center 0.2581 (gap +0.3548)  center 0.1699 (gap +0.0932)  far 0.1091 (gap +0.0737)
+[h9/raycal_bal] near_rim 0.8476 (gap +0.2516)  near_center 0.4521 (gap +0.4914)  center 0.2059 (gap +0.1244)  far 0.1698 (gap +0.0578)
+[h9/raycal_inv] near_rim 0.3365 (gap +0.1995)  near_center 0.2821 (gap +0.3945)  center 0.1422 (gap +0.1159)  far 0.0924 (gap +0.0753)
+[h9/raycal_quad] near_rim 0.4438 (gap +0.1595)  near_center 0.2960 (gap +0.4298)  center 0.1430 (gap +0.1204)  far 0.1029 (gap +0.0743)
+[h9/global] near_rim 0.6112 (gap +0.1494)  near_center 0.2966 (gap +0.3456)  center 0.1970 (gap +0.0844)  far 0.1337 (gap +0.0652)
+[h9/shuffled] near_rim 0.6177 (gap +0.1494)  near_center 0.2978 (gap +0.3424)  center 0.2021 (gap +0.0834)  far 0.1354 (gap +0.0650)
+[h9/none] near_rim 0.4021 (gap +0.2327)  near_center 0.2675 (gap +0.3367)  center 0.1629 (gap +0.0933)  far 0.1088 (gap +0.0691)
+[h9] LOCKED BAR near_rim gap: none +0.2327 -> raycal +0.1617 (did NOT collapse)
+[h9] wrote /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h9-upright/clean_seq133.json  (40.2s)
+MARKER_h9_clean_seq133=0
