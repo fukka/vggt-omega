@@ -50,8 +50,11 @@ before touching anything.
 poses. Read its `README.md` first — it is accurate and will save you an hour.
 
 - **Mac**: `/Users/f.zhang2/Desktop/projects/adt_egocentric`, Blender at `/Applications/Blender.app`
-- **lambda_63**: `/user/f.zhang2/projects/adt_egocentric`, Blender at `~/blender/blender`,
-  ADT at `~/Documents/projectaria_tools_adt_data_clean`
+- **lambda_63**: `/user/f.zhang2/projects/adt_egocentric`, Blender at `~/blender/blender`
+- ADT **sequences** at `~/Documents/projectaria_tools_adt_data_clean`, but the 400
+  DTC **GLB object models** live under a *different* root:
+  `~/Documents/projectaria_tools_adt_data/object_models`. Looking for them beside
+  the sequences finds nothing.
 
 Render on **lambda_63** — that is where Blender, the ADT data and the GPUs are.
 Several scripts have `_lambda_` twins (`render_from_poses_blender_lambda_.py`);
@@ -85,12 +88,19 @@ Relevant CLI: `--output_size`, `--focal`, `--fisheye`, `--frame_step`,
 
 Keep ADT's real Aria 214-1 intrinsics and focal, so that everything inside the
 imaged disc is bit-identical to the real Aria framing. The KB4 polynomial turns
-over at θ_max ≈ 62.33° and is undefined beyond, but the frame corners sit at
-~75°. **Extend θ_d(θ) linearly past the turnover** (continue with the slope at
-the turnover) so corner rays get real directions.
+over at θ_max ≈ 62.33° and is undefined beyond, but the frame corners sit past
+it (measured: out to ~84.6° for this sensor). **Extend θ_d(θ) linearly past the
+turnover** so corner rays get real directions.
+
+Use the **positive secant slope** `θ_d(θ_max) / θ_max` (≈1.1222 here), not the
+derivative at the turnover. At a turnover the derivative is *exactly zero* by
+definition, so "continue with the tangent slope" yields a constant — a
+non-invertible extension. The secant is C0-continuous and strictly monotone.
 
 This extension is a modelling choice, not the real lens. Say so in the code
-comment and in any writeup. It affects only the corners; the disc is untouched.
+comment and in any writeup. It affects only the corners; the disc is untouched —
+assert that, by checking the masked frame is byte-identical to a render made with
+the unextended polynomial.
 
 **2. `persp_full` — pinhole, pixel-aligned to the rectified fisheye.**
 
@@ -159,6 +169,33 @@ principal-point offset, an off-by-one in the ERP sampling grid, or a stale LUT.
   124.7° / 139.3° for `focal_out_norm=0.262`
 - a sanity render of the *unextended* fisheye alongside, so the corner content
   the extension bought is visible as a difference rather than asserted
+
+### Cross-checks worth doing even though the brief does not demand them
+
+The alignment test compares two routes through *your own* code, so it cannot catch
+a convention both routes share. Break that symmetry with an external reference:
+
+- **Compare rendered depth against ADT's own GT depth** at the same timestamp.
+  This validates the depth convention, the pose, the lens model and the rotation
+  simultaneously, against data you did not produce. (Achieved on the first frame:
+  median ratio 0.9976, median |Δ| 4.1 mm, 97.9% of pixels within 5%.)
+- **NCC the render against the real 214-1 frame** across the eight
+  rotation/mirror variants. A shared-wrong-orientation error survives alignment
+  but dies here.
+- **Back-project the pinhole depth** and check the floor lands at the scene's
+  known world height.
+
+### Validate the pose before rendering
+
+`aria_trajectory.csv` does **not** cover every RGB frame. On seq131 it spans
+frames 312–3191 of 3527, so early and late frames have no pose. The existing
+`render_from_poses_blender_lambda_.py` resolves poses with `nearest_pose()` and
+**no residual check**, so an out-of-range frame renders silently at the wrong
+pose and looks perfectly plausible.
+
+Assert the matched trajectory timestamp is within ~1 ms of the frame, and refuse
+the frame otherwise. Do this before spending render time, and treat any existing
+render whose provenance you cannot establish as suspect.
 
 ### Traps that have already cost time here
 
