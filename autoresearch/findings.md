@@ -125,6 +125,30 @@ SynWoodScape arms use a different loader and are unaffected.
 `tests/test_orientation_convention.py` now pins all three declared defaults to
 one quarter turn, with no data and no GPU.
 
+**HOW MUCH OF THE RIM PENALTY WAS ORIENTATION — per backbone (H16, 2026-09-04).**
+seq136, 20 frames, prediction rotated back so every cell scores identical pixels:
+
+| backbone | sideways whole | upright whole | Δ | rim/ctr sideways | rim/ctr upright |
+|---|---|---|---|---|---|
+| da3:small *(this line's backbone)* | 0.5674 | 0.1954 | −65.6% | **5.28** | **2.13** |
+| da3:large | 0.2620 | 0.1113 | −57.5% | 2.58 | 2.04 |
+| vggt (1B) | 0.1730 | 0.1277 | −26.2% | 2.49 | **2.57** |
+
+Two readings, and the second is load-bearing:
+
+1. **Orientation robustness varies 2.5× across backbones.** VGGT loses 26% to a
+   sideways input where DA3-Small loses 66%.
+2. **"The rim penalty is an orientation artefact" is FALSE as a general claim.**
+   The ratio collapses only for DA3-Small (5.28 → 2.13). DA3-Large barely moves
+   and VGGT does not move at all. Measured upright, all three sit at
+   **2.0–2.6×**, which agrees in direction with 024A's controlled ratios
+   (1.25–1.81, different pipeline, upright by construction).
+
+So **the project's central claim survives** — the rim really is worse, by about
+2× — and what has to change is the magnitude this line quoted and the fact that
+**the backbone is now an experimental variable that must be reported**: this
+line happened to run on the least orientation-robust of the three.
+
 **Fix:** `autoresearch/experiments/common/upright.py`, applied at the backbone
 boundary only — the loader keeps returning stored-frame images because the rig
 grids, lens warps, θ binning, GT and pose conjugation all live there and none of
