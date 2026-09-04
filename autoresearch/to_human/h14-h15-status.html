@@ -598,7 +598,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
   </div>
   <div class="scroll">
     <table>
-      <caption><code>roundtrip</code> 对照走的是<strong>同一套重采样、同一个覆盖掩码、同一个损失、同样的容量</strong>，唯一不同是模型从没看过透视图 —— 它动了 0.1%。</caption>
+      <caption><b style="color:var(--neg)">⚠️ 以下数字在侧躺输入下测得</b>（见第 02 节）；正立重跑结果见第 03 节。 <code>roundtrip</code> 对照走的是<strong>同一套重采样、同一个覆盖掩码、同一个损失、同样的容量</strong>，唯一不同是模型从没看过透视图 —— 它动了 0.1%。</caption>
       <thead><tr><th>臂</th><th>seq136 近边缘</th><th>seq132 近边缘</th><th>用真值？</th></tr></thead>
       <tbody>
         <tr><td class="mono">rect</td><td class="num good">1.359 → 1.006　(−26.0%)</td><td class="num good">0.361 → 0.315　(−12.9%)</td><td>否</td></tr>
@@ -727,7 +727,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 
   <div class="scroll">
     <table>
-      <caption>教师"看得多"和"看得准"是两回事，而且它们互相冲突。</caption>
+      <caption><b style="color:var(--neg)">⚠️ 以下数字在侧躺输入下测得</b>（见第 02 节）；正立重跑结果见第 03 节。 教师"看得多"和"看得准"是两回事，而且它们互相冲突。</caption>
       <thead><tr><th>教师</th><th>能回答近边缘 zone 的</th><th>它在那里的增益</th><th>学生 seq136</th><th>学生 seq132</th></tr></thead>
       <tbody>
         <tr><td class="mono">rect（单个 95°）</td><td class="num">70.4%</td><td class="num good">−35.3%</td><td class="num good">−26.0%</td><td class="num good">−12.9%</td></tr>
@@ -814,7 +814,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 
   <div class="scroll">
     <table>
-      <caption>每个序列用自己的视频适应自己（TTA），无深度真值。约 5 万个锚点／序列，中位视差 3.3°，近一半在 38° 以外。</caption>
+      <caption><b style="color:var(--neg)">⚠️ 以下数字在侧躺输入下测得</b>（见第 02 节）；正立重跑结果见第 03 节。 每个序列用自己的视频适应自己（TTA），无深度真值。约 5 万个锚点／序列，中位视差 3.3°，近一半在 38° 以外。</caption>
       <thead><tr><th>序列</th><th>不修正</th><th>raycal</th><th>global 对照</th><th>shuffled 对照</th><th>vs 不修正</th><th>判据：仿射差距塌缩</th></tr></thead>
       <tbody>
         <tr><td class="mono">clean_seq131</td><td class="num">1.2656</td><td class="num good">0.9934</td><td class="num">1.2759</td><td class="num">1.2734</td><td class="num good">−21.5%</td><td class="num bad">否 (+0.42→+0.52)</td></tr>
@@ -862,7 +862,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 
   <div class="scroll">
     <table>
-      <caption>近边缘 AbsRel 相对冻结模型的变化。左两列是模型训练时见过的序列，右两列是留出的。</caption>
+      <caption><b style="color:var(--neg)">⚠️ 以下数字在侧躺输入下测得</b>（见第 02 节）；正立重跑结果见第 03 节。 近边缘 AbsRel 相对冻结模型的变化。左两列是模型训练时见过的序列，右两列是留出的。</caption>
       <thead><tr><th>臂</th><th>seq131（训练）</th><th>seq133（训练）</th><th>seq136（留出）</th><th>dec_seq132（留出）</th></tr></thead>
       <tbody>
         <tr><td class="mono">rect（无标签）</td><td class="num">−33.4%</td><td class="num">−25.1%</td><td class="num good">−26.0%</td><td class="num">−12.9%</td></tr>
