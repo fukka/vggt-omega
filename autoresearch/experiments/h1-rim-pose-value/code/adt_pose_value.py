@@ -56,10 +56,19 @@ class AriaLocalPairs:
     ``camera``, ``h``, ``w``, ``image(i)``; ``pose(i)`` returns T_world_device
     (rotation, translation) — DEVICE frame, conjugate before camera-frame use.
     Frames are used exactly as stored (native sensor orientation), so the
-    camera uses the native (rotated=False) intrinsics.
+    camera uses the native (rotated=False) intrinsics. That pairing is correct
+    and it is what H1.3's hand-eye gate verified -- but it does NOT mean the
+    frames are upright for a pretrained network. They are a quarter turn off,
+    and the turn is applied at the backbone boundary by
+    `autoresearch/experiments/common/upright.py`; see that module for how the
+    repo came to run sideways and what it cost.
+
+    A sequence that carries its own `camera.json` (written by
+    `tools/extract_adt_sequence.py`) uses that instead, so a scene recorded on
+    another device is scored through its own lens.
     """
 
-    def __init__(self, seq_dir: str, size: int = 504) -> None:
+    def __init__(self, seq_dir: str, size: int = 504, camera=None) -> None:
         from PIL import Image
 
         # Accept .jpg or .png. This class was written against 28 staged seq131
@@ -81,11 +90,25 @@ class AriaLocalPairs:
                                              "aria_trajectory.csv"))
         self._traj_ts, self._traj_T = ts.numpy(), T
         self.h = self.w = size
-        ref = aria_214_1_kb4(size, size, rotated=False)
-        self.camera = KannalaBrandt(
-            fx=ref.fx, fy=ref.fy, cx=ref.cx, cy=ref.cy,
-            width=size, height=size, k=tuple(_ARIA_KB4),
-            theta_max=aria_valid_theta_max())
+        if camera is not None:
+            # A sequence recorded on another device carries its own lens. Aria
+            # Gen1 units are close (0.76 px at the rim between the Apartment's
+            # M1292 and LiteOffice's 61283 at 504) but their theta_max is not:
+            # 56.63 deg against 54.83, and theta_max defines the cone, the zone
+            # edges and every radial bin in this project.
+            self.camera = camera
+        elif os.path.exists(os.path.join(seq_dir, "camera.json")):
+            import sys as _sys
+            _sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "tools"))
+            from adt_camera import camera_from_json
+            self.camera = camera_from_json(
+                os.path.join(seq_dir, "camera.json"), size)
+        else:
+            ref = aria_214_1_kb4(size, size, rotated=False)
+            self.camera = KannalaBrandt(
+                fx=ref.fx, fy=ref.fy, cx=ref.cx, cy=ref.cy,
+                width=size, height=size, k=tuple(_ARIA_KB4),
+                theta_max=aria_valid_theta_max())
         self._Image = Image
         self._cache: Dict[int, torch.Tensor] = {}
 
