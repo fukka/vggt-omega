@@ -158,6 +158,56 @@ and Aria's principal point is 4.5 px off centre (≈1° of θ at the rim, a 2.5%
 radial error). `forward_z` refuses a `range` install rather than trusting the
 caller.
 
+## Upright re-runs, 2026-09-04 — what survived and what did not
+
+**H14 (rect-teacher distillation): REFUTED.** near_rim % change against the
+frozen model, held out, sideways → upright:
+
+| arm | seq136 | seq132 |
+|---|---|---|
+| `rect` | −26.0% → **−13.2%** | −12.9% → **+4.7%** |
+| `rect_ring` | −19.1% → +3.7% | +5.1% → +7.9% |
+| `roundtrip` (control) | +0.1% → −0.1% | 0.0% → 0.0% |
+| `gt` (labelled) | −82.0% → −57.9% | −33.0% → −27.2% |
+
+P1 required `rect` to beat `roundtrip` on **both** held-out sequences; upright it
+wins seq136 and loses decoration_seq132, where it is worse than doing nothing.
+P2 (22.8% / −17.5% of the labelled arm) and P3 (near_centre +43.3% where `gt`
+improves −39.0%) also fail. **More than half of what the rect teacher appeared
+to buy was compensating for the input orientation.** The pre-check said so
+before the students trained: the teacher's own near-rim advantage fell −35.3%
+→ −14.7%.
+
+**H9 (RayCal-TTA): the model-class fix flipped it.** near_rim AbsRel, upright:
+
+| seq | none | raycal | **raycal_inv** | raycal_quad | global | shuffled |
+|---|---|---|---|---|---|---|
+| clean_seq136 | 0.4269 | 0.4930 | **0.3613** | 0.4331 | 0.6222 | 0.6256 |
+| decoration_132 | 0.2320 | 0.3607 | **0.2602** | 0.2951 | 0.3878 | 0.3910 |
+| clean_seq131 | 0.3805 | 0.4122 | **0.3050** | 0.3171 | 0.5316 | 0.5340 |
+| clean_seq133 | 0.4021 | 0.5033 | **0.3365** | 0.4438 | 0.6112 | 0.6177 |
+| clean_seq134 | 0.3719 | 0.4330 | **0.3201** | 0.3621 | 0.5519 | 0.5527 |
+| clean_seq135 | 0.5039 | 0.5602 | **0.4107** | 0.4537 | 0.7552 | 0.7549 |
+
+The ORIGINAL `raycal` now loses to doing nothing **6/6** — upright the field is
+half the size and a mis-specified correction costs more than it buys.
+`raycal_inv`, the same per-θ model fitted in the direction the correction is
+*applied* in, is best **6/6** and beats the frozen model **5/6**. `raycal_bal`
+(the sampling reading) is worst 6/6, exactly as its own synthetic predicted.
+`global` and `shuffled` stay far behind everything (0.55–0.76), so **P2 passes
+6/6 by a wide margin** — the radial structure is doing real work.
+
+Still failing: the locked bar (0/6, though the gap now *shrinks* — decoration
++0.5247 → +0.2935, a 44% cut against a 50% bar — where sideways it **grew**),
+and P3 (near_centre 21–52% worse). `raycal_shrunk` — evidence-weighted
+shrinkage toward identity, driven by each bin's anchor count and depth spread
+rather than by θ — is the current attempt at P3 and is running.
+
+**Orientation tolerance (H16).** ±20° of roll costs +28% and leaves the
+near_rim/centre ratio flat at 2.10–2.23; ±40° costs +197% and inflates it to
+4.9. Ordinary head roll is inside the flat part, so a per-frame gravity
+alignment is **not worth building** — recorded as a decision not to build.
+
 ## Method-phase status (post-pivot, 2026-08-27)
 
 - **H5 (rim-targeted LoRA): REFUTED BY ITS OWN CONTROL (2026-08-22, #35 evals).**
