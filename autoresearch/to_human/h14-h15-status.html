@@ -545,6 +545,48 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
         而且"用哪个 backbone"从此变成一个必须报告的实验变量。
       </p>
     </div>
+    <h3 style="margin-top:30px">偏多少度开始出事？—— 一条曲线，和它否掉的一个方法</h3>
+    <p>
+      四分之一转的表说了 0° 和 90° 各是什么，没说中间。而<strong>中间正是头戴相机所在的地方</strong>：
+      戴着眼镜的人头一直在动，固定修正只在头水平时才精确。所以做了连续角度扫描 ——
+      绕<strong>主点</strong>（不是画幅中心，Aria 主点偏 4.5 px）旋转，预测再经逆变换转回来。
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>seq136，20 帧，DA3-Small。曲线在每一对匹配角度上对称到 1% 以内 —— 这是"变换和它的逆都写对了"的自检。</caption>
+      <thead><tr><th>偏离正立</th><th>全图</th><th>near_rim</th><th>center</th><th>rim/ctr</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">−40°</td><td class="num">0.5822</td><td class="num">1.5205</td><td class="num">0.3108</td><td class="num bad">4.89</td></tr>
+        <tr><td class="mono">−30°</td><td class="num">0.3866</td><td class="num">0.9273</td><td class="num">0.2950</td><td class="num bad">3.14</td></tr>
+        <tr><td class="mono">−20°</td><td class="num">0.2474</td><td class="num">0.5181</td><td class="num">0.2329</td><td class="num">2.22</td></tr>
+        <tr><td class="mono">−10°</td><td class="num">0.2185</td><td class="num">0.4382</td><td class="num">0.2043</td><td class="num">2.14</td></tr>
+        <tr class="flip"><td class="mono"><b>0°</b></td><td class="num good">0.1954</td><td class="num good">0.3893</td><td class="num good">0.1828</td><td class="num">2.13</td></tr>
+        <tr><td class="mono">+10°</td><td class="num">0.2154</td><td class="num">0.4104</td><td class="num">0.1957</td><td class="num">2.10</td></tr>
+        <tr><td class="mono">+20°</td><td class="num">0.2505</td><td class="num">0.5005</td><td class="num">0.2240</td><td class="num">2.23</td></tr>
+        <tr><td class="mono">+30°</td><td class="num">0.3674</td><td class="num">0.8596</td><td class="num">0.2741</td><td class="num bad">3.14</td></tr>
+        <tr><td class="mono">+40°</td><td class="num">0.5775</td><td class="num">1.4900</td><td class="num">0.3030</td><td class="num bad">4.92</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p style="margin-top:16px">
+      ±20° 以内代价温和（10° 是 +10%，20° 是 +28%），超过就陡了（30° +95%，40° +197%）。
+      更要紧的是 <strong><code>rim/ctr</code> 在 ±20° 内几乎不动（2.10–2.23），出了这个范围就炸</strong>（30° 是 3.14，40° 是 4.9）——
+      也就是说小幅头部倾斜几乎不扰动径向场，<strong>大幅倾斜则会凭空制造出一个边缘惩罚</strong>。
+    </p>
+    <div class="note">
+      <span class="eyebrow">这条曲线否掉了我自己的下一个方法想法</span>
+      <p>
+        跑它是为了决定要不要做<strong>逐帧重力对齐</strong>（论据：头戴相机的"上"随头动）。
+        曲线说<strong>不要做</strong>：正常头部 roll 落在曲线平坦段里，固定四分之一转在 ADT 上已经够用，
+        逐帧对齐几乎买不到东西。记为"决定不建"。
+      </p>
+      <p>
+        但这条警告可以出圈：<strong>任何佩戴者头部倾斜超过约 30° 的第一人称录像</strong> ——
+        趴在桌上、躺着 —— 报出来的边缘惩罚都会有相当一部分是倾斜造的。
+      </p>
+    </div>
     <p style="color:var(--ink-faint);font-size:.9rem">
       VGGT-Ω（本项目测得受控边缘惩罚最大、最高上限的那个）这一行还缺 ——
       它的权重是门控检查点而不是 hub 名，第一次跑时去找了一个叫 <code>pretrained</code> 的文件。已修，单独在跑。
