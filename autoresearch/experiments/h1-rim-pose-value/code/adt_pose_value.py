@@ -99,7 +99,7 @@ class AriaLocalPairs:
             self.camera = camera
         elif os.path.exists(os.path.join(seq_dir, "camera.json")):
             import sys as _sys
-            _sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "tools"))
+            _sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "tools"))
             from adt_camera import camera_from_json
             self.camera = camera_from_json(
                 os.path.join(seq_dir, "camera.json"), size)
