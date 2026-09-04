@@ -45,10 +45,12 @@ sys.path.insert(0, str(_HERE.parents[3]))
 sys.path.insert(0, str(_HERE.parents[1] / "h1-rim-pose-value" / "code"))
 sys.path.append(str(_HERE.parents[1] / "h5-rim-finetune" / "code"))
 sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_HERE.parents[1] / "common"))
 
 import importlib.util as _ilu  # noqa: E402
 import anchors as AN  # noqa: E402
 import raycal as RC  # noqa: E402
+import upright as U  # noqa: E402
 
 
 def _load(name, path):
@@ -139,7 +141,7 @@ def main(argv=None) -> None:
     bb = build_backbone("da3", weights="pretrained", device=a.device,
                         variant=a.variant)
     bb.install(None, cam, (h, w), patch_undistort=False, border_token=False,
-               dpt_grid=False, depth_convention="range")
+               dpt_grid=False, depth_convention="z")
     matcher = build_matcher(a.matcher, device=a.device)
     print(f"[h9] {s.name}: {len(s.frames)} frames, matcher={matcher.name}, "
           f"stride={a.stride}")
@@ -152,7 +154,7 @@ def main(argv=None) -> None:
     n_pairs_used = 0
     for n in s.frames:
         with torch.no_grad():
-            pr = bb.forward(s.src.image(n)[None, None].to(a.device)).depth[0]
+            pr = U.forward_range(bb, s.src.image(n).to(a.device), cos_t)
         pred = pr.float().cpu().numpy()
         gt = s.gt_range(n, cos_t).numpy()
         v = cone & (gt > 0) & (gt <= a.depth_max_m) & (pred > 1e-6)

@@ -51,9 +51,11 @@ sys.path.insert(0, str(_HERE.parents[3]))
 sys.path.insert(0, str(_HERE.parents[1] / "h1-rim-pose-value" / "code"))
 sys.path.append(str(_HERE.parents[1] / "h5-rim-finetune" / "code"))
 sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_HERE.parents[1] / "common"))
 
 import importlib.util as _ilu  # noqa: E402
 import rect_teacher as RT  # noqa: E402
+import upright as U  # noqa: E402
 
 
 def _load(name, path):
@@ -211,7 +213,7 @@ def main(argv=None) -> None:
                 install(view.pin, hw)
                 installed["hw"] = hw
             with torch.no_grad():
-                return bb.forward(warped[None, None]).depth[0]
+                return U.forward_z(bb, warped)
         for n in s.frames:
             d, info = rig.teach(forward_z, s.src.image(n).to(a.device))
             teacher[s.stem(n)] = d.float().cpu().numpy()
@@ -220,7 +222,7 @@ def main(argv=None) -> None:
         install(cam, (a.size, a.size))
         for n in s.frames:
             with torch.no_grad():
-                z = bb.forward(s.src.image(n)[None, None].to(a.device)).depth[0]
+                z = U.forward_z(bb, s.src.image(n).to(a.device))
             d, info = rig.roundtrip(z / cos_dev)
             teacher[s.stem(n)] = d.float().cpu().numpy()
             scales[s.stem(n)] = info["log_scale"]
@@ -248,7 +250,7 @@ def main(argv=None) -> None:
     for n in s.frames:
         stem = s.stem(n)
         with torch.no_grad():
-            zr = bb.forward(s.src.image(n)[None, None].to(a.device)).depth[0]
+            zr = U.forward_z(bb, s.src.image(n).to(a.device))
         raw = (zr / cos_dev).float().cpu().numpy()
         tea = teacher[stem]
         both = cov_np & (raw > 1e-6) & (tea > 1e-6)

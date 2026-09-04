@@ -35,10 +35,12 @@ sys.path.insert(0, str(_HERE.parents[1] / "h1-rim-pose-value" / "code"))
 sys.path.append(str(_HERE.parents[1] / "h5-rim-finetune" / "code"))
 sys.path.insert(0, str(_HERE.parents[1] / "h12-lens-jacobian" / "code"))
 sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_HERE.parents[1] / "common"))
 
 import importlib.util as _ilu  # noqa: E402
 import lora  # noqa: E402
 import lens_family as LF  # noqa: E402
+import upright as U  # noqa: E402
 import arms as A  # noqa: E402
 from film import FiLMConditioner  # noqa: E402
 
@@ -163,9 +165,9 @@ def main(argv=None) -> None:
                 with torch.no_grad():
                     if phase == "before":
                         with lora.lora_disabled(net):
-                            pz = bb.forward(img[None, None].to(a.device)).depth[0]
+                            pz = U.forward_z(bb, img.to(a.device))
                     else:
-                        pz = bb.forward(img[None, None].to(a.device)).depth[0]
+                        pz = U.forward_z(bb, img.to(a.device))
                 d = (pz.cpu() / g["cos"]).numpy()
                 valid = ((g["cone"] & g["valid"]).numpy() & (gt > 0)
                          & (gt <= a.depth_max_m) & (d > 1e-6))

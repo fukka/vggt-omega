@@ -30,11 +30,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]
                        / "h1-rim-pose-value" / "code"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
 
 from adt_pose_value import AriaLocalPairs  # noqa: E402
 from finetune.eval.metrics import align_depth  # noqa: E402
 from raytun3r.metrics import rotation_error_deg, translation_error_deg  # noqa: E402
 import lora  # noqa: E402
+import upright as U  # noqa: E402
 from train import Seq, camera_conjugation  # noqa: E402
 
 THETA_BINS = 8
@@ -84,7 +86,7 @@ def main(argv=None) -> None:
     bb = build_backbone("da3", weights="pretrained", device=args.device,
                         variant="small")
     bb.install(None, cam, (h, w), patch_undistort=False, border_token=False,
-               dpt_grid=False, depth_convention="range")
+               dpt_grid=False, depth_convention="z")
     net = bb.model if hasattr(bb, "model") else bb
     n_loaded = load_lora(net, args.lora)
     print(f"[eval] loaded LoRA into {n_loaded} layers from {args.lora}")
@@ -98,15 +100,13 @@ def main(argv=None) -> None:
         per_frame.setdefault(arm, [])
         for k, n in enumerate(s.frames):
             with torch.no_grad():
+                im = s.src.image(n).to(args.device)
                 if arm == "before":
                     with lora.lora_disabled(net):
-                        pred = bb.forward(
-                            s.src.image(n)[None, None].to(args.device))
+                        d = U.forward_range(bb, im, cos_t)
                 else:
-                    pred = bb.forward(
-                        s.src.image(n)[None, None].to(args.device))
-            pred.require_convention("range")
-            d = pred.depth[0].cpu().numpy()
+                    d = U.forward_range(bb, im, cos_t)
+            d = d.cpu().numpy()
             gr = s.gt_range(n, cos_t).numpy()
             valid = (cone.numpy() & (gr > 0)
                      & (gr <= args.depth_max_m) & (d > 1e-6))
@@ -184,10 +184,13 @@ def main(argv=None) -> None:
             for arm in ("before", "after"):
                 if arm == "before":
                     with lora.lora_disabled(net):
-                        pr = bb.forward(imgs)
+                        pr = bb.forward(U.to_model(imgs))
                 else:
-                    pr = bb.forward(imgs)
+                    pr = bb.forward(U.to_model(imgs))
+                # the turn rolled the camera frame; put the pose back where
+                # R_gt lives before comparing
                 R_hat, t_hat = pr.relative(0, 1)
+                R_hat, t_hat = U.unroll_R(R_hat), U.unroll_t(t_hat)
                 pose[arm]["rot"].append(
                     rotation_error_deg(R_hat.cpu().to(R_gt), R_gt))
                 pose[arm]["tdir"].append(

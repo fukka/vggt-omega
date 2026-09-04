@@ -53,11 +53,13 @@ sys.path.insert(0, str(_HERE.parents[1] / "h1-rim-pose-value" / "code"))
 sys.path.append(str(_HERE.parents[1] / "h5-rim-finetune" / "code"))
 sys.path.insert(0, str(_HERE.parents[1] / "h12-lens-jacobian" / "code"))
 sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_HERE.parents[1] / "common"))
 
 import importlib.util as _ilu  # noqa: E402
 import losses  # noqa: E402
 import lora  # noqa: E402
 import lens_family as LF  # noqa: E402
+import upright as U  # noqa: E402
 import arms as A  # noqa: E402
 from film import FiLMConditioner  # noqa: E402
 
@@ -192,7 +194,7 @@ def main(argv=None) -> None:
             if not bool(valid.any()):
                 continue
             current["field"] = None if a.arm == "none" else arm_fields[lens]
-            pred_z = bb.forward(img[None, None].to(a.device)).depth[0]
+            pred_z = U.forward_z(bb, img.to(a.device))
             pred = pred_z / g["cos"].to(a.device)
             # alpha=0: PLAIN log-L1. Rim weighting lost to its own control in H5.
             loss = losses.depth_loss(pred, gt, valid,

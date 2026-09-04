@@ -67,10 +67,12 @@ sys.path.insert(0, str(_HERE.parents[3]))
 sys.path.insert(0, str(_HERE.parents[1] / "h1-rim-pose-value" / "code"))
 sys.path.append(str(_HERE.parents[1] / "h5-rim-finetune" / "code"))
 sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_HERE.parents[1] / "common"))
 
 import importlib.util as _ilu  # noqa: E402
 import losses  # noqa: E402
 import lora  # noqa: E402
+import upright as U  # noqa: E402
 
 
 def _load(name, path):
@@ -180,7 +182,7 @@ def main(argv=None) -> None:
     cam = seqs[0].src.camera
     h = w = a.size
     bb.install(None, cam, (h, w), patch_undistort=False, border_token=False,
-               dpt_grid=False, depth_convention="range")
+               dpt_grid=False, depth_convention="z")
     net = bb.model if hasattr(bb, "model") else bb
     hits = lora.inject(net, LORA_PATTERNS, r=a.lora_r, alpha=2 * a.lora_r)
     assert hits, "LoRA matched nothing"
@@ -206,8 +208,7 @@ def main(argv=None) -> None:
         tot, cnt, t0 = 0.0, 0, time.time()
         for s, n in items:
             opt.zero_grad()
-            im = s.src.image(n)[None, None].to(a.device)
-            pred = bb.forward(im).depth[0]
+            pred = U.forward_range(bb, s.src.image(n).to(a.device), cos_t)
             # The label-free claim lives in this branch and nowhere else:
             # `s.gt_range` is reachable only under --arm gt.
             if a.arm == "gt":
