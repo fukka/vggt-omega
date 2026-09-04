@@ -1,0 +1,22 @@
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+[eval] loaded LoRA into 8 layers from /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-upright/rect/lora_last.pt
+
+depth joint AbsRel BEFORE -> AFTER:
+   0- 1 m  0.282>0.456 0.337>0.399 0.450>0.529 0.455>0.540 0.447>0.527 0.485>0.531 0.624>0.577 0.851>0.647
+   1- 2 m  0.251>0.284 0.256>0.309 0.256>0.320 0.216>0.269 0.208>0.245 0.222>0.232 0.221>0.219 0.255>0.242
+   2- 3 m  0.169>0.128 0.154>0.117 0.130>0.099 0.112>0.090 0.097>0.085 0.094>0.092 0.103>0.098 0.145>0.115
+   3- 5 m  0.140>0.095 0.129>0.087 0.114>0.082 0.098>0.074 0.082>0.067 0.077>0.070 0.097>0.081 0.152>0.106
+   5-10 m  0.109>0.081 0.140>0.102 0.145>0.100 0.132>0.095 0.111>0.086 0.088>0.076 0.090>0.079 0.127>0.107
+near_rim(<=2m,>=38deg): 0.402 -> 0.355 (-11.6%)
+near_center(<=2m,<=11deg): 0.268 -> 0.322 (+20.4%)
+center(<=11deg): 0.163 -> 0.140 (-13.8%)
+far(>=3m): 0.109 -> 0.086 (-21.0%)
+
+pose (adjacent pairs, official calibration GT):
+  before: rot median 7.07 deg, RRA@15 0.864, tdir median 8.85, RTA@15 0.644 (n=59)
+  after : rot median 6.83 deg, RRA@15 0.881, tdir median 11.12, RTA@15 0.593 (n=59)
+
+[eval] wrote /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-upright/evalTRAIN_rect_seq133.json
+MARKER_evalTRAIN_rect_seq133=0

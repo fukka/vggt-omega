@@ -1,0 +1,27 @@
+[h14/roundtrip] 4 sequences, 240 frames
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+[h14/roundtrip] LoRA 122.9k params, scale_align=True
+[h14/roundtrip] ep00 depth 0.0009 (240 steps, 96.5s)
+[h14/roundtrip] ep01 depth 0.0010 (240 steps, 24.2s)
+[h14/roundtrip] ep02 depth 0.0010 (240 steps, 22.5s)
+[h14/roundtrip] ep03 depth 0.0009 (240 steps, 21.5s)
+[h14/roundtrip] ep04 depth 0.0011 (240 steps, 24.1s)
+[h14/roundtrip] ep05 depth 0.0011 (240 steps, 23.3s)
+[h14/roundtrip] ep06 depth 0.0010 (240 steps, 11.2s)
+[h14/roundtrip] ep07 depth 0.0009 (240 steps, 7.8s)
+[h14/roundtrip] ep08 depth 0.0009 (240 steps, 8.2s)
+[h14/roundtrip] ep09 depth 0.0010 (240 steps, 8.2s)
+[h14/roundtrip] ep10 depth 0.0010 (240 steps, 8.4s)
+[h14/roundtrip] ep11 depth 0.0011 (240 steps, 7.9s)
+[h14/roundtrip] ep12 depth 0.0013 (240 steps, 8.3s)
+[h14/roundtrip] ep13 depth 0.0010 (240 steps, 7.7s)
+[h14/roundtrip] ep14 depth 0.0009 (240 steps, 7.7s)
+[h14/roundtrip] ep15 depth 0.0009 (240 steps, 8.3s)
+[h14/roundtrip] ep16 depth 0.0009 (240 steps, 7.8s)
+[h14/roundtrip] ep17 depth 0.0009 (240 steps, 7.8s)
+[h14/roundtrip] ep18 depth 0.0009 (240 steps, 8.9s)
+[h14/roundtrip] ep19 depth 0.0009 (240 steps, 8.4s)
+[h14/roundtrip] done -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-upright/roundtrip
+MARKER_train_roundtrip=0

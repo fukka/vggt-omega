@@ -1,0 +1,27 @@
+[h14/rect_ring] 4 sequences, 240 frames
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+[h14/rect_ring] LoRA 122.9k params, scale_align=True
+[h14/rect_ring] ep00 depth 0.1063 (240 steps, 96.8s)
+[h14/rect_ring] ep01 depth 0.0965 (240 steps, 22.9s)
+[h14/rect_ring] ep02 depth 0.0920 (240 steps, 21.9s)
+[h14/rect_ring] ep03 depth 0.0881 (240 steps, 22.1s)
+[h14/rect_ring] ep04 depth 0.0859 (240 steps, 21.6s)
+[h14/rect_ring] ep05 depth 0.0836 (240 steps, 20.9s)
+[h14/rect_ring] ep06 depth 0.0811 (240 steps, 22.7s)
+[h14/rect_ring] ep07 depth 0.0783 (240 steps, 19.9s)
+[h14/rect_ring] ep08 depth 0.0757 (240 steps, 20.3s)
+[h14/rect_ring] ep09 depth 0.0738 (240 steps, 22.6s)
+[h14/rect_ring] ep10 depth 0.0720 (240 steps, 20.9s)
+[h14/rect_ring] ep11 depth 0.0708 (240 steps, 21.2s)
+[h14/rect_ring] ep12 depth 0.0694 (240 steps, 17.9s)
+[h14/rect_ring] ep13 depth 0.0677 (240 steps, 22.6s)
+[h14/rect_ring] ep14 depth 0.0664 (240 steps, 19.9s)
+[h14/rect_ring] ep15 depth 0.0653 (240 steps, 22.4s)
+[h14/rect_ring] ep16 depth 0.0642 (240 steps, 22.0s)
+[h14/rect_ring] ep17 depth 0.0632 (240 steps, 24.9s)
+[h14/rect_ring] ep18 depth 0.0614 (240 steps, 25.5s)
+[h14/rect_ring] ep19 depth 0.0606 (240 steps, 21.5s)
+[h14/rect_ring] done -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-upright/rect_ring
+MARKER_train_rect_ring=0
