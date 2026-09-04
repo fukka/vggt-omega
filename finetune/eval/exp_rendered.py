@@ -172,16 +172,23 @@ def evaluate(model, root: str, setting: str, seq_len: int, device: torch.device,
             if m.sum() < 100:
                 continue
             pa = align_depth(dp[fi], gt, m, mode=align)
-            per_frame.append(depth_metrics(pa, gt, m))
+            met = depth_metrics(pa, gt, m)
+            # Key on the frame dir so the two arms of a projection can be PAIRED:
+            # they see the same scene, so an unpaired test throws away the variance
+            # that the pairing removes and badly understates significance.
+            met["_dir"] = s["dirs"][fi]
+            per_frame.append(met)
             if qual_dir and wi == 0 and fi == 0:
                 _save_qual(qual_dir, setting, seq_len, s["images"][fi].numpy(),
                            pa, gt, m)
     if not per_frame:
         return {}
     out = {k: float(np.mean([f[k] for f in per_frame]))
-           for k in per_frame[0] if isinstance(per_frame[0][k], (int, float))}
+           for k in per_frame[0]
+           if not k.startswith("_") and isinstance(per_frame[0][k], (int, float))}
     out["n_frames"] = len(per_frame)
     out["n_windows"] = len(ds)
+    out["_per_frame"] = {f["_dir"]: float(f["AbsRel"]) for f in per_frame}
     if fovs:
         f = np.concatenate(fovs, 0)
         out["fov_h_deg"] = float(f[:, 0].mean())
@@ -212,6 +219,28 @@ def _save_qual(qual_dir: str, setting: str, seq_len: int, img_chw: np.ndarray,
     plt.close(fig)
 
 
+def paired_bootstrap(a: Dict[str, float], b: Dict[str, float],
+                     n_boot: int = 10000, seed: int = 0) -> Optional[dict]:
+    """Bootstrap CI for mean(a - b) over frames present in BOTH arms.
+
+    Paired, because the two arms are the same scenes: resampling frames
+    independently would reintroduce the between-scene variance that pairing
+    removes, and understate significance. Returns None if the arms share no
+    frames (which would itself mean the comparison is not what it claims).
+    """
+    keys = sorted(set(a) & set(b))
+    if len(keys) < 3:
+        return None
+    d = np.array([a[k] - b[k] for k in keys], dtype=float)
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(d), size=(n_boot, len(d)))
+    boots = d[idx].mean(axis=1)
+    lo, hi = np.percentile(boots, [2.5, 97.5])
+    return {"n_pairs": len(d), "mean": float(d.mean()),
+            "ci_lo": float(lo), "ci_hi": float(hi),
+            "excludes_zero": bool(lo > 0 or hi < 0)}
+
+
 def report(results: Dict[str, Dict[str, dict]], out_dir: str) -> str:
     """Per-setting table plus the contrasts that actually answer the question."""
     lines = ["", "=" * 86,
@@ -229,15 +258,37 @@ def report(results: Dict[str, Dict[str, dict]], out_dir: str) -> str:
                          f"{r.get('delta1',float('nan')):>10.4f}{r.get('fov_h_deg',float('nan')):>9.1f}")
     lines.append("")
     for mode, res in results.items():
-        def ar(s):
-            return (res.get(s) or {}).get("AbsRel", float("nan"))
-        fe = ar("fisheye_full") - ar("fisheye_masked")   # oracle content effect, fisheye
-        pe = ar("persp_full") - ar("persp_masked")       # oracle content effect, perspective
-        lines += [f"[{mode}] true content vs black:",
-                  f"    fisheye  (full - masked): {fe:+.4f}",
-                  f"    persp    (full - masked): {pe:+.4f}",
-                  f"    interaction (persp - fisheye): {pe - fe:+.4f}",
-                  "      negative => the true content helps MORE once the projection is perspective"]
+        def pf(s):
+            return (res.get(s) or {}).get("_per_frame", {})
+        lines.append(f"[{mode}] true content vs black  (AbsRel full - masked; "
+                     f"negative = true content helps):")
+        eff = {}
+        for proj in ("fisheye", "persp"):
+            bs = paired_bootstrap(pf(f"{proj}_full"), pf(f"{proj}_masked"))
+            if bs is None:
+                lines.append(f"    {proj:<8} (no paired frames)")
+                continue
+            eff[proj] = bs
+            star = "  SIGNIFICANT" if bs["excludes_zero"] else "  n.s. (CI spans 0)"
+            lines.append(f"    {proj:<8} {bs['mean']:+.4f}  95% CI "
+                         f"[{bs['ci_lo']:+.4f}, {bs['ci_hi']:+.4f}]  "
+                         f"n={bs['n_pairs']}{star}")
+        if len(eff) == 2:
+            # Interaction, paired at frame level: (full-masked)_persp - (full-masked)_fisheye
+            fk = sorted(set(pf("fisheye_full")) & set(pf("fisheye_masked")))
+            pk = sorted(set(pf("persp_full")) & set(pf("persp_masked")))
+            common = sorted(set(fk) & set(pk))
+            if len(common) >= 3:
+                d = np.array([(pf("persp_full")[k] - pf("persp_masked")[k])
+                              - (pf("fisheye_full")[k] - pf("fisheye_masked")[k])
+                              for k in common])
+                rng = np.random.default_rng(1)
+                b = d[rng.integers(0, len(d), size=(10000, len(d)))].mean(axis=1)
+                lo, hi = np.percentile(b, [2.5, 97.5])
+                sig = "SIGNIFICANT" if (lo > 0 or hi < 0) else "n.s. (CI spans 0)"
+                lines += [f"    INTERACTION {d.mean():+.4f}  95% CI [{lo:+.4f}, {hi:+.4f}]"
+                          f"  n={len(d)}  {sig}",
+                          "      negative => true content helps MORE in the perspective domain"]
     txt = "\n".join(lines)
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "report.txt"), "w") as fh:
