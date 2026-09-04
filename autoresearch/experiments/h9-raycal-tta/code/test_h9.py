@@ -245,48 +245,64 @@ def test_the_correction_is_monotone_so_it_cannot_be_many_to_one():
     assert bool(np.all(np.diff(out) > 0))
 
 
-def test_depth_balancing_fixes_a_bin_whose_anchors_are_all_far():
-    """The diagnosed failure, reproduced and then removed.
+def test_one_line_per_bin_cannot_represent_the_measured_curve():
+    """Why the first two fixes failed, as a number.
 
-    The first attempt at this test used a PURE log-linear field, and the
-    balanced arm came out worse. That was the test's fault and it is worth
-    recording: with an exactly straight relation, a line fitted on far anchors
-    extrapolates to near content perfectly, so there is no bias to remove and
-    balancing only throws away effective sample size.
-
-    The real field is not straight. run_009 measured 0-1 m content placed
-    1.7-3.3x too far and 5-10 m content 1.4-1.8x too near -- a CURVE in log-log.
-    Against a curve, a line fitted only over 4-9 m mis-extrapolates onto near
-    content, which is exactly the near_centre damage H9 showed, and balancing
-    the depth histogram is what fixes it.
+    run_009 measured 0-1 m content placed 1.7-3.3x too far and 5-10 m content
+    1.4-1.8x too near: a CURVE in log-log, not a line. Two attempts assumed the
+    problem was sampling -- fit the same line on better-distributed anchors --
+    and both were refuted by this synthetic before any GPU time was spent:
+    depth-balancing left ~25% error, as does the plain line. The model class is
+    wrong, not the sample.
     """
-    rng = np.random.default_rng(4)
+    theta, true_r, pred, field = _curved_scene()
+    for arm in ("raycal", "raycal_bal"):
+        f = RC.fit_field(arm, theta, pred, true_r, 0.95)
+        th_t, tr_t, pr_t = _near_centre_probe(field)
+        e = float(np.abs(RC.apply_field(pr_t, th_t, f) / tr_t - 1).mean())
+        assert e > 0.10, f"{arm} unexpectedly fits the curve ({e:.3f})"
+
+
+def test_a_curved_inverse_fit_does_represent_it():
+    """The third hypothesis, and the one the synthetic supports.
+
+    Fit the direction the correction is APPLIED in -- log(true) on log(pred) --
+    and allow one degree of curvature. Rejected if it turns over inside the
+    observed range, because a non-monotone correction is run_010's many-to-one
+    failure again.
+    """
+    theta, true_r, pred, field = _curved_scene()
+    th_t, tr_t, pr_t = _near_centre_probe(field)
+    errs = {}
+    for arm in ("raycal", "raycal_inv", "raycal_quad"):
+        f = RC.fit_field(arm, theta, pred, true_r, 0.95)
+        errs[arm] = float(np.abs(RC.apply_field(pr_t, th_t, f) / tr_t - 1).mean())
+    assert errs["raycal_quad"] < 0.5 * errs["raycal"], errs
+    assert errs["raycal_quad"] < errs["raycal_inv"], errs
+
+
+def _curved_scene(seed: int = 4):
+    rng = np.random.default_rng(seed)
     n = 12000
     theta = rng.uniform(0, 0.95, n)
     true_r = np.exp(rng.uniform(np.log(0.4), np.log(9.0), n))
-    centre = theta < 0.25
-    drop = centre & (true_r < 4.0)          # the real sampling bias: walls only
+    drop = (theta < 0.25) & (true_r < 4.0)       # centre anchors are walls only
     theta, true_r = theta[~drop], true_r[~drop]
 
-    # curved in log-log, as measured
     def field(th, tr):
         lt = np.log(tr)
-        g = 0.95 - 0.55 * (th / 0.95)
-        return np.exp(g * lt + 0.06 * lt ** 2)
+        return np.exp((0.95 - 0.55 * (th / 0.95)) * lt + 0.06 * lt ** 2)
 
-    pred = field(theta, true_r)
-    plain = RC.fit_field("raycal", theta, pred, true_r, 0.95)
-    bal = RC.fit_field("raycal_bal", theta, pred, true_r, 0.95)
+    return theta, true_r, field(theta, true_r), field
 
+
+def _near_centre_probe(field):
     th_t = np.full(400, 0.12)
     tr_t = np.exp(np.linspace(np.log(0.4), np.log(2.0), 400))
-    pr_t = field(th_t, tr_t)
-    e_plain = float(np.abs(RC.apply_field(pr_t, th_t, plain) / tr_t - 1).mean())
-    e_bal = float(np.abs(RC.apply_field(pr_t, th_t, bal) / tr_t - 1).mean())
-    assert e_bal < e_plain, f"balanced {e_bal:.4f} vs plain {e_plain:.4f}"
+    return th_t, tr_t, field(th_t, tr_t)
 
 
-def test_the_balanced_arm_is_still_one_monotone_line_per_bin():
+def test_every_arm_stays_monotone():
     """It must not become H2.1: indexing by predicted depth is what killed
     run_010, and balancing the FIT does not do that."""
     rng = np.random.default_rng(5)
@@ -294,7 +310,7 @@ def test_the_balanced_arm_is_still_one_monotone_line_per_bin():
     theta = rng.uniform(0, 0.95, n)
     true_r = np.exp(rng.uniform(np.log(0.4), np.log(9.0), n))
     pred = np.exp((0.95 - 0.55 * (theta / 0.95)) * np.log(true_r))
-    f = RC.fit_field("raycal_bal", theta, pred, true_r, 0.95)
-    assert all(g > 0 for g in f["g"])
-    out = RC.apply_field(np.linspace(0.2, 9.0, 500), np.full(500, 0.5), f)
-    assert bool(np.all(np.diff(out) > 0))
+    for arm in ("raycal", "raycal_bal", "raycal_inv", "raycal_quad"):
+        f = RC.fit_field(arm, theta, pred, true_r, 0.95)
+        out = RC.apply_field(np.linspace(0.2, 9.0, 500), np.full(500, 0.5), f)
+        assert bool(np.all(np.diff(out) > 0)), f"{arm} is not monotone"

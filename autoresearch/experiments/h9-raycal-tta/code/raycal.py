@@ -60,11 +60,22 @@ import numpy as np
 
 __all__ = ["fit_field", "apply_field", "ARMS"]
 
-ARMS = ("raycal", "raycal_bal", "global", "shuffled", "none")
+ARMS = ("raycal", "raycal_bal", "raycal_inv", "raycal_quad",
+        "global", "shuffled", "none")
 
 #: A bin whose fitted gain leaves this range is not describing a compression;
 #: it is describing noise, and it would invert or explode the correction.
 G_MIN, G_MAX = 0.15, 3.0
+
+#: The two arms below fit the INVERSE relation -- log(true) on log(pred) --
+#: because that is the direction the correction is applied in, so least squares
+#: minimises the error that is actually paid. `raycal_quad` additionally allows
+#: a curve, which is what the field measured in run_009 actually is: 0-1 m
+#: content placed 1.7-3.3x too far and 5-10 m content 1.4-1.8x too near is not
+#: a straight line in log-log. One line per theta bin cannot represent that,
+#: which is a model-class failure, not a sampling one -- `raycal_bal` was built
+#: for the sampling reading and its own test refuted it.
+INV_ARMS = ("raycal_inv", "raycal_quad")
 
 
 def _fit_line(log_pred: np.ndarray, log_true: np.ndarray) -> Tuple[float, float]:
@@ -123,6 +134,21 @@ def fit_field(arm: str, theta: np.ndarray, pred: np.ndarray, true: np.ndarray,
         th = np.random.default_rng(seed).permutation(theta)
 
     idx = np.clip(np.digitize(th, edges) - 1, 0, n_bins - 1)
+
+    if arm in INV_ARMS:
+        deg = 2 if arm == "raycal_quad" else 1
+        a0, b0, q0 = _fit_inverse(lp, lt, deg)
+        A, B, Q, ns = [], [], [], []
+        for b in range(n_bins):
+            m = idx == b
+            if int(m.sum()) < min_per_bin:
+                A.append(a0); B.append(b0); Q.append(q0); ns.append(int(m.sum()))
+                continue
+            aa, bb, qq = _fit_inverse(lp[m], lt[m], deg)
+            A.append(aa); B.append(bb); Q.append(qq); ns.append(int(m.sum()))
+        return {"arm": arm, "direction": "inverse", "edges": edges.tolist(),
+                "a": A, "b": B, "q": Q, "n": ns, "n_anchors": int(theta.size)}
+
     # Depth-balancing weights: inside each theta bin, weight anchors so the
     # depth histogram is flat in log-depth. Computed against a COMMON set of
     # depth edges so every bin's line is fitted over the same range.
@@ -156,17 +182,45 @@ def fit_field(arm: str, theta: np.ndarray, pred: np.ndarray, true: np.ndarray,
             "g_global": g_glob, "c_global": c_glob, "n_anchors": int(theta.size)}
 
 
-def apply_field(pred: np.ndarray, theta: np.ndarray, field: Dict) -> np.ndarray:
-    """Invert the fitted line at every pixel: ``log(true) = (log(pred)-c)/g``.
+def _fit_inverse(lp: np.ndarray, lt: np.ndarray, deg: int) -> Tuple[float, float, float]:
+    """``log(true) = a + b log(pred) [+ q log(pred)^2]``, monotone-checked.
 
-    ``(g, c)`` are interpolated LINEARLY in theta between bin centres rather
+    Returned as ``(a, b, q)`` with ``q = 0`` for ``deg == 1``. If the quadratic
+    turns over inside the observed range it is rejected and the line is used:
+    a non-monotone correction can send two different predictions to the same
+    depth, which is precisely the many-to-one failure that killed run_010.
+    """
+    if lp.size < deg + 1:
+        return 0.0, 1.0, 0.0
+    co = np.polyfit(lp, lt, deg)
+    if deg == 1:
+        b, a = float(co[0]), float(co[1])
+        return a, b, 0.0
+    q, b, a = float(co[0]), float(co[1]), float(co[2])
+    lo, hi = float(lp.min()), float(lp.max())
+    if (b + 2 * q * lo) <= 1e-6 or (b + 2 * q * hi) <= 1e-6:
+        return _fit_inverse(lp, lt, 1)
+    return a, b, q
+
+
+def apply_field(pred: np.ndarray, theta: np.ndarray, field: Dict) -> np.ndarray:
+    """Map a predicted depth to a corrected one, per incidence angle.
+
+    Coefficients are interpolated LINEARLY in theta between bin centres rather
     than applied piecewise-constant: a piecewise-constant correction writes
     visible rings into the depth map at the bin edges, and a ring is a radial
     artefact in an experiment whose whole subject is radial artefacts.
     """
     edges = np.asarray(field["edges"], float)
     mid = 0.5 * (edges[:-1] + edges[1:])
-    g = np.interp(theta, mid, np.asarray(field["g"], float))
-    c = np.interp(theta, mid, np.asarray(field["c"], float))
-    out = np.exp((np.log(np.clip(pred, 1e-6, None)) - c) / np.clip(g, G_MIN, G_MAX))
+    lp = np.log(np.clip(pred, 1e-6, None))
+    if field.get("direction") == "inverse":
+        a = np.interp(theta, mid, np.asarray(field["a"], float))
+        b = np.interp(theta, mid, np.asarray(field["b"], float))
+        q = np.interp(theta, mid, np.asarray(field.get("q", [0.0] * len(mid)), float))
+        out = np.exp(a + b * lp + q * lp * lp)
+    else:
+        g = np.interp(theta, mid, np.asarray(field["g"], float))
+        c = np.interp(theta, mid, np.asarray(field["c"], float))
+        out = np.exp((lp - c) / np.clip(g, G_MIN, G_MAX))
     return np.where(pred > 1e-6, out, pred)
