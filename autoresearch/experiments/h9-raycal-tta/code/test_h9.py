@@ -248,33 +248,41 @@ def test_the_correction_is_monotone_so_it_cannot_be_many_to_one():
 def test_depth_balancing_fixes_a_bin_whose_anchors_are_all_far():
     """The diagnosed failure, reproduced and then removed.
 
-    H9's first run beat both controls 6/6 and still damaged near_centre by
-    +72%/+57%. The mechanism is sampling: at small theta almost every anchor is
-    far content (walls), so the centre bins' lines are fitted over a narrow far
-    range and mis-extrapolate onto near content. Here the centre bin's anchors
-    are drawn ONLY from 4-9 m while the true field is the same everywhere; the
-    balanced arm has to do better on the near content the bin never saw.
+    The first attempt at this test used a PURE log-linear field, and the
+    balanced arm came out worse. That was the test's fault and it is worth
+    recording: with an exactly straight relation, a line fitted on far anchors
+    extrapolates to near content perfectly, so there is no bias to remove and
+    balancing only throws away effective sample size.
+
+    The real field is not straight. run_009 measured 0-1 m content placed
+    1.7-3.3x too far and 5-10 m content 1.4-1.8x too near -- a CURVE in log-log.
+    Against a curve, a line fitted only over 4-9 m mis-extrapolates onto near
+    content, which is exactly the near_centre damage H9 showed, and balancing
+    the depth histogram is what fixes it.
     """
     rng = np.random.default_rng(4)
-    n = 8000
+    n = 12000
     theta = rng.uniform(0, 0.95, n)
     true_r = np.exp(rng.uniform(np.log(0.4), np.log(9.0), n))
-    # centre anchors exist only far away -- the real sampling bias
     centre = theta < 0.25
-    drop = centre & (true_r < 4.0)
+    drop = centre & (true_r < 4.0)          # the real sampling bias: walls only
     theta, true_r = theta[~drop], true_r[~drop]
-    g_of = lambda th: 0.95 - 0.55 * (th / 0.95)
-    pred = np.exp(g_of(theta) * np.log(true_r))
 
+    # curved in log-log, as measured
+    def field(th, tr):
+        lt = np.log(tr)
+        g = 0.95 - 0.55 * (th / 0.95)
+        return np.exp(g * lt + 0.06 * lt ** 2)
+
+    pred = field(theta, true_r)
     plain = RC.fit_field("raycal", theta, pred, true_r, 0.95)
     bal = RC.fit_field("raycal_bal", theta, pred, true_r, 0.95)
 
-    # score on NEAR content at the centre, which the bin's anchors never covered
     th_t = np.full(400, 0.12)
     tr_t = np.exp(np.linspace(np.log(0.4), np.log(2.0), 400))
-    pr_t = np.exp(g_of(th_t) * np.log(tr_t))
-    e_plain = np.abs(RC.apply_field(pr_t, th_t, plain) / tr_t - 1).mean()
-    e_bal = np.abs(RC.apply_field(pr_t, th_t, bal) / tr_t - 1).mean()
+    pr_t = field(th_t, tr_t)
+    e_plain = float(np.abs(RC.apply_field(pr_t, th_t, plain) / tr_t - 1).mean())
+    e_bal = float(np.abs(RC.apply_field(pr_t, th_t, bal) / tr_t - 1).mean())
     assert e_bal < e_plain, f"balanced {e_bal:.4f} vs plain {e_plain:.4f}"
 
 
