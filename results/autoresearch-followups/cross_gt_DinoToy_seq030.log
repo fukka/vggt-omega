@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/user/f.zhang2/projects/vggt-omega-organized/autoresearch/experiments/h5-rim-finetune/code/eval_lora.py", line 234, in <module>
+    main()
+  File "/user/f.zhang2/projects/vggt-omega-organized/autoresearch/experiments/h5-rim-finetune/code/eval_lora.py", line 75, in main
+    s = Seq(os.path.expanduser(args.seq), args.size, args.max_frames)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/user/f.zhang2/projects/vggt-omega-organized/autoresearch/experiments/h5-rim-finetune/code/train.py", line 59, in __init__
+    self.src = AriaLocalPairs(seq_dir, size=size)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/user/f.zhang2/projects/vggt-omega-organized/autoresearch/experiments/h1-rim-pose-value/code/adt_pose_value.py", line 103, in __init__
+    from adt_camera import camera_from_json
+ModuleNotFoundError: No module named 'adt_camera'
+MARKER_cross_gt_DinoToy_seq030=1

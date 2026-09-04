@@ -1,0 +1,21 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+[97m[INFO ] using MLP layer as FFN[0m
+[eval] loaded LoRA into 8 layers from results/autoresearch-h14-upright/rect/lora_last.pt
+
+depth joint AbsRel BEFORE -> AFTER:
+   0- 1 m  4.179>4.740 4.064>4.661 3.288>3.877 2.333>2.764 1.360>1.571 0.364>0.383 0.265>0.206 0.533>0.397
+   1- 2 m  0.247>0.193 0.238>0.210 0.205>0.189 0.140>0.131 0.100>0.115 0.107>0.122 0.134>0.106 0.199>0.121
+   2- 3 m  0.302>0.247 0.209>0.169 0.139>0.119 0.141>0.114 0.110>0.085 0.076>0.063 0.066>0.052 0.136>0.071
+   3- 5 m  0.093>0.044 0.095>0.049 0.100>0.059 0.097>0.063 0.067>0.048 0.040>0.037 0.048>0.041 0.111>0.073
+   5-10 m  0.000>0.000 0.000>0.000 0.000>0.000 0.051>0.034 0.050>0.040 0.018>0.021 0.033>0.023 0.114>0.077
+near_rim(<=2m,>=38deg): 0.192 -> 0.137 (-28.5%)
+near_center(<=2m,<=11deg): 2.145 -> 2.420 (+12.8%)
+center(<=11deg): 0.369 -> 0.365 (-1.2%)
+far(>=3m): 0.075 -> 0.051 (-31.1%)
+
+pose (adjacent pairs, official calibration GT):
+  before: rot median 0.94 deg, RRA@15 1.000, tdir median 72.44, RTA@15 0.019 (n=54)
+  after : rot median 1.46 deg, RRA@15 1.000, tdir median 80.71, RTA@15 0.019 (n=54)
+
+[eval] wrote /user/f.zhang2/projects/vggt-omega-organized/autoresearch/experiments/h5-rim-finetune/results/autoresearch-followups/cross_rect_DinoToy.json
