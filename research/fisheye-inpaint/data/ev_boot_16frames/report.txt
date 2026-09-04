@@ -1,0 +1,25 @@
+
+======================================================================================
+VGGT-Omega on rendered ADT — 4 settings x single/multi-frame
+(AbsRel lower better; graded on the MASKED arm's region in both arms)
+======================================================================================
+setting           mode        n    AbsRel     RMSE    delta1    fov_h
+fisheye_full      single     16    0.0717    0.160    0.9463     87.8
+fisheye_masked    single     16    0.1743    0.388    0.7619     88.4
+persp_full        single     16    0.1150    0.240    0.8351    110.9
+persp_masked      single     16    0.1610    0.339    0.7691    110.1
+fisheye_full      8-frame    16    0.0715    0.144    0.9629     86.8
+fisheye_masked    8-frame    16    0.0753    0.182    0.9451     87.9
+persp_full        8-frame    16    0.0589    0.142    0.9683    110.1
+persp_masked      8-frame    16    0.1104    0.272    0.8493    110.0
+
+[single] true content vs black  (AbsRel full - masked; negative = true content helps):
+    fisheye  -0.1025  95% CI [-0.1564, -0.0529]  n=16  SIGNIFICANT
+    persp    -0.0460  95% CI [-0.0937, -0.0146]  n=16  SIGNIFICANT
+    INTERACTION +0.0566  95% CI [+0.0177, +0.0999]  n=16  SIGNIFICANT
+      negative => true content helps MORE in the perspective domain
+[8-frame] true content vs black  (AbsRel full - masked; negative = true content helps):
+    fisheye  -0.0038  95% CI [-0.0091, +0.0012]  n=16  n.s. (CI spans 0)
+    persp    -0.0515  95% CI [-0.0895, -0.0188]  n=16  SIGNIFICANT
+    INTERACTION -0.0478  95% CI [-0.0866, -0.0144]  n=16  SIGNIFICANT
+      negative => true content helps MORE in the perspective domain
