@@ -61,6 +61,20 @@ __all__ = ["UPRIGHT_K", "to_model", "from_model", "unroll_R", "unroll_t",
 #: Quarter turns (`torch.rot90`) taking a stored ADT frame to upright.
 UPRIGHT_K = 3
 
+#: Which way the roll goes when undoing it on a predicted pose. Determined by
+#: measurement, not by derivation, because getting it backwards is silent --
+#: it produces a plausible-looking pose that is simply wrong. On seq136, 40
+#: adjacent pairs, frozen DA3-Small, median rotation error / RRA@15:
+#:
+#:     unrotated (what every run did)   12.07 deg   0.550
+#:     upright, no unroll               28.93 deg   0.125
+#:     upright, unroll sign=+1          40.68 deg   0.075
+#:     upright, unroll sign=-1           5.77 deg   0.925   <-
+#:
+#: So the turn more than halves the pose error as well as the depth error, and
+#: the two wrong choices are both worse than not turning at all.
+UNROLL_SIGN = -1.0
+
 
 def to_model(x: Tensor, k: int = UPRIGHT_K) -> Tensor:
     """Stored frame -> upright. Works on (..., H, W)."""
@@ -78,7 +92,7 @@ def _roll(k: int, sign: float) -> Tensor:
     return torch.tensor([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
 
 
-def unroll_R(R: Tensor, k: int = UPRIGHT_K, sign: float = 1.0) -> Tensor:
+def unroll_R(R: Tensor, k: int = UPRIGHT_K, sign: float = UNROLL_SIGN) -> Tensor:
     """A rotation predicted in the upright frame, expressed in the stored one.
 
     Turning the image rolls the camera frame about its optical axis, so a
@@ -91,7 +105,7 @@ def unroll_R(R: Tensor, k: int = UPRIGHT_K, sign: float = 1.0) -> Tensor:
     return Rz.transpose(0, 1) @ R @ Rz
 
 
-def unroll_t(t: Tensor, k: int = UPRIGHT_K, sign: float = 1.0) -> Tensor:
+def unroll_t(t: Tensor, k: int = UPRIGHT_K, sign: float = UNROLL_SIGN) -> Tensor:
     Rz = _roll(k, sign).to(t.dtype).to(t.device)
     return t @ Rz            # rows are vectors: t Rz == (Rz^T t^T)^T
 
