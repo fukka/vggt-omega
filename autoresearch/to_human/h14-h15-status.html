@@ -519,13 +519,16 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
             <td class="num">2.58</td><td class="num">2.04</td></tr>
         <tr><td class="mono">vggt (1B)</td><td class="num">0.1730</td><td class="num good">0.1277</td><td class="num">−26.2%</td>
             <td class="num">2.49</td><td class="num">2.57</td></tr>
+        <tr><td class="mono">vggt_omega</td><td class="num">0.0993</td><td class="num good">0.0804</td><td class="num">−19.0%</td>
+            <td class="num">2.15</td><td class="num">2.33</td></tr>
       </tbody>
     </table>
   </div>
   <div class="col">
     <p style="margin-top:16px">
       <strong>①朝向的代价对每个模型都真实存在，但大小差 2.5 倍。</strong>
-      DA3-Small 掉 65.6%，DA3-Large 57.5%，VGGT 只掉 26.2% —— VGGT 的抗旋转能力是 DA3-Small 的两倍多。
+      DA3-Small 掉 65.6%，DA3-Large 57.5%，VGGT 26.2%，VGGT-Ω 只掉 19.0% ——
+      <strong>四个模型之间差 3.5 倍</strong>，而且这和模型大小没有简单关系：VGGT-Ω 既是最抗旋转的，也是绝对精度最高的。
     </p>
     <p>
       <strong>②真正要紧的是那个比值。</strong>DA3-Small 的 <span class="mono">5.28</span> 掉到 <span class="mono">2.13</span>，
@@ -536,7 +539,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       <span class="eyebrow">所以正确的说法是</span>
       <p>
         "边缘惩罚是朝向假象"作为<strong>一般性论断是错的</strong>；
-        "边缘惩罚是真的"在正立下以 <strong>2.0–2.6×</strong> 的规模在三个 backbone 上都成立。
+        "边缘惩罚是真的"在正立下以 <strong>2.0–2.6×</strong> 的规模在<strong>四个 backbone 上全部成立</strong>。
         本项目特殊的地方在于：<strong>它跑在 DA3-Small 上，三者中抗旋转最差的那个</strong>，
         它表面上的 5.28× 有大约一半是假象。
       </p>
@@ -588,8 +591,10 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       </p>
     </div>
     <p style="color:var(--ink-faint);font-size:.9rem">
-      VGGT-Ω（本项目测得受控边缘惩罚最大、最高上限的那个）这一行还缺 ——
-      它的权重是门控检查点而不是 hub 名，第一次跑时去找了一个叫 <code>pretrained</code> 的文件。已修，单独在跑。
+      VGGT-Ω 的注意事项：它的 patch 是 16，所以跑在 512 px / 16 帧，另外三个是 504 / 20 帧。
+      <strong>同一模型内的旋转比较不受影响</strong>，但绝对值那一列和另外三个不是严格同条件，不要当排名读。
+      （历史注记：这一行第一次跑时还缺 ——
+      —— 它的权重是门控检查点而不是 hub 名，去找了一个叫 <code>pretrained</code> 的文件。已修。）
     </p>
   </div>
 </section>
