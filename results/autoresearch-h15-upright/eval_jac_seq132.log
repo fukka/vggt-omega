@@ -1,0 +1,45 @@
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[97m[INFO ] using MLP layer as FFN[0m
+[h15/jac] train    aria_kb4
+    near_rim(<=2m,>=38deg): 0.4069 -> 0.2436 (-40.13%)
+    near_center(<=2m,<=11deg): 0.1706 -> 0.3341 (+95.89%)
+    center(<=11deg): 0.1730 -> 0.2466 (+42.53%)
+    far(>=3m): 0.1762 -> 0.1038 (-41.09%)
+[h15/jac] train    equidistant
+    near_rim(<=2m,>=38deg): 0.4585 -> 0.2585 (-43.62%)
+    near_center(<=2m,<=11deg): 0.1561 -> 0.2999 (+92.15%)
+    center(<=11deg): 0.1673 -> 0.2251 (+34.54%)
+    far(>=3m): 0.1902 -> 0.1058 (-44.38%)
+[h15/jac] train    orthographic
+    near_rim(<=2m,>=38deg): 0.6003 -> 0.3127 (-47.91%)
+    near_center(<=2m,<=11deg): 0.1549 -> 0.2826 (+82.41%)
+    center(<=11deg): 0.1728 -> 0.2203 (+27.48%)
+    far(>=3m): 0.2092 -> 0.1176 (-43.76%)
+[h15/jac] train    rectilinear
+    near_rim(<=2m,>=38deg): 0.3399 -> 0.2365 (-30.43%)
+    near_center(<=2m,<=11deg): 0.1908 -> 0.3777 (+97.93%)
+    center(<=11deg): 0.1863 -> 0.2867 (+53.92%)
+    far(>=3m): 0.1733 -> 0.1211 (-30.11%)
+[h15/jac] train    kb4x0.5
+    near_rim(<=2m,>=38deg): 0.4249 -> 0.2514 (-40.85%)
+    near_center(<=2m,<=11deg): 0.1629 -> 0.3195 (+96.16%)
+    center(<=11deg): 0.1685 -> 0.2377 (+41.06%)
+    far(>=3m): 0.1788 -> 0.1029 (-42.45%)
+[h15/jac] train    kb4x1.5
+    near_rim(<=2m,>=38deg): 0.3938 -> 0.2429 (-38.31%)
+    near_center(<=2m,<=11deg): 0.1749 -> 0.3403 (+94.56%)
+    center(<=11deg): 0.1748 -> 0.2527 (+44.55%)
+    far(>=3m): 0.1781 -> 0.1088 (-38.90%)
+[h15/jac] HELD-OUT stereographic
+    near_rim(<=2m,>=38deg): 0.4289 -> 0.2472 (-42.36%)
+    near_center(<=2m,<=11deg): 0.1623 -> 0.3118 (+92.10%)
+    center(<=11deg): 0.1710 -> 0.2330 (+36.27%)
+    far(>=3m): 0.1827 -> 0.1043 (-42.92%)
+[h15/jac] HELD-OUT equisolid
+    near_rim(<=2m,>=38deg): 0.4915 -> 0.2630 (-46.50%)
+    near_center(<=2m,<=11deg): 0.1572 -> 0.2988 (+90.05%)
+    center(<=11deg): 0.1720 -> 0.2265 (+31.68%)
+    far(>=3m): 0.1958 -> 0.1077 (-44.98%)
+[h15/jac] wrote /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h15-upright/eval_jac_seq132.json
+MARKER_eval_jac_seq132=0

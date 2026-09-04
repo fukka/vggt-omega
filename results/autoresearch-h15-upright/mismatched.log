@@ -1,0 +1,54 @@
+[h15/mismatched] 4 sequences, 240 frames, 6 training lenses: aria_kb4, equidistant, orthographic, rectilinear, kb4x0.5, kb4x1.5
+[h15/mismatched] held out and never seen: stereographic, equisolid
+    aria_kb4       log_area[+0.000,+0.158] log_aniso[-0.158,-0.000]
+    equidistant    log_area[-0.552,-0.001] log_aniso[-0.552,-0.001]
+    orthographic   log_area[+0.006,+1.655] log_aniso[+0.002,+0.552]
+    rectilinear    log_area[+0.002,+0.368] log_aniso[-0.176,+0.016]
+    kb4x0.5        log_area[+0.007,+0.773] log_aniso[-0.205,+0.136]
+    kb4x1.5        log_area[+0.004,+0.581] log_aniso[-0.191,+0.077]
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+[97m[INFO ] using MLP layer as FFN[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[h15/mismatched] LoRA 122.9k + FiLM 25.5k params
+[h15/mismatched] ep00 depth 0.3003 (240 steps, 27.6s)
+[h15/mismatched] ep01 depth 0.2168 (240 steps, 9.2s)
+[h15/mismatched] ep02 depth 0.1910 (240 steps, 9.6s)
+[h15/mismatched] ep03 depth 0.1786 (240 steps, 9.3s)
+[h15/mismatched] ep04 depth 0.1675 (240 steps, 9.3s)
+[h15/mismatched] ep05 depth 0.1609 (240 steps, 9.7s)
+[h15/mismatched] ep06 depth 0.1573 (240 steps, 9.1s)
+[h15/mismatched] ep07 depth 0.1513 (240 steps, 9.6s)
+[h15/mismatched] ep08 depth 0.1423 (240 steps, 9.3s)
+[h15/mismatched] ep09 depth 0.1355 (240 steps, 9.2s)
+[h15/mismatched] ep10 depth 0.1341 (240 steps, 16.7s)
+[h15/mismatched] ep11 depth 0.1249 (240 steps, 54.4s)
+[h15/mismatched] ep12 depth 0.1241 (240 steps, 55.6s)
+[h15/mismatched] ep13 depth 0.1233 (240 steps, 53.0s)
+[h15/mismatched] ep14 depth 0.1238 (240 steps, 50.9s)
+[h15/mismatched] ep15 depth 0.1160 (240 steps, 49.0s)
+[h15/mismatched] ep16 depth 0.1180 (240 steps, 47.3s)
+[h15/mismatched] ep17 depth 0.1138 (240 steps, 46.7s)
+[h15/mismatched] ep18 depth 0.1145 (240 steps, 46.9s)
+[h15/mismatched] ep19 depth 0.1129 (240 steps, 47.3s)
+[h15/mismatched] ep20 depth 0.1086 (240 steps, 51.0s)
+[h15/mismatched] ep21 depth 0.1035 (240 steps, 48.7s)
+[h15/mismatched] ep22 depth 0.1047 (240 steps, 52.0s)
+[h15/mismatched] ep23 depth 0.1000 (240 steps, 52.6s)
+[h15/mismatched] ep24 depth 0.1006 (240 steps, 51.0s)
+[h15/mismatched] ep25 depth 0.0995 (240 steps, 49.3s)
+[h15/mismatched] ep26 depth 0.0978 (240 steps, 35.1s)
+[h15/mismatched] ep27 depth 0.0963 (240 steps, 9.7s)
+[h15/mismatched] ep28 depth 0.0946 (240 steps, 9.0s)
+[h15/mismatched] ep29 depth 0.0965 (240 steps, 9.0s)
+[h15/mismatched] ep30 depth 0.0956 (240 steps, 9.3s)
+[h15/mismatched] ep31 depth 0.0964 (240 steps, 9.3s)
+[h15/mismatched] ep32 depth 0.0942 (240 steps, 9.5s)
+[h15/mismatched] ep33 depth 0.0916 (240 steps, 9.3s)
+[h15/mismatched] ep34 depth 0.0906 (240 steps, 9.2s)
+[h15/mismatched] ep35 depth 0.0888 (240 steps, 9.6s)
+[h15/mismatched] ep36 depth 0.0885 (240 steps, 9.2s)
+[h15/mismatched] ep37 depth 0.0926 (240 steps, 9.2s)
+[h15/mismatched] ep38 depth 0.0859 (240 steps, 10.0s)
+[h15/mismatched] ep39 depth 0.0862 (240 steps, 9.3s)
+[h15/mismatched] done -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h15-upright/mismatched
+MARKER_train_mismatched=0
