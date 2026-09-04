@@ -1,0 +1,42 @@
+{
+ "seq": "Apartment_release_clean_seq136_M1292",
+ "frames": 16,
+ "results": {
+  "vggt_omega": {
+   "0": {
+    "near_rim": 0.17738517990406985,
+    "center": 0.08247928977522594,
+    "all": 0.09928446396505686,
+    "rim_over_center": 2.1506632802911274
+   },
+   "1": {
+    "near_rim": 0.2239386894945818,
+    "center": 0.11755737574040748,
+    "all": 0.12418231110147498,
+    "rim_over_center": 1.9049310014293586
+   },
+   "2": {
+    "near_rim": 0.17730572416800683,
+    "center": 0.08669340220967292,
+    "all": 0.1018025420212459,
+    "rim_over_center": 2.0452043598333223
+   },
+   "3": {
+    "near_rim": 0.14724742537090849,
+    "center": 0.06315117559243788,
+    "all": 0.08036844141633834,
+    "rim_over_center": 2.3316656260084065
+   }
+  }
+ },
+ "config": {
+  "seq": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq136_M1292",
+  "models": "vggt_omega",
+  "size": 512,
+  "max_frames": 16,
+  "depth_max_m": 10.0,
+  "device": "cuda",
+  "omega_ckpt": "/user/f.zhang2/projects/vggt-omega-organized/checkpoints/VGGT-Omega-1B-512/model.pt",
+  "out": "results/autoresearch-h16-orientation/seq136_omega.json"
+ }
+}
