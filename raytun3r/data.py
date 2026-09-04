@@ -289,9 +289,25 @@ class ScanNetPPFisheye(SequenceSource):
 class ADTSequence(SequenceSource):
     """One ADT sequence's raw Aria RGB fisheye stream.
 
-    Frames are stored rotated 90 deg CW on Aria; a 270 deg CCW rotation is applied
-    to RGB and depth alike, matching this repo's ADT convention, and the
-    intrinsics come from ``aria_fisheye.aria_intrinsics(rotated=True)``.
+    Frames are stored rotated 90 deg CW on Aria; the turn that undoes it is
+    applied to RGB and depth alike, and the intrinsics come from
+    ``aria_fisheye.aria_intrinsics(rotated=True)``.
+
+    ``rotation`` is read through ``{0: 0, 90: 3, 180: 2, 270: 1}`` -- it names
+    how far the STORED frame is from upright, and the map gives the quarter
+    turns that undo it. The default was ``270``, i.e. one quarter turn (k=1),
+    and that is **upside down**: rendered and looked at on 2026-09-04, the
+    floor comes out at the top. The stored frame is 90 deg off, not 270, so the
+    default is now ``90`` -> k=3, which agrees with ``fovbench/run.py``'s
+    ``rotation_k = 3`` and with the four-way measurement in
+    ``autoresearch/experiments/common/upright.py`` (k=3 is the best of the four
+    by a factor of nearly three; k=1 is the worst of the four, worse than not
+    turning at all).
+
+    **Consumers of this class ran upside down**: `depthfisheye`'s ADT arm and
+    anything using `raytun3r.train`/`eval` on ADT. `fovbench` does not use this
+    class and was already correct, so ticket 024A -- the premise H14 rests on --
+    is unaffected.
 
     ADT ``depth_npy`` is **planar z** (CONTEXT.md); it is converted to euclidean
     range on load so it matches the ``"range"`` depth convention the losses and
@@ -301,7 +317,7 @@ class ADTSequence(SequenceSource):
     def __init__(self, seq_dir: str, *, max_size: int = 504, patch: int = 14,
                  max_frames: Optional[int] = None, rgb_subdir: str = "videos_rgb",
                  depth_subdir: str = "depth_npy", depth_scale: float = 1e-3,
-                 rotation: int = 270, extrinsics_json: Optional[str] = None,
+                 rotation: int = 90, extrinsics_json: Optional[str] = None,
                  depth_convention: str = "range"):
         from cam3r.adt import load_trajectory, resolve_extrinsics, _frame_timestamp_us
 
