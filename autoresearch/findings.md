@@ -203,6 +203,25 @@ and P3 (near_centre 21–52% worse). `raycal_shrunk` — evidence-weighted
 shrinkage toward identity, driven by each bin's anchor count and depth spread
 rather than by θ — is the current attempt at P3 and is running.
 
+**H15 (lens conditioning): still refuted, but the failure changed shape.**
+near_rim head-to-head over all 16 (lens × sequence) cells, sideways → upright:
+
+| | sideways | upright |
+|---|---|---|
+| `shuffled` better than `jac` | **16/16** | 10/16 |
+| `mismatched` better than `jac` | 8/16 | **0/16** |
+| `none` better than `jac` | 4/16 | 10/16 |
+
+Upright, `jac` beats the **mismatched** control — a real lens's real field,
+equally smooth, describing the wrong lens — on 16/16, while `shuffled` and plain
+LoRA each beat it on 10/16. Spread across arms is ~2% on values of 0.18–0.31.
+So the network is **sensitive** to the field (a plausible-but-wrong one is
+consistently worse than anything) and does not **benefit** from it being right.
+P1 still fails on the held-out lenses (jac beats shuffled on 2 of 4). The
+sideways headline — "a scrambled field beats the real one 16/16" — was itself
+partly an orientation artefact; what survives is the weaker, more precise claim
+that the field is inert.
+
 **Orientation tolerance (H16).** ±20° of roll costs +28% and leaves the
 near_rim/centre ratio flat at 2.10–2.23; ±40° costs +197% and inflates it to
 4.9. Ordinary head roll is inside the flat part, so a per-frame gravity
