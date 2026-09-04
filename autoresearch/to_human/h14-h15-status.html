@@ -498,8 +498,62 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
   </div>
 </section>
 
+
 <section>
-  <div class="section-head"><span class="eyebrow">04</span><h2>前两个实验在做什么</h2></div>
+  <div class="section-head"><span class="eyebrow">04</span><h2>那"边缘惩罚"到底有多少是朝向造成的？</h2></div>
+  <div class="col">
+    <p>
+      这是这次会话里最值得留下的一个结果，而且它比"全是朝向"要有意思得多。
+      同一批帧、同一个协议，换四个 backbone 各转四个方向。
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>seq136，20 帧，按帧 scale+shift，预测都转回原帧后打分。<code>rim/ctr</code> 是近边缘除以中心 —— <strong>本项目整条诊断线就建立在这个比值上</strong>。</caption>
+      <thead><tr><th>backbone</th><th>侧躺 全图</th><th>正立 全图</th><th>改善</th><th>rim/ctr 侧躺</th><th>rim/ctr 正立</th></tr></thead>
+      <tbody>
+        <tr class="flip"><td class="mono">da3:small <span style="color:var(--ink-faint)">（本项目用的）</span></td>
+            <td class="num">0.5674</td><td class="num good">0.1954</td><td class="num good">−65.6%</td>
+            <td class="num bad">5.28</td><td class="num">2.13</td></tr>
+        <tr><td class="mono">da3:large</td><td class="num">0.2620</td><td class="num good">0.1113</td><td class="num good">−57.5%</td>
+            <td class="num">2.58</td><td class="num">2.04</td></tr>
+        <tr><td class="mono">vggt (1B)</td><td class="num">0.1730</td><td class="num good">0.1277</td><td class="num">−26.2%</td>
+            <td class="num">2.49</td><td class="num">2.57</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p style="margin-top:16px">
+      <strong>①朝向的代价对每个模型都真实存在，但大小差 2.5 倍。</strong>
+      DA3-Small 掉 65.6%，DA3-Large 57.5%，VGGT 只掉 26.2% —— VGGT 的抗旋转能力是 DA3-Small 的两倍多。
+    </p>
+    <p>
+      <strong>②真正要紧的是那个比值。</strong>DA3-Small 的 <span class="mono">5.28</span> 掉到 <span class="mono">2.13</span>，
+      所以它表面上的径向误差场<strong>大半是朝向</strong>。DA3-Large 几乎不动（2.58 → 2.04）。
+      VGGT <strong>完全不动</strong>（2.49 → 2.57）。
+    </p>
+    <div class="note">
+      <span class="eyebrow">所以正确的说法是</span>
+      <p>
+        "边缘惩罚是朝向假象"作为<strong>一般性论断是错的</strong>；
+        "边缘惩罚是真的"在正立下以 <strong>2.0–2.6×</strong> 的规模在三个 backbone 上都成立。
+        本项目特殊的地方在于：<strong>它跑在 DA3-Small 上，三者中抗旋转最差的那个</strong>，
+        它表面上的 5.28× 有大约一半是假象。
+      </p>
+      <p>
+        这也意味着项目的核心论点<strong>没有倒</strong> —— 只是量级要按 2.0–2.6× 重新标定，
+        而且"用哪个 backbone"从此变成一个必须报告的实验变量。
+      </p>
+    </div>
+    <p style="color:var(--ink-faint);font-size:.9rem">
+      VGGT-Ω（本项目测得受控边缘惩罚最大、最高上限的那个）这一行还缺 ——
+      它的权重是门控检查点而不是 hub 名，第一次跑时去找了一个叫 <code>pretrained</code> 的文件。已修，单独在跑。
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="section-head"><span class="eyebrow">05</span><h2>前两个实验在做什么</h2></div>
 
   <div class="col">
     <h3>H14：让模型自己给自己出标签</h3>
@@ -680,7 +734,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">05</span><h2>结果</h2></div>
+  <div class="section-head"><span class="eyebrow">06</span><h2>结果</h2></div>
 
   <div class="col">
     <h3>H14 · 无标签的透视教师蒸馏 —— 主判据通过</h3>
@@ -748,7 +802,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 
 
 <section>
-  <div class="section-head"><span class="eyebrow">06</span><h2>这一轮的两个新想法，和它们的下场</h2></div>
+  <div class="section-head"><span class="eyebrow">07</span><h2>这一轮的两个新想法，和它们的下场</h2></div>
 
   <div class="col">
     <p>
@@ -942,7 +996,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">07</span><h2>H9 的下一版：两个假设在花 GPU 之前就被否掉了</h2></div>
+  <div class="section-head"><span class="eyebrow">08</span><h2>H9 的下一版：两个假设在花 GPU 之前就被否掉了</h2></div>
   <p>
     H9 的诊断是"小 θ 处的锚点几乎全是远处的墙面，所以中心档的直线外推到近处就错"。
     针对它我提了三个修法，用合成实验依次检验 —— <strong>前两个被自己的测试否掉，一次 GPU 都没花。</strong>
@@ -971,7 +1025,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">08</span><h2>过拟合体检（以及一个必须更正的数）</h2></div>
+  <div class="section-head"><span class="eyebrow">09</span><h2>过拟合体检（以及一个必须更正的数）</h2></div>
 
   <div class="col">
     <p>
@@ -1030,7 +1084,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 
 
 <section>
-  <div class="section-head"><span class="eyebrow">09</span><h2>样例与数据规模</h2></div>
+  <div class="section-head"><span class="eyebrow">10</span><h2>样例与数据规模</h2></div>
 
   <div class="col">
     <p>
@@ -1168,7 +1222,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">10</span><h2>为什么是这两个</h2></div>
+  <div class="section-head"><span class="eyebrow">11</span><h2>为什么是这两个</h2></div>
   <p>
     项目已经有<strong>五个受控否定</strong>：H5 的边缘损失输给普通 LoRA、H6 的边缘 KV 输给全 token、中心／边缘 MoE 被自家证据杀死、
     H7 的 θ 门是平的、H12 的镜头雅可比 FiLM 输给打乱场。共同点是：凡「哪里症状重就在哪儿加力气」的设计都输，凡作用于全图的操作都赢。
@@ -1193,7 +1247,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">11</span><h2>途中量到的关键结果：教师能做多宽</h2></div>
+  <div class="section-head"><span class="eyebrow">12</span><h2>途中量到的关键结果：教师能做多宽</h2></div>
   <div class="col">
     <p>
       H14 的设计里预留了一个<strong>能在训练前杀死整个前提</strong>的预检：先拿教师和原始模型在同一批像素上对分。第一次跑，它就开火了 ——
@@ -1320,7 +1374,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">12</span><h2>今天做完的</h2></div>
+  <div class="section-head"><span class="eyebrow">13</span><h2>今天做完的</h2></div>
   <div class="stack">
     <div class="row"><span class="who">H14 代码</span><p><code>rect_teacher.py</code>（鱼眼↔透视搬运、Rig 多视角装置、视角间尺度对齐）、<code>cache_teacher.py</code>（教师缓存 + 预检）、<code>train_student.py</code>（三臂）。评测直接复用 h5 的 <code>eval_lora.py</code>，所以数字会落在 #35/#36 和 H12 的同一张表里，并且自带姿态轴。</p></div>
     <div class="row"><span class="who">H15 代码</span><p><code>lens_family.py</code>（七种镜头形状、固定锥体构造、镜头间形变、逐镜头 token 场）、<code>arms.py</code>（四臂的定义，训练和评测共用同一条规则）、<code>train_multilens.py</code>、<code>eval_lens.py</code>。</p></div>
@@ -1331,7 +1385,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">13</span><h2>还缺什么</h2></div>
+  <div class="section-head"><span class="eyebrow">14</span><h2>还缺什么</h2></div>
   <div class="stack">
     <div class="row"><span class="who">结果本身</span><p>两条流水线都还在跑。<strong>现在没有任何可引用的结论</strong>，上面那张 FOV 表是唯一已完成的测量。</p></div>
     <div class="row"><span class="who">误差棒</span><p>每臂一个种子，和 H12 一样。方向 + 预注册可以支持「停」，但要下<strong>结论</strong>需要按本项目的标准做逐帧配对自助法。</p></div>
@@ -1341,7 +1395,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">14</span><h2>判据：跑之前就写死了</h2></div>
+  <div class="section-head"><span class="eyebrow">15</span><h2>判据：跑之前就写死了</h2></div>
   <div class="col"><p>两个 README 里的预注册条款，原样搬在这里，方便结果回来时直接对照，不给事后解释留空间。</p></div>
   <div class="crit">
     <div class="row"><span class="who">H14 · 主判据</span><p><code>rect</code> 必须在<strong>两个</strong>留出序列的近边缘上打赢 <code>roundtrip</code>。输了就是<strong>第六个受控否定</strong>，照实写。</p></div>
@@ -1354,7 +1408,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section class="col">
-  <div class="section-head"><span class="eyebrow">15</span><h2>风险与挑战</h2></div>
+  <div class="section-head"><span class="eyebrow">16</span><h2>风险与挑战</h2></div>
   <div class="stack">
     <div class="row"><span class="who">最可能的失败</span><p>H14 的教师只覆盖 84% 的锥体，而近边缘 zone 只被看到 <span class="mono">70.4%</span>。最外那圈完全没有监督，恰恰是问题最重的地方。如果学生学不会往外推，H14 会变成「把中场修好了，边缘没动」。</p></div>
     <div class="row"><span class="who">对照可能太弱</span><p><code>roundtrip</code> 的教师和学生起点逐位相同，损失起步接近零，所以它天然动得少。这是设计意图（「蒸馏一个模糊的自己什么也学不到」），但它也意味着主判据接近「rect 赢过几乎不动」。<code>gt</code> 臂是防这一点的天花板参照。</p></div>
@@ -1365,7 +1419,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
-  <div class="section-head"><span class="eyebrow">16</span><h2>怎么自己看</h2></div>
+  <div class="section-head"><span class="eyebrow">17</span><h2>怎么自己看</h2></div>
   <div class="scroll">
     <table class="files">
       <thead><tr><th>位置</th><th style="text-align:left">内容</th></tr></thead>
