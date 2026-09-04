@@ -64,6 +64,8 @@ def main(argv=None) -> None:
     p.add_argument("--max-frames", type=int, default=20)
     p.add_argument("--depth-max-m", type=float, default=10.0)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--omega-ckpt",
+                   default="/user/f.zhang2/projects/vggt-omega-organized/checkpoints/VGGT-Omega-1B-512/model.pt")
     p.add_argument("--out", default=None)
     a = p.parse_args(argv)
 
@@ -96,8 +98,11 @@ def main(argv=None) -> None:
     for spec in [x.strip() for x in a.models.split(",") if x.strip()]:
         name, _, variant = spec.partition(":")
         kw = {"variant": variant} if variant else {}
+        # vggt_omega's weights are a gated checkpoint, not a hub name: passing
+        # "pretrained" makes it look for a file called `pretrained`.
+        w = a.omega_ckpt if name == "vggt_omega" else "pretrained"
         try:
-            bb = build_backbone(name, weights="pretrained", device=a.device, **kw)
+            bb = build_backbone(name, weights=w, device=a.device, **kw)
         except Exception as exc:
             print(f"{spec:16s}  unavailable: {exc.__class__.__name__}: {exc}")
             continue
