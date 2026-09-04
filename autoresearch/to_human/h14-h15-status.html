@@ -490,6 +490,40 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
         只是没有东西可以拿来比了。
       </p>
     </div>
+    <h3 style="margin-top:30px">但在<em>真正</em>不同的房间里，顺序反过来了</h3>
+    <p style="margin-bottom:14px">
+      用公寓训出来的学生，去评 LiteOffice —— ADT 的另一个场景，<strong>另一个房间、另一台设备</strong>，
+      并且用<strong>它自己的</strong> <code>camera.json</code> 打分。
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>LiteOffice / DinoToy_seq030，60 帧。冻结基线近边缘 0.192（公寓是 0.4269 —— 这个办公室是个更简单的场景）。</caption>
+      <thead><tr><th>臂</th><th>near_rim</th><th>near_center</th><th>center</th><th>far</th></tr></thead>
+      <tbody>
+        <tr class="flip"><td class="mono">rect（无标签）</td><td class="num good">0.192 → 0.137　(−28.5%)</td><td class="num bad">+12.8%</td><td class="num">−1.2%</td><td class="num good">−31.1%</td></tr>
+        <tr><td class="mono">gt（有标签）</td><td class="num">0.192 → 0.169　(−11.8%)</td><td class="num">−0.2%</td><td class="num good">−11.7%</td><td class="num good">−32.8%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note" style="margin-top:16px">
+      <span class="eyebrow">这是本次会话里对 H14 最有利的一个数</span>
+      <p>
+        在<strong>同一间公寓</strong>的留出序列上，有标签臂在边缘碾压无标签臂（−57.9% vs −13.2%）。
+        换到<strong>真正不同的房间</strong>，顺序<strong>反过来</strong>：−28.5% vs −11.8%。
+      </p>
+      <p>
+        这正是它们各自被要求学的东西：<code>gt</code> 拟合的是<strong>某一个房间的深度</strong>，带不走；
+        <code>rect</code> 拟合的是<strong>图像的一个函数</strong>（同一个冻结模型在另一种投影下对同一帧说了什么），
+        这个能带走。和之前量到的训练/留出差距也一致 —— 无标签臂的差距本来就更小。
+      </p>
+      <p>
+        <strong>不作强声称：</strong>一个序列、60 帧、佩戴者几乎不动，
+        而且 near_center 的基线高达 2.145（办公室远处是墙，这个 zone 几乎空的，小且噪声大）。
+        第二个 LiteOffice 序列的深度第一次没下完，正在补，落地前这只是一个点。
+      </p>
+    </div>
     <p>
       训练/留出差距在正立后依然成立：<code>rect</code> 训练序列 −14.6% / −11.6%，留出 −13.2% / +4.7%；
       <code>gt</code> 训练 −71.4% / −65.2%，留出 −57.9% / −27.2%。
