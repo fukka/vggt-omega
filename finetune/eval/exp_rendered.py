@@ -105,9 +105,15 @@ class RenderedWindowDataset(Dataset):
             man = json.load(open(manifest))
             rows = man["frames"] if isinstance(man, dict) else man
             for r in rows:
-                d = r.get("dir") or os.path.join(root, r["sequence"], f"frame_{int(r['frame_idx']):04d}")
+                # The manifest stores `dir` RELATIVE to the render root, so it must
+                # be joined before testing -- an unjoined relative path silently
+                # fails os.path.isdir and yields zero windows.
+                d = r.get("dir") or os.path.join(r["sequence"], f"frame_{int(r['frame_idx']):04d}")
+                if not os.path.isabs(d):
+                    d = os.path.join(root, d)
                 if os.path.isdir(d):
-                    groups.setdefault(f"{r['sequence']}/w{r.get('window', 0)}", []).append(d)
+                    key = r.get("window_id") or f"{r['sequence']}/w{r.get('window', 0)}"
+                    groups.setdefault(key, []).append(d)
         else:
             for d in frames:
                 groups.setdefault(os.path.basename(os.path.dirname(d)), []).append(d)
@@ -119,8 +125,10 @@ class RenderedWindowDataset(Dataset):
             for i in range(0, len(ds) - seq_len + 1, seq_len):
                 self.windows.append(ds[i:i + seq_len])
         if not self.windows:
-            raise SystemExit(f"[exp_rendered] no windows of length {seq_len} "
-                             f"(found {len(frames)} frames)")
+            raise SystemExit(
+                f"[exp_rendered] no windows of length {seq_len} from "
+                f"{len(frames)} frames / {len(groups)} groups. If a manifest was "
+                f"given, check its `dir` fields resolve under --render-root.")
 
     def __len__(self) -> int:
         return len(self.windows)
