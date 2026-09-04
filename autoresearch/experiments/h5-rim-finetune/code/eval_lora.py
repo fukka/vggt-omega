@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]
                        / "h1-rim-pose-value" / "code"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "common"))
 
 from adt_pose_value import AriaLocalPairs  # noqa: E402
 from finetune.eval.metrics import align_depth  # noqa: E402
