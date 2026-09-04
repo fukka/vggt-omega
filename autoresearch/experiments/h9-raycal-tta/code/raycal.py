@@ -38,6 +38,18 @@ THE ARMS
 ``shuffled`` per-bin, but the anchors' theta labels are permuted before
              binning. Same anchors, same count, same per-bin sample sizes, no
              radial correspondence.
+``raycal_bal`` per-bin, but each bin's line is fitted on a DEPTH-BALANCED
+             sample. Added 2026-09-04 against a diagnosed failure, not a hunch:
+             the first run beat both controls on 6/6 sequences and still failed
+             its locked bar, damaging near_centre by +72%/+57%. The mechanism is
+             sampling, not modelling -- at small theta the anchors are almost
+             all far content (walls), so the centre bins' lines are fitted over
+             a narrow far range and mis-extrapolate onto near content. Balancing
+             the depth histogram inside each bin removes exactly that, and it
+             does NOT reintroduce H2.1's failure: the fit stays ONE monotone
+             line per bin, so it cannot be many-to-one. Indexing the correction
+             by predicted depth would be H2.1 again and is deliberately not
+             done.
 ``none``     identity.
 """
 from __future__ import annotations
@@ -48,7 +60,7 @@ import numpy as np
 
 __all__ = ["fit_field", "apply_field", "ARMS"]
 
-ARMS = ("raycal", "global", "shuffled", "none")
+ARMS = ("raycal", "raycal_bal", "global", "shuffled", "none")
 
 #: A bin whose fitted gain leaves this range is not describing a compression;
 #: it is describing noise, and it would invert or explode the correction.
@@ -61,6 +73,21 @@ def _fit_line(log_pred: np.ndarray, log_true: np.ndarray) -> Tuple[float, float]
         return 1.0, float(np.mean(log_pred - log_true)) if log_true.size else 0.0
     g, c = np.polyfit(log_true, log_pred, 1)
     return float(g), float(c)
+
+
+def _fit_line_w(log_pred: np.ndarray, log_true: np.ndarray,
+                w: np.ndarray) -> Tuple[float, float]:
+    """Weighted least squares ``log_pred = c + g * log_true``."""
+    if log_true.size < 2 or w.sum() <= 0:
+        return 1.0, 0.0
+    W = w / w.sum()
+    mx, my = float((W * log_true).sum()), float((W * log_pred).sum())
+    vxx = float((W * (log_true - mx) ** 2).sum())
+    vxy = float((W * (log_true - mx) * (log_pred - my)).sum())
+    if vxx <= 1e-12:
+        return 1.0, my - mx
+    g = vxy / vxx
+    return g, my - g * mx
 
 
 def fit_field(arm: str, theta: np.ndarray, pred: np.ndarray, true: np.ndarray,
@@ -96,9 +123,26 @@ def fit_field(arm: str, theta: np.ndarray, pred: np.ndarray, true: np.ndarray,
         th = np.random.default_rng(seed).permutation(theta)
 
     idx = np.clip(np.digitize(th, edges) - 1, 0, n_bins - 1)
+    # Depth-balancing weights: inside each theta bin, weight anchors so the
+    # depth histogram is flat in log-depth. Computed against a COMMON set of
+    # depth edges so every bin's line is fitted over the same range.
+    d_edges = np.geomspace(max(true.min(), 0.2), min(true.max(), 12.0), 9)
+    d_idx = np.clip(np.digitize(true, d_edges) - 1, 0, len(d_edges) - 2)
+
     gs, cs, ns = [], [], []
     for b in range(n_bins):
         m = idx == b
+        if arm == "raycal_bal" and int(m.sum()) >= min_per_bin:
+            w = np.zeros(int(m.sum()))
+            dsub = d_idx[m]
+            for j in range(len(d_edges) - 1):
+                k = dsub == j
+                if k.sum():
+                    w[k] = 1.0 / k.sum()
+            g, c = _fit_line_w(lp[m], lt[m], w)
+            gs.append(float(np.clip(g, G_MIN, G_MAX))); cs.append(float(c))
+            ns.append(int(m.sum()))
+            continue
         if int(m.sum()) < min_per_bin:
             # Too few anchors to fit a line. Falling back to the global fit is
             # the honest move: inventing a per-bin slope from 5 points is how a

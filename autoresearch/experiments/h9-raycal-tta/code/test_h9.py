@@ -243,3 +243,50 @@ def test_the_correction_is_monotone_so_it_cannot_be_many_to_one():
     pred = np.linspace(0.2, 9.0, 500)
     out = RC.apply_field(pred, theta, field)
     assert bool(np.all(np.diff(out) > 0))
+
+
+def test_depth_balancing_fixes_a_bin_whose_anchors_are_all_far():
+    """The diagnosed failure, reproduced and then removed.
+
+    H9's first run beat both controls 6/6 and still damaged near_centre by
+    +72%/+57%. The mechanism is sampling: at small theta almost every anchor is
+    far content (walls), so the centre bins' lines are fitted over a narrow far
+    range and mis-extrapolate onto near content. Here the centre bin's anchors
+    are drawn ONLY from 4-9 m while the true field is the same everywhere; the
+    balanced arm has to do better on the near content the bin never saw.
+    """
+    rng = np.random.default_rng(4)
+    n = 8000
+    theta = rng.uniform(0, 0.95, n)
+    true_r = np.exp(rng.uniform(np.log(0.4), np.log(9.0), n))
+    # centre anchors exist only far away -- the real sampling bias
+    centre = theta < 0.25
+    drop = centre & (true_r < 4.0)
+    theta, true_r = theta[~drop], true_r[~drop]
+    g_of = lambda th: 0.95 - 0.55 * (th / 0.95)
+    pred = np.exp(g_of(theta) * np.log(true_r))
+
+    plain = RC.fit_field("raycal", theta, pred, true_r, 0.95)
+    bal = RC.fit_field("raycal_bal", theta, pred, true_r, 0.95)
+
+    # score on NEAR content at the centre, which the bin's anchors never covered
+    th_t = np.full(400, 0.12)
+    tr_t = np.exp(np.linspace(np.log(0.4), np.log(2.0), 400))
+    pr_t = np.exp(g_of(th_t) * np.log(tr_t))
+    e_plain = np.abs(RC.apply_field(pr_t, th_t, plain) / tr_t - 1).mean()
+    e_bal = np.abs(RC.apply_field(pr_t, th_t, bal) / tr_t - 1).mean()
+    assert e_bal < e_plain, f"balanced {e_bal:.4f} vs plain {e_plain:.4f}"
+
+
+def test_the_balanced_arm_is_still_one_monotone_line_per_bin():
+    """It must not become H2.1: indexing by predicted depth is what killed
+    run_010, and balancing the FIT does not do that."""
+    rng = np.random.default_rng(5)
+    n = 4000
+    theta = rng.uniform(0, 0.95, n)
+    true_r = np.exp(rng.uniform(np.log(0.4), np.log(9.0), n))
+    pred = np.exp((0.95 - 0.55 * (theta / 0.95)) * np.log(true_r))
+    f = RC.fit_field("raycal_bal", theta, pred, true_r, 0.95)
+    assert all(g > 0 for g in f["g"])
+    out = RC.apply_field(np.linspace(0.2, 9.0, 500), np.full(500, 0.5), f)
+    assert bool(np.all(np.diff(out) > 0))
