@@ -23,6 +23,16 @@ is itself worth knowing before the number is quoted as a property of VGGT.
 
     python -m finetune.eval.compare_lighting_runs --a runs/ev_clust96/results.json \\
                                                   --b runs/ev_clust96_lit/results.json
+
+Self-test. Run it on two evaluations of the SAME render root that merely differ
+in how many frames had finished -- e.g. a 64-frame run against the 96-frame run
+that supersedes it. The shared frames are byte-identical inputs, so every delta
+must come back exactly +0.0000 with a zero-width interval. A broken frame join
+reports "insufficient paired frames" instead, which reads like the two runs
+disagreeing rather than like a path bug; broken pairing reports plain noise. The
+marginal effect columns will still DIFFER between the two, because those are
+computed over each run's own frame set while the delta is computed over the
+shared one -- which is exactly why the delta is the number to read.
 """
 
 import argparse, json, os
