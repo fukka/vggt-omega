@@ -1022,8 +1022,8 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
 <hr class="rule">
 
 <section id="running">
-  <p class="eyebrow">正在跑</p>
-  <h2>96 帧测试集与下一步</h2>
+  <p class="eyebrow">测试集与执行</p>
+  <h2>96 帧是怎么造出来的,以及那条决定实验成不成立的评分规则</h2>
 
   <div class="scroll">
     <table>
@@ -1032,8 +1032,8 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
         <tr><td>规模</td><td>4 序列 × 3 窗口 × 8 帧 = <strong>96 帧,0 跳过</strong>(seq131 / seq134 / seq136 / decoration_seq132 —— 最后一个是同一套公寓的不同布置)</td></tr>
         <tr><td><strong>窗口内基线</strong></td><td>相邻帧只移动 <strong>1.6 cm</strong> —— 对 VGGT 是三角化退化的。改用 stride 10,实测每步中位平移 <strong>0.317 m</strong>,窗口跨度 1.6–2.5 m,对应室内 1–4 m 的深度。若用相邻帧,多帧那一组会因为与本实验无关的原因被削弱。</td></tr>
         <tr><td>位姿</td><td>每帧断言轨迹残差 ≤1 ms;96 帧全部通过(最大 339 µs)</td></tr>
-        <tr><td>算力</td><td>刻意留在 CPU:两块 GPU 虽空闲但被<em>其他 job</em> 占着 27 GB / 34 GB 显存,354 个 GLB + 4096² 贴图可能超出余量。别人的 run 不值得赌。</td></tr>
-        <tr><td>ETA</td><td>约 14 小时(非 7)—— 约 20 个核被本机上正在跑的 h14/h15 autoresearch 任务占用。可断点续跑,重启只损失一帧。</td></tr>
+        <tr><td>算力</td><td>起初刻意留在 CPU(两块 GPU 被<em>其他用户</em>占着 27/34 GB)。中途实测 OPTIX 在全分辨率下 <strong>19 s vs CPU 470 s(25×)</strong>,遂把剩余 21 帧切到 GPU。每帧的 <code>cycles_device</code> 都记在 meta 里,所以哪一帧用什么渲的是自描述的;深度来自确定性的 Z 通道,与设备无关。</td></tr>
+        <tr><td>真正的瓶颈</td><td>不是渲染,是 <strong>354 个 GLB 的单线程导入(约 7 分钟,占单帧成本 95%)</strong>。于是让 Blender 支持「建一次场景、渲多组灯光」,把光照扫描的导入从每组一次降到每帧一次。</td></tr>
       </tbody>
     </table>
   </div>
@@ -1045,12 +1045,19 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
     <p>跨行(鱼眼 vs 透视)的像素网格不同 —— 矫正网格对边缘过采样约 10 倍 —— 所以<strong>绝对值不可跨行比较</strong>,交互项才可以,因为它是两个行内差值之差,网格权重一阶抵消。</p>
   </div>
 
-  <h3>接下来按结果分支</h3>
-  <ul class="plain">
-    <li><strong>96 帧上交互项仍为负</strong> → 原假设成立,而且真实素材那次的结论要被修正为「填充质量的假象」。下一步:填充阶梯(黑 → 均值 → replicate → TELEA → diffusion → 真值),看便宜的填充能吃掉真值收益的多少 —— 这正是决定要不要做生成式补全的那个数。</li>
-    <li><strong>交互项归零或翻正</strong> → 先导信号是 n=2 的噪声,原假设在真值填充下同样不成立,负结果更强。</li>
-    <li><strong>多帧 vs 单帧</strong> → 这一轴还没跑。VGGT 靠跨视图注意力解单目尺度歧义,坏输入在多帧模式下可能伤到<em>别的帧</em>。若多帧的退化大于单帧,那是一个单帧实验完全看不到的机制。</li>
-  </ul>
+  <h3>三条预注册分支,已全部揭晓</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>当时写下的分支</th><th>实际结果</th></tr></thead>
+    <tbody>
+      <tr><td>96 帧上交互项仍为负 → 原假设成立</td><td style="color:var(--bad)"><strong>没有发生。</strong>交互项 +0.0150(单帧)/ +0.0498(8 帧),两个都跨零</td></tr>
+      <tr class="hl"><td>交互项归零或翻正 → 原假设在真值填充下同样不成立,负结果更强</td><td style="color:var(--good)"><strong>这一支。</strong>而且在 6、8、12 窗口三次运行里一致</td></tr>
+      <tr><td>多帧 vs 单帧 → 坏输入在多帧下可能伤到<em>别的</em>帧</td><td>均值上 <code>fisheye_masked</code> 确实从 0.1767 退到 0.1931,看着像这个机制;但逐帧配对后 <strong>+0.0164 [−0.0318, +0.0620],跨零</strong>。唯一显著从多帧受益的是 <code>persp_full</code>(−0.0299)—— <em>输入完整的那一个</em></td></tr>
+    </tbody></table></div>
+
+  <div class="note">
+    <p>预注册的价值正体现在这里:三条分支是<strong>看到数据之前</strong>写下的,所以「落在哪一支」不是事后叙事。
+    第三条尤其 —— 它预言的机制在均值表上<em>出现了</em>,而配对检验说那是噪声。</p>
+  </div>
 </section>
 
 <hr class="rule">
@@ -1278,16 +1285,53 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
 <hr class="rule">
 
 <section id="close">
-  <p class="eyebrow">下一步</p>
-  <h2>建议的执行顺序</h2>
+  <p class="eyebrow">下一步 · 更新于 2026-09-05</p>
+  <h2>已经做完的,和现在该做的</h2>
+
+  <div class="scroll"><table>
+    <thead><tr><th>原计划</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td>先跑 T1 的 2×2(真实素材,replicate 填充)</td><td>✅ 已做。补全大幅有效,但交互项<strong>符号相反</strong> —— 原始鱼眼受益更多</td></tr>
+      <tr><td>把推断 FoV 接进评估表</td><td>✅ 已做。<code>pose_enc[7:9]</code> 在每张表里。关键观察:填掉 32.3% 的黑区只让推断 FoV 动了 0.7°(真值差 15°),而 AbsRel 降了 44% —— <strong>补全的增益不是相机中介的</strong></td></tr>
+      <tr><td>T2 oracle,只在 T1 出现正向信号后再做</td><td>✅ 已做,而且做到了更强的版本:不是从 ERP 采样,而是用 Blender <strong>渲染</strong>真值,96 帧 / 12 窗口 / 4 序列</td></tr>
+      <tr><td>核实「均值填充优于黑色」那篇记忆</td><td>❌ 五路检索未找到。<strong>确认前不要引用</strong></td></tr>
+    </tbody></table></div>
+
   <div class="col">
-    <ul class="plain">
-      <li><strong>先跑 T1 的 2×2。</strong>真实 ADT,现有数据,不碰 Blender。把 <code>diagnose_dav2_rectify.py</code> 的第二根轴从"模型大小"换成"是否补全",填充先用最便宜的边缘复制。若 ④ 相对 ② 毫无提升,后面全部不用做。</li>
-      <li><strong>把 <code>pose_enc[7:9]</code> 的推断 FoV 接进评估表。</strong><code>vggt_single_image.py</code> 里已经实现了解码,主指标应该是它而不是深度 —— 它离假设最近。</li>
-      <li><strong>T2 只在 T1 出现正向信号后再做。</strong>oracle 需要 ERP 全景源,零件(<code>erp_utils.py</code>、95° 射线 LUT、<code>ERP2Persp</code>)都已在仓库里。</li>
-      <li><strong>通读三篇全文。</strong>RayTun3R(<span class="m">2607.02711</span>)—— 最强反例;PanoVGGT(<span class="m">2603.17571</span>)—— 检索时 PDF 过大未取到,其无效区处理方式未知;<span class="m">2512.11508</span> —— 探测 DUSt3R/VGGT 内部,可能已回答内参与深度的耦合。</li>
-      <li><strong>核实那篇「均值填充优于黑色」的记忆。</strong>五路检索都没找到。最可能藏在 WoodScape / OmniDet / SVDistNet 的实现细节或补充材料里,建议直接查源码,不要在确认前引用。</li>
-    </ul>
+    <p>2×2 已经给出定论,所以下一步不再是「补全有没有用」,而是<strong>那个决策数字</strong>:</p>
+  </div>
+
+  <div class="phase">
+    <div class="phead"><span class="pid">现在</span><span class="ptitle">填充阶梯 —— 便宜的填充能吃掉真值收益的多少</span><span class="pcost">GPU 约 15 分钟</span></div>
+    <dl class="prow">
+      <dt>为什么这才是决策点</dt><dd>「真值内容有用」已经量出来了(0.06–0.11 AbsRel)。但生成式补全<strong>只能拿到剩下的那部分</strong> ——
+      一个什么都不发明的填充吃掉多少,就是整个想法的预算上限。</dd>
+      <dt>阶梯</dt><dd><code>black → mean → chanmean → replicate → telea → ns → ORACLE</code>,
+      共用<strong>同一批像素、同一套评分掩膜</strong>,只在洞里放什么不同。每一档报告增益、
+      占真值增益的<strong>百分比</strong>、以及按窗口聚类的 CI。</dd>
+      <dt>已有的下界</dt><dd>真实素材那一轮:replicate 88.1%、mean 88.7%。但那是<em>没有真值上界</em>的估计 ——
+      那些像素的真值根本不存在。渲染集上存在,所以阶梯和它的天花板是在<strong>同一批帧</strong>上量的。</dd>
+      <dt>被排除的一档</dt><dd><code>mirror</code>。它关于有效区外接框做反射,够不到被有效像素<strong>包围</strong>的洞
+      —— 实测只改变了 0.0%/3.4% 的洞而<em>成功返回</em>。已改为报错:一个静默不填的臂,得分与黑色完全相同,
+      会读成「镜像填充没帮助」。</dd>
+    </dl>
+  </div>
+
+  <div class="phase">
+    <div class="phead"><span class="pid">同时</span><span class="ptitle">光照稳健性 —— 结论依不依赖渲染光度</span><span class="pcost">重渲约 3 h,已在跑</span></div>
+    <dl class="prow">
+      <dt>为什么要做</dt><dd>2×2 是<strong>帧内</strong>对比,光照错误不可能凭空制造那个效应,但可以改变它的<em>大小</em>。
+      整套 96 帧正在用<a href="#lighting">拟合光照</a>重渲,两次评估逐帧配对、按窗口聚类做差。</dd>
+      <dt>判据</dt><dd>差值的 CI 跨零 → 结论对渲染光度稳健。不跨零 → 效应量是「场景怎么打光」的属性,
+      必须在把它当成 VGGT 的属性之前说清楚。</dd>
+    </dl>
+  </div>
+
+  <div class="col">
+    <p>再之后才是 <a href="#followup">E3</a>:把「训练无关的输入修复」与「训练一个条件化模块」
+    (Fisheye3R calibration tokens / RayTun3R 位置编码)放到同一张表上。
+    但那张表的第一行现在已经知道会写什么 —— <strong>补全的收益与投影方式无关</strong>,
+    所以「让图像回到透视训练域」这个卖点讲不通,能讲的是更朴素的「别喂大片纯黑」。</p>
   </div>
 </section>
 
