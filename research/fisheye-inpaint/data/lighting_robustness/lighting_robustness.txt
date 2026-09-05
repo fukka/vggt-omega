@@ -1,0 +1,16 @@
+
+================================================================================================
+2x2 effect under two lightings   A=historical 2.35 m ring   B=fitted atrium
+(effect = AbsRel full - masked; negative = true content helps. CIs resample WINDOWS.)
+================================================================================================
+mode     proj        effect A                  CI A   effect B                  CI B
+single   fisheye      -0.0763    [-0.1259, -0.0326]    -0.0152    [-0.0236, -0.0074]
+single   persp        -0.0613    [-0.0874, -0.0386]    -0.0174    [-0.0238, -0.0087]
+8-frame  fisheye      -0.1096    [-0.2135, -0.0211]    -0.0176    [-0.0417, -0.0023]
+8-frame  persp        -0.0598    [-0.1152, -0.0216]    -0.0102    [-0.0173, -0.0026]
+
+change in the effect, PAIRED frame by frame across the two renders:
+  single   fisheye  delta +0.0611  CI [+0.0193, +0.1075]  n=96f/12w  CHANGES with the lighting
+  single   persp    delta +0.0439  CI [+0.0186, +0.0716]  n=96f/12w  CHANGES with the lighting
+  8-frame  fisheye  delta +0.0920  CI [+0.0156, +0.1867]  n=96f/12w  CHANGES with the lighting
+  8-frame  persp    delta +0.0495  CI [+0.0089, +0.1061]  n=96f/12w  CHANGES with the lighting

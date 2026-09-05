@@ -1,0 +1,33 @@
+
+======================================================================================
+VGGT-Omega on rendered ADT — 4 settings x single/multi-frame
+(AbsRel lower better; graded on the MASKED arm's region in both arms)
+======================================================================================
+setting           mode        n  win    AbsRel     RMSE    delta1    fov_h
+fisheye_full      single     96   12    0.0709    0.222    0.9546     83.8
+fisheye_masked    single     96   12    0.0861    0.269    0.9302     86.5
+persp_full        single     96   12    0.0594    0.194    0.9625    107.5
+persp_masked      single     96   12    0.0768    0.251    0.9395    106.9
+fisheye_full      8-frame    96   12    0.0811    0.244    0.9455     82.2
+fisheye_masked    8-frame    96   12    0.0987    0.312    0.9159     83.7
+persp_full        8-frame    96   12    0.0595    0.204    0.9753    108.0
+persp_masked      8-frame    96   12    0.0698    0.242    0.9613    108.8
+
+[single] true content vs black  (AbsRel full - masked; negative = true content helps):
+    CI(win) resamples WINDOWS and is the one to quote; CI(frm) resamples frames and is too narrow (frames in a window share a scene) -- it is shown only to make the gap visible.
+    fisheye  -0.0152  CI(win) [-0.0236, -0.0074]  CI(frm) [-0.0245, -0.0083]  n=96f/12w  SIGNIFICANT
+    persp    -0.0174  CI(win) [-0.0238, -0.0087]  CI(frm) [-0.0216, -0.0128]  n=96f/12w  SIGNIFICANT
+    INTERACTION -0.0022  CI(win) [-0.0144, +0.0129]  CI(frm) [-0.0098, +0.0071]  n=96f/12w  n.s. (CI spans 0)
+      negative => true content helps MORE in the perspective domain
+[8-frame] true content vs black  (AbsRel full - masked; negative = true content helps):
+    CI(win) resamples WINDOWS and is the one to quote; CI(frm) resamples frames and is too narrow (frames in a window share a scene) -- it is shown only to make the gap visible.
+    fisheye  -0.0176  CI(win) [-0.0417, -0.0023]  CI(frm) [-0.0277, -0.0094]  n=96f/12w  SIGNIFICANT
+    persp    -0.0102  CI(win) [-0.0173, -0.0026]  CI(frm) [-0.0135, -0.0067]  n=96f/12w  SIGNIFICANT
+    INTERACTION +0.0074  CI(win) [-0.0114, +0.0333]  CI(frm) [-0.0015, +0.0179]  n=96f/12w  n.s. (CI spans 0)
+      negative => true content helps MORE in the perspective domain
+
+does multi-frame help? (8-frame minus single, paired per frame, clustered by window; negative = it helps):
+    fisheye_full      +0.0102  CI(win) [+0.0051, +0.0150]  n=96f/12w  SIGNIFICANT
+    fisheye_masked    +0.0127  CI(win) [-0.0070, +0.0369]  n=96f/12w  n.s. (CI spans 0)
+    persp_full        +0.0002  CI(win) [-0.0126, +0.0133]  n=96f/12w  n.s. (CI spans 0)
+    persp_masked      -0.0070  CI(win) [-0.0190, +0.0052]  n=96f/12w  n.s. (CI spans 0)
