@@ -1,0 +1,88 @@
+========================================================================
+1. FIRST SURFACE ABOVE 1.6 m, on a grid over the floor plan
+z=-3.80 RHHHHHHHHHHMMMMMMMMM
+z=-3.45 HHRRRRRRRRRMMMMMMMMM
+z=-3.10 HRRHHHHHHHHMMMMMLLMM
+z=-2.75 HHRRRHHHHHHMMMMMMMMM
+z=-2.40 HRRRRHHRHHHMMMMMMMMM
+z=-2.05 HRRRRHRRRRHMMMMMMMMM
+z=-1.70 HRRRRHRRRHRMMMMMMMMM
+z=-1.35 HRRRRHHRHRHMMMMMMLMM
+z=-1.00 HHRHHHRRHRHMMLMMMLMM
+z=-0.65 HRRHHHRRRRHMMMMMMMMM
+z=-0.30 HRRRRHRRRRRMMMMMMMMM
+z= 0.05 HRHRHHRRRRRRRRRRHRMM
+z= 0.40 HRRRRHRRRRRRRRRRRRMM
+z= 0.75 HHRRRHRRRRRRRRHRRHMM
+z= 1.10 HRRRRHRRRRRRRRRRRRMM
+z= 1.45 HRRRHHRRRRRRRRHRRRML
+z= 1.80 HRRHHHRRRRHHRRRRHRML
+z= 2.15 HHRRRHRHHRRHRRRRRRML
+z= 2.50 HRRRRHRRHRRRRRRRRRML
+z= 2.85 HRRRRHHRHRRRRRRRRHML
+z= 3.20 HRRRRHRRRRRHRRRRRRML
+z= 3.55 HHRRRHRRRRRRRRRRRRML
+z= 3.90 HRRRHHRRRRRRRRHRRRML
+z= 4.25 HRRRRHRRRRRRRRRRHRML
+z= 4.60 HHRRRHRRRRRRRRRRRHMM
+z= 4.95 HHRRHHRRRLLLLMRRRHMM
+z= 5.30 HRRRRHRRLLLLLMRRRRMM
+z= 5.65 HHRRHHRHLLLLLMRRRRMM
+z= 6.00 HRRRRHHMLLLLLLRRRRMM
+z= 6.35 HRRRRHRLLLLLLLRRRHMM
+z= 6.70 HHHHHHMLLLLLLLLLLLLL
+z= 7.05 HRRRRHRHLLLLLLLLLLLL
+z= 7.40 HRRRRHHHLLLLLLLLLLLL
+z= 7.75 HRRHRHRRLLLLLLLLLLLL
+z= 8.10 HRHRRHRRLLLLLLLLLLLL
+z= 8.45 HHHHHHHHLLLLLLLLLLLL
+z= 8.80 .............LLLLLLL
+legend  . nothing above   L <3.0 m   M 3-5 m   H 5-7.5 m   R >=7.5 m (roof)
+hit fraction 0.982 ; of hits  <3m 0.166  3-5m 0.176  5-7.5m 0.221  >=7.5m 0.436
+========================================================================
+2. SHELL VERTEX HEIGHTS inside the apartment footprint
+  Y[-0.10, 0.10)    37689  ############################################################
+  Y[ 0.10, 0.30)    45142  ############################################################
+  Y[ 0.30, 0.50)    42181  ############################################################
+  Y[ 0.50, 0.70)    22329  ############################################
+  Y[ 0.70, 0.90)    21128  ##########################################
+  Y[ 0.90, 1.10)    26345  ####################################################
+  Y[ 1.10, 1.30)    22850  #############################################
+  Y[ 1.30, 1.50)    14580  #############################
+  Y[ 1.50, 1.70)     7707  ###############
+  Y[ 1.70, 1.90)    12177  ########################
+  Y[ 1.90, 2.10)    29124  ##########################################################
+  Y[ 2.10, 2.30)     3820  #######
+  Y[ 2.30, 2.50)     1538  ###
+  Y[ 2.50, 2.70)     2306  ####
+  Y[ 2.70, 2.90)     6934  #############
+  Y[ 2.90, 3.10)     8383  ################
+  Y[ 3.10, 3.30)     4521  #########
+  Y[ 3.30, 3.50)     5632  ###########
+  Y[ 3.50, 3.70)      751  #
+  Y[ 3.70, 3.90)      755  #
+  Y[ 3.90, 4.10)     1617  ###
+  Y[ 4.10, 4.30)      675  #
+  Y[ 4.30, 4.50)      299  
+  Y[ 4.50, 4.70)     5219  ##########
+  Y[ 4.70, 4.90)     3972  #######
+  Y[ 4.90, 5.10)     1736  ###
+  Y[ 5.10, 5.30)     1565  ###
+  Y[ 5.30, 5.50)     1285  ##
+  Y[ 5.50, 5.70)     1252  ##
+  Y[ 5.70, 5.90)     1324  ##
+  Y[ 5.90, 6.10)    15730  ###############################
+  Y[ 6.10, 6.30)    74379  ############################################################
+  Y[ 6.30, 6.50)    82131  ############################################################
+  Y[ 6.50, 6.70)     5249  ##########
+  Y[ 6.70, 6.90)    79051  ############################################################
+  Y[ 6.90, 7.10)    20835  #########################################
+  Y[ 7.10, 7.30)      579  #
+  Y[ 7.30, 7.50)     1004  ##
+  Y[ 7.50, 7.70)      624  #
+  Y[ 7.70, 7.90)      229  
+  Y[ 7.90, 8.10)      419  
+  Y[ 8.10, 8.30)     4028  ########
+  Y[ 8.30, 8.50)     1720  ###
+Blender 3.6.9 (hash e958717a0c25 built 2024-02-20 00:33:19)
+
