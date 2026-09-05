@@ -62,15 +62,38 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from ..data.fill import apply_fill
 from .metrics import align_depth, depth_metrics
 
 SETTINGS = ("fisheye_full", "fisheye_masked", "persp_full", "persp_masked")
-# Which analytic mask grades each setting. Both arms of a projection are graded on
-# the MASKED arm's region -- see the scoring rule in the module docstring.
-GRADING_MASK = {
-    "fisheye_full": "mask_fisheye_valid", "fisheye_masked": "mask_fisheye_valid",
-    "persp_full": "mask_persp_valid",     "persp_masked": "mask_persp_valid",
-}
+PROJECTIONS = ("fisheye", "persp")
+
+
+def parse_setting(setting: str):
+    """'fisheye_full' -> ('fisheye', 'full');  'persp_fill_mean' -> ('persp', 'mean').
+
+    The fill arms are the point of the ladder: black, then progressively better
+    cheap fills, then the rendered oracle. They share the MASKED arm's pixels and
+    differ only in what goes in the hole, so the ladder measures how much of the
+    oracle's gain a fill that invents nothing can already capture -- which is the
+    number that decides whether a generative filler is worth building.
+    """
+    for proj in PROJECTIONS:
+        if setting == f"{proj}_full":
+            return proj, "full"
+        if setting == f"{proj}_masked":
+            return proj, "black"
+        if setting.startswith(f"{proj}_fill_"):
+            return proj, setting[len(proj) + 6:]
+    raise ValueError(f"unknown setting {setting!r}")
+
+
+def grading_mask_of(setting: str) -> str:
+    """Every arm of a projection is graded on that projection's analytic mask --
+    never on the larger region the full arm happens to have. Otherwise the full
+    arm would score better for covering more, and the experiment would measure
+    coverage instead of what is in the hole."""
+    return f"mask_{parse_setting(setting)[0]}_valid"
 
 
 def find_frames(root: str, sequences: Optional[List[str]] = None) -> List[str]:
@@ -93,8 +116,7 @@ class RenderedWindowDataset(Dataset):
     def __init__(self, root: str, setting: str, seq_len: int = 1,
                  sequences: Optional[List[str]] = None,
                  manifest: Optional[str] = None) -> None:
-        if setting not in SETTINGS:
-            raise ValueError(f"unknown setting {setting!r}; expected one of {SETTINGS}")
+        parse_setting(setting)          # raises on an unknown setting
         self.setting, self.seq_len, self.root = setting, seq_len, root
         frames = find_frames(root, sequences)
         if not frames:
@@ -144,12 +166,18 @@ class RenderedWindowDataset(Dataset):
 
     def __getitem__(self, i: int) -> dict:
         imgs, deps, masks = [], [], []
+        proj, arm = parse_setting(self.setting)
         for d in self.windows[i]:
-            rgb = np.load(os.path.join(d, f"{self.setting}_rgb.npy"))
+            gm = np.load(os.path.join(d, f"{grading_mask_of(self.setting)}.npy")).astype(bool)
+            src = "full" if arm == "full" else "masked"
+            rgb = np.load(os.path.join(d, f"{proj}_{src}_rgb.npy"))
             if rgb.dtype == np.uint8:
                 rgb = rgb.astype(np.float32) / 255.0
-            dep = np.load(os.path.join(d, f"{self.setting}_depth.npy")).astype(np.float32)
-            gm = np.load(os.path.join(d, f"{GRADING_MASK[self.setting]}.npy")).astype(bool)
+            dep = np.load(os.path.join(d, f"{proj}_{src}_depth.npy")).astype(np.float32)
+            if arm not in ("full", "black"):
+                # The masked arm already holds zeros in the hole; fill it. The
+                # grading mask is untouched, so filled pixels are never scored.
+                rgb = apply_fill(rgb, gm, arm)
             imgs.append(torch.from_numpy(np.ascontiguousarray(rgb)).permute(2, 0, 1))
             deps.append(torch.from_numpy(dep))
             # Grade only where the analytic mask AND the GT agree -- the full arm's
@@ -299,8 +327,10 @@ def report(results: Dict[str, Dict[str, dict]], out_dir: str) -> str:
              "=" * 86,
              f"{'setting':<18}{'mode':<8}{'n':>5}{'win':>5}{'AbsRel':>10}{'RMSE':>9}"
              f"{'delta1':>10}{'fov_h':>9}"]
+    all_settings = [s for m in results for s in results[m]]
+    seen_s = list(dict.fromkeys(all_settings))
     for mode, res in results.items():
-        for s in SETTINGS:
+        for s in seen_s:
             r = res.get(s) or {}
             if not r:
                 continue
@@ -370,6 +400,41 @@ def report(results: Dict[str, Dict[str, dict]], out_dir: str) -> str:
                               f"(one window only)",
                               "      negative => true content helps MORE in the "
                               "perspective domain"]
+    # The fill ladder, if any fill arms were run. The decision-relevant number is
+    # not "does true content help" -- that is already answered -- but how much of
+    # that gain a fill which INVENTS NOTHING already captures. If a flat mean or a
+    # nearest-valid smear recovers most of it, a generative filler is buying the
+    # remainder, and the remainder is the budget for the whole idea.
+    for mode, res in results.items():
+        for proj in PROJECTIONS:
+            def pfm(s):
+                return (res.get(s) or {}).get("_per_frame") or {}
+            gom = ((res.get(f"{proj}_masked") or {}).get("_group_of") or {})
+            blk, orc = pfm(f"{proj}_masked"), pfm(f"{proj}_full")
+            fills = [s for s in res if s.startswith(f"{proj}_fill_")]
+            if not (blk and orc and fills):
+                continue
+            common = sorted(set(blk) & set(orc))
+            span = float(np.mean([blk[k] - orc[k] for k in common]))
+            lines += ["", f"[{mode}] {proj} fill ladder — the oracle recovers "
+                          f"{span:+.4f} AbsRel over black; how much does each "
+                          f"cheap fill capture?",
+                      f'    {"fill":<12}{"AbsRel":>9}{"vs black":>10}{"% of oracle":>13}'
+                      f'{"CI(win) on the gain":>26}']
+            rows = [("black", blk), *[(s[len(proj) + 6:], pfm(s)) for s in sorted(fills)],
+                    ("ORACLE", orc)]
+            for name, vals in rows:
+                ks = sorted(set(vals) & set(blk))
+                if not ks:
+                    continue
+                gain = {k: blk[k] - vals[k] for k in ks}
+                g = float(np.mean(list(gain.values())))
+                pct = 100.0 * g / span if abs(span) > 1e-9 else float("nan")
+                cb = cluster_bootstrap(gain, {k: 0.0 for k in gain}, gom)
+                ci = (f'[{cb["ci_lo"]:+.4f}, {cb["ci_hi"]:+.4f}]' if cb else "--")
+                lines.append(f'    {name:<12}{np.mean([vals[k] for k in ks]):>9.4f}'
+                             f'{g:>+10.4f}{pct:>12.1f}%{ci:>26}')
+
     # Does multi-frame help, per setting? The modes score the SAME frames, so the
     # comparison is paired; and it is a question the table invites but cannot
     # answer -- fisheye_masked reads WORSE at 8 frames than at 1 in the means,
@@ -382,7 +447,7 @@ def report(results: Dict[str, Dict[str, dict]], out_dir: str) -> str:
             lines += ["", f"does multi-frame help? ({mode} minus {base_mode}, "
                           f"paired per frame, clustered by window; "
                           f"negative = it helps):"]
-            for st in SETTINGS:
+            for st in seen_s:
                 ra = (results[base_mode].get(st) or {})
                 rb = (results[mode].get(st) or {})
                 a_, b_ = ra.get("_per_frame") or {}, rb.get("_per_frame") or {}
@@ -416,9 +481,15 @@ def main() -> None:
     ap.add_argument("--manifest", default="")
     ap.add_argument("--sequences", default="", help="comma-separated; default all")
     ap.add_argument("--seq-lens", default="1,8", help="single- and multi-frame modes")
+    ap.add_argument("--settings", default=",".join(SETTINGS),
+                    help="comma-separated; '<proj>_full', '<proj>_masked', or "
+                         "'<proj>_fill_<mode>' for the fill ladder")
     ap.add_argument("--align", default="scale_shift")
     args = ap.parse_args()
 
+    settings = [x.strip() for x in args.settings.split(",") if x.strip()]
+    for s in settings:
+        parse_setting(s)                # fail before loading a 1B model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     seqs = args.sequences.split(",") if args.sequences else None
     os.makedirs(args.out, exist_ok=True)
@@ -431,7 +502,7 @@ def main() -> None:
     for sl in [int(x) for x in args.seq_lens.split(",")]:
         mode = "single" if sl == 1 else f"{sl}-frame"
         results[mode] = {}
-        for s in SETTINGS:
+        for s in settings:
             print(f"\n[exp_rendered] {s}  ·  {mode}")
             results[mode][s] = evaluate(
                 model, args.render_root, s, sl, device, seqs,
