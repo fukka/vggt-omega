@@ -1,0 +1,56 @@
+run07  2026-09-05 05:30   FILL LADDER  --  THE DECISION NUMBER
+================================================================
+This answers the question the whole investigation was for. Quote the
+FITTED-LIGHTING ladder; the historical one is kept because the two disagree,
+which is itself the finding that justified running both.
+
+ANSWER: a generative filler is not worth building.
+
+  On the calibrated render, `replicate` -- nearest-valid smear, which invents
+  NOTHING -- already captures most or all of what true content is worth:
+
+    cell              oracle   replicate   remaining   replicate %
+    single  fisheye   0.0152     0.0126      0.0026        82.9%
+    single  persp     0.0174     0.0135      0.0039        77.6%
+    8-frame fisheye   0.0176     0.0169      0.0007        96.0%
+    8-frame persp     0.0102     0.0129     -0.0027       126.5%
+
+  The budget left for ANY generative method is 0.000 to 0.004 AbsRel. In the
+  8-frame perspective cell a smear BEATS the rendered truth: the true corner
+  content is complex and the smear is not, and the model prefers the smear.
+
+THE RATIO DID NOT SURVIVE THE LIGHTING CHANGE -- which is why both were run.
+  replicate's share, historical -> fitted:
+    single  fisheye   23.9% -> 82.9%
+    single  persp     37.8% -> 77.6%
+    8-frame fisheye   38.0% -> 96.0%
+    8-frame persp     84.7% -> 126.5%
+  On the badly-lit render the conclusion would have been "cheap fills capture
+  only 24-85%, so there is room". There is not. A percentage is a ratio and its
+  denominator moved 4-6x; assuming it would cancel would have been wrong.
+
+AN UNEXPECTED ASYMMETRY, CONSISTENT ACROSS BOTH RENDERS
+  A flat mean fill HURTS in the fisheye domain and HELPS in the perspective one:
+                       single fisheye   single persp
+    mean                    -225%           +68%
+    chanmean                -228%           +61%
+  (historical render: -64%/-58% fisheye, +7%/+11% persp -- same signs)
+
+  This bears directly on the remembered claim that "mean fill beats black",
+  which five literature searches failed to source. On a RECTIFIED image it holds.
+  On a RAW FISHEYE it is not merely absent, it is much worse than black. The
+  claim is domain-dependent and must not be carried across.
+
+WHAT THIS MEANS FOR THE ORIGINAL IDEA
+  Ground-truth content in the invalid region is worth 0.010-0.018 AbsRel; a fill
+  that invents nothing takes 77-126% of it; a generative filler is left with
+  0-0.004. And the effect does not depend on the projection, so the premise --
+  that completion helps by returning the image to the perspective training
+  domain -- has no support. It is a low-level "do not feed the model large black
+  regions" effect.
+
+FILES
+  ladder_fitted_lighting/report.txt      <- the one to quote
+  ladder_historical_lighting/report.txt  <- kept: shows the ratio is not stable
+  */results.json                          per-frame AbsRel, window membership
+  */qual/                                 qualitative panels per arm

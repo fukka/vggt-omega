@@ -1,0 +1,103 @@
+
+======================================================================================
+VGGT-Omega on rendered ADT — 4 settings x single/multi-frame
+(AbsRel lower better; graded on the MASKED arm's region in both arms)
+======================================================================================
+setting           mode        n  win    AbsRel     RMSE    delta1    fov_h
+fisheye_full      single     96   12    0.1004    0.312    0.9077     83.7
+fisheye_masked    single     96   12    0.1767    0.484    0.7851     86.0
+persp_full        single     96   12    0.1094    0.328    0.8837    107.4
+persp_masked      single     96   12    0.1707    0.467    0.7784    106.6
+fisheye_fill_mean single     96   12    0.2252    0.563    0.7220     86.5
+persp_fill_mean   single     96   12    0.1667    0.451    0.7868    108.5
+fisheye_fill_chanmeansingle     96   12    0.2212    0.558    0.7275     86.5
+persp_fill_chanmeansingle     96   12    0.1641    0.450    0.7881    108.4
+fisheye_fill_replicatesingle     96   12    0.1584    0.442    0.8048     85.8
+persp_fill_replicatesingle     96   12    0.1475    0.421    0.8111    108.3
+fisheye_fill_teleasingle     96   12    0.1741    0.467    0.7903     85.9
+persp_fill_telea  single     96   12    0.1539    0.424    0.8069    108.0
+fisheye_fill_ns   single     96   12    0.1637    0.443    0.8005     85.9
+persp_fill_ns     single     96   12    0.1359    0.390    0.8335    108.9
+fisheye_full      8-frame    96   12    0.0835    0.249    0.9426     82.1
+fisheye_masked    8-frame    96   12    0.1931    0.488    0.7789     83.5
+persp_full        8-frame    96   12    0.0795    0.270    0.9497    107.6
+persp_masked      8-frame    96   12    0.1392    0.408    0.8499    108.2
+fisheye_fill_mean 8-frame    96   12    0.2105    0.503    0.7519     83.5
+persp_fill_mean   8-frame    96   12    0.1485    0.412    0.8206    110.2
+fisheye_fill_chanmean8-frame    96   12    0.2140    0.523    0.7378     83.5
+persp_fill_chanmean8-frame    96   12    0.1361    0.391    0.8478    110.0
+fisheye_fill_replicate8-frame    96   12    0.1515    0.399    0.8364     83.5
+persp_fill_replicate8-frame    96   12    0.0886    0.301    0.9315    109.0
+fisheye_fill_telea8-frame    96   12    0.1859    0.463    0.7818     83.6
+persp_fill_telea  8-frame    96   12    0.1137    0.349    0.8910    108.4
+fisheye_fill_ns   8-frame    96   12    0.1666    0.435    0.8063     83.4
+persp_fill_ns     8-frame    96   12    0.0875    0.290    0.9359    110.0
+
+[single] true content vs black  (AbsRel full - masked; negative = true content helps):
+    CI(win) resamples WINDOWS and is the one to quote; CI(frm) resamples frames and is too narrow (frames in a window share a scene) -- it is shown only to make the gap visible.
+    fisheye  -0.0763  CI(win) [-0.1259, -0.0326]  CI(frm) [-0.0987, -0.0559]  n=96f/12w  SIGNIFICANT
+    persp    -0.0613  CI(win) [-0.0874, -0.0386]  CI(frm) [-0.0797, -0.0453]  n=96f/12w  SIGNIFICANT
+    INTERACTION +0.0150  CI(win) [-0.0232, +0.0571]  CI(frm) [-0.0069, +0.0388]  n=96f/12w  n.s. (CI spans 0)
+      negative => true content helps MORE in the perspective domain
+[8-frame] true content vs black  (AbsRel full - masked; negative = true content helps):
+    CI(win) resamples WINDOWS and is the one to quote; CI(frm) resamples frames and is too narrow (frames in a window share a scene) -- it is shown only to make the gap visible.
+    fisheye  -0.1096  CI(win) [-0.2135, -0.0211]  CI(frm) [-0.1466, -0.0755]  n=96f/12w  SIGNIFICANT
+    persp    -0.0598  CI(win) [-0.1152, -0.0216]  CI(frm) [-0.0807, -0.0423]  n=96f/12w  SIGNIFICANT
+    INTERACTION +0.0498  CI(win) [-0.0180, +0.1372]  CI(frm) [+0.0225, +0.0795]  n=96f/12w  n.s. (CI spans 0)
+      negative => true content helps MORE in the perspective domain
+
+[single] fisheye fill ladder — the oracle recovers +0.0763 AbsRel over black; how much does each cheap fill capture?
+    fill           AbsRel  vs black  % of oracle       CI(win) on the gain
+    black          0.1767   +0.0000         0.0%        [+0.0000, +0.0000]
+    chanmean       0.2212   -0.0445       -58.2%        [-0.0859, -0.0081]
+    mean           0.2252   -0.0486       -63.6%        [-0.0908, -0.0121]
+    ns             0.1637   +0.0129        17.0%        [+0.0013, +0.0243]
+    replicate      0.1584   +0.0182        23.9%        [+0.0076, +0.0301]
+    telea          0.1741   +0.0026         3.3%        [-0.0110, +0.0156]
+    ORACLE         0.1004   +0.0763       100.0%        [+0.0326, +0.1259]
+
+[single] persp fill ladder — the oracle recovers +0.0613 AbsRel over black; how much does each cheap fill capture?
+    fill           AbsRel  vs black  % of oracle       CI(win) on the gain
+    black          0.1707   +0.0000         0.0%        [+0.0000, +0.0000]
+    chanmean       0.1641   +0.0066        10.7%        [-0.0130, +0.0249]
+    mean           0.1667   +0.0040         6.5%        [-0.0189, +0.0243]
+    ns             0.1359   +0.0348        56.8%        [+0.0211, +0.0507]
+    replicate      0.1475   +0.0232        37.8%        [+0.0077, +0.0402]
+    telea          0.1539   +0.0168        27.4%        [+0.0078, +0.0288]
+    ORACLE         0.1094   +0.0613       100.0%        [+0.0386, +0.0874]
+
+[8-frame] fisheye fill ladder — the oracle recovers +0.1096 AbsRel over black; how much does each cheap fill capture?
+    fill           AbsRel  vs black  % of oracle       CI(win) on the gain
+    black          0.1931   +0.0000         0.0%        [+0.0000, +0.0000]
+    chanmean       0.2140   -0.0209       -19.0%        [-0.0743, +0.0124]
+    mean           0.2105   -0.0174       -15.9%        [-0.0801, +0.0240]
+    ns             0.1666   +0.0266        24.2%        [-0.0149, +0.0670]
+    replicate      0.1515   +0.0417        38.0%        [+0.0082, +0.0836]
+    telea          0.1859   +0.0073         6.6%        [-0.0623, +0.0556]
+    ORACLE         0.0835   +0.1096       100.0%        [+0.0211, +0.2135]
+
+[8-frame] persp fill ladder — the oracle recovers +0.0598 AbsRel over black; how much does each cheap fill capture?
+    fill           AbsRel  vs black  % of oracle       CI(win) on the gain
+    black          0.1392   +0.0000         0.0%        [+0.0000, +0.0000]
+    chanmean       0.1361   +0.0031         5.2%        [-0.0239, +0.0266]
+    mean           0.1485   -0.0093       -15.6%        [-0.0419, +0.0198]
+    ns             0.0875   +0.0517        86.5%        [+0.0189, +0.0991]
+    replicate      0.0886   +0.0506        84.7%        [+0.0161, +0.1011]
+    telea          0.1137   +0.0255        42.7%        [+0.0122, +0.0397]
+    ORACLE         0.0795   +0.0598       100.0%        [+0.0216, +0.1152]
+
+does multi-frame help? (8-frame minus single, paired per frame, clustered by window; negative = it helps):
+    fisheye_full      -0.0168  CI(win) [-0.0444, +0.0061]  n=96f/12w  n.s. (CI spans 0)
+    fisheye_masked    +0.0164  CI(win) [-0.0318, +0.0620]  n=96f/12w  n.s. (CI spans 0)
+    persp_full        -0.0299  CI(win) [-0.0567, -0.0041]  n=96f/12w  SIGNIFICANT
+    persp_masked      -0.0315  CI(win) [-0.0693, +0.0138]  n=96f/12w  n.s. (CI spans 0)
+    fisheye_fill_mean -0.0147  CI(win) [-0.0544, +0.0170]  n=96f/12w  n.s. (CI spans 0)
+    persp_fill_mean   -0.0182  CI(win) [-0.0541, +0.0284]  n=96f/12w  n.s. (CI spans 0)
+    fisheye_fill_chanmean-0.0072  CI(win) [-0.0291, +0.0120]  n=96f/12w  n.s. (CI spans 0)
+    persp_fill_chanmean-0.0280  CI(win) [-0.0694, +0.0225]  n=96f/12w  n.s. (CI spans 0)
+    fisheye_fill_replicate-0.0070  CI(win) [-0.0422, +0.0141]  n=96f/12w  n.s. (CI spans 0)
+    persp_fill_replicate-0.0589  CI(win) [-0.0919, -0.0284]  n=96f/12w  SIGNIFICANT
+    fisheye_fill_telea+0.0117  CI(win) [-0.0083, +0.0374]  n=96f/12w  n.s. (CI spans 0)
+    persp_fill_telea  -0.0401  CI(win) [-0.0825, +0.0036]  n=96f/12w  n.s. (CI spans 0)
+    fisheye_fill_ns   +0.0028  CI(win) [-0.0139, +0.0179]  n=96f/12w  n.s. (CI spans 0)
+    persp_fill_ns     -0.0483  CI(win) [-0.0764, -0.0222]  n=96f/12w  SIGNIFICANT
