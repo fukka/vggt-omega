@@ -119,8 +119,17 @@ class RenderedWindowDataset(Dataset):
                 groups.setdefault(os.path.basename(os.path.dirname(d)), []).append(d)
 
         self.windows: List[List[str]] = []
-        for _, ds in groups.items():
+        # Frame -> group key.  The GROUP (the renderer's own window: consecutive
+        # frames of one trajectory segment in one sequence) is the unit of
+        # independence, and it does NOT depend on seq_len: at seq_len=1 every eval
+        # window is a single frame, but those frames still share a scene, a
+        # lighting and a few tenths of a second of trajectory. Resampling them as
+        # if independent is what makes a frame-level CI far too narrow.
+        self.group_of: Dict[str, str] = {}
+        for gkey, ds in groups.items():
             ds = sorted(ds)
+            for d in ds:
+                self.group_of[d] = gkey
             # Non-overlapping chunks so every frame is scored exactly once.
             for i in range(0, len(ds) - seq_len + 1, seq_len):
                 self.windows.append(ds[i:i + seq_len])
@@ -189,6 +198,8 @@ def evaluate(model, root: str, setting: str, seq_len: int, device: torch.device,
     out["n_frames"] = len(per_frame)
     out["n_windows"] = len(ds)
     out["_per_frame"] = {f["_dir"]: float(f["AbsRel"]) for f in per_frame}
+    out["_group_of"] = {f["_dir"]: ds.group_of.get(f["_dir"], f["_dir"]) for f in per_frame}
+    out["n_groups"] = len(set(out["_group_of"].values()))
     if fovs:
         f = np.concatenate(fovs, 0)
         out["fov_h_deg"] = float(f[:, 0].mean())
@@ -241,54 +252,124 @@ def paired_bootstrap(a: Dict[str, float], b: Dict[str, float],
             "excludes_zero": bool(lo > 0 or hi < 0)}
 
 
+def cluster_bootstrap(a: Dict[str, float], b: Dict[str, float],
+                      group_of: Dict[str, str], n_boot: int = 10000,
+                      seed: int = 0) -> Optional[dict]:
+    """Paired bootstrap that resamples GROUPS, not frames.
+
+    The frames of one rendered window share a scene, a lighting and a fraction of
+    a second of trajectory, so they are not independent draws. A frame-level
+    bootstrap treats n frames as n samples and returns an interval that is too
+    narrow by roughly sqrt(frames per group). Resampling whole groups -- taking
+    every paired frame of each drawn group -- propagates the between-group
+    variance instead, which is the variance a new sequence would actually show.
+
+    The estimate is the mean over frames (identical to the frame-level point
+    estimate); only the interval differs. Reported alongside the number of
+    groups, because with a handful of groups the interval is wide for a real
+    reason and quoting it without n_groups invites the same overconfidence the
+    frame-level version produced.
+    """
+    keys = sorted(set(a) & set(b) & set(group_of))
+    if len(keys) < 3:
+        return None
+    by_group: "OrderedDict[str, List[float]]" = OrderedDict()
+    for k in keys:
+        by_group.setdefault(group_of[k], []).append(a[k] - b[k])
+    gkeys = list(by_group)
+    if len(gkeys) < 2:
+        return None
+    vals = [np.asarray(by_group[g], dtype=float) for g in gkeys]
+    d_all = np.concatenate(vals)
+    rng = np.random.default_rng(seed)
+    draws = rng.integers(0, len(gkeys), size=(n_boot, len(gkeys)))
+    boots = np.array([np.concatenate([vals[j] for j in row]).mean() for row in draws])
+    lo, hi = np.percentile(boots, [2.5, 97.5])
+    return {"n_pairs": len(d_all), "n_groups": len(gkeys), "mean": float(d_all.mean()),
+            "ci_lo": float(lo), "ci_hi": float(hi),
+            "excludes_zero": bool(lo > 0 or hi < 0),
+            "frames_per_group": [len(v) for v in vals]}
+
+
 def report(results: Dict[str, Dict[str, dict]], out_dir: str) -> str:
     """Per-setting table plus the contrasts that actually answer the question."""
     lines = ["", "=" * 86,
              "VGGT-Omega on rendered ADT — 4 settings x single/multi-frame",
              "(AbsRel lower better; graded on the MASKED arm's region in both arms)",
              "=" * 86,
-             f"{'setting':<18}{'mode':<8}{'n':>5}{'AbsRel':>10}{'RMSE':>9}{'delta1':>10}{'fov_h':>9}"]
+             f"{'setting':<18}{'mode':<8}{'n':>5}{'win':>5}{'AbsRel':>10}{'RMSE':>9}"
+             f"{'delta1':>10}{'fov_h':>9}"]
     for mode, res in results.items():
         for s in SETTINGS:
             r = res.get(s) or {}
             if not r:
                 continue
             lines.append(f"{s:<18}{mode:<8}{r.get('n_frames',0):>5}"
+                         f"{r.get('n_groups',0):>5}"
                          f"{r.get('AbsRel',float('nan')):>10.4f}{r.get('RMSE',float('nan')):>9.3f}"
                          f"{r.get('delta1',float('nan')):>10.4f}{r.get('fov_h_deg',float('nan')):>9.1f}")
     lines.append("")
     for mode, res in results.items():
         def pf(s):
             return (res.get(s) or {}).get("_per_frame", {})
+        def go(s):
+            return (res.get(s) or {}).get("_group_of", {})
         lines.append(f"[{mode}] true content vs black  (AbsRel full - masked; "
                      f"negative = true content helps):")
+        lines.append("    CI(win) resamples WINDOWS and is the one to quote; CI(frm) "
+                     "resamples frames and is too narrow (frames in a window share a "
+                     "scene) -- it is shown only to make the gap visible.")
         eff = {}
         for proj in ("fisheye", "persp"):
-            bs = paired_bootstrap(pf(f"{proj}_full"), pf(f"{proj}_masked"))
+            a_, b_ = pf(f"{proj}_full"), pf(f"{proj}_masked")
+            bs = paired_bootstrap(a_, b_)
             if bs is None:
                 lines.append(f"    {proj:<8} (no paired frames)")
                 continue
-            eff[proj] = bs
-            star = "  SIGNIFICANT" if bs["excludes_zero"] else "  n.s. (CI spans 0)"
-            lines.append(f"    {proj:<8} {bs['mean']:+.4f}  95% CI "
-                         f"[{bs['ci_lo']:+.4f}, {bs['ci_hi']:+.4f}]  "
-                         f"n={bs['n_pairs']}{star}")
+            cb = cluster_bootstrap(a_, b_, go(f"{proj}_full") or go(f"{proj}_masked"))
+            eff[proj] = cb or bs
+            if cb:
+                star = "  SIGNIFICANT" if cb["excludes_zero"] else "  n.s. (CI spans 0)"
+                lines.append(
+                    f"    {proj:<8} {cb['mean']:+.4f}  CI(win) "
+                    f"[{cb['ci_lo']:+.4f}, {cb['ci_hi']:+.4f}]  "
+                    f"CI(frm) [{bs['ci_lo']:+.4f}, {bs['ci_hi']:+.4f}]  "
+                    f"n={cb['n_pairs']}f/{cb['n_groups']}w{star}")
+            else:
+                star = "  SIGNIFICANT" if bs["excludes_zero"] else "  n.s. (CI spans 0)"
+                lines.append(f"    {proj:<8} {bs['mean']:+.4f}  CI(frm) "
+                             f"[{bs['ci_lo']:+.4f}, {bs['ci_hi']:+.4f}]  "
+                             f"n={bs['n_pairs']} (one window only){star}")
         if len(eff) == 2:
             # Interaction, paired at frame level: (full-masked)_persp - (full-masked)_fisheye
             fk = sorted(set(pf("fisheye_full")) & set(pf("fisheye_masked")))
             pk = sorted(set(pf("persp_full")) & set(pf("persp_masked")))
             common = sorted(set(fk) & set(pk))
             if len(common) >= 3:
-                d = np.array([(pf("persp_full")[k] - pf("persp_masked")[k])
-                              - (pf("fisheye_full")[k] - pf("fisheye_masked")[k])
-                              for k in common])
+                dd = {k: (pf("persp_full")[k] - pf("persp_masked")[k])
+                         - (pf("fisheye_full")[k] - pf("fisheye_masked")[k])
+                      for k in common}
+                d = np.array(list(dd.values()))
                 rng = np.random.default_rng(1)
                 b = d[rng.integers(0, len(d), size=(10000, len(d)))].mean(axis=1)
                 lo, hi = np.percentile(b, [2.5, 97.5])
-                sig = "SIGNIFICANT" if (lo > 0 or hi < 0) else "n.s. (CI spans 0)"
-                lines += [f"    INTERACTION {d.mean():+.4f}  95% CI [{lo:+.4f}, {hi:+.4f}]"
-                          f"  n={len(d)}  {sig}",
-                          "      negative => true content helps MORE in the perspective domain"]
+                gmap = go("persp_full") or go("fisheye_full")
+                cb = cluster_bootstrap(dd, {k: 0.0 for k in dd}, gmap)
+                if cb:
+                    sig = "SIGNIFICANT" if cb["excludes_zero"] else "n.s. (CI spans 0)"
+                    lines += [f"    INTERACTION {cb['mean']:+.4f}  CI(win) "
+                              f"[{cb['ci_lo']:+.4f}, {cb['ci_hi']:+.4f}]  "
+                              f"CI(frm) [{lo:+.4f}, {hi:+.4f}]  "
+                              f"n={cb['n_pairs']}f/{cb['n_groups']}w  {sig}",
+                              "      negative => true content helps MORE in the "
+                              "perspective domain"]
+                else:
+                    sig = "SIGNIFICANT" if (lo > 0 or hi < 0) else "n.s. (CI spans 0)"
+                    lines += [f"    INTERACTION {d.mean():+.4f}  CI(frm) "
+                              f"[{lo:+.4f}, {hi:+.4f}]  n={len(d)}  {sig} "
+                              f"(one window only)",
+                              "      negative => true content helps MORE in the "
+                              "perspective domain"]
     txt = "\n".join(lines)
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "report.txt"), "w") as fh:
