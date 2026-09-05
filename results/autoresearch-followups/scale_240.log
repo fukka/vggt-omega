@@ -11,3 +11,6 @@ Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF
 [h14/gt] ep05 depth 0.0781 (960 steps, 72.3s)
 [h14/gt] ep06 depth 0.0745 (960 steps, 38.0s)
 [h14/gt] ep07 depth 0.0719 (960 steps, 38.7s)
+[h14/gt] ep08 depth 0.0693 (960 steps, 100.6s)[[h14/gt] ep09 depth 0.0674 (960 steps, 168.2s)[[h14/gt] ep10 depth 0.0650 (960 steps, 190.9s)[[h14/gt] ep11 depth 0.0640 (960 steps, 180.0s)[[h14/gt] ep12 depth 0.0611 (960 steps, 155.9s)[[h14/gt] ep13 depth 0.0600 (960 steps, 72.4s)[[h14/gt] ep14 depth 0.0593 (960 steps, 38.7s)[[h14/gt] ep15 depth 0.0578 (960 steps, 38.2s)[[h14/gt] ep16 depth 0.0565 (960 steps, 51.0s)[[h14/gt] ep17 depth 0.0553 (960 steps, 138.6s)[[h14/gt] ep18 depth 0.0537 (960 steps, 171.3s)[[h14/gt] ep19 depth 0.0538 (960 steps, 172.4s)
+[h14/gt] done -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-followups/scale_240
+MARKER_train_scale_240=0

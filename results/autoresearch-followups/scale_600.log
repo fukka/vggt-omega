@@ -1,0 +1,29 @@
+[h14/gt] 4 sequences, 2400 frames
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+[97m[INFO ] using MLP layer as FFN[0m
+[h14/gt] LoRA 122.9k params, scale_align=True
+[h14/gt] ep00 depth 0.1250 (2400 steps, 575.3s)
+[h14/gt] ep01 depth 0.0847 (2400 steps, 434.8s)
+[h14/gt] ep02 depth 0.0744 (2400 steps, 144.4s)
+[h14/gt] ep03 depth 0.0681 (2400 steps, 100.7s)
+[h14/gt] ep04 depth 0.0636 (2400 steps, 429.2s)
+[h14/gt] ep05 depth 0.0604 (2400 steps, 382.0s)
+[h14/gt] ep06 depth 0.0575 (2400 steps, 98.0s)
+[h14/gt] ep07 depth 0.0556 (2400 steps, 166.8s)
+[h14/gt] ep08 depth 0.0536 (2400 steps, 443.0s)
+[h14/gt] ep09 depth 0.0520 (2400 steps, 299.5s)
+[h14/gt] ep10 depth 0.0505 (2400 steps, 97.3s)
+[h14/gt] ep11 depth 0.0494 (2400 steps, 246.2s)
+[h14/gt] ep12 depth 0.0481 (2400 steps, 438.3s)
+[h14/gt] ep13 depth 0.0470 (2400 steps, 220.0s)
+[h14/gt] ep14 depth 0.0461 (2400 steps, 97.0s)
+[h14/gt] ep15 depth 0.0455 (2400 steps, 311.1s)
+[h14/gt] ep16 depth 0.0451 (2400 steps, 436.1s)
+[h14/gt] ep17 depth 0.0442 (2400 steps, 144.9s)
+[h14/gt] ep18 depth 0.0436 (2400 steps, 96.4s)
+[h14/gt] ep19 depth 0.0429 (2400 steps, 386.0s)
+[h14/gt] done -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-followups/scale_600
+MARKER_train_scale_600=0
+ 366.6s)
+[h14/gt] done -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-followups/scale_600
+MARKER_train_scale_600=0

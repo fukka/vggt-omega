@@ -1,0 +1,12 @@
+[h14/rect] Apartment_release_clean_seq136_M1292: 60 frames, layout=single (1 views, sizes [(630, 630)]), cone coverage 0.7350, rim-band coverage 0.5339, mean frame fill 1.0000
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+[97m[INFO ] using MLP layer as FFN[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[h14/rect] median log-offset vs raw fisheye: -0.0696 (roundtrip should be ~0 by construction)
+[h14/rect] PRE-CHECK (teacher vs raw, same pixels):
+    near_rim(<=2m,>=38deg): raw 0.4399 -> teacher 0.3553 (-19.23%)  [teacher sees 53.6% of this zone]
+    near_center(<=2m,<=11deg): raw 0.2499 -> teacher 0.3272 (+30.93%)
+    center(<=11deg): raw 0.1700 -> teacher 0.1519 (-10.68%)  [teacher sees 100.0% of this zone]
+    far(>=3m): raw 0.1047 -> teacher 0.0852 (-18.58%)
+[h14/rect] pre-check only, no cache written -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-upright/sweep/fov89_seq136 (24.6s)
+MARKER_fov89_seq136=0

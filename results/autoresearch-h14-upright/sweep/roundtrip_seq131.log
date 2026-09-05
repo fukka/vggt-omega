@@ -1,0 +1,11 @@
+[h14/roundtrip] Apartment_release_clean_seq131_M1292: 60 frames, layout=single (1 views, sizes [(630, 630)]), cone coverage 0.8371, rim-band coverage 0.7135, mean frame fill 0.9866
+[93m[WARN ] Dependency `gsplat` is required for rendering 3DGS. Install via: pip install git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70[0m
+[97m[INFO ] using MLP layer as FFN[0m
+[h14/roundtrip] median log-offset vs raw fisheye: +0.0000 (roundtrip should be ~0 by construction)
+[h14/roundtrip] PRE-CHECK (teacher vs raw, same pixels):
+    near_rim(<=2m,>=38deg): raw 0.3944 -> teacher 0.3943 (-0.04%)  [teacher sees 70.4% of this zone]
+    near_center(<=2m,<=11deg): raw 0.2599 -> teacher 0.2600 (+0.01%)
+    center(<=11deg): raw 0.1774 -> teacher 0.1773 (-0.01%)  [teacher sees 100.0% of this zone]
+    far(>=3m): raw 0.1174 -> teacher 0.1174 (-0.00%)
+[h14/roundtrip] pre-check only, no cache written -> /user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-upright/sweep/roundtrip_seq131 (9.0s)
+MARKER_roundtrip_seq131=0
