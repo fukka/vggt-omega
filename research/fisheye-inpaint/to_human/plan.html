@@ -1162,8 +1162,32 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
 <hr class="rule">
 
 <section id="data">
-  <p class="eyebrow">数据来源</p>
-  <h2>Blender 值不值得:建议先不用</h2>
+  <p class="eyebrow">数据来源 · 决策记录</p>
+  <h2>Blender 值不值得:当时的建议是「先不用」</h2>
+
+  <div class="corr">
+    <h4>后来怎么样了(2026-09-05)</h4>
+    <p><strong>三条反对理由里,两条落空、一条完全说中。</strong>下面的原文保留不改 ——
+    把当时的推理改成事后看起来正确的样子,比记录它更没用。</p>
+    <ul class="plain">
+      <li><strong>「ADT 已自带渲染流」——落空。</strong><code>videos_synthetic</code> 是<em>相机拍到的那部分</em>的渲染,
+      它同样没有成像锥之外的内容。要 oracle 就必须拥有场景本身。</li>
+      <li><strong>「更便宜的路线是全景图而不是渲染器」——两者其实是同一条。</strong>
+      最终管线正是 <code>Blender → ERP 全景 → cv2.remap → 鱼眼/透视</code>:
+      渲染器负责<em>造出</em>全景,重映射负责从中采样。当时把两者当成替代方案,实际是上下游。
+      而 Stanford2D3D / Matterport 那条路走不通 —— 需要的是 <em>ADT 这套公寓</em>的全景,别的场景换不来。</li>
+      <li><strong>「渲染图对 VGGT 是域偏移」——完全说中,而且比预想更贵。</strong>
+      渲染的光照本身就是错的:灯装在 2.35 m,低于它该照亮的家具,而这套公寓<strong>根本没有天花板</strong>。
+      修它花掉了整整一轮工作(见<a href="#lighting">光照标定</a>),过程中<strong>两次抓到度量本身在骗人</strong>。
+      「四个格子的共模效应,组内比较仍然有效」这句判断是对的,所以 2×2 的结论站得住;
+      但「结论会变成关于 Blender 渲染图的结论」这个担忧也是对的,所以整套 96 帧正在用拟合光照重渲,
+      两次评估会逐帧配对做差来量这件事。</li>
+    </ul>
+    <p><strong>θ &gt; θ_max 的纪律被遵守了:</strong>下面那条「必须写明是延拓假设而非真值」——
+    实际用的是割线斜率单调延拓(slope 1.12220,指纹 <code>b4ccab10f5ecfb09</code>),每帧记录在案,
+    而格子 ③ 的 oracle 确实依赖它,格子 ④ 不依赖。</p>
+  </div>
+
   <div class="col">
     <p>你提到可能需要 Blender 造测试数据。Blender 确实能给出完全可控的镜头模型、完美 GT 深度,以及<em>超出成像锥的真实内容</em>(即上面的 oracle)。但在动手之前有三点需要权衡。</p>
   </div>
