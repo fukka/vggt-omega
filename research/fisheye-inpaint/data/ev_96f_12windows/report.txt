@@ -25,3 +25,9 @@ persp_masked      8-frame    96   12    0.1392    0.408    0.8499    108.2
     persp    -0.0598  CI(win) [-0.1152, -0.0216]  CI(frm) [-0.0807, -0.0423]  n=96f/12w  SIGNIFICANT
     INTERACTION +0.0498  CI(win) [-0.0180, +0.1372]  CI(frm) [+0.0225, +0.0795]  n=96f/12w  n.s. (CI spans 0)
       negative => true content helps MORE in the perspective domain
+
+does multi-frame help? (8-frame minus single, paired per frame, clustered by window; negative = it helps):
+    fisheye_full      -0.0168  CI(win) [-0.0444, +0.0061]  n=96f/12w  n.s. (CI spans 0)
+    fisheye_masked    +0.0164  CI(win) [-0.0318, +0.0620]  n=96f/12w  n.s. (CI spans 0)
+    persp_full        -0.0299  CI(win) [-0.0567, -0.0041]  n=96f/12w  SIGNIFICANT
+    persp_masked      -0.0315  CI(win) [-0.0693, +0.0138]  n=96f/12w  n.s. (CI spans 0)

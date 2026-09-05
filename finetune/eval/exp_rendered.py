@@ -370,6 +370,36 @@ def report(results: Dict[str, Dict[str, dict]], out_dir: str) -> str:
                               f"(one window only)",
                               "      negative => true content helps MORE in the "
                               "perspective domain"]
+    # Does multi-frame help, per setting? The modes score the SAME frames, so the
+    # comparison is paired; and it is a question the table invites but cannot
+    # answer -- fisheye_masked reads WORSE at 8 frames than at 1 in the means,
+    # which looks like a mechanism (bad input propagating across views) until the
+    # paired interval is computed and straddles zero.
+    modes = list(results)
+    if len(modes) >= 2:
+        base_mode, other_modes = modes[0], modes[1:]
+        for mode in other_modes:
+            lines += ["", f"does multi-frame help? ({mode} minus {base_mode}, "
+                          f"paired per frame, clustered by window; "
+                          f"negative = it helps):"]
+            for st in SETTINGS:
+                ra = (results[base_mode].get(st) or {})
+                rb = (results[mode].get(st) or {})
+                a_, b_ = ra.get("_per_frame") or {}, rb.get("_per_frame") or {}
+                go = rb.get("_group_of") or ra.get("_group_of") or {}
+                common = sorted(set(a_) & set(b_))
+                if len(common) < 3:
+                    continue
+                d = {k: b_[k] - a_[k] for k in common}
+                cb = cluster_bootstrap(d, {k: 0.0 for k in d}, go)
+                if cb is None:
+                    continue
+                mark = ("  SIGNIFICANT" if cb["excludes_zero"]
+                        else "  n.s. (CI spans 0)")
+                lines.append(f'    {st:<18}{cb["mean"]:+.4f}  CI(win) '
+                             f'[{cb["ci_lo"]:+.4f}, {cb["ci_hi"]:+.4f}]  '
+                             f'n={cb["n_pairs"]}f/{cb["n_groups"]}w{mark}')
+
     txt = "\n".join(lines)
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "report.txt"), "w") as fh:
