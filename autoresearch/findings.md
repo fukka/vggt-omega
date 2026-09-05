@@ -621,3 +621,65 @@ Inherited from prior repo work — treat as hard constraints:
 ## Optimization Trajectory
 
 No runs yet.
+
+## The three measurements the report was missing, 2026-09-04
+
+**Teacher-FOV sweep, re-measured, on two sequences.** The shape reproduces and
+the magnitudes roughly halve:
+
+| fov | cone cov | frame fill | rim-zone seen | near_rim seq131 | near_rim seq136 |
+|---|---|---|---|---|---|
+| 85° | 0.666 | 100% | 40.1% | **−23.49%** | −18.61% |
+| 89° | 0.735 | 100% | 52.2% | −22.95% | −19.23% |
+| 95° (adopted) | 0.837 | 98.7% | 70.4% | −14.68% | −9.55% |
+| 110° | 1.000 | 77.5% | 100% | **+33.28%** | +39.31% |
+
+Two things follow. (a) The black-corner inversion is real and reproduces on a
+second sequence — an unseen image statistic costs more than the rim coverage it
+buys. (b) **Accuracy and coverage trade against each other**: 85° is the best
+teacher per pixel and sees 40% of the rim zone; 95° sees 70% and is worse where
+they overlap. H14.2's ring is that trade at its limit — 99.3% coverage and
+**+9.49%** at the rim, i.e. worse than the raw model, which is the whole reason
+its student is worse in both held-out sequences.
+
+The adopted 95° pre-check over the four training sequences: near_rim −14.68 /
+−11.48 / −12.76 / −14.01%, near_centre +32.44 / +20.38 / +32.58 / +40.02%,
+`roundtrip` control −0.04%. The premise holds 4/4 but is **thin**, and that is
+the sufficient explanation for H14 losing P1.
+
+**Cross-room is two sequences now.** `BlackCeramicBowl_seq030`'s depth finally
+downloaded; extracted at stride 40 and scored through its own `camera.json`:
+
+| sequence | frozen near_rim | `rect` (label-free) | `gt` (labelled) |
+|---|---|---|---|
+| DinoToy_seq030 | 0.1920 | **−28.5%** | −11.8% |
+| BlackCeramicBowl_seq030 | 0.4970 | **−10.7%** | −5.0% |
+| (apartment held-out seq136) | 0.4269 | −13.2% | **−57.9%** |
+
+The ordering **inverts** when the room changes, on both sequences. `gt` fits one
+room's depth and does not carry it; `rect` fits a function of the image and
+does. This is the strongest evidence for the H14 idea in the record, and it is
+orthogonal to H14's own pre-registered bar, which it still fails.
+
+**Data scaling: more frames from one room buy memory, not generalisation.**
+Labelled arm, 20 epochs, per-sequence frame cap raised 60 → 240 → 600:
+
+| frames/seq | steps | seq136 rim | seq136 near_ctr | dec_132 rim | dec_132 near_ctr |
+|---|---|---|---|---|---|
+| 60 | 4,800 | −58.3% | −38.2% | **−27.3%** | +27.8% |
+| 240 | 19,200 | −64.1% | −52.9% | −16.9% | +89.0% |
+| 600 | 48,000 | **−69.3%** | −45.4% | −18.9% | **+100.7%** |
+
+The same-room held-out sequence improves monotonically; the **rearranged** one
+stalls at the rim and its near centre degrades to +100.7%. So "use the 97.9% of
+the data we already have" is **not** the cheap answer to the overfitting
+question — I had recorded it as the likely one. What the line needs is a second
+room, and the LiteOffice rows above are the only measurement that supplies one.
+
+**H9 closing state.** `raycal_shrunk` (evidence-weighted shrinkage toward
+identity, driven by anchor count and depth spread, *not* by θ) holds near-centre
+damage to −3.6…+8.4% on 5/6 sequences while keeping the rim win 5/6. The locked
+bar stays **0/6**: the affine gap shrinks 6.1–25.5% under `raycal_shrunk`
+(seq135 *grows* 4.3%), and at best 32.6% under `raycal_inv` on
+decoration_seq132 — never halved. Correct summary: **an effective rim
+recalibration, not a solution to the radial distortion.**

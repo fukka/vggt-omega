@@ -1093,8 +1093,9 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <div class="row"><span class="who">P1 主判据 ✗ 0/6</span><p>
       预注册的主判据是"<strong>逐帧对齐与单一冻结仿射之间的差距必须塌缩（减半）</strong>"——
       因为本项目已量过：某序列近边缘惩罚的 82% 来自评测仿射的摆放，一个真正修好了径向形状的方法应该让这个差距坍掉。
-      结果：差距确实<strong>缩小了 6% ~ 26%</strong>（decoration_seq132 缩了 25.5%），但<strong>没有一个减半</strong>，
-      而且 seq135 反而扩大 4.3%。<strong>0/6，不通过。</strong>
+      结果（<code>raycal_shrunk</code>）：差距确实<strong>缩小了 6.1% ~ 25.5%</strong>，但<strong>没有一个减半</strong>，
+      而且 seq135 反而扩大 4.3%。放宽到 <code>raycal_inv</code> 也只是把 decoration_seq132 推到 −32.6%，仍然不到一半。
+      <strong>0/6，不通过。</strong>
     </p></div>
     <div class="row"><span class="who">P2 对照 ✓ 6/6</span><p>
       <code>global</code> 和 <code>shuffled</code> 在六个序列上无一例外地输，且优势很大。
@@ -1259,7 +1260,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       <li><strong>把镜头几何显式喂给网络是惰性的</strong>（H15：输给打乱场 10/16、输给不喂 10/16），
         <strong>但喂错的几何是有害的</strong>（赢错配场 16/16）。这是一个可判定场景下的干净否定。</li>
       <li><strong>边缘的视差盈余里有真实的径向信息</strong>（H9：两个对照 6/6，无深度真值），
-        但把它变成"径向畸变的解"还差得远（仿射差距只缩小 6–26%，判据要求减半）。</li>
+        但把它变成"径向畸变的解"还差得远（仿射差距只缩小 6–26%（判据要求减半），判据要求减半）。</li>
       <li><strong>同一个房间里加十倍数据，只买记忆不买泛化。</strong></li>
       <li><strong>无标签蒸馏学到的东西比有标签的更能迁移</strong>：跨房间两个序列上 −28.5%/−10.7% 对 −11.8%/−5.0%。</li>
     </ul>
