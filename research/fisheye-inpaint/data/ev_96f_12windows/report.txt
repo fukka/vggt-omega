@@ -1,0 +1,27 @@
+
+======================================================================================
+VGGT-Omega on rendered ADT — 4 settings x single/multi-frame
+(AbsRel lower better; graded on the MASKED arm's region in both arms)
+======================================================================================
+setting           mode        n  win    AbsRel     RMSE    delta1    fov_h
+fisheye_full      single     96   12    0.1004    0.312    0.9077     83.7
+fisheye_masked    single     96   12    0.1767    0.484    0.7851     86.0
+persp_full        single     96   12    0.1094    0.328    0.8837    107.4
+persp_masked      single     96   12    0.1707    0.467    0.7784    106.6
+fisheye_full      8-frame    96   12    0.0835    0.249    0.9426     82.1
+fisheye_masked    8-frame    96   12    0.1931    0.488    0.7789     83.5
+persp_full        8-frame    96   12    0.0795    0.270    0.9497    107.6
+persp_masked      8-frame    96   12    0.1392    0.408    0.8499    108.2
+
+[single] true content vs black  (AbsRel full - masked; negative = true content helps):
+    CI(win) resamples WINDOWS and is the one to quote; CI(frm) resamples frames and is too narrow (frames in a window share a scene) -- it is shown only to make the gap visible.
+    fisheye  -0.0763  CI(win) [-0.1259, -0.0326]  CI(frm) [-0.0987, -0.0559]  n=96f/12w  SIGNIFICANT
+    persp    -0.0613  CI(win) [-0.0874, -0.0386]  CI(frm) [-0.0797, -0.0453]  n=96f/12w  SIGNIFICANT
+    INTERACTION +0.0150  CI(win) [-0.0232, +0.0571]  CI(frm) [-0.0069, +0.0388]  n=96f/12w  n.s. (CI spans 0)
+      negative => true content helps MORE in the perspective domain
+[8-frame] true content vs black  (AbsRel full - masked; negative = true content helps):
+    CI(win) resamples WINDOWS and is the one to quote; CI(frm) resamples frames and is too narrow (frames in a window share a scene) -- it is shown only to make the gap visible.
+    fisheye  -0.1096  CI(win) [-0.2135, -0.0211]  CI(frm) [-0.1466, -0.0755]  n=96f/12w  SIGNIFICANT
+    persp    -0.0598  CI(win) [-0.1152, -0.0216]  CI(frm) [-0.0807, -0.0423]  n=96f/12w  SIGNIFICANT
+    INTERACTION +0.0498  CI(win) [-0.0180, +0.1372]  CI(frm) [+0.0225, +0.0795]  n=96f/12w  n.s. (CI spans 0)
+      negative => true content helps MORE in the perspective domain

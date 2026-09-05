@@ -1,0 +1,12 @@
+fitted lighting through the PRODUCTION render path
+solution : out/lightfit/fitted_CHOSEN.json
+exposure : per frame (fitted)
+
+frame                   rmse_log  grid_sd   seg_sd   clip     EV  role
+133_M1292:275             1.0592   0.9449   0.7712  0.000  +0.38  fit
+133_M1292:588             1.4138   1.2100   1.0298  0.000  +0.06  fit
+133_M1292:1848            1.0880   0.9405   0.8347  0.000  +0.36  fit
+135_M1292:1112            1.1910   1.0007   0.6520  0.000  +0.26  HELD OUT
+135_M1292:2713            1.1554   1.0312   0.7576  0.000  +0.51  HELD OUT
+mean fit                  1.1870   1.0318   0.8786  0.000
+mean HELD OUT             1.1732   1.0159   0.7048  0.000
