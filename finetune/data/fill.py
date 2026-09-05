@@ -137,10 +137,31 @@ def apply_fill(img_hwc: np.ndarray, valid_hw: np.ndarray, mode: str = "black",
         # Reflect about the valid region's bounding box, then keep only what lands
         # in the hole. Cheap, invents nothing, but (unlike replicate) carries real
         # texture rather than a smeared edge colour.
+        #
+        # This only means anything when the hole is a BORDER BAND. Both holes in
+        # this repo are not: the fisheye's is four corners and the rectified one is
+        # four wedges, each surrounded by valid pixels, so the valid region's
+        # bounding box is essentially the whole frame, the padding is empty, and
+        # the reflection cannot reach the hole at all. Measured on a rendered ADT
+        # frame it changed 0.0% of the fisheye hole and 3.4% of the rectified one
+        # -- while returning successfully. An arm that silently fills nothing
+        # scores exactly like black and reads as a clean "mirroring does not help",
+        # which is a conclusion about this function rather than about mirroring.
+        # So it refuses instead.
         ys, xs = np.nonzero(valid)
         y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
-        core = img[y0:y1, x0:x1]
         H, W = img.shape[:2]
+        rr, cc = np.ogrid[:H, :W]
+        reachable = (rr < y0) | (rr >= y1) | (cc < x0) | (cc >= x1)
+        unreached = float((hole & ~reachable).sum()) / max(1, int(hole.sum()))
+        if unreached > 0.05:
+            raise ValueError(
+                f"'mirror' cannot fill this hole: {unreached:.1%} of it lies inside "
+                f"the valid region's bounding box, so reflecting about that box "
+                f"leaves it untouched. Reflection only reaches a hole that is a "
+                f"border band; this one is enclosed by valid pixels. Use "
+                f"'replicate' for a fill that invents nothing.")
+        core = img[y0:y1, x0:x1]
         pad = cv2.copyMakeBorder(core, y0, H - y1, x0, W - x1, cv2.BORDER_REFLECT_101)
         out = img.copy()
         out[hole] = pad[hole]
