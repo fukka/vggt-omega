@@ -11,6 +11,9 @@ equirectangular panorama at the same pose, so they differ in nothing else:
     persp_crop       inscribed pinhole (focal_out_norm 0.371, 106.9 deg): no
                      invalid region by construction -- the free alternative that
                      drops the rim instead of filling the corners (cell 5)
+    persp_crop_lores same frame, blurred to the circumscribed arm's angular
+                     sampling rate, so crop-vs-circumscribed is a contrast in
+                     field of view alone rather than in sharpness as well
 
 Grading region (``--region``): ``own`` grades a full/masked pair on the masked
 arm's mask and the crop on its own frame; ``crop`` restricts EVERY arm to the
@@ -83,7 +86,8 @@ from torch.utils.data import Dataset
 from ..data.fill import apply_fill
 from .metrics import align_depth, depth_metrics
 
-SETTINGS = ("fisheye_full", "fisheye_masked", "persp_full", "persp_masked", "persp_crop")
+SETTINGS = ("fisheye_full", "fisheye_masked", "persp_full", "persp_masked",
+            "persp_crop", "persp_crop_lores")
 PROJECTIONS = ("fisheye", "persp")
 REGIONS = ("own", "crop")
 
@@ -104,6 +108,8 @@ def parse_setting(setting: str):
             return proj, "black"
         if setting == f"{proj}_crop":
             return proj, "crop"
+        if setting == f"{proj}_crop_lores":
+            return proj, "crop_lores"
         if setting.startswith(f"{proj}_fill_"):
             return proj, setting[len(proj) + 6:]
     raise ValueError(f"unknown setting {setting!r}")
@@ -115,7 +121,7 @@ def grading_mask_of(setting: str) -> str:
     arm would score better for covering more, and the experiment would measure
     coverage instead of what is in the hole."""
     proj, arm = parse_setting(setting)
-    return f"mask_{proj}_crop_valid" if arm == "crop" else f"mask_{proj}_valid"
+    return f"mask_{proj}_crop_valid" if arm.startswith("crop") else f"mask_{proj}_valid"
 
 
 # The images in a frame dir are in the rot90(k=3) upright frame; meta.json's
@@ -152,9 +158,36 @@ def gt_camera(frame_dir: str, arm: str = "full") -> Tuple[np.ndarray, float]:
     A4 = np.eye(4)
     A4[:3, :3] = A_ROT
     E = np.linalg.inv(T @ A4)[:3]
-    _fx, fy, _cx, _cy = m["crop"]["Knew_crop"] if arm == "crop" else m["Knew_pinhole"]
+    _fx, fy, _cx, _cy = m["crop"]["Knew_crop"] if arm.startswith("crop") else m["Knew_pinhole"]
     fov_h = float(np.degrees(2.0 * np.arctan((m["output_size"] / 2.0) / fy)))
     return E, fov_h
+
+
+def match_angular_sampling(rgb: np.ndarray, frame_dir: str) -> Tuple[np.ndarray, float]:
+    """Blur the crop down to the CIRCUMSCRIBED arm's angular sampling rate.
+
+    The crop and the circumscribed arm differ in two things at once: the field
+    of view, and how densely each samples the directions they share. The crop
+    spends all 512x512 pixels on 106.9 deg, the circumscribed arm spends about
+    half of them on the same directions -- ``f_crop / f_circ`` = 1.42x finer.
+    A crop that wins might simply be the sharper of the two.
+
+    This arm removes that advantage and keeps the framing: downsample by exactly
+    that ratio and back, so the crop carries the circumscribed arm's detail over
+    the crop's field of view. If it still wins, sampling density was not the
+    explanation; if the win disappears, the wider FOV was never the variable.
+
+    Ratio comes from the frame's own ``meta.json``, never a constant: the two
+    focals are recorded there by the renderer.
+    """
+    import cv2
+    m = json.load(open(os.path.join(frame_dir, "meta.json")))
+    ratio = float(m["crop"]["Knew_crop"][0]) / float(m["Knew_pinhole"][0])
+    assert ratio > 1.0, f"crop focal must be the longer one, got ratio {ratio}"
+    H, W = rgb.shape[:2]
+    h, w = int(round(H / ratio)), int(round(W / ratio))
+    small = cv2.resize(rgb, (w, h), interpolation=cv2.INTER_AREA)
+    return cv2.resize(small, (W, H), interpolation=cv2.INTER_LINEAR), ratio
 
 
 def _rot_angle_deg(R: np.ndarray) -> float:
@@ -297,12 +330,14 @@ class RenderedWindowDataset(Dataset):
         for d in self.windows[i]:
             # The arm's OWN valid mask: what the fill treats as the hole.
             vm = np.load(os.path.join(d, f"{grading_mask_of(self.setting)}.npy")).astype(bool)
-            src = {"full": "full", "crop": "crop"}.get(arm, "masked")
+            src = {"full": "full", "crop": "crop", "crop_lores": "crop"}.get(arm, "masked")
             rgb = np.load(os.path.join(d, f"{proj}_{src}_rgb.npy"))
             if rgb.dtype == np.uint8:
                 rgb = rgb.astype(np.float32) / 255.0
             dep = np.load(os.path.join(d, f"{proj}_{src}_depth.npy")).astype(np.float32)
-            if arm not in ("full", "black", "crop"):
+            if arm == "crop_lores":
+                rgb, _ratio = match_angular_sampling(rgb, d)
+            elif arm not in ("full", "black", "crop"):
                 # The masked arm already holds zeros in the hole; fill it. The
                 # grading mask is untouched, so filled pixels are never scored.
                 rgb = apply_fill(rgb, vm, arm)
@@ -311,7 +346,7 @@ class RenderedWindowDataset(Dataset):
             # arm is scored on the same scene directions (the smallest region,
             # the crop's). The crop's footprint of itself is the whole frame.
             gm = vm
-            if self.region == "crop" and arm != "crop":
+            if self.region == "crop" and not arm.startswith("crop"):
                 gm = gm & np.load(os.path.join(d, f"mask_{proj}_in_crop.npy")).astype(bool)
             imgs.append(torch.from_numpy(np.ascontiguousarray(rgb)).permute(2, 0, 1))
             deps.append(torch.from_numpy(dep))
@@ -676,7 +711,8 @@ def report(results: Dict[str, Dict[str, dict]], out_dir: str, region: str = "own
         gc = (res["persp_crop"].get("_group_of") or {})
         lines += ["", f"[{mode}] inscribed crop (5) vs the others  (AbsRel crop - other; "
                       f"negative = crop better; region = {region}):"]
-        for st in ("persp_masked", "persp_full", "fisheye_masked", "fisheye_full"):
+        for st in ("persp_masked", "persp_full", "fisheye_masked", "fisheye_full",
+                   "persp_crop_lores"):
             cb = cluster_bootstrap(pfc("persp_crop"), pfc(st), gc)
             if cb is None:
                 continue
@@ -688,7 +724,7 @@ def report(results: Dict[str, Dict[str, dict]], out_dir: str, region: str = "own
             wg = res["persp_crop"]["_window_group"]
             for key in ("auc30", "rot_err_deg", "trans_err_deg", "ate_m"):
                 row = f"    pose {key:<14}"
-                for st in ("persp_masked", "persp_full", "fisheye_masked", "fisheye_full"):
+                for st in ("persp_masked", "persp_full", "persp_crop_lores"):
                     a_ = {k: v[key] for k, v in res["persp_crop"]["_per_window"].items()}
                     b_ = {k: v[key] for k, v in ((res.get(st) or {}).get("_per_window") or {}).items()}
                     cb = cluster_bootstrap(a_, b_, wg)

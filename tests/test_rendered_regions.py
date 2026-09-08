@@ -14,7 +14,8 @@ import pytest
 import torch
 
 from finetune.eval.exp_rendered import (RenderedWindowDataset, gt_camera,
-                                        grading_mask_of, parse_setting)
+                                        grading_mask_of, match_angular_sampling,
+                                        parse_setting)
 
 
 def _frame(tmp_path, S=32):
@@ -23,7 +24,8 @@ def _frame(tmp_path, S=32):
     yy, xx = np.mgrid[:S, :S]
     disc = (np.hypot(xx - S / 2 + .5, yy - S / 2 + .5) <= S * 0.45)      # the "valid" region
     crop = (np.abs(xx - S / 2 + .5) <= S * 0.25) & (np.abs(yy - S / 2 + .5) <= S * 0.25)
-    rgb = np.full((S, S, 3), 120, np.uint8)
+    rng = np.random.default_rng(0)
+    rgb = rng.integers(40, 220, (S, S, 3), dtype=np.uint8)   # texture, so blur is measurable
     rgb_m = rgb.copy(); rgb_m[~disc] = 0
     dep = np.full((S, S), 2.0, np.float32)
     for proj in ("fisheye", "persp"):
@@ -74,3 +76,28 @@ def test_gt_fov_is_the_arms_own(tmp_path):
     assert fov_full == pytest.approx(2 * np.degrees(np.arctan(0.5 / 0.262)))
     assert fov_crop == pytest.approx(2 * np.degrees(np.arctan(0.5 / 0.371)))
     assert fov_crop < fov_full
+
+
+def test_crop_lores_blurs_the_input_but_not_the_grading(tmp_path):
+    """The sampling-matched control must change only the image the model sees."""
+    _frame(tmp_path)
+    sharp = RenderedWindowDataset(str(tmp_path), "persp_crop", 1)[0]
+    lores = RenderedWindowDataset(str(tmp_path), "persp_crop_lores", 1)[0]
+    assert torch.equal(sharp["depths"], lores["depths"])
+    assert torch.equal(sharp["valid_masks"], lores["valid_masks"])
+    a = sharp["images"][0].numpy()
+    b = lores["images"][0].numpy()
+    assert not np.allclose(a, b)
+    # High-frequency energy must drop: that is what "matched to a coarser
+    # sampling rate" means, and a resize that silently no-ops would not.
+    hf = lambda x: float(np.abs(np.diff(x, axis=-1)).mean())
+    assert hf(b) < 0.6 * hf(a), f"lores is not blurrier: {hf(b)} vs {hf(a)}"
+
+
+def test_match_angular_sampling_uses_the_frames_own_focals(tmp_path):
+    _frame(tmp_path)
+    d = str(tmp_path / "seqA" / "frame_0000")
+    rgb = np.load(os.path.join(d, "persp_crop_rgb.npy"))
+    out, ratio = match_angular_sampling(rgb, d)
+    assert ratio == pytest.approx(0.371 / 0.262)
+    assert out.shape == rgb.shape and out.dtype == rgb.dtype
