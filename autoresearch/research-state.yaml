@@ -18,7 +18,7 @@ constraints:
   - "Working venv for CPU torch: recreate python3.9 + torch 2.2.2 + numpy<2 per raytun3r memory; DA3-Small runs on Mac CPU."
   - "Local data on Mac: ADT sample (see local-adt-sample memory), ScanNet++ 3f15a9266d sample at ~/Desktop/ADT/scannetpp_example/ (licensed — never commit content, only statistics)."
   - "Known confounds to control in ANY radial claim: depth-vs-eccentricity (fov.py distance control), dead-pixel layout (ring tilt), resampling asymmetry, one-frozen-affine U-shape artifact, denominator/coverage bugs."
-  - "NEW 2026-09-08: never feed the model a hard black border. Masking 1.7% of the cone at 0 deg costs +25% all / +38% near_rim — as much as a 20 deg roll — and it is the same mechanism that inverted H14's 110 deg teacher. No crops, no masks, no zero padding; to roll, roll the camera and re-image."
+  - "NEW 2026-09-08, CORRECTED same day by the dose curve: a hard black border damages the band ADJACENT to it severely and the rest of the image by a roughly constant ~18%. AREA IS NOT THE VARIABLE, DISTANCE IS — 3.1% of the frame black costs +22% and 39.5% costs +6.6% when scored 14 deg away, while 21.9% costs +106% when scored right against it. So: never let a hard border sit next to the zone you care about; to roll, roll the camera and re-image. This also re-explains H14's 110 deg teacher — its black corners sat on near_rim, the zone it was meant to improve."
   - "NEW 2026-09-08: any data-scaling claim must hold GRADIENT STEPS fixed. The first 60/240/600 ladder ran all rungs at 20 epochs, so data and compute moved together and the apparent data gain was mostly compute."
   - "NEW 2026-09-08: decoration_seq132 is the ONLY sequence that separates 'learned the lens' from 'memorised the room'. Make it the primary bar sequence; seq136 is a sanity check only."
 
@@ -497,6 +497,26 @@ h17_roll_prior:
         readout — (sin, cos) then atan2 — gave MAE 70 deg, worse than a
         constant, because cos spans only [0.707, 1] within +-45 deg.
       artefacts: [results/autoresearch-h17-roll/roll_probe.json]
+    h17_5_boundary_or_projection:
+      status: done
+      kind: CONFIRMATORY — landed BETWEEN the locked thresholds, and the design had a named flaw
+      result: >
+        Masking the rectified 89 deg view to its inscribed disc rises +84% at
+        30 deg (pinhole +46%, fisheye_disc +146%), i.e. "both contribute". But
+        the protocol called that mask a near-exact analogue of fisheye_disc and
+        it is not — 21.9% of the frame vs 1.7% of the cone — so the 30 deg
+        comparison is not a clean decomposition and is reported as such. The
+        clean number is 0 deg: 21.9% black on a full rectified frame costs
+        +106% all-image, +141% near_rim.
+      followup_dose_curve: >
+        Border width swept 0 -> 53.4% of the frame, scored at theta <= 30 deg:
+        +22 / +13 / +17 / +17 / +6.6 / +32 percent. NO dose-response; only the
+        step (border vs none, ~+18%) survives. Combined with the +106% measured
+        against the border, the variable is distance, not area. Standing rule
+        rewritten above.
+      artefacts:
+        - results/autoresearch-h17-roll/roll_boundary_seq136.json
+        - results/autoresearch-h17-roll/border_dose_seq136.json
     h17_4_use_the_gravity:
       status: deprioritised, not run
       why: >

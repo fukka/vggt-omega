@@ -698,3 +698,38 @@ bottleneck is a wider-pose egocentric dataset with dense depth, not a method.
 In parallel, on the user's instruction to increase ADT training frames: the data
 ladder was re-run with gradient steps pinned near 48k. 48x the distinct frames
 buys nothing on the honest held-out sequence and triples the near-centre damage.
+
+## 2026-09-08 (later) — H17.5, the dose curve, and a build-process failure
+
+**A process failure I have to record, because it made a previous report to the
+user inaccurate.** The report is assembled from `body{1..4}.html` fragments in
+a scratchpad. On 2026-09-08 I wrote a corrected section 02 into `body2a.html`,
+merged it into `body2.html`, and then continued editing `body2a.html` — which
+by then was no longer the file the build reads. Two later rebuilds therefore
+silently republished the *stale* section 02, still containing the "two thirds
+of the fall-off is the black wedge" claim I had already retracted, while I told
+the user the correction was live. Fixed by replacing section 02 in `body2.html`
+wholesale from the corrected copy, adding an assertion in the build that fails
+on the known stale strings, and renaming the intermediate fragments to
+`_merged_*` so they cannot be edited-then-ignored again.
+
+**H17.5** (locked before running) put the boundary into the clean arm: mask the
+rectified view to its inscribed disc. +84% at 30 deg, between the two
+thresholds, so "both contribute". But the protocol's premise — that this mask
+is a near-exact analogue of `fisheye_disc` — is wrong by an order of magnitude
+(21.9% of the frame vs 1.7% of the cone), so the intended decomposition did not
+happen. Recorded as a flawed design rather than a result.
+
+**The dose curve** then produced the most useful thing in this block, and it
+corrects a rule I wrote myself yesterday. Sweeping border width from 3.1% to
+53.4% of the frame, scored 14 deg away from the border, gives +22 / +13 / +17 /
++17 / +6.6 / +32 percent — non-monotone, no dose-response, noise-scale spread.
+Only the step survives. Against the +106% measured with the score taken right
+against the border, the variable is **distance, not area**. The standing rule in
+research-state.yaml was rewritten, and the new form explains H14's 110 deg
+teacher better than the old one did.
+
+Two guards were added along the way and both earned their keep: the dose script
+refuses any border that would eat into the scored cap (it caught that an 89 deg
+view leaves only 5 px outside a 44 deg cap), and the probe prints a
+label-permutation null (it caught the atan2 readout bug earlier in the day).
