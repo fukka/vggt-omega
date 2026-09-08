@@ -470,3 +470,78 @@ Note the offset caveat: the cached targets carry a per-frame `log_offset_vs_raw`
 computed against DA3-Small. The fit's intercept `b` absorbs a constant offset,
 but the per-frame variation becomes noise in the DA3-Large fit. `a(theta)`, the
 quantity the prediction is about, is not affected by an offset.
+
+## H18.5 — what makes a fitting set sufficient? (locked 2026-09-08, before running)
+
+### Why this is now the interesting question
+
+H18.3 left an asymmetry it could not explain away. The Apartment-fitted curve
+(240 frames, four sequences, real motion, 0.44–10 m) is **bit-identical** under a
+range-matched refit. The LiteOffice-fitted curve (120 frames, two sequences,
+near-static, 0.41–4.66 m) changes a lot and gets worse. So one fitting set
+estimates the object and the other does not — and nothing so far says what the
+difference is made of, or how much is enough.
+
+That number is exactly what a calibration procedure has to quote. "Fit 16
+numbers per (lens, backbone)" is not a procedure until it says on how much.
+
+### Design
+
+One GPU pass, then everything else in numpy — the fits are least squares on
+cached samples, so the whole sweep costs one forward pass over the data.
+
+* **Pass 1** — for the four Apartment training sequences x 60 frames: frozen
+  DA3-Small prediction and the `omega110` teacher target, subsampled to 20k
+  pixels per frame, kept as (log pred, log target, theta bin).
+* **Pass 2** — for the four evaluation sequences x 60 frames: frozen prediction
+  and ground-truth range, kept whole (scoring needs the per-frame scale+shift
+  alignment, which needs the frame).
+* Then sweep, entirely on CPU.
+
+### The two axes
+
+| axis | values |
+|---|---|
+| **how many frames** | 2, 4, 8, 15, 30, 60, 120, 240 |
+| **how they are drawn** | `spread` — evenly across the four sequences; `single` — all from one |
+
+`single` vs `spread` at matched frame count is the part that separates "needs
+more pixels" from "needs more viewpoints". LiteOffice's failure has both
+confounded (fewer frames AND near-static), and this design pulls them apart on
+data where the answer can be checked.
+
+At each cell, **five independent draws**, and two things are reported:
+
+* **stability** — mean absolute pairwise difference in `a(theta)` between draws.
+  This measures the estimator's spread and needs no held-out data at all.
+* **transfer** — near_rim gain on the two held-out Apartment sequences and the
+  two LiteOffice ones, mean +- sd across the five draws.
+
+### Prediction (locked)
+
+1. **Stability reaches mean pairwise |da| < 0.10 by 60 `spread` frames**, and the
+   full 240-frame fit sits within 0.10 of the 60-frame one — i.e. the recorded
+   curve is already converged and quoting it is safe.
+2. **`spread` beats `single` at every matched frame count** on both stability and
+   cross-room transfer. Viewpoint diversity, not pixel count, is the binding
+   constraint.
+3. **Cross-room transfer saturates at or before the frame count where stability
+   does.** If transfer keeps improving after the coefficients stop moving, then
+   something other than the curve is being learned and the whole radial reading
+   is incomplete.
+
+**Falsified if** stability has not reached 0.10 by 240 frames (the recorded
+Apartment curve would then be a noisy estimate and H18.2's headline weakens), or
+if `single` matches `spread` (then LiteOffice's failure is purely a frame-count
+problem and the near-static explanation is wrong).
+
+### What it produces either way
+
+A number to quote in the procedure — "N frames spread over K viewpoints" — and,
+from the `single`/`spread` split, whether a deployment calibration needs the
+wearer to move around or merely to record for longer. Those have very different
+costs in practice.
+
+Scale: 240 fitting frames, 240 evaluation frames, one backbone, one seed for the
+GPU pass; the five draws per cell are the uncertainty that matters here, since
+the fit is least squares and the sampling of frames is the random part.
