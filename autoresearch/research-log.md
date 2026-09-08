@@ -1545,3 +1545,33 @@ argparse.
 
 The download question I put to the user two ticks ago is still unanswered, so
 the shared filesystem at 98% remains untouched.
+
+## 2026-09-08 (night) — H29: the strongest advice in the report survived; its numbers did not
+
+Checked the claim section 4.2 calls "the most transferable warning here" — the
+7.4x border collapse — across the same thirteen recordings.
+
+Both bars that matter passed unanimously. DA3-Large's border cost exceeds
+DA3-Small's on 13 of 13, and the 70 px border blacking out 39.5% of the frame
+costs less than the 5 px one blacking out 3.1% on 13 of 13. The advice is better
+supported now than when it was published, because it rests on thirteen
+recordings instead of one.
+
+B1 failed by the largest margin in the whole campaign: DA3-Large's +636% is
++5.96 sd above the thirteen-recording mean of +269%, beating H25's 5.74 sd, and
+DA3-Small's +106% is +3.32 sd above +59%. The headline "7.4x collapse" is
+really 4.56x.
+
+That forced a refinement of what I concluded in H28. I had said seq136
+"flattered what we built, not what we measured". The border test is a
+measurement and it is inflated too, so that framing was too neat. The version
+that covers all five experiments without special pleading: seq136 responds
+unusually strongly to INTERVENTIONS — corrections help it unusually much,
+perturbations hurt it unusually much — while its unperturbed structure is
+ordinary. Offered as an observation, explicitly not a mechanism, since this line
+has already had two mechanism guesses refuted.
+
+Also caught a claim H29 cannot support: "DA3-Large is the best of the four on a
+clean frame and the worst with a border" was four backbones on one recording,
+and I only re-measured two. The "worst of the four" half is now untested for
+VGGT and VGGT-Omega and should say so rather than riding on the two that were.

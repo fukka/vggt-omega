@@ -1,0 +1,64 @@
+{
+ "seq": "Apartment_release_clean_seq150_M1292",
+ "frames": 20,
+ "doses": {
+  "0.0": {
+   "0": {
+    "outer": 0.18160959906341514,
+    "center": 0.1070624067928935,
+    "all": 0.15601983815341638,
+    "black_frac": 0.0
+   },
+   "5": {
+    "outer": 0.19415883176044849,
+    "center": 0.12585157230953173,
+    "all": 0.1691481960933424,
+    "black_frac": 0.03149407911312685
+   },
+   "12": {
+    "outer": 0.19173694829165797,
+    "center": 0.1188549308900034,
+    "all": 0.1658050236604783,
+    "black_frac": 0.07473922902494323
+   },
+   "25": {
+    "outer": 0.19764022083624797,
+    "center": 0.12294882346681248,
+    "all": 0.17056274560228932,
+    "black_frac": 0.15243134290753346
+   },
+   "45": {
+    "outer": 0.2023567168494826,
+    "center": 0.1286539581743256,
+    "all": 0.17510145150713802,
+    "black_frac": 0.26530612244897966
+   },
+   "70": {
+    "outer": 0.18479888082692406,
+    "center": 0.11138978935452105,
+    "all": 0.1586546099052068,
+    "black_frac": 0.3950617283950617
+   },
+   "100": {
+    "outer": 0.22289054498473693,
+    "center": 0.14559353336241743,
+    "all": 0.19425770407938414,
+    "black_frac": 0.5341395817586294
+   }
+  }
+ },
+ "config": {
+  "seq": "/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq150_M1292",
+  "widths": "0,5,12,25,45,70,100",
+  "angles": "0",
+  "size": 504,
+  "max_frames": 20,
+  "variant": "small",
+  "view_fov": 89.0,
+  "view_size": 630,
+  "common_theta_deg": 30.0,
+  "depth_max_m": 10.0,
+  "device": "cuda",
+  "out": "/user/f.zhang2/projects/vggt-omega-organized/autoresearch/experiments/h29-border-variance/results/dose_seq150.json"
+ }
+}

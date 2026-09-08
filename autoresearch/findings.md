@@ -2325,3 +2325,61 @@ one argument`. Values beginning with `-` are read by argparse as flags. The
 runner's DEFAULT `-40,-30,...` works because it never passes through argparse;
 passing the same string explicitly does not. Use `--angles=-40,...`, never a
 space.
+
+## H29 — the border warning survives 13/13; its numbers were the worst outliers yet
+
+`h29-border-variance/`, both runners unchanged on the same thirteen recordings.
+Reading in that experiment's `analysis.md`.
+
+**B2 passes 13/13.** DA3-Large's border cost exceeds DA3-Small's on every single
+recording. **B3 passes 13/13.** A 70 px border blacking out 39.5% of the frame
+costs LESS than a 5 px border blacking out 3.1%, everywhere. The non-monotonic
+dip that is the entire evidence for "proximity, not area" is completely robust.
+
+| border | % of frame | thirteen recordings | seq136 |
+|---|---|---|---|
+| 5 px | 3.1% | +19.5% +- 13.0 | +22.0% |
+| 12 px | 7.5% | +14.7% +- 10.2 | +13.2% |
+| 25 px | 15.2% | +18.1% +- 11.8 | +17.1% |
+| 45 px | 26.5% | +21.8% +- 15.6 | +16.8% |
+| **70 px** | **39.5%** | **+7.3% +- 4.9** | +6.6% |
+| 100 px | 53.4% | +35.6% +- 20.9 | +32.2% |
+
+**B1 fails by the largest margin in the whole campaign.**
+
+| | thirteen | seq136 | |
+|---|---|---|---|
+| DA3-Small border cost | +59.0% +- 14.1 | +105.7% | **+3.32 sd** |
+| DA3-Large border cost | +268.9% +- 61.5 | +635.5% | **+5.96 sd** |
+| ratio Large / Small | **4.56x** | 7.4x | |
+
+**+5.96 sd beats H25's 5.74 sd.** Both published border figures are extreme
+outliers and the headline "7.4x collapse" is really 4.56x.
+
+### This refines H28's asymmetry rather than confirming it
+
+H28 concluded seq136 "flattered what we built, not what we measured". But the
+border test IS a measurement and here seq136 is +3.3 and +6.0 sd. The sharper
+statement, offered as an observation and NOT a mechanism (two mechanism guesses
+have already been refuted in this line):
+
+**seq136 responds unusually strongly to INTERVENTIONS.** Corrections applied to
+it help unusually much (H25-H27); perturbations applied to it hurt unusually
+much (H29). Its UNPERTURBED structure is ordinary (H28). That covers all five
+experiments without special pleading, and predicts that any future intervention
+measured on seq136 alone will read high.
+
+### What changes
+
+**Not the advice.** "Never put a hard black border next to the region you care
+about" and "cost is proximity, not area" are 13/13 — better supported now than
+when published.
+
+**Three numbers.** +106% -> +59% +- 14; +636% -> +269% +- 62; 7.4x -> 4.56x. A
+4.6x collapse from a change touching no scored pixel is still the strongest
+practical warning in either report.
+
+**One phrase.** "DA3-Large is the best of the four on a clean frame and the worst
+with a border" was four backbones on one recording; H29 re-measured two. The
+"worst of the four" half is now supported for the two tested and untested for
+VGGT and VGGT-Omega.

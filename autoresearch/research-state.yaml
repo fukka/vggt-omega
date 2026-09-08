@@ -1277,3 +1277,30 @@ h28_outcome:
     sd/mean 0.176 against a 0.15 pass bar and 0.25 falsification bar. Rounding
     it to "passes" would have been the third convenient reading to go out
     unchallenged in this line.
+
+# ------------------------------------------------- H29 resolved 2026-09-08
+h29_outcome:
+  status: B2 and B3 PASS 13/13; B1 fails by the largest margin in the campaign
+  artifacts: autoresearch/experiments/h29-border-variance/results/
+  analysis: autoresearch/experiments/h29-border-variance/analysis.md
+  the_advice_is_confirmed: >
+    DA3-Large's border cost exceeds DA3-Small's on 13/13 recordings, and a 70 px
+    border (39.5% of frame) costs LESS than a 5 px one (3.1%) on 13/13. Both
+    "never put a border next to what you care about" and "cost is proximity, not
+    area" are better supported now than when published.
+  the_numbers_were_the_worst_outliers_yet:
+    da3_small: "+105.7% (seq136) -> +59.0% +- 14.1 over 13  (+3.32 sd)"
+    da3_large: "+635.5% (seq136) -> +268.9% +- 61.5 over 13 (+5.96 sd)"
+    ratio: "published 7.4x -> 4.56x on 13-recording means"
+    note: "+5.96 sd beats H25's 5.74 sd — the largest deviation in H25-H29."
+  REFINES_H28_ASYMMETRY: >
+    H28 said seq136 "flattered what we built, not what we measured". The border
+    test IS a measurement and is inflated too, so that framing was too neat.
+    Version covering all five experiments: SEQ136 RESPONDS UNUSUALLY STRONGLY TO
+    INTERVENTIONS — corrections help it unusually much (H25-H27), perturbations
+    hurt it unusually much (H29) — while its UNPERTURBED structure is ordinary
+    (H28). Observation, explicitly NOT a mechanism.
+  claim_h29_cannot_support: >
+    "DA3-Large is the best of the four on a clean frame and the worst with a
+    border" was four backbones on ONE recording; H29 re-measured two. The
+    "worst of the four" half is untested for vggt and vggt_omega.

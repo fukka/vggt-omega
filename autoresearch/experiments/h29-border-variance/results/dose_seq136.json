@@ -1,0 +1,64 @@
+{
+ "seq": "Apartment_release_clean_seq136_M1292",
+ "frames": 20,
+ "doses": {
+  "0.0": {
+   "0": {
+    "outer": 0.12971868679921475,
+    "center": 0.12065179347574635,
+    "all": 0.12609297675310815,
+    "black_frac": 0.0
+   },
+   "5": {
+    "outer": 0.16291387302979318,
+    "center": 0.14234099321921162,
+    "all": 0.15382817059131268,
+    "black_frac": 0.03149407911312685
+   },
+   "12": {
+    "outer": 0.15084085557181498,
+    "center": 0.13226531463159866,
+    "all": 0.14268100535091482,
+    "black_frac": 0.07473922902494323
+   },
+   "25": {
+    "outer": 0.15746023264486886,
+    "center": 0.13522392359588584,
+    "all": 0.14764777140239718,
+    "black_frac": 0.15243134290753346
+   },
+   "45": {
+    "outer": 0.1564493303538327,
+    "center": 0.13755928888558494,
+    "all": 0.1472478216765952,
+    "black_frac": 0.26530612244897966
+   },
+   "70": {
+    "outer": 0.14197963243571357,
+    "center": 0.12749657515579654,
+    "all": 0.13442799824581395,
+    "black_frac": 0.3950617283950617
+   },
+   "100": {
+    "outer": 0.17674274365658693,
+    "center": 0.15884520870210114,
+    "all": 0.16666070812490996,
+    "black_frac": 0.5341395817586294
+   }
+  }
+ },
+ "config": {
+  "seq": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq136_M1292",
+  "widths": "0,5,12,25,45,70,100",
+  "angles": "0",
+  "size": 504,
+  "max_frames": 20,
+  "variant": "small",
+  "view_fov": 89.0,
+  "view_size": 630,
+  "common_theta_deg": 30.0,
+  "depth_max_m": 10.0,
+  "device": "cuda",
+  "out": "/user/f.zhang2/projects/vggt-omega-organized/autoresearch/experiments/h29-border-variance/results/dose_seq136.json"
+ }
+}
