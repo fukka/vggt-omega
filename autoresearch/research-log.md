@@ -1964,3 +1964,24 @@ Both of H42's substantive corrections are to claims that came from seq136 at a
 single angle. That is now four experiments in a row (H41, H42, and H39/H40's
 label corrections) whose main output is a previously published number moving.
 The line is in the phase where re-measuring is worth more than measuring.
+
+### H43 — a CPU experiment that cost nothing and moved the most
+
+H43 used no GPU and no new data: it is arithmetic on H41's and H42's committed
+curves plus the per-frame roll already inside those JSONs. It explains the one
+contradiction the line had left, and retires every published asymmetry number as
+a statement about models.
+
+Two things worth keeping from how it went.
+
+**A badly chosen bar is still a failed bar.** B1 asked for inflation on "a
+majority of cells", but two recordings have a non-negative median tilt where the
+offset must deflate — so the bar could never have been clean. It passed at 60%
+and I am recording it as marginal rather than as support. B3, the bar that
+actually tested the mechanism, failed, and the writeup leads with that rather
+than with B2's success.
+
+**Say which results rest on extrapolation.** ±22° was the edge of the grid, so
+the device-origin column needed guessing beyond it. B2 does not depend on that
+guess and B1/B3 do, so B2 is the one quoted and the other two are labelled. The
+wide-angle run launched alongside removes the guess entirely.

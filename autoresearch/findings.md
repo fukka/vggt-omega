@@ -3299,3 +3299,66 @@ found the asymmetry, H33 could not attribute it, H34 was void trying, and this
 is a fourth data point that does not line up. The honest position is that it is
 **less clean now than when H32 found it**, and nothing in the reports should
 lean on it.
+
+## H43 — the origin explains the contradiction, and retires the published asymmetry numbers
+
+The asymmetry was the last thing open in this line, with four measurements that
+disagree. **Every one of them shares its zero: the device-aligned render.**
+
+A device-origin sweep at ±a measures `g(ψ − a) − g(ψ + a)`. With a negative
+signed median ψ that is **positive even for a perfectly symmetric g**, because
+the "+a" arm is sampled further out on a convex curve. The signed median across
+these 13 recordings is **−3.10°** (H17.1 reported −2.70° over all frames).
+
+| backbone | Δ about the true zero | Δ about the device zero |
+|---|---|---|
+| `da3:small` | +4.70% | +12.5% / +13.5% |
+| `da3:large` | **+7.77%** | +8.7% / +19.4% |
+| `vggt` | **−6.99%** | **+9.3% / +8.7%** |
+| `vggt_omega` | −0.87% | +2.9% / +6.4% |
+
+**The contradiction H42 raised dissolves.** H42 found `vggt` inverting against a
+gravity origin where H33 had it 8/8 the other way against a device origin. The
+same curve gives −6.99% about the true zero and +9.29% about the device zero,
+positive on 10/13 recordings and 12/13 under the quadratic extrapolation. **One
+curve, two origins, opposite signs. The zero changed, not the model.**
+
+**But the mechanism does not carry the whole effect.** The bar that actually
+tested it — the correlation between a recording's median tilt and how much
+asymmetry the offset manufactures — **failed**: Spearman −0.345 and −0.441
+against a locked ≤ −0.4 under both extrapolations. Per-cell inflation is 31/52
+and 32/52, a 60% majority against a badly-chosen "a majority" bar (two
+recordings have a non-negative median tilt, where the offset must *deflate*).
+
+> **The device origin flips the sign; it does not cleanly account for the
+> asymmetry. The published numbers are part artefact and part something else,
+> and this cannot say how much of each.**
+
+### What changes regardless
+
+**No asymmetry number in this line survives as a statement about a model.**
+H32's "+30° costs 2.3× what −30° costs" is a device-origin measurement on
+footage with a −2.7° median tilt, and its *direction is exactly what the offset
+manufactures*. H33's per-backbone differences inherit the same problem —
+including "da3:large is at chance", which is now doubly odd, because
+`da3:large` has the **largest** true-zero asymmetry of the four.
+
+The defensible numbers are the true-zero column above, at ±22°, on one lens.
+
+### Third time the origin was the answer
+
+H41 explained §03u's near-zero dip by the same offset. H41 also showed §03u's
+"coincidence" — the wearer's median tilt landing at the curve's cheapest angle
+— is an identity about coordinates. This is the same identity one step further
+on. **When a curve looks odd near its origin, suspect the origin** has now paid
+for itself three times.
+
+### Honesty note on what rests on extrapolation
+
+±22° was the outer edge of the measured grid, so every device-origin number
+above needed g beyond it and was computed twice. **B1 and B3 were evaluated on
+extrapolated values; B2 was not** — `vggt`'s true-zero Δ is measured, and its
+device-origin Δ is positive under both extrapolations and on 10 and 12 of 13
+recordings. That is why B2 is the one quoted. A wide-angle run (0, ±26, ±30) is
+in flight to remove the extrapolation and make the comparison angle-matched with
+H32.
