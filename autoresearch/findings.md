@@ -1900,3 +1900,75 @@ time the published phrasing was tighter than the evidence, and the next
 experiment supplied the qualifier. This is now a standing rule, not an
 observation: **before publishing a characterisation, name the axis it was never
 varied along.**
+
+## H22 — Spearman +1.000, and H21's mechanism was backwards in the direction I corrected
+
+`h22-rim-density/results/rim_density.json`, full reading in that experiment's
+`analysis.md`. Six lens shapes, same machinery as H21.
+
+### B1, B2, B3 all pass
+
+| fitted on | rim area share | row mean (same room) | (rearranged) |
+|---|---|---|---|
+| orthographic | 68.3% | **-30.5%** | **-15.6%** |
+| equisolid | 73.5% | -29.0% | -14.1% |
+| equidistant | 75.0% | -27.7% | -13.3% |
+| stereographic | 77.9% | -24.7% | -11.1% |
+| the real lens | 79.4% | -21.8% | -9.3% |
+| rectilinear | 86.6% | -11.3% | -2.4% |
+
+**Spearman rho = +1.000 on both recordings.** The geometry giving the rim the
+FEWEST pixels makes the best fitting set — the opposite of what H21's analysis
+claimed, and the direction I had already corrected analytically before running.
+
+### The recommendation, stated at the right strength
+
+On the real Aria lens: equisolid -26.8%, orthographic -26.2%, equidistant
+-26.0%, its own curve -21.0%. Any rim-compressing geometry is worth ~5-6 points;
+**the 0.6 points between equisolid and orthographic is inside noise, so B2
+passing does NOT license naming orthographic.** The finding is "fit on a
+rim-compressing geometry", not a specific one.
+
+### Where "matching buys nothing" holds — and where it stops
+
+The raw diagonal beats the off-diagonal (-27.6 vs -23.5), which looks like it
+contradicts H21. It does not: good fitting geometries are also easy targets, so
+the diagonal is confounded by correlated row and column effects. The clean test
+is an additive model `M[i,j] ~ mu + r_i + c_j` and the diagonal's residual:
+
+  orthographic 8.5 | rectilinear 8.3 | equisolid 1.3 | real lens 1.1 |
+  stereographic 0.7 | equidistant 0.5      (residual sd 2.98)
+
+Among the four **realistic fisheye shapes, including the real lens**, matching is
+worth 0.5-1.3 points — inside noise. **5 of 6 target lenses do better with
+somebody else's curve.** H21's conclusion holds and is better supported. It
+stops holding at the two extremes, where a lens's own curve is worth 8 points:
+those renderings sit far enough outside the fisheye family that only their own
+curve describes them.
+
+Variance: fit geometry 49.8%/36.7%, target 39.4%/54.0%, rest ~10%.
+
+### Mechanism — a hypothesis, deliberately not a finding
+
+I got this wrong once, so it is labelled. Rim-EXPANDING geometries upsample the
+rim: more pixels, interpolated from the same samples, so no new information plus
+blur. Rim-COMPRESSING ones downsample: fewer pixels, each a real average. On that
+reading the fit is limited by rim pixel QUALITY, not count — the same shape of
+explanation as H20's motion result.
+
+**A competing explanation this cannot rule out**: row and column effects are
+ordered the same way, so the ranking may just be "how badly this rendering was
+damaged by resampling", hitting fitting and scoring alike. The recommendation
+survives either way because the row effect is measured against fixed targets;
+the mechanism does not.
+
+Falsifiable: if it is upsampling loss, rendering the source at higher resolution
+before warping should shrink the spread. If it is the angular distribution
+itself, it should not.
+
+### On the standing rule
+
+The rule added after H21 — *before publishing a characterisation, name the axis
+it was never varied along* — worked as intended this time. H21's mechanism was
+caught by computing r(theta)/r(theta_max) with no data at all, before H22 ran,
+and the protocol opened by correcting it rather than testing around it.

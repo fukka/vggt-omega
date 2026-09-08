@@ -950,3 +950,41 @@ h22_candidate:
     keeps rising or turns over. If it keeps rising, "resample before fitting"
     becomes a tunable knob with an optimum worth finding.
   cost: one GPU pass, no new data, no teacher inference — same machinery as H21.
+
+# ------------------------------------------------- H22 resolved 2026-09-08
+h22_outcome:
+  status: ALL THREE BARS PASS — Spearman +1.000, corrected direction confirmed
+  artifact: autoresearch/experiments/h22-rim-density/results/rim_density.json
+  analysis: autoresearch/experiments/h22-rim-density/analysis.md
+  headline: >
+    Rim area share vs fit quality is perfectly monotone (Spearman +1.000, both
+    recordings, six geometries spanning 68.3%-86.6%). The geometry giving the
+    rim the FEWEST pixels makes the best fitting set — the opposite of what
+    H21's analysis had claimed, corrected analytically before this ran.
+  do_not_overclaim_b2: >
+    orthographic beats equisolid by row mean, but on the real Aria lens they
+    differ by 0.6 points, inside noise (equisolid -26.8, orthographic -26.2,
+    equidistant -26.0, own curve -21.0). The finding is "fit on a
+    rim-compressing geometry"; naming one is not supported.
+  h21_holds_but_has_a_boundary: >
+    Raw diagonal beats off-diagonal (-27.6 vs -23.5) only because good fitting
+    geometries are also easy targets. Additive model M ~ mu + r_i + c_j, diagonal
+    residual: orthographic 8.5, rectilinear 8.3, equisolid 1.3, real lens 1.1,
+    stereographic 0.7, equidistant 0.5 (residual sd 2.98). Matching buys nothing
+    among realistic fisheye shapes; it is worth 8 points only at the extremes.
+    5 of 6 target lenses do better with somebody else's curve.
+  mechanism_is_a_hypothesis_not_a_finding: >
+    Rim-expanding geometries upsample (more pixels, no new information, plus
+    blur); rim-compressing ones downsample (fewer pixels, each a real average).
+    Competing explanation this cannot rule out: row and column effects are
+    ordered alike, so the ranking may be generic resampling damage. The
+    recommendation survives either way (row effect measured on fixed targets);
+    the mechanism does not.
+
+h23_candidate:
+  question: >
+    Is the rim-density effect upsampling loss, or the angular distribution
+    itself? Render the source at higher resolution before warping: upsampling
+    loss predicts the spread shrinks, an angular-distribution cause predicts it
+    does not.
+  cost: one GPU pass, same machinery, no new data.

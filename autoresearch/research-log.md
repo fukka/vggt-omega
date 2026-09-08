@@ -1311,3 +1311,35 @@ and the next experiment supplied the missing qualifier. Promoted from observatio
 to standing rule in findings.md: before publishing a characterisation, name the
 axis it was never varied along. Here that axis was the lens itself, in a claim
 whose whole content was about the lens.
+
+## 2026-09-08 (late) — H22: the trend is perfect, and my correction was the right one
+
+H22 existed because H21's analysis stated a mechanism backwards. That was caught
+analytically — every lens is normalised so r(theta_max) = R_disc, so the rim's
+share of the frame follows from the shape alone, and equisolid gives the rim
+FEWER pixels than equidistant, not more. The protocol opened by correcting H21's
+analysis.md rather than quietly testing around it.
+
+The corrected direction is right, and cleanly so: Spearman +1.000 between rim
+area share and fit quality, on both test recordings, across six geometries
+spanning 68% to 87%. All three bars pass.
+
+Two things I made sure not to over-claim.
+
+B2 passed — orthographic beats equisolid by row mean — but on the real Aria
+lens, the only target that matters in deployment, they differ by 0.6 points,
+inside noise. So the finding is "fit on a rim-compressing geometry", and the
+report does not name one.
+
+And the raw diagonal looks better than the off-diagonal, which would appear to
+contradict H21's "matching buys nothing". It does not: good fitting geometries
+are also easy targets, so row and column effects are correlated and the diagonal
+is confounded. Fitting the additive model and looking at the diagonal residual
+splits it properly — 0.5 to 1.3 points for the four realistic fisheye shapes
+including the real lens (residual sd 2.98), against 8.5 and 8.3 for the two
+extremes. H21 holds inside the fisheye family and stops holding outside it,
+which is a better result than either "it always holds" or "it never does".
+
+Mechanism is left as a labelled hypothesis with a competing explanation stated
+alongside, because I got the last one wrong and the row/column orderings are
+degenerate here in a way this experiment cannot separate.
