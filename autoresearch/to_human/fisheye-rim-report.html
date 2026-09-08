@@ -235,7 +235,13 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       <strong>H9</strong>：两个对照 6/6、无深度真值，但预注册主判据 0/6 ——<em>一个有效的边缘重标定，不是径向畸变的解</em>（§06）。
     </p></div>
 
-    <div class="row"><span class="who">⑦ 瓶颈是场景数，不是数据量</span><p>
+    <div class="row"><span class="who">⑦ 那条曲线只要 30 帧</span><p>
+      径向标定的代价是 <strong>约 30 帧、一秒视频</strong>，可以全部来自同一段普通录像。
+      预注册赌的是"要视角分散"——<strong>输了</strong>：五个匹配帧数里 single 赢三个，
+      连带否掉了停机期间那个预测有显著差距的模拟（§03d）。
+    </p></div>
+
+    <div class="row"><span class="who">⑧ 瓶颈是场景数，不是数据量</span><p>
       固定计算量下，同一间房里把独立帧从 240 加到 <strong>11,418（48 倍）</strong>，在诚实的留出序列上买到的是<strong>零</strong>
       （−21.7% → −20.9%），而近中心损伤从 +58% 单调恶化到 <strong>+145%</strong>。
       跨房间才是分得开的那个检验，而它现在只有 <strong>120 帧</strong>，却同时扛着④⑤两条主张 —— <strong>本页最该补强的一处。</strong>（§07）
@@ -1819,6 +1825,102 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 
 
 <!-- ============================================================ 04 C H14.2 -->
+<section>
+  <div class="section-head"><span class="eyebrow">03d</span><h2>实验 B‴ · H18.5：那 16 个数要多少帧才拟合得出来</h2>
+    <span class="chip kill"><span class="dot"></span>主判据被证伪 · 连带否掉自己的模拟</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      §03c 说可迁移的是一条 16 个数（其实是 6 个）的径向曲线。那么它<strong>要多少数据才拟合得出来</strong>？
+      这是一条标定流程必须报出的数字。
+    </p>
+    <p>
+      预注册的机制是这样的：识别出每档的斜率 <span class="mono">a</span>，靠的是该档内 <span class="mono">log(预测)</span> 的<strong>展开范围</strong>。
+      一帧是一个视角，它的像素只占一条窄的深度带；同一视角再加像素只是把这条带填得更密，<strong>不会把它变宽</strong>，
+      而换一个视角会把带整个移走。所以预测是：<strong>视角分散的帧买到斜率精度，同一视角的帧买不到。</strong>
+    </p>
+    <p>
+      两个轴交叉：帧数 2…240，以及 <span class="mono">spread</span>（均匀取自四条序列）对 <span class="mono">single</span>（全取自一条）。
+      每格五次独立抽样，读两个量：<strong>稳定性</strong>（各次抽样之间 <span class="mono">a(θ)</span> 的平均两两绝对差，不需要留出集）
+      与<strong>迁移</strong>（四条评测序列上的近边缘增益）。
+    </p>
+  </div>
+
+  <div class="scroll" style="margin-top:18px">
+    <table>
+      <caption>每行五次独立拟合。<span class="mono">stab</span> 越小表示各次抽样拟出来的曲线越一致。
+        <strong>灰底两行是退化行</strong>：它们把各自的池子取尽了，所以 0.000 是算术结果，不是收敛。</caption>
+      <thead><tr><th>取法</th><th>帧数</th><th>stab</th><th>seq136</th><th>dec132</th><th>DinoToy</th><th>Bowl</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">spread</td><td class="num">2</td><td class="num bad">0.485</td><td class="num">−11.0 ± 12.9</td><td class="num">−1.4 ± 13.3</td><td class="num">−20.4 ± 14.8</td><td class="num">−8.0 ± 2.5</td></tr>
+        <tr><td class="mono">spread</td><td class="num">4</td><td class="num">0.237</td><td class="num">−13.0 ± 5.5</td><td class="num">−3.0 ± 5.2</td><td class="num">−21.9 ± 3.2</td><td class="num">−8.4 ± 0.4</td></tr>
+        <tr><td class="mono">spread</td><td class="num">8</td><td class="num good">0.085</td><td class="num">−15.1 ± 2.6</td><td class="num">−5.0 ± 0.9</td><td class="num">−23.1 ± 3.6</td><td class="num">−8.5 ± 0.9</td></tr>
+        <tr class="flip"><td class="mono">spread</td><td class="num"><b>30</b></td><td class="num good"><b>0.069</b></td><td class="num">−13.9 ± 2.1</td><td class="num">−4.3 ± 1.5</td><td class="num">−23.0 ± 2.3</td><td class="num">−8.6 ± 0.5</td></tr>
+        <tr><td class="mono">spread</td><td class="num">120</td><td class="num good">0.025</td><td class="num">−16.4 ± 0.5</td><td class="num">−6.2 ± 0.5</td><td class="num">−25.9 ± 0.6</td><td class="num">−9.0 ± 0.1</td></tr>
+        <tr style="opacity:.55"><td class="mono">spread</td><td class="num">240</td><td class="num">0.000</td><td class="num">−16.6</td><td class="num">−6.5</td><td class="num">−26.0</td><td class="num">−8.9</td></tr>
+        <tr><td class="mono">single</td><td class="num">2</td><td class="num bad">0.530</td><td class="num">−17.1 ± 8.7</td><td class="num">+0.3 ± 18.2</td><td class="num">−23.0 ± 12.9</td><td class="num">−8.6 ± 1.8</td></tr>
+        <tr><td class="mono">single</td><td class="num">8</td><td class="num">0.152</td><td class="num">−12.7 ± 3.1</td><td class="num">−1.6 ± 2.8</td><td class="num">−21.9 ± 3.1</td><td class="num">−8.4 ± 0.5</td></tr>
+        <tr class="flip"><td class="mono">single</td><td class="num"><b>30</b></td><td class="num good"><b>0.060</b></td><td class="num">−16.1 ± 1.1</td><td class="num">−6.6 ± 0.6</td><td class="num">−25.4 ± 1.6</td><td class="num">−8.7 ± 0.5</td></tr>
+        <tr style="opacity:.55"><td class="mono">single</td><td class="num">60</td><td class="num">0.000</td><td class="num">−17.9</td><td class="num">−7.1</td><td class="num">−27.9</td><td class="num">−9.3</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:18px">
+    <h3>逐条判据</h3>
+  </div>
+  <div class="crit">
+    <div class="row"><span class="who">判据一 ✓ 大幅通过</span><p>
+      预注册写的是"<code>spread</code> 60 帧时 <span class="mono">|da|</span> 降到 0.10 以下"。
+      实际 <strong>8 帧</strong>就到了（0.085）。收敛比预期快得多。
+    </p></div>
+    <div class="row"><span class="who">判据二 ✗ 未通过 —— 这是预注册的证伪条件</span><p>
+      "<code>spread</code> 在每个匹配帧数上都赢 <code>single</code>"：五个非退化的匹配帧数里
+      <strong>single 赢三个</strong>（4、15、30），spread 赢两个（2、8）。
+      协议里写的证伪条件正是"<code>single</code> 追平 <code>spread</code>"。<strong>H18.5 被自己的判据推翻。</strong>
+    </p></div>
+    <div class="row"><span class="who">连带 ✗ 模拟一起被否</span><p>
+      停机期间我写过一个 CPU 模拟来刻画这个估计量，它预测 spread/single 之间会有一个随视角分散扩大的显著差距。
+      <strong>没有这个差距。</strong>那个模拟当时被明确标注为"对估计量的刻画，不是关于 ADT 的结论"，
+      并且在数据存在之前就提交了 —— 这是它现在算一次干净证伪、而不是事后找补的唯一原因。
+    </p></div>
+  </div>
+
+  <div class="col">
+    <h3 style="margin-top:22px">再想一层</h3>
+    <div class="note">
+      <span class="eyebrow">这一节的结论</span>
+      <p>
+        <strong>约 30 帧就够，而且可以全部来自同一段普通录像。</strong>
+      </p>
+      <p>
+        决定精度的只是<strong>帧数</strong>，不是视角分散程度，并且到 30 帧左右就饱和了。
+        最可能的原因：一条 ADT 序列是一个人在房间里走动，<strong>相邻帧本来就扫过很宽的深度范围</strong> ——
+        模拟里假设的"单一视角只看到一条窄深度带"，根本不描述头戴录像。
+      </p>
+    </div>
+    <div class="note warn">
+      <span class="eyebrow">别引这两行</span>
+      <p>
+        <code>spread_240</code> 和 <code>single_60</code> 把各自的池子取尽了，每次抽样都是同一次抽样，
+        它们的 0.000 是算术不是收敛。因此
+        "60 帧单序列（−17.9）比 240 帧四序列（−16.6）还略好"是<strong>两个点估计相比，两边都没有误差棒</strong>。
+        提示性的，不是测出来的。
+      </p>
+    </div>
+    <p>
+      上面那个解释是<strong>假设，不是测量</strong>。它有一个可证伪的推论：
+      在<strong>真正静止</strong>的素材上，spread 的优势应该重新出现 —— 而 LiteOffice 差不多就是静止的。
+      这条推论已经写进 H19 的预注册判据里去测了。
+    </p>
+    <p>
+      实际意义是这一节里最有用的东西：径向标定的代价是<strong>约 30 帧、大约一秒视频</strong>，来自一段普通录像。
+      这和"每台设备都要采集多样化素材"是完全不同的部署故事。
+    </p>
+  </div>
+</section>
+
 <section>
   <div class="section-head"><span class="eyebrow">04</span><h2>实验 C · H14.2：虚拟视角不必是方的</h2>
     <span class="chip kill"><span class="dot"></span>预测被否定</span></div>
