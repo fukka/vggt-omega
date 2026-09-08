@@ -1,0 +1,68 @@
+{
+ "seq": "Apartment_release_clean_seq144_M1292",
+ "frames": 20,
+ "results": {
+  "da3:small": {
+   "0": {
+    "near_rim": 1.0887808428815666,
+    "center": 0.324816558386711,
+    "all": 0.43382463055784176,
+    "rim_over_center": 3.351986882347656
+   },
+   "1": {
+    "near_rim": 1.184248375031692,
+    "center": 0.36759665402479813,
+    "all": 0.47317422100561046,
+    "rim_over_center": 3.2215972644620487
+   },
+   "2": {
+    "near_rim": 1.12448730081461,
+    "center": 0.3638620950317033,
+    "all": 0.45408731217502135,
+    "rim_over_center": 3.090421662956218
+   },
+   "3": {
+    "near_rim": 0.35740305972281405,
+    "center": 0.16815568940150494,
+    "all": 0.18207289438371474,
+    "rim_over_center": 2.125429481422086
+   }
+  },
+  "da3:large": {
+   "0": {
+    "near_rim": 0.43435606700014356,
+    "center": 0.180797318630002,
+    "all": 0.21179504585590697,
+    "rim_over_center": 2.4024475047057767
+   },
+   "1": {
+    "near_rim": 0.7703244387153447,
+    "center": 0.24873796271167117,
+    "all": 0.3221656786280937,
+    "rim_over_center": 3.0969315271279254
+   },
+   "2": {
+    "near_rim": 0.510133903369877,
+    "center": 0.20509977555633638,
+    "all": 0.24770885228385917,
+    "rim_over_center": 2.487247496912811
+   },
+   "3": {
+    "near_rim": 0.22836496795498382,
+    "center": 0.12972546742161103,
+    "all": 0.13287043869381557,
+    "rim_over_center": 1.7603711321601325
+   }
+  }
+ },
+ "config": {
+  "seq": "/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq144_M1292",
+  "models": "da3:small,da3:large",
+  "size": 504,
+  "max_frames": 20,
+  "depth_max_m": 10.0,
+  "device": "cuda",
+  "omega_ckpt": "/user/f.zhang2/projects/vggt-omega-organized/checkpoints/VGGT-Omega-1B-512/model.pt",
+  "out": "/user/f.zhang2/projects/vggt-omega-organized/autoresearch/experiments/h28-foundation-variance/results/ratio_seq144.json"
+ }
+}

@@ -1210,3 +1210,40 @@ adt_unused_sequences:
   do_not_launch_without_asking: >
     Filling a shared research filesystem past 98% affects colleagues and is not
     reversible from here. Flagged to the user rather than started.
+
+# ------------------------------- H28 part 1 (ratio arm) 2026-09-08
+h28_ratio_arm:
+  status: B2 PASSES cleanly, B1 MARGINAL — and the asymmetry is the finding
+  artifact: autoresearch/experiments/h28-foundation-variance/results/ratio_seq*.json
+  b2_seq136_was_representative_here: >
+    seq136's published rim/centre of 2.13 sits at -0.11 sd from the
+    13-recording mean of 2.171. Its raw rim error (0.389) is likewise ordinary
+    against 0.396 +- 0.056. So for the PHENOMENON, seq136 was representative —
+    the opposite of what H25-H27 found for the METHODS, where it inflated
+    everything by 1.33x to 2.36x.
+  b1_marginal_and_the_range_claim_is_wrong: >
+    sd/mean = 0.176 for da3:small (bar: pass <0.15, falsified >=0.25) and 0.224
+    for da3:large. Neither passes nor falsifies. But the ranges are the real
+    problem: da3:small 1.39-2.65 and da3:large 1.14-2.98 across recordings.
+  what_must_be_restated: >
+    The published claim is "the rim is 2.0-2.6x worse than the centre, IN EVERY
+    MODEL". That range was never a spread across models — it was four numbers
+    each measured on ONE recording that happened to land close together. Across
+    13 recordings the ratio reaches down to 1.14. The MEAN survives (2.17 and
+    2.13 against the published 2.13 and 2.04); the tight range does not.
+  honest_restatement: >
+    "About 2.2x on average, with recording-to-recording spread from roughly 1.4
+    to 2.7." The "in every model" half survives; the interval does not.
+  roll_arm_still_running: >
+    The roll arm (B3) failed on the first attempt: argparse reads a bare
+    "-40,-30,..." as a flag, so --angles must use the = form. Relaunched as
+    tmux h28b with --angles=-40,... The published +13/+46/+131% at
+    +-20/30/40 deg is still unverified across recordings.
+
+gotcha_argparse_negative_list:
+  symptom: "roll_controls.py: error: argument --angles: expected one argument"
+  cause: >
+    A value starting with '-' is parsed as a flag. The runner's DEFAULT
+    "-40,-30,..." works because it never passes through argparse; passing the
+    same string explicitly fails.
+  fix: "--angles=-40,-30,-20,0,20,30,40 (the = form), never a space."
