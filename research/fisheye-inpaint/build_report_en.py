@@ -252,6 +252,25 @@ def main():
     left = [LAD1["fisheye"]["span"] - rep1["fisheye"]["gain"], LAD1["persp"]["span"] - rep1["persp"]["gain"],
             LAD8["fisheye"]["span"] - rep8["fisheye"]["gain"], LAD8["persp"]["span"] - rep8["persp"]["gain"]]
 
+
+    ir = "".join(
+        f'<div{" class=ctl" if k == CTRL[0] else ""}><div class="nm">{chip(k)}</div>'
+        f'<p>{ALL[k][2]}<br><span class="ci">'
+        + (f'black {INP[k]["black_pct"]:.1f}% · scored {INP[k]["graded_pct"]:.0f}%' if k in INP
+           else 'a control, not one of the four cells')
+        + '</span></p></div>' for k in ALL)
+
+    def cells_table(Ca, Cb, keys, hl=None):
+        rows = "".join(
+            f'<tr{" class=hl" if k == hl else ""}><td>{chip(k)}</td>'
+            f'<td class="n">{Ca[k]["AbsRel"]:.4f}</td><td class="n">{Cb[k]["AbsRel"]:.4f}</td>'
+            f'<td class="n">{Ca[k]["delta1"]:.3f}</td><td class="n">{Cb[k]["delta1"]:.3f}</td></tr>'
+            for k in keys if k in Ca)
+        return ('<div class="scroll"><table><thead><tr><th>Input</th>'
+                '<th class="n">AbsRel · 1 frame</th><th class="n">AbsRel · 8 frames</th>'
+                '<th class="n">δ₁ · 1 frame</th><th class="n">δ₁ · 8 frames</th></tr></thead>'
+                f'<tbody>{rows}</tbody></table></div>')
+
     H = []
     A = H.append
 
@@ -265,346 +284,258 @@ def main():
 <header class="mast">
   <p class="eyebrow">Experiment report · VGGT-Omega · Aria fisheye</p>
   <h1>Filling the black corners does not buy what we hoped</h1>
-  <p class="lede">Straightening a fisheye photo leaves black wedges in the corners. The obvious fix is to paint something into them so the picture looks like an ordinary photo again. We rendered a scene where we could put the <b>real</b> scene content into those corners — the best any filling method could ever do — and measured what a 3D model gained. It gained a little depth accuracy, nothing on camera pose, and <b>less than simply zooming in and cropping the black away</b>.</p>
+  <p class="lede">Straightening a fisheye photo leaves black wedges in the corners. We filled them with the
+  <b>real</b> scene — the best any method could do. It bought a little depth accuracy, nothing on camera pose,
+  and <b>less than simply cropping the black away</b>.</p>
   <div class="facts">
     <span>96 frames · 12 windows · 4 sequences</span>
     <span>VGGT-Omega-1B-512, no fine-tuning</span>
-    <span>one evaluation run, 2026-09-08</span>
+    <span>one run, 2026-09-08</span>
   </div>
 </header>
-""")
 
-    # ---------------------------------------------------------------- answers
-    A(f"""
 <section class="part" id="answers">
 <span class="pnum">Summary</span>
-<h2>Four questions, four answers</h2>
+<h2>Four questions</h2>
 <div class="answers">
   <div class="ans"><div class="q">Q1</div><div class="a">
-    <b>Does real content in the black corners make depth better?</b> Yes, but only a little, and it helps
-    the fisheye frame just as much as the straightened one — so it is not about "looking like a normal photo".
-    <span class="fig">{E1['AbsRel']['fisheye']['mean']:+.4f} on fisheye, {E1['AbsRel']['persp']['mean']:+.4f} on rectified (AbsRel, lower is better). The difference between those two is {E1['AbsRel']['interaction']['mean']:+.4f} and could easily be zero.</span></div></div>
+    <b>Does real content in the corners improve depth?</b> Yes, a little. But it helps the fisheye frame as much
+    as the straightened one — so this is not about looking like a normal photo.
+    <span class="fig">{E1['AbsRel']['fisheye']['mean']:+.4f} fisheye · {E1['AbsRel']['persp']['mean']:+.4f} rectified · difference between them {E1['AbsRel']['interaction']['mean']:+.4f}, could be zero</span></div></div>
   <div class="ans"><div class="q">Q2</div><div class="a">
-    <b>Does it make the camera estimate better?</b> No. On the fisheye frame it makes it measurably worse,
-    and the model's guess at the lens's field of view barely moves.
-    <span class="fig">Pose score changes {E8['auc30']['fisheye']['mean']:+.3f} on fisheye and {E8['auc30']['persp']['mean']:+.3f} on rectified. Inferred field of view moves {abs(F1['persp_full']['mean'] - F1['persp_masked']['mean']):.1f}° and stays {F1['persp_full']['abs_err']:.0f}° away from the truth.</span></div></div>
+    <b>Does it improve the camera estimate?</b> No. On fisheye it makes it worse.
+    <span class="fig">Pose score {E8['auc30']['fisheye']['mean']:+.3f} fisheye · {E8['auc30']['persp']['mean']:+.3f} rectified · inferred field of view moves {abs(F1['persp_full']['mean'] - F1['persp_masked']['mean']):.1f}° and stays {F1['persp_full']['abs_err']:.0f}° wrong</span></div></div>
   <div class="ans"><div class="q">Q3</div><div class="a">
-    <b>How much of that gain needs a clever filling method?</b> Almost none. Smearing the nearest real pixel
-    outward — which invents nothing — already captures most or all of it.
-    <span class="fig">Smearing captures {min(rep1['persp']['pct'], rep1['fisheye']['pct'], rep8['persp']['pct'], rep8['fisheye']['pct']):.0f}–{max(rep1['persp']['pct'], rep1['fisheye']['pct'], rep8['persp']['pct'], rep8['fisheye']['pct']):.0f}% of what real content is worth — in one case it beats the truth. At most {max(left):.3f} AbsRel is left for anything smarter.</span></div></div>
+    <b>How much of the gain needs a clever filler?</b> Almost none. Smearing the nearest pixel outward gets most of it.
+    <span class="fig">Smearing captures {min(rep1['persp']['pct'], rep1['fisheye']['pct'], rep8['persp']['pct'], rep8['fisheye']['pct']):.0f}–{max(rep1['persp']['pct'], rep1['fisheye']['pct'], rep8['persp']['pct'], rep8['fisheye']['pct']):.0f}% · at most {max(left):.3f} AbsRel left for anything smarter</span></div></div>
   <div class="ans"><div class="q">Q4</div><div class="a">
-    <b>Is a wider filled view better than just cropping the black away?</b> No — cropping wins on every measure,
-    and the gap grows when the model gets several frames at once.
-    <span class="fig">Cropping beats filling by {abs(XC1['AbsRel']['persp_full']['mean']):.4f} AbsRel with 1 frame and {abs(XC8['AbsRel']['persp_full']['mean']):.4f} with 8, on the part of the scene both can see. Camera pose score {P8['persp_crop']['auc30']:.2f} against {P8['persp_full']['auc30']:.2f}; trajectory error {P8['persp_crop']['ate_m']*100:.1f} cm against {P8['persp_full']['ate_m']*100:.1f} cm.</span></div></div>
+    <b>Is a wide filled view better than cropping the black away?</b> No. Cropping wins on depth, on pose, and on
+    multi-frame. The gap grows with more frames.
+    <span class="fig">Depth {abs(XC1['AbsRel']['persp_full']['mean']):.4f} better at 1 frame, {abs(XC8['AbsRel']['persp_full']['mean']):.4f} at 8 · pose {P8['persp_crop']['auc30']:.2f} vs {P8['persp_full']['auc30']:.2f} · trajectory {P8['persp_crop']['ate_m']*100:.1f} cm vs {P8['persp_full']['ate_m']*100:.1f} cm</span></div></div>
 </div>
-<p class="note">Every number below is a measurement from one evaluation run, with a 95% confidence interval in brackets. "Real" means the interval does not contain zero. Intervals are computed by resampling <em>windows</em>, not frames — see <a href="#method">the method</a> for why that matters.</p>
+<p class="note">Brackets are 95% confidence intervals. <b>Real</b> means the interval excludes zero. Intervals
+resample <em>windows</em>, not frames — <a href="#method">why</a>.</p>
 </section>
-""")
 
-    # ---------------------------------------------------------------- motivation
-    A(f"""
 <section class="part" id="why">
 <span class="pnum">Part 1 — Motivation</span>
-<h2>Why anyone would want to fill the corners</h2>
-<p>A fisheye lens draws a circle of light on a square sensor, so the four corners of the file are empty.
-Straightening that circle into a flat, ordinary-looking photo (called <em>rectification</em>) makes the problem
-worse rather than better: to keep the whole circle you have to zoom out, and then a third of the picture is
-black wedges.</p>
-<p>3D models like VGGT-Omega were trained on ordinary photographs. Large black regions are not something an
-ordinary photograph has. Two published results say this should matter: black is not a neutral value to a
-convolutional or attention model, and networks are known to read the frame's edges as positional information.
-So the idea is simple and appealing:</p>
+<h2>Why fill the corners at all</h2>
+<p>A fisheye lens draws a circle on a square sensor. The corners hold nothing.</p>
+<p>Straightening that circle into a flat photo makes it worse. To keep the whole circle you zoom out, and a
+third of the frame becomes black wedges.</p>
+<p>3D models are trained on ordinary photos. Ordinary photos have no black wedges.</p>
 <div class="key">
-<h4>The claim we set out to test</h4>
-<p>If you fill the black wedges with plausible content, the picture returns to the domain the model was trained
-on, the model recovers its ability to work out its own camera, and its depth gets better.</p>
-<p>That claim makes a sharp prediction. Filling should help the <em>straightened</em> picture much more than it
-helps the raw fisheye picture, because only the straightened one becomes a normal photo. If filling helps both
-equally, then whatever is going on is just "do not feed the model a big black region" — a much smaller and much
-less interesting story.</p>
+<h4>The claim we tested</h4>
+<p>Fill the wedges → the picture looks normal again → the model works out its own camera → depth improves.</p>
+<p>That predicts something specific: filling should help the <em>straightened</em> frame much more than the raw
+fisheye frame, because only the straightened one becomes a normal photo. If both improve equally, the effect is
+just "no large black regions" — a much smaller story.</p>
 </div>
-<p>The reason to test it carefully rather than just try it: a good filling method means a generative model,
-which is expensive to build, expensive to run, and hard to trust. Before paying that, it is worth knowing the
-size of the prize.</p>
+<p>Worth measuring before building. A good filler means a generative model: expensive to build, expensive to
+run, hard to trust.</p>
 </section>
-""")
 
-    # ---------------------------------------------------------------- data
-    ir = "".join(
-        f'<div{" class=ctl" if k == CTRL[0] else ""}><div class="nm">{chip(k)}</div>'
-        f'<p>{ALL[k][2]}<br><span class="ci">black pixels {INP[k]["black_pct"]:.1f}% · scored area {INP[k]["graded_pct"]:.0f}%</span></p></div>'
-        if k in INP else
-        f'<div class="ctl"><div class="nm">{chip(k)}</div><p>{ALL[k][2]}<br><span class="ci">a control, not one of the four cells</span></p></div>'
-        for k in ALL)
-    A(f"""
 <section class="part" id="data">
 <span class="pnum">Part 2 — Data</span>
-<h2>Why the pictures had to be rendered</h2>
-<p>To test the claim properly you need to know what the <em>right</em> answer in the corners looks like. That is
-impossible with real footage: the lens never pointed at those directions, so nobody has a photograph of them.
-Any experiment on real frames can only compare one guess against another guess, and a negative result is then
-ambiguous — did filling not help, or was the filler just not good enough?</p>
-<p>So we rebuilt the scene. Four sequences from the Aria Digital Twin dataset were re-rendered in Blender from
-their object-level 3D reconstructions ({meta['n_objects']} objects, {meta['n_lights_used']} lights fitted to
-match the real photographs), following the real camera trajectory. Each frame was rendered as a full
-360° panorama and then resampled into each of the inputs below. Depth comes from the renderer itself, so it is
-exact and identical across inputs.</p>
-<p>This gives us the thing real footage cannot: <strong>true content in directions the lens never imaged.</strong>
-That is the ceiling. No filling method can ever beat it.</p>
+<h2>Why the frames had to be rendered</h2>
+<p>You need to know the <em>right</em> answer in the corners. Real footage cannot give it — the lens never
+pointed there. On real frames you can only compare one guess with another.</p>
+<p>So we rebuilt the scene. Four Aria Digital Twin sequences, re-rendered in Blender from their 3D
+reconstructions ({meta['n_objects']} objects, {meta['n_lights_used']} lights fitted to the real photos), along
+the real camera path. Each frame is rendered as a 360° panorama, then resampled into every input below. Depth
+comes from the renderer, so it is exact and shared.</p>
+<p><strong>This gives true content in directions the lens never imaged. That is the ceiling. No filler can beat
+it.</strong></p>
 
 <h3>The inputs</h3>
-<p>Every input below is the same instant, the same camera position, the same panorama. They differ only in how
-that panorama was sampled and what sits in the corners.</p>
+<p>Same instant, same camera, same panorama. They differ only in how it was sampled and what sits in the corners.</p>
 <div class="inputs">{ir}</div>
-{fig("inputs_w00", "The six inputs, taken straight out of the evaluation script before they were fed to the model — not illustrations. Inputs 1 and 2 have the black regions. Inputs 3 and 4 have the true scene there instead. Input 5 avoids the problem by zooming in. Input 5b is a control explained in Part 4.")}
-<p>Inputs <b>1</b> and <b>3</b> are the same field of view as each other; so are <b>2</b> and <b>4</b>. That is what
-makes this a clean 2×2: projection (fisheye or straightened) crossed with corners (black or filled).</p>
-<p>The small remaining black in inputs 3, 4 and 5 — under {max(INP[k]['black_pct'] for k in ('fisheye_full','persp_full','persp_crop')):.1f}% of pixels — is
-not missing render. Those pixels all carry valid depth; they are shadows and dark objects in a dimly lit
-apartment, and all inputs have them equally.</p>
-
-<h3>Frames and windows</h3>
-<p>4 sequences × 3 windows each × 8 consecutive frames = 96 frames. Each window covers about 2–2.5 metres of real
-walking, so the model has genuine parallax to work with when it sees eight frames at once.</p>
+{fig("inputs_w00", "The six inputs, dumped by the evaluation script before the model saw them. Not illustrations.")}
+<ul>
+<li>Inputs <b>1</b> and <b>3</b> share a field of view. So do <b>2</b> and <b>4</b>. That is the 2×2: projection × corners.</li>
+<li>The leftover black in 3, 4 and 5 (under {max(INP[k]['black_pct'] for k in ('fisheye_full','persp_full','persp_crop')):.1f}%) is shadow in a dim apartment, not missing render. Every input has it.</li>
+<li>96 frames = 4 sequences × 3 windows × 8 frames. Each window covers 2–2.5 m of walking, so eight frames carry real parallax.</li>
+</ul>
 </section>
-""")
 
-    # ---------------------------------------------------------------- method
-    A(f"""
 <section class="part" id="method">
 <span class="pnum">Part 3 — Method</span>
-<h2>How it was scored, and the three traps avoided</h2>
-<p>The model is VGGT-Omega-1B-512 with its released weights, no fine-tuning. It is run twice over the same
-frames: once one frame at a time, and once eight frames at a time, because a corrupted input can do damage
-across views that it cannot do on its own.</p>
+<h2>How it was scored</h2>
+<p>VGGT-Omega-1B-512, released weights, no fine-tuning. Run twice over the same frames: one frame at a time, and
+eight at a time.</p>
 
-<h3>Trap 1 — scoring the filled input on more pixels than the black one</h3>
-<p>If you score input 4 everywhere it has an answer and input 2 only where it is not black, input 4 wins simply
-by covering more ground. So both halves of a pair are always scored on <strong>the black one's region</strong>.
-Pixels that were filled in are never compared against anything. The two inputs differ in what the model sees;
-they are graded on identical pixels.</p>
-
-<h3>Trap 2 — comparing two inputs that see different amounts of the world</h3>
-<p>Input 5 sees a narrower slice of the scene than input 4. Comparing their overall scores is meaningless. So
-every comparison involving input 5 is also run a second way: <strong>all inputs restricted to the slice input 5
-can see</strong>, worked out analytically from each pixel's ray. Then all of them are scored on the same
-directions in the world. We report both, and say which is which.</p>
-
-<h3>Trap 3 — treating 96 frames as 96 independent samples</h3>
-<p>The eight frames of one window share a room, a lighting setup and a fraction of a second of walking. They are
-not eight independent observations. Every confidence interval here comes from resampling <strong>whole
-windows</strong> (n = 12), which is wider and honest, rather than frames, which is narrower and wrong.</p>
+<h3>Three traps, and how each was closed</h3>
+<div class="scroll"><table>
+<thead><tr><th>Trap</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Scoring the filled input on more pixels than the black one — it would win just by covering more.</td>
+    <td>Both halves of a pair are scored on <strong>the black one's region</strong>. Filled pixels are never compared against anything.</td></tr>
+<tr><td>Comparing inputs that see different amounts of the world. Input 5 sees a narrower slice than input 4.</td>
+    <td>Every comparison with input 5 is also run with <strong>all inputs restricted to input 5's slice</strong>, computed from each pixel's ray. Both versions are reported.</td></tr>
+<tr><td>Treating 96 frames as 96 samples. The 8 frames of a window share a room, a light setup and half a second of walking.</td>
+    <td>Every interval resamples <strong>whole windows</strong> (n = 12). Wider, and honest.</td></tr>
+</tbody></table></div>
 
 <h3>What is measured</h3>
 <ul>
-<li><strong>Depth.</strong> AbsRel — the average relative error between predicted and true depth after
-removing the model's unknown scale and offset. Lower is better. Also δ₁, the fraction of pixels within 25% of
-the truth. Higher is better.</li>
-<li><strong>Camera pose.</strong> For each 8-frame window, every pair of frames is compared through its relative
-pose, so the model's free choice of world origin and overall scale cannot affect the score. We report
-<strong>AUC@30</strong> (a 0–1 summary of how many pairs get both rotation and translation direction right;
-higher is better) and <strong>ATE</strong>, the trajectory error in centimetres after aligning to the truth.</li>
-<li><strong>Field of view.</strong> What the model thinks its own lens is. For the straightened inputs there is a
-true answer to compare against ({gt_wide:.1f}° for inputs 2 and 4, {gt_crop:.1f}° for input 5). For the fisheye
-inputs there is no such thing as a correct pinhole field of view, so their number is reported but not graded.</li>
+<li><strong>Depth.</strong> AbsRel — average relative error after removing the model's unknown scale and offset. Lower is better. Plus δ₁, the fraction of pixels within 25% of truth. Higher is better.</li>
+<li><strong>Camera pose.</strong> Per 8-frame window, every pair of frames compared through its relative pose, so the model's free origin and scale cannot help it. <strong>AUC@30</strong> summarises how many pairs get rotation and translation direction right (0–1, higher better). <strong>ATE</strong> is trajectory error in centimetres.</li>
+<li><strong>Field of view.</strong> What the model thinks its lens is. Truth is {gt_wide:.1f}° for inputs 2 and 4, {gt_crop:.1f}° for input 5. Fisheye inputs have no pinhole truth, so their number is shown but not graded.</li>
 </ul>
-<p class="note">The ground-truth camera convention was checked against the data rather than read off a comment:
-unprojecting one frame's depth and reprojecting it into the next frame lands within 0.12% median relative error
-with the convention used here, versus 4–7% for each plausible alternative.</p>
+<p class="note">The ground-truth camera convention was checked on the data, not read off a comment: reprojecting
+one frame's depth into the next lands within 0.12% median error, against 4–7% for each alternative.</p>
 </section>
 """)
-
-    # ---------------------------------------------------------------- results
-    def cells_table(C1_, C8_, keys, note_hl=None):
-        rows = "".join(
-            f'<tr{" class=hl" if k == note_hl else ""}><td>{chip(k)}</td>'
-            f'<td class="n">{C1_[k]["AbsRel"]:.4f}</td><td class="n">{C8_[k]["AbsRel"]:.4f}</td>'
-            f'<td class="n">{C1_[k]["delta1"]:.3f}</td><td class="n">{C8_[k]["delta1"]:.3f}</td></tr>'
-            for k in keys if k in C1_)
-        return ('<div class="scroll"><table><thead><tr><th>Input</th>'
-                '<th class="n">AbsRel · 1 frame</th><th class="n">AbsRel · 8 frames</th>'
-                '<th class="n">δ₁ · 1 frame</th><th class="n">δ₁ · 8 frames</th></tr></thead>'
-                f'<tbody>{rows}</tbody></table></div>')
 
     A(f"""
 <section class="part" id="results">
 <span class="pnum">Part 4 — Results</span>
-<h2>Result 1: filling helps depth a little, and it helps both projections the same</h2>
+<h2>Result 1 — filling helps depth a little, and both projections equally</h2>
 {cells_table(C1, C8, ("fisheye_masked", "fisheye_full", "persp_masked", "persp_full"))}
-<p class="note">Scores within a projection are comparable; scores <em>across</em> projections are not, because the
-two pixel grids sample the world differently. That is exactly why the test below is a difference of differences.</p>
+<p class="note">Rows are comparable within a projection, not across it — the two pixel grids sample the world
+differently. That is why the real test below is a difference of differences.</p>
 <div class="scroll"><table>
-<thead><tr><th>Change from filling the corners (lower AbsRel = better)</th><th class="n">Fisheye: 3 − 1</th><th class="n">Rectified: 4 − 2</th><th class="n">Difference between them</th></tr></thead>
+<thead><tr><th>Change from filling (lower AbsRel = better)</th><th class="n">Fisheye: 3 − 1</th><th class="n">Rectified: 4 − 2</th><th class="n">Difference between them</th></tr></thead>
 <tbody>
 <tr><td>1 frame</td><td class="n">{num(E1['AbsRel']['fisheye'])}</td><td class="n">{num(E1['AbsRel']['persp'])}</td><td class="n">{num(E1['AbsRel']['interaction'])}</td></tr>
 <tr><td>8 frames</td><td class="n">{num(E8['AbsRel']['fisheye'])}</td><td class="n">{num(E8['AbsRel']['persp'])}</td><td class="n">{num(E8['AbsRel']['interaction'])}</td></tr>
 </tbody></table></div>
-{fig("effects", "Each dot is one window's paired difference; the square is the average and the whisker its 95% interval. The first two panels are depth, the last two camera pose. The right-hand group in each panel is the interaction — the quantity that would have to be clearly negative for the original claim to hold.")}
-<p><strong>Filling helps. The prediction that it should help the straightened picture more does not hold.</strong>
-The two columns are the same size, and the difference between them straddles zero in both modes — and even
-changes sign between them. Six main effects across three metrics are all real; six interactions are all
-inconclusive. Whatever filling is doing, it is not "returning the image to the training domain".</p>
+{fig("effects", "Each dot is one window. Square = mean, whisker = 95% interval. The right-hand group in each panel is the difference of differences — it would have to be clearly negative for the original claim to hold.")}
+<p><strong>Filling helps. The prediction fails.</strong> The two columns are the same size, and the difference
+between them straddles zero — and flips sign between 1 frame and 8. Six main effects across three metrics are
+real; six differences-of-differences are inconclusive.</p>
+<p>The gain sits in a narrow band just inside the edge of the black. Within 16 pixels of that edge, error drops
+{B['fisheye']['band_gain_pct']:.0f}% (fisheye) and {B['persp']['band_gain_pct']:.0f}% (rectified). Further in, only
+{B['fisheye']['int_gain_pct']:.0f}% and {B['persp']['int_gain_pct']:.0f}%. A boundary effect, the same size in
+both projections.</p>
 
-<h3>Where in the picture the gain actually is</h3>
-<p>The improvement is concentrated in a narrow band just inside the edge of the black region. Within 16 pixels of
-that boundary, error drops by {B['fisheye']['band_gain_pct']:.0f}% on the fisheye frame and
-{B['persp']['band_gain_pct']:.0f}% on the straightened one. Further inside, it drops by only
-{B['fisheye']['int_gain_pct']:.0f}% and {B['persp']['int_gain_pct']:.0f}%. This is a boundary effect, and its size
-is the same in both projections — consistent with everything above.</p>
-
-<h2>Result 2: filling does not fix the camera, and on fisheye it makes it worse</h2>
+<h2>Result 2 — filling does not fix the camera</h2>
 <div class="scroll"><table>
-<thead><tr><th>Camera pose, 8-frame windows</th><th class="n">AUC@30 ↑</th><th class="n">Rotation error ↓</th><th class="n">Translation direction error ↓</th><th class="n">Trajectory error ↓</th></tr></thead>
+<thead><tr><th>Camera pose, 8-frame windows</th><th class="n">AUC@30 ↑</th><th class="n">Rotation err ↓</th><th class="n">Translation dir err ↓</th><th class="n">Trajectory err ↓</th></tr></thead>
 <tbody>
 {"".join(f'<tr{" class=hl" if k == "persp_crop" else ""}><td>{chip(k)}</td><td class="n">{P8[k]["auc30"]:.3f}</td>'
          f'<td class="n">{P8[k]["rot_err_deg"]:.2f}°</td><td class="n">{P8[k]["trans_err_deg"]:.2f}°</td>'
          f'<td class="n">{P8[k]["ate_m"]*100:.1f} cm</td></tr>' for k in ALL if k in P8)}
 </tbody></table></div>
 <div class="scroll"><table>
-<thead><tr><th>Change from filling the corners</th><th class="n">Fisheye: 3 − 1</th><th class="n">Rectified: 4 − 2</th></tr></thead>
+<thead><tr><th>Change from filling</th><th class="n">Fisheye: 3 − 1</th><th class="n">Rectified: 4 − 2</th></tr></thead>
 <tbody>
-<tr><td>AUC@30 (higher = better, so negative means filling hurt)</td><td class="n">{num(E8['auc30']['fisheye'], '{:+.3f}')}</td><td class="n">{num(E8['auc30']['persp'], '{:+.3f}')}</td></tr>
-<tr><td>Rotation error (lower = better)</td><td class="n">{num(E8['rot_err_deg']['fisheye'], '{:+.2f}°')}</td><td class="n">{num(E8['rot_err_deg']['persp'], '{:+.2f}°')}</td></tr>
-<tr><td>Trajectory error (lower = better)</td><td class="n">{num(E8['ate_m']['fisheye'], '{:+.4f} m')}</td><td class="n">{num(E8['ate_m']['persp'], '{:+.4f} m')}</td></tr>
+<tr><td>AUC@30 (negative = filling hurt)</td><td class="n">{num(E8['auc30']['fisheye'], '{:+.3f}')}</td><td class="n">{num(E8['auc30']['persp'], '{:+.3f}')}</td></tr>
+<tr><td>Rotation error (positive = filling hurt)</td><td class="n">{num(E8['rot_err_deg']['fisheye'], '{:+.2f}°')}</td><td class="n">{num(E8['rot_err_deg']['persp'], '{:+.2f}°')}</td></tr>
+<tr><td>Trajectory error (positive = filling hurt)</td><td class="n">{num(E8['ate_m']['fisheye'], '{:+.4f} m')}</td><td class="n">{num(E8['ate_m']['persp'], '{:+.4f} m')}</td></tr>
 </tbody></table></div>
-<p>On the straightened picture, filling changes the camera estimate by nothing you can distinguish from zero.
-On the raw fisheye it makes it <strong>worse</strong> on all three measures. A plausible reading — this is
-interpretation, not measurement — is that the filled fisheye corners are real scene content placed under a lens
-model no real lens has, since they lie beyond the angle the lens can physically image. The depth head reads that
-as extra texture and benefits; the camera head reads it as an impossible lens and suffers.</p>
+<p>Rectified: no change you can distinguish from zero. Fisheye: <strong>worse on all three</strong>.</p>
+<p class="note">A reading, not a measurement: the filled fisheye corners are real scene content placed beyond the
+angle the lens can physically image — a lens model no real lens has. The depth head reads extra texture and
+gains; the camera head reads an impossible lens and loses.</p>
 
-<h3>The model's guess at its own field of view explains a lot</h3>
-{fig("fov", "Each dot is one frame's inferred horizontal field of view. Inputs 2 and 4 both sit near 108° against a true 124.7° — whether their corners are black or contain the real scene. Input 5, at a true 106.8°, is read almost correctly.")}
+<h3>The field of view explains it</h3>
+{fig("fov", "Each dot is one frame's inferred horizontal field of view. Inputs 2 and 4 both sit near 108° against a true 124.7° — black corners or real ones. Input 5, truly 106.8°, is read almost right.")}
 <div class="key">
-<h4>The finding that decides the original idea</h4>
-<p>A perfectly clean, black-free {gt_wide:.0f}° photograph is still read by the model as roughly
-{F1['persp_full']['mean']:.0f}° — off by {F1['persp_full']['abs_err']:.0f}°. Filling the corners moves that guess
-by {abs(F1['persp_full']['mean'] - F1['persp_masked']['mean']):.1f}°.</p>
-<p>The model is not being confused by the black. It does not recognise the <em>field of view</em>. Filling cannot
-fix that, because the filled picture is just as wide as the black one.</p>
+<h4>The finding that settles the original idea</h4>
+<p>A clean, black-free {gt_wide:.0f}° photo is still read as {F1['persp_full']['mean']:.0f}° — off by
+{F1['persp_full']['abs_err']:.0f}°. Filling moves that guess by {abs(F1['persp_full']['mean'] - F1['persp_masked']['mean']):.1f}°.</p>
+<p>The model is not confused by the black. It does not recognise the <em>width</em>. Filling changes the corners;
+it does not change the width.</p>
 </div>
 
-<h2>Result 3: cheap filling already captures nearly all of it</h2>
-<p>If real content is worth some amount, how much of that amount does the dumbest possible filling get for free?
-We tried several methods that invent nothing new: repeating the nearest valid pixel outward, flat averages, and
-two classical inpainting algorithms.</p>
+<h2>Result 3 — cheap filling already takes nearly all of it</h2>
+<p>How much of the gain does the dumbest filler get for free? We tried methods that invent nothing: smearing the
+nearest valid pixel outward, flat averages, two classical inpainters.</p>
 <div class="scroll"><table>
-<thead><tr><th>Share of the real-content gain that smearing the nearest pixel already captures</th><th class="n">1 frame</th><th class="n">8 frames</th></tr></thead>
+<thead><tr><th>Share of the real-content gain that smearing already captures</th><th class="n">1 frame</th><th class="n">8 frames</th></tr></thead>
 <tbody>
 <tr><td>Fisheye</td><td class="n">{rep1['fisheye']['pct']:.0f}%</td><td class="n">{rep8['fisheye']['pct']:.0f}%</td></tr>
 <tr><td>Rectified</td><td class="n">{rep1['persp']['pct']:.0f}%</td><td class="n">{rep8['persp']['pct']:.0f}%</td></tr>
-<tr><td><strong>AbsRel still left on the table</strong></td><td class="n"><strong>{left[0]:.4f} / {left[1]:.4f}</strong></td><td class="n"><strong>{left[2]:.4f} / {left[3]:.4f}</strong></td></tr>
+<tr><td><strong>AbsRel left on the table</strong></td><td class="n"><strong>{left[0]:.4f} / {left[1]:.4f}</strong></td><td class="n"><strong>{left[2]:.4f} / {left[3]:.4f}</strong></td></tr>
 </tbody></table></div>
-<p>In one case smearing actually <em>beats</em> the true content: the real corner detail is complicated, the smear
-is simple, and the model prefers the simple one. <strong>The budget for any generative filling method is
-0 to {max(left):.3f} AbsRel</strong>, and it comes with no camera-pose improvement at all.</p>
-<p class="note">One incidental finding worth remembering: a flat average fill <em>helps</em> on a straightened
-picture ({LAD1['persp']['rows']['mean']['pct']:+.0f}% of the gain) and is far <em>worse than black</em> on a raw
-fisheye ({LAD1['fisheye']['rows']['mean']['pct']:+.0f}%). Advice about fill colours does not carry across
-projections.</p>
+<p>In one case smearing <em>beats</em> the truth: real corner detail is complicated, a smear is simple, and the
+model prefers simple. <strong>The budget for a generative filler is 0 to {max(left):.3f} AbsRel, with no camera
+improvement.</strong></p>
+<p class="note">Incidental, but worth carrying: a flat average fill <em>helps</em> on a rectified frame
+({LAD1['persp']['rows']['mean']['pct']:+.0f}% of the gain) and is far <em>worse than black</em> on a raw fisheye
+({LAD1['fisheye']['rows']['mean']['pct']:+.0f}%). Fill advice does not transfer across projections.</p>
 
-<h2>Result 4: a wider filled view loses to simply cropping</h2>
-<p>Input 5 avoids the whole problem: zoom in until the black is outside the frame. It costs about 17% of the
-lens's solid angle and needs no filling, no model and no compute. It is the free alternative that any filling
-approach has to beat.</p>
-<p>Inputs 4 and 5 differ in two things at once, though — the field of view, and how many pixels each spends on the
-part of the scene they share (input 5 spends all of them, input 4 about half, a factor of
-{cm['Knew_crop'][0]/meta['Knew_pinhole'][0]:.2f}). So input 5 could be winning just by being sharper. Input
-<b>5b</b> settles it: input 5 band-limited to input 4's sampling rate — same framing, input 4's level of detail.</p>
-{cells_table(CC1, CC8, ("persp_masked", "persp_full", "persp_crop", "persp_crop_lores"), note_hl="persp_crop")}
-<p class="note">All four rows above are scored on the same slice of the world — the part input 5 can see.</p>
+<h2>Result 4 — cropping beats a wide filled view</h2>
+<p>Input 5 sidesteps the problem: zoom in until the black is outside the frame. It costs ~17% of the lens's solid
+angle, and needs no filler, no model, no compute. That is what filling has to beat.</p>
+<p>But inputs 4 and 5 differ in two things: the field of view, <em>and</em> how many pixels each spends on the
+part they share (input 5 all of them, input 4 about half — a factor of
+{cm['Knew_crop'][0]/meta['Knew_pinhole'][0]:.2f}). So input 5 might just be sharper. Input <b>5b</b> settles it:
+input 5 band-limited to input 4's sampling rate. Same framing, input 4's detail.</p>
+{cells_table(CC1, CC8, ("persp_masked", "persp_full", "persp_crop", "persp_crop_lores"), hl="persp_crop")}
+<p class="note">All four rows scored on the same slice of the world — the part input 5 can see.</p>
 <div class="scroll"><table>
 <thead><tr><th>Input 5 minus …</th><th class="n">vs 4 (wide, filled)</th><th class="n">vs 2 (wide, black)</th><th class="n">vs 5b (same view, blurred)</th></tr></thead>
 <tbody>
 <tr><td>Depth, 1 frame (negative = 5 better)</td><td class="n">{num(XC1['AbsRel']['persp_full'])}</td><td class="n">{num(XC1['AbsRel']['persp_masked'])}</td><td class="n">{num(XC1['AbsRel']['persp_crop_lores'])}</td></tr>
 <tr><td>Depth, 8 frames</td><td class="n">{num(XC8['AbsRel']['persp_full'])}</td><td class="n">{num(XC8['AbsRel']['persp_masked'])}</td><td class="n">{num(XC8['AbsRel']['persp_crop_lores'])}</td></tr>
-<tr><td>Camera AUC@30 (positive = 5 better)</td><td class="n">{num(XO8['auc30']['persp_full'], '{:+.3f}')}</td><td class="n">{num(XO8['auc30']['persp_masked'], '{:+.3f}')}</td><td class="n">{num(XO8['auc30']['persp_crop_lores'], '{:+.3f}')}</td></tr>
+<tr><td>AUC@30 (positive = 5 better)</td><td class="n">{num(XO8['auc30']['persp_full'], '{:+.3f}')}</td><td class="n">{num(XO8['auc30']['persp_masked'], '{:+.3f}')}</td><td class="n">{num(XO8['auc30']['persp_crop_lores'], '{:+.3f}')}</td></tr>
 <tr><td>Trajectory error (negative = 5 better)</td><td class="n">{num(XO8['ate_m']['persp_full'], '{:+.4f} m')}</td><td class="n">{num(XO8['ate_m']['persp_masked'], '{:+.4f} m')}</td><td class="n">{num(XO8['ate_m']['persp_crop_lores'], '{:+.4f} m')}</td></tr>
 </tbody></table></div>
-{fig("five_vs_four", "Input 5 against input 4, with the sharpness control 5b beside it. In every panel 5b sits on top of 5, not on 4 — so the gap is about the field of view, not about pixel density.")}
-<p><strong>Cropping wins by {abs(XC1['AbsRel']['persp_full']['mean']):.4f} AbsRel on one frame and
-{abs(XC8['AbsRel']['persp_full']['mean']):.4f} on eight — the gap grows by
-{abs(XC8['AbsRel']['persp_full']['mean'])/abs(XC1['AbsRel']['persp_full']['mean']):.1f}×.</strong> The control 5b
-lands on top of 5 in every measurement (camera score {P8['persp_crop_lores']['auc30']:.3f} against
-{P8['persp_crop']['auc30']:.3f}), so sharpness explains none of it.</p>
+{fig("five_vs_four", "Input 5 against input 4, with the sharpness control 5b beside it. In every panel 5b sits on 5, not on 4 — the gap is field of view, not pixel density.")}
+<p><strong>Cropping wins by {abs(XC1['AbsRel']['persp_full']['mean']):.4f} AbsRel at 1 frame and
+{abs(XC8['AbsRel']['persp_full']['mean']):.4f} at 8 — a {abs(XC8['AbsRel']['persp_full']['mean'])/abs(XC1['AbsRel']['persp_full']['mean']):.1f}× wider gap.</strong>
+The control 5b lands on 5 everywhere (pose {P8['persp_crop_lores']['auc30']:.3f} against
+{P8['persp_crop']['auc30']:.3f}). Sharpness explains none of it.</p>
 
-<h3>And more content does not make multi-frame pay off</h3>
+<h3>More content does not make multi-frame pay</h3>
 <div class="scroll"><table>
-<thead><tr><th>Gain from seeing 8 frames instead of 1 (positive = it helps)</th><th class="n">Gain [95% interval]</th></tr></thead>
+<thead><tr><th>Gain from 8 frames instead of 1 (positive = it helps)</th><th class="n">Gain [95% interval]</th></tr></thead>
 <tbody>
 {"".join(f'<tr{" class=hl" if k == "persp_crop" else ""}><td>{chip(k)}</td><td class="n">{num(mfg(k))}</td></tr>' for k in ALL)}
 </tbody></table></div>
-<p>Input 4 carries strictly more of the scene than input 5, so if extra context were what multi-frame needs,
-input 4 should benefit most. It benefits <em>least</em>. Comparing the two directly, window by window, input 5
-gains {num(MC['common']['persp_full'])} more from multi-frame than input 4 does. On the filled fisheye input,
-eight frames are actively <em>worse</em> than one.</p>
+<p>Input 4 carries strictly more of the scene than input 5. If extra context were what multi-frame needs, input 4
+should gain most. It gains <em>least</em>. Compared window by window, input 5 gains {num(MC['common']['persp_full'])}
+more than input 4. On the filled fisheye, eight frames are actively worse than one.</p>
 <div class="warn">
-<h4>A tempting explanation that did not survive testing</h4>
-<p>"Multi-frame only pays off where the camera is estimated correctly" fits the headline numbers nicely — input 5
-has a good camera estimate and gains from multi-frame; input 4 has a poor one and gains nothing.</p>
-<p>Tested properly, it fails. Across {MED['n']} (input × window) combinations, the correlation between a window's
-multi-frame gain and its camera score is {MED['r_raw']:+.2f} overall, and only {MED['r_within_window']:+.2f} once
-each window is centred — which is the level at which the mechanism would have to operate. The association lives
-at the coarser "fisheye versus rectified" level instead. <strong>The multi-frame results above are a
-description, not a demonstrated cause.</strong></p>
+<h4>A tempting explanation that failed its test</h4>
+<p>"Multi-frame only pays where the camera is right" fits the headline numbers. Tested properly, it does not hold.</p>
+<p>Across {MED['n']} (input × window) combinations, the correlation between a window's multi-frame gain and its
+camera score is {MED['r_raw']:+.2f} overall, and {MED['r_within_window']:+.2f} once each window is centred — the
+level at which the mechanism would have to work. <strong>The multi-frame results above are description, not a
+demonstrated cause.</strong></p>
 </div>
 
 <h3>What it looks like</h3>
-{fig("panels_w00", "One window, one frame, all six inputs. Columns: the input, the depth the model predicts from one frame, its error map, the same for eight frames, and the rendered truth. Grey means not scored. The brightest errors are large low-texture surfaces near the camera — present in every input, and not about the black regions.")}
-{fig("trajectories", "The camera path the model recovers for each 8-frame window, aligned to the truth. Input 5 (purple) tracks the black line closely; the wide inputs wander. Note the two axes are not equally scaled — the sideways deviations are centimetres.")}
+{fig("panels_w00", "One frame, all six inputs. Columns: input, depth from 1 frame, its error, the same from 8 frames, rendered truth. Grey = not scored. The brightest errors are large flat surfaces near the camera — in every input, unrelated to the black.")}
+{fig("trajectories", "Recovered camera path per 8-frame window, aligned to truth. Input 5 (purple) tracks the black line; the wide inputs wander. The axes are not equally scaled — sideways deviations are centimetres.")}
 </section>
-""")
 
-    # ---------------------------------------------------------------- conclusion
-    A(f"""
 <section class="part" id="conclusion">
 <span class="pnum">Part 5 — Conclusion</span>
-<h2>What we would now do, and what we would not build</h2>
+<h2>What to do</h2>
 <div class="key">
 <h4>Recommendation</h4>
-<p><strong>Do not build a generative filler for this.</strong> Three independent reasons, each measured here:
-the whole prize is {abs(E1['AbsRel']['fisheye']['mean']):.3f}–{abs(E1['AbsRel']['persp']['mean']):.3f} AbsRel;
-a smear that invents nothing already takes {min(rep1['persp']['pct'], rep1['fisheye']['pct']):.0f}% or more of
-it; and none of it reaches the camera estimate, which was the original motivation.</p>
-<p><strong>If you have a fisheye frame and a model that expects photographs, crop rather than fill.</strong>
-It costs about 17% of the lens's solid angle and beats the filled wide-angle version on depth, on camera pose,
-and on how much the model gains from multiple frames.</p>
+<p><strong>Do not build a generative filler for this.</strong> The whole prize is
+{abs(E1['AbsRel']['fisheye']['mean']):.3f}–{abs(E1['AbsRel']['persp']['mean']):.3f} AbsRel. A smear that invents
+nothing already takes {min(rep1['persp']['pct'], rep1['fisheye']['pct']):.0f}%+ of it. None of it reaches the
+camera estimate, which was the point.</p>
+<p><strong>Crop instead of filling.</strong> It costs ~17% of the lens's solid angle and beats the filled wide
+version on depth, on camera pose, and on multi-frame gain.</p>
 </div>
-<h3>The reason underneath all of it</h3>
-<p>The model does not fail on a wide picture because the picture has black in it. It fails because the picture is
-wide. A clean {gt_wide:.0f}° photograph is read as {F1['persp_full']['mean']:.0f}°, and a {gt_crop:.0f}° one is
-read almost correctly. Filling changes what is in the corners; it does not change how wide the frame is, which is
-the thing the model cannot handle.</p>
+<p>The reason underneath: the model does not fail because the picture has black in it. It fails because the
+picture is <em>wide</em>. A clean {gt_wide:.0f}° photo is read as {F1['persp_full']['mean']:.0f}°; a
+{gt_crop:.0f}° one is read almost right. Filling changes the corners, not the width.</p>
 
 <h3>What this does not settle</h3>
 <ul>
-<li><strong>Where the limit is.</strong> We measured two zoom levels: {gt_crop:.0f}° works, {gt_wide:.0f}° does not.
-The transition could be anywhere between. Finding it is cheap — the same renders, one parameter changed — and it
-would tell you directly how much of the lens you can keep.</li>
-<li><strong>Whether training-based approaches do better.</strong> Methods that give the model explicit calibration
-information (Fisheye3R's calibration tokens, RayTun3R's positional-encoding adapter) attack the field-of-view
-problem rather than the black-region problem, so this experiment does not speak against them. It does sharpen the
-question they have to answer: can they keep the whole lens <em>and</em> match what cropping gets for free
-(camera score {P8['persp_crop']['auc30']:.2f} versus {P8['persp_full']['auc30']:.2f},
-{P8['persp_crop']['ate_m']*100:.1f} cm versus {P8['persp_full']['ate_m']*100:.1f} cm)?</li>
-<li><strong>Rendered scenes are not real footage.</strong> The rendering was photometrically fitted to the real
-frames, and an earlier badly-lit version of the same geometry gave the same qualitative conclusions with effect
-sizes 4–6× larger — so the direction of these findings is robust to the render, but the exact magnitudes are a
-property of it.</li>
-<li><strong>One model, one scene type.</strong> VGGT-Omega-1B-512 in a furnished apartment. Nothing here has been
-checked on another backbone or outdoors.</li>
+<li><strong>Where the limit is.</strong> We tested two zoom levels: {gt_crop:.0f}° works, {gt_wide:.0f}° does not. The transition could be anywhere between. Cheap to find — same renders, one parameter.</li>
+<li><strong>Training-based approaches.</strong> Calibration tokens (Fisheye3R) and positional-encoding adapters (RayTun3R) attack the width, not the black. This experiment does not argue against them. It does sharpen their target: keep the whole lens <em>and</em> match what cropping gets free ({P8['persp_crop']['auc30']:.2f} vs {P8['persp_full']['auc30']:.2f}; {P8['persp_crop']['ate_m']*100:.1f} cm vs {P8['persp_full']['ate_m']*100:.1f} cm).</li>
+<li><strong>Rendered ≠ real.</strong> Lighting was fitted to the real frames. An earlier badly-lit render of the same geometry gave the same conclusions with effects 4–6× larger — directions are robust, magnitudes are a property of the render.</li>
+<li><strong>One model, one scene type.</strong> VGGT-Omega-1B-512, furnished apartment. Nothing checked on another backbone or outdoors.</li>
 </ul>
 </section>
 
 <section class="part" id="repro">
 <span class="pnum">Appendix</span>
-<h2>Where every number came from</h2>
+<h2>Provenance</h2>
 <dl class="kv">
-<dt>Model</dt><dd><code>{PROV['ckpt']}</code>, md5 <code>{PROV['ckpt_md5']}</code>, released weights, no fine-tuning.</dd>
-<dt>Evaluation</dt><dd><code>finetune/eval/exp_rendered.py</code> at commit <code>{PROV['eval_commit']}</code> on branch <code>{PROV['branch']}</code>. Unit tests pin the pose metrics against synthetic cameras (a global similarity transform must cost nothing; a known rotation must read as its own angle; a collapsed prediction must not score as perfect) and pin that the scoring region never leaks into the fill.</dd>
-<dt>Run</dt><dd>{PROV['run']}, finished {PROV['finished']}, {PROV['env']}. Two passes differing only in the scoring region; their camera-pose numbers are bit-identical, which confirms the two passes share one set of predictions.</dd>
-<dt>Rendering</dt><dd>Blender/Cycles via <code>render_oracle_2x2_lambda.py</code>, {meta['cycles_samples']} samples, OPTIX, {meta['eq_w']}×{meta['eq_h']} panorama, {meta['output_size']} px outputs at {meta['supersample']}× supersampling. Input 5 added by <code>add_persp_crop.py</code> at <code>{PROV['renderer_commit']}</code>, reusing the same ray, resampling and depth code with only the focal length changed. Frame list md5 <code>{PROV['manifest_md5']}</code>.</dd>
-<dt>Numbers</dt><dd><code>research/fisheye-inpaint/data/final/own/</code> and <code>common/</code> hold the raw per-frame and per-window results and the evaluator's own printed report. <code>make_final_figures.py</code> recomputes every confidence interval and <em>refuses to write anything</em> if it does not reproduce that report; this page is generated from its output by <code>build_report_en.py</code>. No figure in this document was typed by hand.</dd>
+<dt>Model</dt><dd><code>{PROV['ckpt']}</code>, md5 <code>{PROV['ckpt_md5']}</code>. Released weights, no fine-tuning.</dd>
+<dt>Evaluation</dt><dd><code>finetune/eval/exp_rendered.py</code> at <code>{PROV['eval_commit']}</code>, branch <code>{PROV['branch']}</code>. Tests pin the pose metrics against synthetic cameras (a global similarity must cost nothing; a known rotation must read as its own angle; a collapsed prediction must not score perfect) and pin that the scoring region never leaks into the fill.</dd>
+<dt>Run</dt><dd>{PROV['run']}, {PROV['finished']}, {PROV['env']}. Two passes differing only in scoring region; their pose numbers are bit-identical, confirming one set of predictions.</dd>
+<dt>Rendering</dt><dd>Blender/Cycles, {meta['cycles_samples']} samples, OPTIX, {meta['eq_w']}×{meta['eq_h']} panorama, {meta['output_size']} px at {meta['supersample']}× supersampling. Input 5 added by <code>add_persp_crop.py</code> at <code>{PROV['renderer_commit']}</code> — same ray, resampling and depth code, only the focal length changed. Frame list md5 <code>{PROV['manifest_md5']}</code>.</dd>
+<dt>Numbers</dt><dd><code>data/final/own/</code> and <code>data/final/common/</code> hold the raw per-frame and per-window results plus the evaluator's own report. <code>make_final_figures.py</code> recomputes every interval and refuses to write if it cannot reproduce that report. This page is generated from its output. No figure here was typed by hand.</dd>
 </dl>
 <pre>R=.../out/oracle_set_lit
 python -m finetune.eval.exp_rendered --render-root $R --manifest $R/manifest.json \\
@@ -618,7 +549,8 @@ python research/fisheye-inpaint/build_report_en.py</pre>
 </section>
 
 <footer>
-Research line fisheye-inpaint · branch {PROV['branch']} · generated by build_report_en.py · a fuller Chinese research log, including the experiments this report supersedes, lives alongside it in the same repository.
+Research line fisheye-inpaint · branch {PROV['branch']} · generated by build_report_en.py · a fuller Chinese
+research log, including the experiments this report supersedes, sits beside it in the same repository.
 </footer>
 </div>
 """)
