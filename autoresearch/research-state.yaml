@@ -1907,3 +1907,57 @@ rule_check_the_construction_not_the_result:
     convention gave two arms equally bad, and later a spurious vggt_omega
     positive), H40's black-pixel fraction (a rotated raster gave "resampling
     costs +80%").
+
+# ------------------------------------------------- H41 resolved 2026-09-08
+h41_residual_curve:
+  status: "B1, B2, B3 all PASS — and H32's near-zero anomaly is explained away"
+  artifacts: autoresearch/experiments/h41-residual-curve/results/ (26 JSONs + summary.json)
+  analysis: autoresearch/experiments/h41-residual-curve/analysis.md
+  the_measurement: >
+    13 recordings, da3:small, each frame rendered at roll_deg = psi + d so the
+    residual roll is exactly -d, normalised by that frame's OWN d = 0 render.
+    Recording-to-recording sd under 0.05 inside +-11 deg. This is now the
+    best-measured object in the line.
+  curve_g_by_residual: >
+    -22: 1.307, -15: 1.158, -11: 1.086, -8: 1.050, -6: 1.031, -4: 1.015,
+    -2: 1.014, 0: 1.000, +2: 1.011, +4: 1.034, +6: 1.038, +8: 1.064,
+    +11: 1.099, +15: 1.188, +22: 1.354
+  CORRECTS_H32: >
+    H32 reported the penalty BELOW baseline at -5 deg (-1.1% +- 2.8, negative on
+    9/13) and flat from -10 to +5, and recorded "B3 was the wrong sanity check".
+    Against an exact per-frame gravity-aligned zero the curve is MONOTONE from
+    zero on both sides with a clean minimum at 0. H32's zero was the
+    DEVICE-aligned render on frames carrying a median 4 deg of real roll, so its
+    origin was several degrees off level and the true minimum sat near -4 —
+    exactly where it saw the dip. A curve measured against the wrong origin
+    looks non-monotone; nothing about the model was odd.
+  validates_h40_quantitatively: >
+    With NO free parameters the curve predicts H39b's prize (+16.10% vs measured
+    +21.52%) and its price (+7.11% vs +11.51%) at psi = 11 deg, both inside the
+    locked factor-of-2 windows. Both UNDER-predict in the direction the
+    construction requires: that cell reaches 28 deg so 2*psi reaches 56, far
+    outside the +-22 grid, and np.interp clamps. The shortfall is the clamp.
+  three_experiments_one_number: >
+    At psi = 1.5 deg: Jensen predicts S = +0.29%, H39b measured +0.95%, H40
+    charged +0.81% for two grid samples. Three methods, one number.
+  h39_headline_untouched: >
+    -2.65% +- 2.43 is a direct A/B between device and grav_p with no
+    decomposition in it. It has now survived THREE consecutive experiments
+    trying to reinterpret its parts.
+  does_not_settle_the_asymmetry: >
+    +22 costs 1.354 and -22 costs 1.307 — same sign as H32/H33, but 3.6%, not
+    H32's 24.4 vs 56.5 at +-30. Different origin, different angle, and H32's
+    frames' own roll biased one side. H33 left the asymmetry undecided and H34
+    was void trying; NOTHING HERE CHANGES THAT.
+  limits:
+    - "One backbone (da3:small, chosen because its roll penalty has a shape). Not claimed for the others."
+    - "+-22 deg is the outer edge; the frames reach 28, so anything needing g past 22 is extrapolation."
+    - "20 frames per recording, 16-19 surviving the timestamp join."
+
+rule_when_a_curve_looks_odd_near_its_origin:
+  rule: "When a curve looks odd near its origin, suspect the origin."
+  why: >
+    Two experiments in a row produced a correction by fixing a REFERENCE rather
+    than measuring something new: H40 corrected H39b's label by noticing what
+    its two arms' residual rolls actually were, and H41 corrected H32 by putting
+    the zero where zero is.
