@@ -584,15 +584,16 @@ ul.plain li strong{color:var(--ink)}
 
   <div class="scroll">
     <table>
-      <caption>The same test with the border moved right up against the scored region. The first
-        two columns are the error itself (lower is better); the last is how much worse the border
-        makes it.</caption>
+      <caption><span style="color:var(--neg)">*</span> single recording; across thirteen the two
+        DA3 costs are +59% ± 14 and +269% ± 62, and the ordering holds 13 of 13 — see below. The
+        same test with the border moved right up against the scored region. The first two columns
+        are the error itself (lower is better); the last is how much worse the border makes it.</caption>
       <thead><tr><th>Depth model</th><th>Error, clean frame</th><th>Error, border alongside</th><th>Error grows by</th></tr></thead>
       <tbody>
         <tr class="hi"><td class="mono">VGGT-Omega</td><td class="n">0.051</td><td class="n">0.066</td><td class="n good">+29%</td></tr>
         <tr><td class="mono">DA3-Small</td><td class="n">0.155</td><td class="n">0.318</td><td class="n bad">+106%</td></tr>
         <tr><td class="mono">VGGT</td><td class="n">0.083</td><td class="n">0.171</td><td class="n bad">+107%</td></tr>
-        <tr><td class="mono">DA3-Large</td><td class="n good">0.069</td><td class="n bad">0.508</td><td class="n bad">+636%</td></tr>
+        <tr><td class="mono">DA3-Large</td><td class="n good">0.069</td><td class="n bad">0.508</td><td class="n bad">+636%<span style="color:var(--neg)">*</span></td></tr>
       </tbody>
     </table>
   </div>
@@ -710,9 +711,13 @@ ul.plain li strong{color:var(--ink)}
 
   <div class="scroll">
     <table>
-      <caption>Rim error change against the untouched frozen model, on two recordings the adapter
-        never trained on. "Same room, rearranged" is the harder of the two — the furniture moved,
-        so memorising the room does not help.</caption>
+      <caption><span style="color:var(--neg)">*</span> <strong>These are the original
+        single-recording figures.</strong> That recording turned out to be an outlier and all four
+        rows were later re-measured across thirteen — see the correction in §4.4, where the
+        "Same room" column becomes −38.6% ± 4.9 for the new teacher. The comparison between rows,
+        which is what this table is for, survived: the new teacher beats the control on 13 of 13.
+        Rim error change against the untouched frozen model, on two recordings the adapter never
+        trained on.</caption>
       <thead><tr><th>Method</th><th>Uses depth labels?</th><th>Same room</th><th>Same room, rearranged</th></tr></thead>
       <tbody>
         <tr class="hi"><td class="mono">New teacher</td><td>no</td><td class="n good">−51.5% ± 2.0</td><td class="n good">−22.4% ± 1.8</td></tr>
@@ -1242,11 +1247,17 @@ ul.plain li strong{color:var(--ink)}
       <li><strong>Never put a hard black border next to what you care about.</strong> No crops, no
         masks, no zero padding. To rotate, rotate the camera and re-render. Cost is set by proximity,
         not area — and with the wrong model it is catastrophic.</li>
+      <li><strong>Do not spend effort on camera tilt.</strong> Ignoring it costs
+        <strong>0.3–0.5%</strong> of depth error with a multi-view-pretrained model and about
+        <strong>1.8%</strong> with a single-photo one, integrated over how often people actually
+        tilt their heads. If you are on a single-photo model and still care, the only thing worth
+        handling is the rare tilt past ±20°, which is 1.5% of frames and a quarter of the cost.</li>
       <li><strong>Pick the depth model for robustness, not clean-benchmark accuracy.</strong> They do
         not correlate. Our most accurate model fell apart at the first framing artefact.</li>
       <li><strong>You can adapt to a fisheye with no depth labels.</strong> Distil a stronger frozen
-        model through a rectified view. Expect 80–90% of what real labels buy, in the room you
-        trained in.</li>
+        model through a rectified view. Expect about <strong>94%</strong> of what real labels buy in
+        the room you trained in — measured across thirteen recordings, and higher than the 89% we
+        first published from one.</li>
       <li><strong>Expect almost none of it to transfer.</strong> What crosses a room is a small
         angle-dependent recalibration — six numbers — and that beats labelled training in a new
         room. About 30 frames fit it, and they should span <strong>roughly 2 m of walking</strong>.
@@ -1300,10 +1311,11 @@ ul.plain li strong{color:var(--ink)}
         the biggest weakness left. Every same-room figure is an average over thirteen recordings;
         every cross-room figure is still two, both nearly static. More apartment footage cannot fix
         that — it needs a second room recorded properly.</li>
-      <li><strong>Work out why squeezing helps.</strong> Two explanations are now dead, so the
-        next probe has to move <em>where</em> content sits without changing anything else. The
-        obvious way — shrinking the picture into a smaller circle — introduces a border, and §4.2
-        says that is fatal. Someone needs a design that avoids it.</li>
+      <li><strong>Work out why squeezing helps.</strong> Two explanations are dead and we stopped
+        looking. The obvious next probe — shrinking the picture into a smaller circle to move
+        content inward — introduces a border, and §4.2 says that is fatal. A third attempt, mirroring
+        the input, was void because we mirrored the image and not the ground truth. Someone needs a
+        design that avoids both traps; we did not find one worth the runs.</li>
       <li><strong>Combine the two label-free signals</strong> — the rectified teacher and the
         motion-triangulated anchors. They estimate the same thing, and each needs something the
         other does not.</li>

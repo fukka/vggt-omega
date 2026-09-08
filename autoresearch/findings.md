@@ -2665,3 +2665,62 @@ a single-image model the rare tilt beyond +-20 deg is where a quarter of the cos
 sits; on a multi-view model there is nothing there worth chasing.
 
 Measured, not inferred from three separately-quoted quantities.
+
+---
+
+# Outer-loop synthesis, 2026-09-08 — where the line stands after H17–H35
+
+Written as a synthesis rather than another append, because eleven experiments
+have run since the last one and `findings.md` had become a log rather than a
+narrative.
+
+## The four things this line actually established
+
+1. **The rim penalty is real and scale does not fix it.** The rim is about
+   **2.2×** worse than the centre (13 recordings, spread 1.4–2.7), in every model
+   tried, and DA3-Large — twice as accurate overall — has the same ratio.
+
+2. **A label-free student recovers ~94% of what depth labels buy, in-room.**
+   Distil a stronger frozen model through a rectified view. The teacher choice
+   that makes it work (VGGT-Omega on a wide view where DA3 fails) holds 13/13.
+
+3. **Almost none of it crosses a room.** What crosses is a **six-number
+   angle-dependent recalibration**, and that beats labelled training in a new
+   room. It needs ~30 frames spanning ~2 m of walking, and it is **not** a
+   property of the lens (matching the lens buys 0.8 pts, inside noise).
+
+4. **Framing beats tilt.** A hard border next to the scored region costs
+   **+59% to +269%** depending on model; ignoring head roll costs **0.3–0.5%**
+   (multi-view) to **1.8%** (single-photo). **The thing to engineer around is
+   what sits at the edge of the frame, not how the camera is held.**
+
+## The methodological output, which may outlast the findings
+
+* **One designated held-out recording is not a test set.** seq136 was used for
+  every in-room number in this line and turned out to **amplify the magnitude of
+  any intervention** — nine of nine, |z| up to 5.96 — while being ordinary for
+  unperturbed measurements. Every published in-room figure had to be re-measured.
+* **Print absolute numbers beside relative ones.** Three times a relative measure
+  passed while the absolute quantity sat at zero.
+* **If two arms were averaged before publication, check they differ.** Twice this
+  hid something: the 2.0–2.6× band and the ±30° roll asymmetry.
+* **Any test that transforms the input needs a bar on the untransformed
+  baseline.** H34's routine sanity check is the only reason a 4×-broken input did
+  not produce a clean-looking finding.
+* **Name the axis a characterisation was never varied along.** "A property of the
+  lens" was published twice before anyone varied the lens.
+
+## What is left, honestly
+
+**Blocked, and it is the largest exposure:** the cross-room evidence is still
+**120 frames over two near-static recordings**. Every same-room figure is now a
+mean over thirteen; every cross-room figure is two. More apartment footage cannot
+fix it. The data that would — depth and ground truth for the untouched ADT
+sequences — needs a download onto a shared filesystem at 98% capacity, which has
+been put to the user and not acted on.
+
+**Closed deliberately:** the roll asymmetry (three experiments, could not
+attribute it, mirror test void) and the rim-density mechanism (two explanations
+refuted, no third offered).
+
+**Not worth more runs:** in-room verification. It is done.
