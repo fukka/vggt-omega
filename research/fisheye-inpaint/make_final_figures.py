@@ -40,9 +40,14 @@ CELLS = OrderedDict([
     ("persp_full",     ("④", "RECT · FILLED", "矫正透视 · 真值补全")),
     ("persp_crop",     ("⑤", "RECT · CROP", "内接矫正 · 天然无黑区")),
 ])
+# The sampling-matched control is not a cell of the design: it exists only to
+# split the crop-vs-filled contrast into "field of view" and "sharpness".
+CTRL = ("persp_crop_lores", ("⑤ᵇ", "CROP · BLURRED", "内接矫正,降到 ④ 的采样率"))
 COLORS = {"fisheye_masked": "#98362f", "persp_masked": "#a86a15",
-          "fisheye_full": "#33704a", "persp_full": "#0b6b6e", "persp_crop": "#5b4a8a"}
-CROP_VS = ("persp_masked", "persp_full", "fisheye_masked", "fisheye_full")
+          "fisheye_full": "#33704a", "persp_full": "#0b6b6e", "persp_crop": "#5b4a8a",
+          "persp_crop_lores": "#9a86c4"}
+CROP_VS = ("persp_masked", "persp_full", "fisheye_masked", "fisheye_full", "persp_crop_lores")
+LABEL = dict(CELLS, **{CTRL[0]: CTRL[1]})
 POSE_KEYS = ("rot_err_deg", "trans_err_deg", "rra15", "rta15", "auc30", "ate_m", "sim3_scale")
 
 
@@ -215,10 +220,13 @@ def fig_panels(raw_dir, res_by_mode, wi, out_img):
 
 
 def fig_inputs(raw_dir, wi, out_png):
-    fig, axes = plt.subplots(1, len(CELLS), figsize=(4 * len(CELLS), 4.4))
-    for a, st in zip(axes, CELLS):
+    show = list(CELLS) + [CTRL[0]]
+    fig, axes = plt.subplots(1, len(show), figsize=(3.6 * len(show), 4.4))
+    for a, st in zip(axes, show):
         z = _load_raw(raw_dir, st, 1, wi)
-        a.imshow(z["rgb"]); cid, cname, zh = CELLS[st]
+        if z is None:
+            a.axis("off"); continue
+        a.imshow(z["rgb"]); cid, cname, zh = LABEL[st]
         blk = float((z["rgb"].max(-1) == 0).mean()) * 100
         a.set_title(f"{cid} {cname}\n{zh}\n纯黑像素 {blk:.2f}% · 评分区 {z['mask'].mean()*100:.1f}%", fontsize=9.5)
         a.set_xticks([]); a.set_yticks([])
@@ -360,8 +368,8 @@ def fig_crop_effects(numbers, out_png):
             if st not in e:
                 continue
             cb = e[st]
-            pg = np.array(list(cb["per_group"].values()))
             col = COLORS[st]
+            pg = np.array(list(cb["per_group"].values()))
             ax.scatter(np.full(len(pg), i) + np.linspace(-.15, .15, len(pg)), pg, s=14, color=col, alpha=.5)
             ax.errorbar([i], [cb["mean"]], yerr=[[cb["mean"] - cb["ci_lo"]], [cb["ci_hi"] - cb["mean"]]],
                         fmt="s", color=col, ms=6.5, capsize=4, lw=2, zorder=5)
@@ -369,9 +377,80 @@ def fig_crop_effects(numbers, out_png):
             ax.text(i + 0.18, cb["mean"], fmt.format(cb["mean"]) + ("*" if cb["excludes_zero"] else ""),
                     ha="left", va="center", fontsize=8.5, color=col, fontweight="bold")
         ax.axhline(0, color="k", lw=.8); ax.set_xlim(-0.5, len(CROP_VS) - 0.2)
-        ax.set_xticks(range(len(CROP_VS))); ax.set_xticklabels([f"⑤−{CELLS[s][0]}" for s in CROP_VS], fontsize=9)
+        ax.set_xticks(range(len(CROP_VS))); ax.set_xticklabels([f"⑤−{LABEL[s][0]}" for s in CROP_VS], fontsize=9)
         ax.set_title(title, fontsize=10, loc="left"); ax.grid(axis="y", alpha=.3)
     fig.suptitle("⑤ 内接裁剪 减 其它格子:点 = 一个窗口,方块 = 均值,须 = 按窗口聚类 95% CI,* = 不含零;深度负 = ⑤ 更好",
+                 fontsize=11, x=0.005, ha="left")
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=80, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
+def fig_five_vs_four(numbers, out_png):
+    """The question the whole cell-5 arm exists for, in one figure."""
+    fig, axes = plt.subplots(1, 4, figsize=(18, 4.4))
+    pairs = [("persp_full", "④ 补真值 124.7°"), ("persp_crop_lores", "⑤ᵇ 降采样 106.9°"),
+             ("persp_crop", "⑤ 裁剪 106.9°")]
+
+    ax = axes[0]                                   # depth on the common region
+    for j, (mode, mk) in enumerate((("single", "o"), ("8-frame", "s"))):
+        cc = numbers["cells_common"][mode]
+        for i, (st, _lab) in enumerate(pairs):
+            ax.plot([i], [cc[st]["AbsRel"]], mk, color=COLORS[st], ms=11,
+                    mfc=COLORS[st] if j else "white", mew=2)
+    ax.set_xticks(range(3)); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
+    ax.set_xlim(-.5, 2.5); ax.margins(y=.16)
+    ax.set_title("AbsRel · 最小公共区域\n(空心 = 单帧,实心 = 8 帧)", fontsize=10.5, loc="left")
+    ax.set_ylabel("AbsRel ↓"); ax.grid(axis="y", alpha=.3)
+
+    ax = axes[1]                                   # the two crop contrasts
+    for i, (key, lab) in enumerate((("AbsRel", "单帧"), ("AbsRel", "8 帧"))):
+        pass
+    for i, (X, lab) in enumerate(((numbers["crop_effects_common"]["single"], "单帧"),
+                                  (numbers["crop_effects_common"]["8-frame"], "8 帧"))):
+        for j, st in enumerate(("persp_full", "persp_crop_lores")):
+            if st not in X["AbsRel"]:
+                continue
+            cb = X["AbsRel"][st]
+            x = i * 2 + j * 0.7
+            pg = np.array(list(cb["per_group"].values()))
+            ax.scatter(np.full(len(pg), x) + np.linspace(-.1, .1, len(pg)), pg, s=13,
+                       color=COLORS[st], alpha=.5)
+            ax.errorbar([x], [cb["mean"]], yerr=[[cb["mean"] - cb["ci_lo"]], [cb["ci_hi"] - cb["mean"]]],
+                        fmt="s", color=COLORS[st], ms=7, capsize=4, lw=2, zorder=5)
+            ax.text(x + .12, cb["mean"], f"{cb['mean']:+.4f}" + ("*" if cb["excludes_zero"] else ""),
+                    fontsize=8.5, color=COLORS[st], fontweight="bold", va="center")
+    ax.axhline(0, color="k", lw=.8); ax.set_xlim(-.4, 3.6)
+    ax.set_xticks([0, .7, 2, 2.7]); ax.set_xticklabels(["⑤−④\n单帧", "⑤−⑤ᵇ\n单帧", "⑤−④\n8 帧", "⑤−⑤ᵇ\n8 帧"], fontsize=8.5)
+    ax.set_title("Δ AbsRel · 公共区域(负 = ⑤ 更好)", fontsize=10.5, loc="left"); ax.grid(axis="y", alpha=.3)
+
+    ax = axes[2]                                   # pose
+    P = numbers["pose"]["8-frame"]
+    for i, (st, lab) in enumerate(pairs):
+        if st not in P:
+            continue
+        ax.bar(i, P[st]["auc30"], color=COLORS[st], width=.6)
+        ax.text(i, P[st]["auc30"] + .012, f"{P[st]['auc30']:.3f}\nATE {P[st]['ate_m']*100:.1f}cm",
+                ha="center", fontsize=9)
+    ax.set_xticks(range(3)); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
+    ax.set_ylim(0, 1.12); ax.set_title("相机位姿 AUC@30 · 8 帧(越高越好)", fontsize=10.5, loc="left")
+    ax.grid(axis="y", alpha=.3)
+
+    ax = axes[3]                                   # multi-frame gain per setting
+    mv = numbers["multi_vs_single"]
+    for i, (st, lab) in enumerate(pairs):
+        if st not in mv:
+            continue
+        cb = mv[st]
+        g, lo, hi = -cb["mean"], -cb["ci_hi"], -cb["ci_lo"]     # sign: + = multi helps
+        ax.errorbar([i], [g], yerr=[[g - lo], [hi - g]], fmt="s", color=COLORS[st], ms=9, capsize=5, lw=2)
+        ax.text(i + .12, g, f"{g:+.4f}" + ("*" if cb["excludes_zero"] else ""), fontsize=9,
+                color=COLORS[st], fontweight="bold", va="center")
+    ax.axhline(0, color="k", lw=.8); ax.set_xlim(-.4, 2.9)
+    ax.set_xticks(range(3)); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
+    ax.set_title("多帧收益(单帧 − 8 帧 AbsRel;正 = 多帧有用)", fontsize=10.5, loc="left")
+    ax.grid(axis="y", alpha=.3)
+    fig.suptitle("⑤ 内接裁剪 vs ④ 补满真值的宽视场 · ⑤ᵇ = ⑤ 降到 ④ 的采样率(把「视场」与「清晰度」拆开)· * = 95% CI 不含零",
                  fontsize=11, x=0.005, ha="left")
     fig.tight_layout()
     fig.savefig(out_png, dpi=80, bbox_inches="tight", facecolor="white")
@@ -436,6 +515,53 @@ def main():
             rows["black"] = {"AbsRel": float(np.mean(list(blk.values()))), "gain": 0.0, "pct": 0.0, "ci_lo": 0.0, "ci_hi": 0.0}
             lad[proj] = {"span": span, "rows": rows}
         numbers["ladder"][mode] = lad
+    # ---- does multi-frame pay off differently in one arm than another? The
+    # per-setting gain answers "does it help here"; the paired CONTRAST answers
+    # the question actually asked -- whether more content in the input makes the
+    # multi-frame mode worth more -- and it is paired on the same windows, so
+    # the between-window variance that dominates the per-setting numbers drops
+    # out.
+    def mf_gain(res1_, res8_, st):
+        a = {k: v["AbsRel"] for k, v in res1_[st]["_per_frame_metrics"].items()}
+        b = {k: v["AbsRel"] for k, v in res8_[st]["_per_frame_metrics"].items()}
+        return {k: a[k] - b[k] for k in set(a) & set(b)}          # + = multi helps
+    numbers["multi_contrast"] = {}
+    for tag, (ra, rb) in (("own", (res1, res8)), ("common", (results_c["single"], results_c["8-frame"]))):
+        go = rb["persp_crop"]["_group_of"]
+        base = mf_gain(ra, rb, "persp_crop")
+        numbers["multi_contrast"][tag] = {}
+        for st in ("persp_full", "persp_masked", "fisheye_full", "persp_crop_lores"):
+            if st not in rb:
+                continue
+            other = mf_gain(ra, rb, st)
+            d = {k: base[k] - other[k] for k in set(base) & set(other)}
+            cb = cluster_bootstrap(d, {k: 0.0 for k in d}, go)
+            cb["per_group"] = _per_group_means(d, go)
+            numbers["multi_contrast"][tag][st] = cb
+
+    # ---- is the multi-frame gain explained by the pose being right? Tested at
+    # the level where it could be causal -- the same window, different arms --
+    # rather than at the level where "fisheye vs perspective" would fake it.
+    rows = []
+    for st in res8:
+        if "_per_window" not in res8[st]:
+            continue
+        g = _per_group_means(mf_gain(res1, res8, st), res8[st]["_group_of"])
+        auc = {res8[st]["_window_group"][w]: v["auc30"] for w, v in res8[st]["_per_window"].items()}
+        rows += [(st, k, g[k], auc[k]) for k in g]
+    G = np.array([r[2] for r in rows]); A = np.array([r[3] for r in rows])
+    def centred(by):
+        Gc, Ac = G.copy(), A.copy()
+        for key in set(r[by] for r in rows):
+            m = np.array([r[by] == key for r in rows])
+            Gc[m] -= G[m].mean(); Ac[m] -= A[m].mean()
+        return float(np.corrcoef(Gc, Ac)[0, 1])
+    numbers["mediation"] = {"n": len(rows), "r_raw": float(np.corrcoef(G, A)[0, 1]),
+                            "r_within_window": centred(1), "r_within_setting": centred(0),
+                            "per_setting": {st: {"gain": float(np.mean([r[2] for r in rows if r[0] == st])),
+                                                 "auc30": float(np.mean([r[3] for r in rows if r[0] == st]))}
+                                            for st in dict.fromkeys(r[0] for r in rows)}}
+
     # ---- the inscribed crop: vs the others, own and common region; the 2x2
     # effects and all five cells under the common region.
     numbers["crop_effects_own"], numbers["crop_effects_common"] = {}, {}
@@ -456,6 +582,22 @@ def main():
         b = {k: v["AbsRel"] for k, v in res8[st]["_per_frame_metrics"].items()}
         d = {k: b[k] - a[k] for k in set(a) & set(b)}
         numbers["multi_vs_single"][st] = cluster_bootstrap(d, {k: 0.0 for k in d}, res8[st]["_group_of"])
+
+    # ---- the control arm must actually be blurrier than the arm it controls,
+    # measured on the real inputs rather than trusted from the resize call.
+    hf = lambda x: float(np.abs(np.diff(x.astype(np.float32), axis=1)).mean())
+    sharp, blur = [], []
+    for f in sorted(glob.glob(os.path.join(raw, "persp_crop_s1_w*.npz"))):
+        b = f.replace("persp_crop_s1", "persp_crop_lores_s1")
+        if not os.path.isfile(b):
+            continue
+        zs, zb = np.load(f), np.load(b)
+        assert str(zs["frame_dir"]) == str(zb["frame_dir"])
+        sharp.append(hf(zs["rgb"])); blur.append(hf(zb["rgb"]))
+    if sharp:
+        numbers["control"] = {"n": len(sharp), "hf_sharp": float(np.mean(sharp)),
+                              "hf_blur": float(np.mean(blur)),
+                              "hf_drop_pct": 100 * (1 - float(np.mean(blur)) / float(np.mean(sharp)))}
 
     # ---- what the model actually received: pure-black and graded fractions,
     # measured on the dumped tensors of all 96 single-frame inputs, not on the
@@ -521,6 +663,7 @@ def main():
     fig_fov(res1, res8, os.path.join(args.out, "fov.png"))
     fig_effects(numbers["effects"], os.path.join(args.out, "effects.png"))
     fig_crop_effects(numbers, os.path.join(args.out, "crop_effects.png"))
+    fig_five_vs_four(numbers, os.path.join(args.out, "five_vs_four.png"))
     with open(os.path.join(args.out, "numbers.json"), "w") as fh:
         json.dump(numbers, fh, indent=1, ensure_ascii=False)
     print(f"[figures] wrote {len(wkeys)} panel figures + inputs/trajectories/fov/effects + numbers.json -> {args.out}")

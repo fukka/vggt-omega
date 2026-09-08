@@ -46,6 +46,15 @@
     "fov_h_deg": 101.41002655029297,
     "fov_h_std": 3.731152296066284
    },
+   "persp_crop_lores": {
+    "AbsRel": 0.05021872330692648,
+    "RMSE": 0.17490196240266043,
+    "delta1": 0.9666298925702902,
+    "n_frames": 96,
+    "n_groups": 12,
+    "fov_h_deg": 101.71952056884766,
+    "fov_h_std": 3.9648232460021973
+   },
    "fisheye_fill_replicate": {
     "AbsRel": 0.07345764301447043,
     "RMSE": 0.22790155123354486,
@@ -182,6 +191,15 @@
     "n_groups": 12,
     "fov_h_deg": 104.87701416015625,
     "fov_h_std": 0.9922851324081421
+   },
+   "persp_crop_lores": {
+    "AbsRel": 0.03476946978777092,
+    "RMSE": 0.1483109400638791,
+    "delta1": 0.9779783837393096,
+    "n_frames": 96,
+    "n_groups": 12,
+    "fov_h_deg": 105.2857666015625,
+    "fov_h_std": 0.7855719327926636
    },
    "fisheye_fill_replicate": {
     "AbsRel": 0.08178446000263051,
@@ -1149,6 +1167,16 @@
     "sim3_scale": 3.027770686858867,
     "n_windows": 12
    },
+   "persp_crop_lores": {
+    "rot_err_deg": 0.37222892017698145,
+    "trans_err_deg": 1.0676646382834463,
+    "rra15": 1.0,
+    "rta15": 1.0,
+    "auc30": 0.9807539682539682,
+    "ate_m": 0.008113882725824674,
+    "sim3_scale": 3.0336629157681974,
+    "n_windows": 12
+   },
    "fisheye_fill_replicate": {
     "rot_err_deg": 3.2113627833390126,
     "trans_err_deg": 6.699676629486614,
@@ -1283,6 +1311,12 @@
     "gt": 106.84916995079807,
     "abs_err": 5.439149122551001
    },
+   "persp_crop_lores": {
+    "mean": 101.71952056884766,
+    "std": 3.9648232460021973,
+    "gt": 106.84916995079807,
+    "abs_err": 5.1296538324305585
+   },
    "fisheye_fill_replicate": {
     "mean": 86.0793228149414,
     "std": 2.87705659866333,
@@ -1374,6 +1408,12 @@
     "std": 0.9922851324081421,
     "gt": 106.84916995079807,
     "abs_err": 1.972151578580257
+   },
+   "persp_crop_lores": {
+    "mean": 105.2857666015625,
+    "std": 0.7855719327926636,
+    "gt": 106.84916995079807,
+    "abs_err": 1.5634088328628906
    },
    "fisheye_fill_replicate": {
     "mean": 83.72874450683594,
@@ -1733,6 +1773,260 @@
    "group": "Apartment_release_decoration_seq132_M1292_w2"
   }
  ],
+ "multi_contrast": {
+  "own": {
+   "persp_full": {
+    "n_pairs": 96,
+    "n_groups": 12,
+    "mean": 0.013758079538521288,
+    "ci_lo": 0.004783793693109742,
+    "ci_hi": 0.022685783678676723,
+    "excludes_zero": true,
+    "per_group": {
+     "Apartment_release_clean_seq131_M1292_w1": 0.02355655426040176,
+     "Apartment_release_clean_seq131_M1292_w0": -0.007626318357259072,
+     "Apartment_release_clean_seq131_M1292_w2": -0.01024193063938605,
+     "Apartment_release_clean_seq134_M1292_w2": 0.039871109964962986,
+     "Apartment_release_clean_seq134_M1292_w1": 0.03211761428842443,
+     "Apartment_release_clean_seq134_M1292_w0": 0.014940327111858664,
+     "Apartment_release_clean_seq136_M1292_w0": -0.006066831565940846,
+     "Apartment_release_clean_seq136_M1292_w2": 0.009005498486431916,
+     "Apartment_release_clean_seq136_M1292_w1": 0.03360362010846385,
+     "Apartment_release_decoration_seq132_M1292_w2": 0.006470965645029653,
+     "Apartment_release_decoration_seq132_M1292_w0": 0.02334992989379147,
+     "Apartment_release_decoration_seq132_M1292_w1": 0.0061164152654766945
+    }
+   },
+   "persp_masked": {
+    "n_pairs": 96,
+    "n_groups": 12,
+    "mean": 0.006561622983171203,
+    "ci_lo": -0.0028122751303647697,
+    "ci_hi": 0.015233162007197574,
+    "excludes_zero": false,
+    "per_group": {
+     "Apartment_release_clean_seq131_M1292_w1": 0.013413805556187961,
+     "Apartment_release_clean_seq131_M1292_w0": -0.028576629082973145,
+     "Apartment_release_clean_seq131_M1292_w2": -0.011775080088374489,
+     "Apartment_release_clean_seq134_M1292_w2": 0.029620770743280518,
+     "Apartment_release_clean_seq134_M1292_w1": 0.020694015785148057,
+     "Apartment_release_clean_seq134_M1292_w0": 0.005058054841764879,
+     "Apartment_release_clean_seq136_M1292_w0": -0.0027989810278776246,
+     "Apartment_release_clean_seq136_M1292_w2": 0.008873639325258635,
+     "Apartment_release_clean_seq136_M1292_w1": 0.02771132510326036,
+     "Apartment_release_decoration_seq132_M1292_w2": 0.004859049450555333,
+     "Apartment_release_decoration_seq132_M1292_w0": 0.01737128500468671,
+     "Apartment_release_decoration_seq132_M1292_w1": -0.005711779812862771
+    }
+   },
+   "fisheye_full": {
+    "n_pairs": 96,
+    "n_groups": 12,
+    "mean": 0.02385012883569129,
+    "ci_lo": 0.016898297599641628,
+    "ci_hi": 0.03139211957845727,
+    "excludes_zero": true,
+    "per_group": {
+     "Apartment_release_clean_seq131_M1292_w1": 0.0344547740978355,
+     "Apartment_release_clean_seq131_M1292_w0": 0.0032512983833794095,
+     "Apartment_release_clean_seq131_M1292_w2": 0.051940475298621544,
+     "Apartment_release_clean_seq134_M1292_w2": 0.02220718119768475,
+     "Apartment_release_clean_seq134_M1292_w1": 0.014232869385744362,
+     "Apartment_release_clean_seq134_M1292_w0": 0.018424229857847627,
+     "Apartment_release_clean_seq136_M1292_w0": 0.012020101923804339,
+     "Apartment_release_clean_seq136_M1292_w2": 0.01798848828295999,
+     "Apartment_release_clean_seq136_M1292_w1": 0.020714425143753462,
+     "Apartment_release_decoration_seq132_M1292_w2": 0.030236794410874648,
+     "Apartment_release_decoration_seq132_M1292_w0": 0.02058701177020156,
+     "Apartment_release_decoration_seq132_M1292_w1": 0.04014389627558823
+    }
+   },
+   "persp_crop_lores": {
+    "n_pairs": 96,
+    "n_groups": 12,
+    "mean": -0.001843178583677829,
+    "ci_lo": -0.0034970078975045662,
+    "ci_hi": -0.0005128547064726589,
+    "excludes_zero": true,
+    "per_group": {
+     "Apartment_release_clean_seq131_M1292_w1": -0.0003110525840524091,
+     "Apartment_release_clean_seq131_M1292_w0": 0.0014219922970032687,
+     "Apartment_release_clean_seq131_M1292_w2": -0.004379760014930987,
+     "Apartment_release_clean_seq134_M1292_w2": -0.001211414158339558,
+     "Apartment_release_clean_seq134_M1292_w1": -0.0020503292845583066,
+     "Apartment_release_clean_seq134_M1292_w0": -0.001235317722985888,
+     "Apartment_release_clean_seq136_M1292_w0": -0.008917036371509078,
+     "Apartment_release_clean_seq136_M1292_w2": -0.0012180995907122606,
+     "Apartment_release_clean_seq136_M1292_w1": -0.00015175074920369472,
+     "Apartment_release_decoration_seq132_M1292_w2": -0.0009857131864174909,
+     "Apartment_release_decoration_seq132_M1292_w0": 0.0007929221777129808,
+     "Apartment_release_decoration_seq132_M1292_w1": -0.0038725838161405217
+    }
+   }
+  },
+  "common": {
+   "persp_full": {
+    "n_pairs": 96,
+    "n_groups": 12,
+    "mean": 0.014002844624794994,
+    "ci_lo": 0.005461528103512863,
+    "ci_hi": 0.022485111832064097,
+    "excludes_zero": true,
+    "per_group": {
+     "Apartment_release_clean_seq131_M1292_w1": 0.020550109061153166,
+     "Apartment_release_clean_seq131_M1292_w0": -0.0064156426719428755,
+     "Apartment_release_clean_seq131_M1292_w2": -0.007745278719616653,
+     "Apartment_release_clean_seq134_M1292_w2": 0.03858925222871247,
+     "Apartment_release_clean_seq134_M1292_w1": 0.027461650733578646,
+     "Apartment_release_clean_seq134_M1292_w0": 0.013158392239424326,
+     "Apartment_release_clean_seq136_M1292_w0": -0.009602475613171988,
+     "Apartment_release_clean_seq136_M1292_w2": 0.011289860276981051,
+     "Apartment_release_clean_seq136_M1292_w1": 0.03616257481106183,
+     "Apartment_release_decoration_seq132_M1292_w2": 0.008517893456420098,
+     "Apartment_release_decoration_seq132_M1292_w0": 0.022308212749852726,
+     "Apartment_release_decoration_seq132_M1292_w1": 0.01375958694508712
+    }
+   },
+   "persp_masked": {
+    "n_pairs": 96,
+    "n_groups": 12,
+    "mean": 0.007683471710091345,
+    "ci_lo": -0.00393010764685167,
+    "ci_hi": 0.018303845790469345,
+    "excludes_zero": false,
+    "per_group": {
+     "Apartment_release_clean_seq131_M1292_w1": 0.016442038782999564,
+     "Apartment_release_clean_seq131_M1292_w0": -0.03184628864293719,
+     "Apartment_release_clean_seq131_M1292_w2": -0.01308197775608238,
+     "Apartment_release_clean_seq134_M1292_w2": 0.03697068710652905,
+     "Apartment_release_clean_seq134_M1292_w1": 0.022839526411481424,
+     "Apartment_release_clean_seq134_M1292_w0": 0.011165799577765522,
+     "Apartment_release_clean_seq136_M1292_w0": -0.021813500321416955,
+     "Apartment_release_clean_seq136_M1292_w2": 0.013888501027870568,
+     "Apartment_release_clean_seq136_M1292_w1": 0.03017006964988425,
+     "Apartment_release_decoration_seq132_M1292_w2": 0.0011565108477610015,
+     "Apartment_release_decoration_seq132_M1292_w0": 0.021395166577016615,
+     "Apartment_release_decoration_seq132_M1292_w1": 0.004915127260224677
+    }
+   },
+   "fisheye_full": {
+    "n_pairs": 96,
+    "n_groups": 12,
+    "mean": 0.02183846590304787,
+    "ci_lo": 0.015202572286933475,
+    "ci_hi": 0.02889643555248266,
+    "excludes_zero": true,
+    "per_group": {
+     "Apartment_release_clean_seq131_M1292_w1": 0.03525123919567723,
+     "Apartment_release_clean_seq131_M1292_w0": 0.002728022966429662,
+     "Apartment_release_clean_seq131_M1292_w2": 0.04611070131727827,
+     "Apartment_release_clean_seq134_M1292_w2": 0.020086089620847,
+     "Apartment_release_clean_seq134_M1292_w1": 0.012038304617605989,
+     "Apartment_release_clean_seq134_M1292_w0": 0.016167189027262295,
+     "Apartment_release_clean_seq136_M1292_w0": 0.01047323575645793,
+     "Apartment_release_clean_seq136_M1292_w2": 0.014163581771754061,
+     "Apartment_release_clean_seq136_M1292_w1": 0.018501485019975276,
+     "Apartment_release_decoration_seq132_M1292_w2": 0.02663621904539541,
+     "Apartment_release_decoration_seq132_M1292_w0": 0.02182794407339353,
+     "Apartment_release_decoration_seq132_M1292_w1": 0.0380775784244978
+    }
+   },
+   "persp_crop_lores": {
+    "n_pairs": 96,
+    "n_groups": 12,
+    "mean": -0.001843178583677829,
+    "ci_lo": -0.0034970078975045662,
+    "ci_hi": -0.0005128547064726589,
+    "excludes_zero": true,
+    "per_group": {
+     "Apartment_release_clean_seq131_M1292_w1": -0.0003110525840524091,
+     "Apartment_release_clean_seq131_M1292_w0": 0.0014219922970032687,
+     "Apartment_release_clean_seq131_M1292_w2": -0.004379760014930987,
+     "Apartment_release_clean_seq134_M1292_w2": -0.001211414158339558,
+     "Apartment_release_clean_seq134_M1292_w1": -0.0020503292845583066,
+     "Apartment_release_clean_seq134_M1292_w0": -0.001235317722985888,
+     "Apartment_release_clean_seq136_M1292_w0": -0.008917036371509078,
+     "Apartment_release_clean_seq136_M1292_w2": -0.0012180995907122606,
+     "Apartment_release_clean_seq136_M1292_w1": -0.00015175074920369472,
+     "Apartment_release_decoration_seq132_M1292_w2": -0.0009857131864174909,
+     "Apartment_release_decoration_seq132_M1292_w0": 0.0007929221777129808,
+     "Apartment_release_decoration_seq132_M1292_w1": -0.0038725838161405217
+    }
+   }
+  }
+ },
+ "mediation": {
+  "n": 192,
+  "r_raw": -0.12241206179597355,
+  "r_within_window": 0.12927739094060223,
+  "r_within_setting": -0.24163637299873678,
+  "per_setting": {
+   "fisheye_full": {
+    "gain": -0.010244053900213556,
+    "auc30": 0.7500992063492063
+   },
+   "fisheye_masked": {
+    "gain": -0.012652562425778077,
+    "auc30": 0.7902777777777779
+   },
+   "persp_full": {
+    "gain": -0.0001520046030435565,
+    "auc30": 0.7435515873015873
+   },
+   "persp_masked": {
+    "gain": 0.007044451952306529,
+    "auc30": 0.7536706349206349
+   },
+   "persp_crop": {
+    "gain": 0.013606074935477731,
+    "auc30": 0.9800595238095239
+   },
+   "persp_crop_lores": {
+    "gain": 0.01544925351915556,
+    "auc30": 0.9807539682539682
+   },
+   "fisheye_fill_replicate": {
+    "gain": -0.008326816988160091,
+    "auc30": 0.7892857142857143
+   },
+   "persp_fill_replicate": {
+    "gain": 0.0064192704602195685,
+    "auc30": 0.7703373015873017
+   },
+   "fisheye_fill_mean": {
+    "gain": -0.0022933818608631244,
+    "auc30": 0.7930555555555555
+   },
+   "persp_fill_mean": {
+    "gain": 0.006425345088929568,
+    "auc30": 0.7796626984126984
+   },
+   "fisheye_fill_chanmean": {
+    "gain": -0.004285152014815152,
+    "auc30": 0.7919642857142857
+   },
+   "persp_fill_chanmean": {
+    "gain": 0.008057542435020097,
+    "auc30": 0.777876984126984
+   },
+   "fisheye_fill_telea": {
+    "gain": -0.00570699063283427,
+    "auc30": 0.7889880952380953
+   },
+   "persp_fill_telea": {
+    "gain": 0.007691884079313663,
+    "auc30": 0.7527777777777778
+   },
+   "fisheye_fill_ns": {
+    "gain": -0.003988510866979965,
+    "auc30": 0.7972222222222222
+   },
+   "persp_fill_ns": {
+    "gain": 0.006246184443788658,
+    "auc30": 0.7690476190476191
+   }
+  }
+ },
  "crop_effects_own": {
   "single": {
    "AbsRel": {
@@ -1822,6 +2116,28 @@
       "Apartment_release_decoration_seq132_M1292_w2": -0.039661294587379214,
       "Apartment_release_decoration_seq132_M1292_w0": -0.029154829602631344,
       "Apartment_release_decoration_seq132_M1292_w1": -0.017227664045327627
+     }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": -0.0007168542044956603,
+     "ci_lo": -0.0022218765599030994,
+     "ci_hi": 0.0010452509857852318,
+     "excludes_zero": false,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": -0.0004218239643655488,
+      "Apartment_release_clean_seq131_M1292_w0": 0.006718413558536712,
+      "Apartment_release_clean_seq131_M1292_w2": -0.005172025490983342,
+      "Apartment_release_clean_seq134_M1292_w2": -0.002107246611579088,
+      "Apartment_release_clean_seq134_M1292_w1": -0.0006445558146994691,
+      "Apartment_release_clean_seq134_M1292_w0": -0.00040620273684113437,
+      "Apartment_release_clean_seq136_M1292_w0": -0.0032337498074578143,
+      "Apartment_release_clean_seq136_M1292_w2": -0.0011768523505919564,
+      "Apartment_release_clean_seq136_M1292_w1": -0.0005407395271093526,
+      "Apartment_release_decoration_seq132_M1292_w2": 0.001080280401700837,
+      "Apartment_release_decoration_seq132_M1292_w0": 0.0010202967027762196,
+      "Apartment_release_decoration_seq132_M1292_w1": -0.0037180448133339867
      }
     }
    },
@@ -1913,6 +2229,28 @@
       "Apartment_release_decoration_seq132_M1292_w0": 0.010781949939201493,
       "Apartment_release_decoration_seq132_M1292_w1": 0.005995193134870319
      }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": 0.001232788031693614,
+     "ci_lo": 5.293194558480222e-05,
+     "ci_hi": 0.002788819297334613,
+     "excludes_zero": true,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": 0.0014695309271022527,
+      "Apartment_release_clean_seq131_M1292_w0": -3.62396240234375e-05,
+      "Apartment_release_clean_seq131_M1292_w2": 0.0015239715576171875,
+      "Apartment_release_clean_seq134_M1292_w2": 4.1961669921875e-05,
+      "Apartment_release_clean_seq134_M1292_w1": 0.002730605891541865,
+      "Apartment_release_clean_seq134_M1292_w0": 9.393692016601562e-05,
+      "Apartment_release_clean_seq136_M1292_w0": 0.002590977199632527,
+      "Apartment_release_clean_seq136_M1292_w2": -0.0015063285827636719,
+      "Apartment_release_clean_seq136_M1292_w1": 2.6711483130978375e-05,
+      "Apartment_release_decoration_seq132_M1292_w2": -2.5272369384765625e-05,
+      "Apartment_release_decoration_seq132_M1292_w0": -0.0006047838345700218,
+      "Apartment_release_decoration_seq132_M1292_w1": 0.008488385141952562
+     }
     }
    },
    "RMSE": {
@@ -2002,6 +2340,28 @@
       "Apartment_release_decoration_seq132_M1292_w2": -0.05245586848581975,
       "Apartment_release_decoration_seq132_M1292_w0": -0.07969963542245487,
       "Apartment_release_decoration_seq132_M1292_w1": -0.024857640307894655
+     }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": -0.0040152046053290365,
+     "ci_lo": -0.0073978043141134245,
+     "ci_hi": -0.0007257272459450972,
+     "excludes_zero": true,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": -0.004099066277691871,
+      "Apartment_release_clean_seq131_M1292_w0": 0.006543113942779709,
+      "Apartment_release_clean_seq131_M1292_w2": -0.012908157684993413,
+      "Apartment_release_clean_seq134_M1292_w2": -0.008609187654940483,
+      "Apartment_release_clean_seq134_M1292_w1": -0.007230345536332502,
+      "Apartment_release_clean_seq134_M1292_w0": 0.001165409582836418,
+      "Apartment_release_clean_seq136_M1292_w0": -0.002274356173599031,
+      "Apartment_release_clean_seq136_M1292_w2": -0.013463356488656358,
+      "Apartment_release_clean_seq136_M1292_w1": -0.00036004888860748704,
+      "Apartment_release_decoration_seq132_M1292_w2": -2.7239648074679074e-05,
+      "Apartment_release_decoration_seq132_M1292_w0": 0.0011699147570837648,
+      "Apartment_release_decoration_seq132_M1292_w1": -0.008089135193752504
      }
     }
    }
@@ -2095,6 +2455,28 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.049741841372832905,
       "Apartment_release_decoration_seq132_M1292_w1": -0.057371560320915865
      }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": 0.0011263243791821687,
+     "ci_lo": 6.192096413833765e-05,
+     "ci_hi": 0.002404983484083594,
+     "excludes_zero": true,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": -0.0001107713803131388,
+      "Apartment_release_clean_seq131_M1292_w0": 0.005296421261533443,
+      "Apartment_release_clean_seq131_M1292_w2": -0.000792265476052355,
+      "Apartment_release_clean_seq134_M1292_w2": -0.0008958324532395299,
+      "Apartment_release_clean_seq134_M1292_w1": 0.0014057734698588375,
+      "Apartment_release_clean_seq134_M1292_w0": 0.0008291149861447537,
+      "Apartment_release_clean_seq136_M1292_w0": 0.005683286564051263,
+      "Apartment_release_clean_seq136_M1292_w2": 4.124724012030418e-05,
+      "Apartment_release_clean_seq136_M1292_w1": -0.0003889887779056579,
+      "Apartment_release_decoration_seq132_M1292_w2": 0.002065993588118327,
+      "Apartment_release_decoration_seq132_M1292_w0": 0.0002273745250632388,
+      "Apartment_release_decoration_seq132_M1292_w1": 0.00015453900280653753
+     }
     }
    },
    "delta1": {
@@ -2184,6 +2566,28 @@
       "Apartment_release_decoration_seq132_M1292_w2": 0.11783092011668832,
       "Apartment_release_decoration_seq132_M1292_w0": 0.018634501128843406,
       "Apartment_release_decoration_seq132_M1292_w1": 0.05840404350372058
+     }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": -0.00026900610916518716,
+     "ci_lo": -0.0016610941154158463,
+     "ci_hi": 0.0010850560749503797,
+     "excludes_zero": false,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": -0.00019663705180529567,
+      "Apartment_release_clean_seq131_M1292_w0": -0.0016870498657226562,
+      "Apartment_release_clean_seq131_M1292_w2": -7.343292236328125e-05,
+      "Apartment_release_clean_seq134_M1292_w2": -2.193450927734375e-05,
+      "Apartment_release_clean_seq134_M1292_w1": 0.00032965508403653976,
+      "Apartment_release_clean_seq134_M1292_w0": 1.7642974853515625e-05,
+      "Apartment_release_clean_seq136_M1292_w0": -0.005316564465700099,
+      "Apartment_release_clean_seq136_M1292_w2": 0.0034499168395996094,
+      "Apartment_release_clean_seq136_M1292_w1": 8.583840902506856e-06,
+      "Apartment_release_decoration_seq132_M1292_w2": -0.0003161430358886719,
+      "Apartment_release_decoration_seq132_M1292_w0": -0.0034251131503969245,
+      "Apartment_release_decoration_seq132_M1292_w1": 0.004003002951779855
      }
     }
    },
@@ -2275,6 +2679,28 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.1251265546605565,
       "Apartment_release_decoration_seq132_M1292_w1": -0.04946121767389601
      }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": 0.0008276844058910842,
+     "ci_lo": -0.0014140771079113323,
+     "ci_hi": 0.0030630707479456,
+     "excludes_zero": false,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": 0.0007486914626754649,
+      "Apartment_release_clean_seq131_M1292_w0": 0.005677105354193913,
+      "Apartment_release_clean_seq131_M1292_w2": 0.0007026252174852834,
+      "Apartment_release_clean_seq134_M1292_w2": -0.004678616165838057,
+      "Apartment_release_clean_seq134_M1292_w1": -0.004748367628655083,
+      "Apartment_release_clean_seq134_M1292_w0": 0.003732174377987496,
+      "Apartment_release_clean_seq136_M1292_w0": 0.00458697068460473,
+      "Apartment_release_clean_seq136_M1292_w2": 0.007749848918690284,
+      "Apartment_release_clean_seq136_M1292_w1": -8.560230927419886e-06,
+      "Apartment_release_decoration_seq132_M1292_w2": 0.0003826755483445736,
+      "Apartment_release_decoration_seq132_M1292_w0": 0.0007855844575992421,
+      "Apartment_release_decoration_seq132_M1292_w1": -0.004997919125467416
+     }
     }
    },
    "auc30": {
@@ -2364,6 +2790,28 @@
       "Apartment_release_decoration_seq132_M1292_w2": 0.4547619047619048,
       "Apartment_release_decoration_seq132_M1292_w0": 0.24404761904761896,
       "Apartment_release_decoration_seq132_M1292_w1": 0.5392857142857144
+     }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 12,
+     "n_groups": 12,
+     "mean": -0.0006944444444444328,
+     "ci_lo": -0.002876984126984126,
+     "ci_hi": 0.0013888888888888746,
+     "excludes_zero": false,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": 0.0011904761904761862,
+      "Apartment_release_clean_seq131_M1292_w0": 0.0011904761904762973,
+      "Apartment_release_clean_seq131_M1292_w2": 0.0023809523809524835,
+      "Apartment_release_clean_seq134_M1292_w2": -0.004761904761904745,
+      "Apartment_release_clean_seq134_M1292_w1": -0.0035714285714285587,
+      "Apartment_release_clean_seq134_M1292_w0": 0.0023809523809524835,
+      "Apartment_release_clean_seq136_M1292_w0": -0.0023809523809523725,
+      "Apartment_release_clean_seq136_M1292_w2": 0.0035714285714284477,
+      "Apartment_release_clean_seq136_M1292_w1": -0.008333333333333304,
+      "Apartment_release_decoration_seq132_M1292_w2": 0.004761904761904745,
+      "Apartment_release_decoration_seq132_M1292_w0": -0.0035714285714285587,
+      "Apartment_release_decoration_seq132_M1292_w1": -0.0011904761904762973
      }
     }
    },
@@ -2455,6 +2903,28 @@
       "Apartment_release_decoration_seq132_M1292_w0": -4.395391503289112,
       "Apartment_release_decoration_seq132_M1292_w1": -15.384702344270131
      }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 12,
+     "n_groups": 12,
+     "mean": -0.01334322985046909,
+     "ci_lo": -0.026081098466885982,
+     "ci_hi": -0.0011111553321454999,
+     "excludes_zero": true,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": -0.024686396584555376,
+      "Apartment_release_clean_seq131_M1292_w0": -0.035146425824696875,
+      "Apartment_release_clean_seq131_M1292_w2": -0.06281968509718722,
+      "Apartment_release_clean_seq134_M1292_w2": -0.01588694577220906,
+      "Apartment_release_clean_seq134_M1292_w1": 0.012544841365852766,
+      "Apartment_release_clean_seq134_M1292_w0": -0.014893156527597096,
+      "Apartment_release_clean_seq136_M1292_w0": -0.001196161701852383,
+      "Apartment_release_clean_seq136_M1292_w2": -0.01662440463509418,
+      "Apartment_release_clean_seq136_M1292_w1": -0.019521969785227133,
+      "Apartment_release_decoration_seq132_M1292_w2": 0.02534948335671333,
+      "Apartment_release_decoration_seq132_M1292_w0": -0.01356312685712896,
+      "Apartment_release_decoration_seq132_M1292_w1": 0.006325189857353086
+     }
     }
    },
    "trans_err_deg": {
@@ -2544,6 +3014,28 @@
       "Apartment_release_decoration_seq132_M1292_w2": -13.678260005233142,
       "Apartment_release_decoration_seq132_M1292_w0": -7.27158568453068,
       "Apartment_release_decoration_seq132_M1292_w1": -12.785134354396256
+     }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 12,
+     "n_groups": 12,
+     "mean": 0.021896837602197905,
+     "ci_lo": -0.023513602833493935,
+     "ci_hi": 0.06827632771184185,
+     "excludes_zero": false,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": 0.02011246497940955,
+      "Apartment_release_clean_seq131_M1292_w0": -0.003279622888900491,
+      "Apartment_release_clean_seq131_M1292_w2": -0.13604006984210293,
+      "Apartment_release_clean_seq134_M1292_w2": 0.11087016936091432,
+      "Apartment_release_clean_seq134_M1292_w1": 0.09673330975003447,
+      "Apartment_release_clean_seq134_M1292_w0": 0.008773760017638077,
+      "Apartment_release_clean_seq136_M1292_w0": 0.0613439441816348,
+      "Apartment_release_clean_seq136_M1292_w2": -0.027135576824667273,
+      "Apartment_release_clean_seq136_M1292_w1": 0.1747253398025307,
+      "Apartment_release_decoration_seq132_M1292_w2": -0.033062995196327494,
+      "Apartment_release_decoration_seq132_M1292_w0": 0.059676237703216506,
+      "Apartment_release_decoration_seq132_M1292_w1": -0.06995490981700536
      }
     }
    },
@@ -2635,6 +3127,28 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.04509647969713329,
       "Apartment_release_decoration_seq132_M1292_w1": -0.04688563398670938
      }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 12,
+     "n_groups": 12,
+     "mean": 0.000969860588419212,
+     "ci_lo": -0.0001382901940976146,
+     "ci_hi": 0.0027076559099273494,
+     "excludes_zero": false,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": -0.00046968840748364297,
+      "Apartment_release_clean_seq131_M1292_w0": -9.354139051719404e-07,
+      "Apartment_release_clean_seq131_M1292_w2": -0.0007715180451782575,
+      "Apartment_release_clean_seq134_M1292_w2": 4.941832252681501e-05,
+      "Apartment_release_clean_seq134_M1292_w1": 0.0007817226929881854,
+      "Apartment_release_clean_seq134_M1292_w0": 0.00035482399688684715,
+      "Apartment_release_clean_seq136_M1292_w0": 0.0012646643534560305,
+      "Apartment_release_clean_seq136_M1292_w2": -0.0010385305765268915,
+      "Apartment_release_clean_seq136_M1292_w1": 0.0010991506437340003,
+      "Apartment_release_decoration_seq132_M1292_w2": 0.0006244883977827957,
+      "Apartment_release_decoration_seq132_M1292_w0": -3.801928136218987e-05,
+      "Apartment_release_decoration_seq132_M1292_w1": 0.009782750378112024
+     }
     }
    },
    "rra15": {
@@ -2725,6 +3239,28 @@
       "Apartment_release_decoration_seq132_M1292_w0": 0.0,
       "Apartment_release_decoration_seq132_M1292_w1": 0.4285714285714286
      }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 12,
+     "n_groups": 12,
+     "mean": 0.0,
+     "ci_lo": 0.0,
+     "ci_hi": 0.0,
+     "excludes_zero": false,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": 0.0,
+      "Apartment_release_clean_seq131_M1292_w0": 0.0,
+      "Apartment_release_clean_seq131_M1292_w2": 0.0,
+      "Apartment_release_clean_seq134_M1292_w2": 0.0,
+      "Apartment_release_clean_seq134_M1292_w1": 0.0,
+      "Apartment_release_clean_seq134_M1292_w0": 0.0,
+      "Apartment_release_clean_seq136_M1292_w0": 0.0,
+      "Apartment_release_clean_seq136_M1292_w2": 0.0,
+      "Apartment_release_clean_seq136_M1292_w1": 0.0,
+      "Apartment_release_decoration_seq132_M1292_w2": 0.0,
+      "Apartment_release_decoration_seq132_M1292_w0": 0.0,
+      "Apartment_release_decoration_seq132_M1292_w1": 0.0
+     }
     }
    },
    "rta15": {
@@ -2814,6 +3350,28 @@
       "Apartment_release_decoration_seq132_M1292_w2": 0.5,
       "Apartment_release_decoration_seq132_M1292_w0": 0.0,
       "Apartment_release_decoration_seq132_M1292_w1": 0.5357142857142857
+     }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 12,
+     "n_groups": 12,
+     "mean": 0.0,
+     "ci_lo": 0.0,
+     "ci_hi": 0.0,
+     "excludes_zero": false,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": 0.0,
+      "Apartment_release_clean_seq131_M1292_w0": 0.0,
+      "Apartment_release_clean_seq131_M1292_w2": 0.0,
+      "Apartment_release_clean_seq134_M1292_w2": 0.0,
+      "Apartment_release_clean_seq134_M1292_w1": 0.0,
+      "Apartment_release_clean_seq134_M1292_w0": 0.0,
+      "Apartment_release_clean_seq136_M1292_w0": 0.0,
+      "Apartment_release_clean_seq136_M1292_w2": 0.0,
+      "Apartment_release_clean_seq136_M1292_w1": 0.0,
+      "Apartment_release_decoration_seq132_M1292_w2": 0.0,
+      "Apartment_release_decoration_seq132_M1292_w0": 0.0,
+      "Apartment_release_decoration_seq132_M1292_w1": 0.0
      }
     }
    }
@@ -2909,6 +3467,28 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.01943498812338722,
       "Apartment_release_decoration_seq132_M1292_w1": -0.007855235879560685
      }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": -0.0007168542044956603,
+     "ci_lo": -0.0022218765599030994,
+     "ci_hi": 0.0010452509857852318,
+     "excludes_zero": false,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": -0.0004218239643655488,
+      "Apartment_release_clean_seq131_M1292_w0": 0.006718413558536712,
+      "Apartment_release_clean_seq131_M1292_w2": -0.005172025490983342,
+      "Apartment_release_clean_seq134_M1292_w2": -0.002107246611579088,
+      "Apartment_release_clean_seq134_M1292_w1": -0.0006445558146994691,
+      "Apartment_release_clean_seq134_M1292_w0": -0.00040620273684113437,
+      "Apartment_release_clean_seq136_M1292_w0": -0.0032337498074578143,
+      "Apartment_release_clean_seq136_M1292_w2": -0.0011768523505919564,
+      "Apartment_release_clean_seq136_M1292_w1": -0.0005407395271093526,
+      "Apartment_release_decoration_seq132_M1292_w2": 0.001080280401700837,
+      "Apartment_release_decoration_seq132_M1292_w0": 0.0010202967027762196,
+      "Apartment_release_decoration_seq132_M1292_w1": -0.0037180448133339867
+     }
     }
    },
    "delta1": {
@@ -2999,6 +3579,28 @@
       "Apartment_release_decoration_seq132_M1292_w0": 0.0018901083265307483,
       "Apartment_release_decoration_seq132_M1292_w1": -0.012614195178460172
      }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": 0.001232788031693614,
+     "ci_lo": 5.293194558480222e-05,
+     "ci_hi": 0.002788819297334613,
+     "excludes_zero": true,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": 0.0014695309271022527,
+      "Apartment_release_clean_seq131_M1292_w0": -3.62396240234375e-05,
+      "Apartment_release_clean_seq131_M1292_w2": 0.0015239715576171875,
+      "Apartment_release_clean_seq134_M1292_w2": 4.1961669921875e-05,
+      "Apartment_release_clean_seq134_M1292_w1": 0.002730605891541865,
+      "Apartment_release_clean_seq134_M1292_w0": 9.393692016601562e-05,
+      "Apartment_release_clean_seq136_M1292_w0": 0.002590977199632527,
+      "Apartment_release_clean_seq136_M1292_w2": -0.0015063285827636719,
+      "Apartment_release_clean_seq136_M1292_w1": 2.6711483130978375e-05,
+      "Apartment_release_decoration_seq132_M1292_w2": -2.5272369384765625e-05,
+      "Apartment_release_decoration_seq132_M1292_w0": -0.0006047838345700218,
+      "Apartment_release_decoration_seq132_M1292_w1": 0.008488385141952562
+     }
     }
    },
    "RMSE": {
@@ -3088,6 +3690,28 @@
       "Apartment_release_decoration_seq132_M1292_w2": -0.04324202620390921,
       "Apartment_release_decoration_seq132_M1292_w0": -0.06292798499180094,
       "Apartment_release_decoration_seq132_M1292_w1": -0.023300716623200983
+     }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": -0.0040152046053290365,
+     "ci_lo": -0.0073978043141134245,
+     "ci_hi": -0.0007257272459450972,
+     "excludes_zero": true,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": -0.004099066277691871,
+      "Apartment_release_clean_seq131_M1292_w0": 0.006543113942779709,
+      "Apartment_release_clean_seq131_M1292_w2": -0.012908157684993413,
+      "Apartment_release_clean_seq134_M1292_w2": -0.008609187654940483,
+      "Apartment_release_clean_seq134_M1292_w1": -0.007230345536332502,
+      "Apartment_release_clean_seq134_M1292_w0": 0.001165409582836418,
+      "Apartment_release_clean_seq136_M1292_w0": -0.002274356173599031,
+      "Apartment_release_clean_seq136_M1292_w2": -0.013463356488656358,
+      "Apartment_release_clean_seq136_M1292_w1": -0.00036004888860748704,
+      "Apartment_release_decoration_seq132_M1292_w2": -2.7239648074679074e-05,
+      "Apartment_release_decoration_seq132_M1292_w0": 0.0011699147570837648,
+      "Apartment_release_decoration_seq132_M1292_w1": -0.008089135193752504
      }
     }
    }
@@ -3181,6 +3805,28 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.04126293219678075,
       "Apartment_release_decoration_seq132_M1292_w1": -0.04593281430405848
      }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": 0.0011263243791821687,
+     "ci_lo": 6.192096413833765e-05,
+     "ci_hi": 0.002404983484083594,
+     "excludes_zero": true,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": -0.0001107713803131388,
+      "Apartment_release_clean_seq131_M1292_w0": 0.005296421261533443,
+      "Apartment_release_clean_seq131_M1292_w2": -0.000792265476052355,
+      "Apartment_release_clean_seq134_M1292_w2": -0.0008958324532395299,
+      "Apartment_release_clean_seq134_M1292_w1": 0.0014057734698588375,
+      "Apartment_release_clean_seq134_M1292_w0": 0.0008291149861447537,
+      "Apartment_release_clean_seq136_M1292_w0": 0.005683286564051263,
+      "Apartment_release_clean_seq136_M1292_w2": 4.124724012030418e-05,
+      "Apartment_release_clean_seq136_M1292_w1": -0.0003889887779056579,
+      "Apartment_release_decoration_seq132_M1292_w2": 0.002065993588118327,
+      "Apartment_release_decoration_seq132_M1292_w0": 0.0002273745250632388,
+      "Apartment_release_decoration_seq132_M1292_w1": 0.00015453900280653753
+     }
     }
    },
    "delta1": {
@@ -3270,6 +3916,28 @@
       "Apartment_release_decoration_seq132_M1292_w2": 0.08095515798014934,
       "Apartment_release_decoration_seq132_M1292_w0": 0.007800058994497969,
       "Apartment_release_decoration_seq132_M1292_w1": 0.04186261299781947
+     }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": -0.00026900610916518716,
+     "ci_lo": -0.0016610941154158463,
+     "ci_hi": 0.0010850560749503797,
+     "excludes_zero": false,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": -0.00019663705180529567,
+      "Apartment_release_clean_seq131_M1292_w0": -0.0016870498657226562,
+      "Apartment_release_clean_seq131_M1292_w2": -7.343292236328125e-05,
+      "Apartment_release_clean_seq134_M1292_w2": -2.193450927734375e-05,
+      "Apartment_release_clean_seq134_M1292_w1": 0.00032965508403653976,
+      "Apartment_release_clean_seq134_M1292_w0": 1.7642974853515625e-05,
+      "Apartment_release_clean_seq136_M1292_w0": -0.005316564465700099,
+      "Apartment_release_clean_seq136_M1292_w2": 0.0034499168395996094,
+      "Apartment_release_clean_seq136_M1292_w1": 8.583840902506856e-06,
+      "Apartment_release_decoration_seq132_M1292_w2": -0.0003161430358886719,
+      "Apartment_release_decoration_seq132_M1292_w0": -0.0034251131503969245,
+      "Apartment_release_decoration_seq132_M1292_w1": 0.004003002951779855
      }
     }
    },
@@ -3361,6 +4029,28 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.11067576500382861,
       "Apartment_release_decoration_seq132_M1292_w1": -0.04747152620283762
      }
+    },
+    "persp_crop_lores": {
+     "n_pairs": 96,
+     "n_groups": 12,
+     "mean": 0.0008276844058910842,
+     "ci_lo": -0.0014140771079113323,
+     "ci_hi": 0.0030630707479456,
+     "excludes_zero": false,
+     "per_group": {
+      "Apartment_release_clean_seq131_M1292_w1": 0.0007486914626754649,
+      "Apartment_release_clean_seq131_M1292_w0": 0.005677105354193913,
+      "Apartment_release_clean_seq131_M1292_w2": 0.0007026252174852834,
+      "Apartment_release_clean_seq134_M1292_w2": -0.004678616165838057,
+      "Apartment_release_clean_seq134_M1292_w1": -0.004748367628655083,
+      "Apartment_release_clean_seq134_M1292_w0": 0.003732174377987496,
+      "Apartment_release_clean_seq136_M1292_w0": 0.00458697068460473,
+      "Apartment_release_clean_seq136_M1292_w2": 0.007749848918690284,
+      "Apartment_release_clean_seq136_M1292_w1": -8.560230927419886e-06,
+      "Apartment_release_decoration_seq132_M1292_w2": 0.0003826755483445736,
+      "Apartment_release_decoration_seq132_M1292_w0": 0.0007855844575992421,
+      "Apartment_release_decoration_seq132_M1292_w1": -0.004997919125467416
+     }
     }
    }
   }
@@ -3406,6 +4096,14 @@
     "n_frames": 96,
     "n_groups": 12,
     "n_valid": 262109.71875
+   },
+   "persp_crop_lores": {
+    "AbsRel": 0.05021872330692648,
+    "RMSE": 0.17490196240266043,
+    "delta1": 0.9666298925702902,
+    "n_frames": 96,
+    "n_groups": 12,
+    "n_valid": 262109.71875
    }
   },
   "8-frame": {
@@ -3445,6 +4143,14 @@
     "AbsRel": 0.03589579416695309,
     "RMSE": 0.1491386244697702,
     "delta1": 0.9777093776301443,
+    "n_frames": 96,
+    "n_groups": 12,
+    "n_valid": 262109.71875
+   },
+   "persp_crop_lores": {
+    "AbsRel": 0.03476946978777092,
+    "RMSE": 0.1483109400638791,
+    "delta1": 0.9779783837393096,
     "n_frames": 96,
     "n_groups": 12,
     "n_valid": 262109.71875
@@ -3906,6 +4612,14 @@
    "ci_hi": -0.007230232116298234,
    "excludes_zero": true
   },
+  "persp_crop_lores": {
+   "n_pairs": 96,
+   "n_groups": 12,
+   "mean": -0.01544925351915556,
+   "ci_lo": -0.022613263667109383,
+   "ci_hi": -0.00827507381408298,
+   "excludes_zero": true
+  },
   "fisheye_fill_replicate": {
    "n_pairs": 96,
    "n_groups": 12,
@@ -3986,6 +4700,12 @@
    "ci_hi": 0.007351820837576885,
    "excludes_zero": false
   }
+ },
+ "control": {
+  "n": 96,
+  "hf_sharp": 2.0117776977519193,
+  "hf_blur": 1.6650982002417247,
+  "hf_drop_pct": 17.23249531484492
  },
  "inputs": {
   "fisheye_masked": {
