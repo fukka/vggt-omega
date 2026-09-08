@@ -864,3 +864,40 @@ Next steps recorded: fit the curve on LiteOffice and compare (is it a lens
 constant?), fit it per backbone (or is it a lens x backbone constant?), and
 scale the cross-room evidence, which is now carrying two separate claims on 120
 frames.
+
+## 2026-09-08 — H18.3/H18.4: the reverse direction, and a second claim withdrawn
+
+Followed the state's own next steps. Both bars were locked before running
+(178e5f4), including the falsification lines.
+
+**H18.3 split.** Fitting the curve on LiteOffice and bringing it back to the
+Apartment recovers 78% / 95% of the gain — the >=60% bar passes — but the
+coefficients differ by mean 0.493 against a <0.10 bar and a >0.20 falsification
+line. So the transfer is real and the *numbers* are not a constant.
+
+I then asked, exploratorily, whether that was just the fitting set: a log-log
+slope is not identified independently of its depth range, and LiteOffice spans
+0.41-4.66 m against the Apartment's 0.44-10 m. Restricting both to 0.5-4.5 m
+leaves the Apartment fit **bit-identical** and makes the LiteOffice fit **worse**
+(-7.3%, +1.2%). That settles it in the unflattering direction: the LiteOffice
+curve is unstable to how its pixels are chosen, so 120 near-static frames cannot
+estimate the object. The asymmetry is about the fitting set, not about which end
+is the lens's home.
+
+**H18.4 confirmed**: mean |da| 0.297 against a predicted >0.20, so the curve is
+backbone-specific — though its *shape* correlates at 0.763 and it is mostly the
+level that moves.
+
+**Second withdrawal this session.** One tick ago I wrote "ship a 16-number
+radial calibration instead of a LoRA; it transfers better". That claimed a
+constant, and it is not one. What stands is a calibration *procedure* per
+(lens, backbone) fitted on a few hundred frames with motion. The first
+withdrawal was the black-wedge attribution in section 02. Both were published
+before the control that would have caught them existed, and in both cases the
+control was cheap and ran one tick later — the pattern to fix is publishing the
+headline before the matched control, not the controls themselves.
+
+Open, and now the most interesting question in this line: **what makes a fitting
+set sufficient?** The Apartment fit is invariant to range matching and the
+LiteOffice one is not. Sweeping the number of fitting frames until the curve
+stabilises would give the number a calibration procedure has to quote.

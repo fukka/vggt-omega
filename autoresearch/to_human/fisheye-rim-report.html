@@ -251,7 +251,9 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       <strong>追平甚至反超那个 122,900 参数的 LoRA</strong>（−20.0% / −9.0%），而房间内只有它的三分之一。
       去掉 θ 依赖的 2 参数对照在 4 个序列里 3 个比不做还差。
       <strong>可迁移的是镜头的径向重标定；LoRA 多出来的容量拟合的是房间。</strong>
-      而且它和 §06 用视差锚点拟合的<strong>同一个函数形式撞上了同一个量级</strong>（−16.6% 对 −15.4%）。（§03c）
+      而且它和 §06 用视差锚点拟合的<strong>同一个函数形式撞上了同一个量级</strong>（−16.6% 对 −15.4%）。
+      但反向检验说明这 <strong>16 个数不是"镜头常数"</strong>：它随 backbone 变（|Δa| 0.297），也依赖拟合集的质量。
+      是一个<strong>按（镜头 × backbone）做的标定流程</strong>，不是一个可发布的常数。（§03c）
     </p></div>
     <div class="row"><span class="who">C · H14.2 环形视角 ✗</span><p>
       拆掉"虚拟视角必须是方的"这条隐藏约束，教师对边缘环带的覆盖从 <strong>70% 提到 99.3%</strong> ——
@@ -1612,10 +1614,72 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
         这条曲线只拟合一次，原样搬到另一个房间就用。
       </p>
     </div>
-    <p>
-      <strong>实用上的意思</strong>：可以<strong>发布 16 个数的径向标定</strong>而不是一个 LoRA，而且它<strong>迁移得更好</strong>。
-      LoRA 只在"部署房间就是训练房间"时才是更好的选择。<strong>两者都不需要深度标签。</strong>
+    <h3 style="margin-top:22px">那这 16 个数是"镜头常数"吗？不是。</h3>
+    <p style="margin-bottom:14px">
+      上面的曲线是在公寓上拟合、搬到 LiteOffice 的。如果它真是镜头的性质，<strong>反过来也该成立</strong>。
+      于是在 LiteOffice 上拟合（2 序列 120 帧）再搬回公寓，并且<strong>跑之前锁定了两条判据</strong>。
     </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>两条判据分裂了。系数那条<strong>超出证伪线 2.5 倍</strong>。</caption>
+      <thead><tr><th style="text-align:left">判据</th><th>结果</th><th>判定</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left">复现公寓拟合曲线增益的 ≥60%</td><td class="num">seq136 78%、dec_seq132 95%</td><td class="num good">通过</td></tr>
+        <tr class="flip"><td style="text-align:left">系数 <span class="mono">a(θ)</span> 平均差 &lt;0.10（&gt;0.20 即证伪）</td><td class="num bad">0.493</td><td class="num bad">不通过</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col" style="margin-top:16px">
+    <p>
+      公寓拟合的 <span class="mono">a(θ)</span> 平滑且单峰（1.337 → 1.468 → 1.341）；LiteOffice 拟合的是锯齿状的
+      （0.596、0.951、1.263、1.228、0.896、0.737、0.793、0.915）。
+    </p>
+    <p style="margin-bottom:14px">
+      <strong>会不会只是拟合集的问题？</strong>对数斜率本来就和拟合区间的深度范围混淆
+      —— LiteOffice 的深度是 0.41–4.66 m，公寓是 0.44–10 m。所以把两边都限制到预测深度 0.5–4.5 m 重拟（滤的是<em>预测</em>，仍然无标签）：
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>近边缘 AbsRel 的变化。<strong>公寓的拟合纹丝不动，LiteOffice 的更差了</strong>，在 dec_seq132 上甚至变成有害。</caption>
+      <thead><tr><th>拟合于</th><th>seq136</th><th>dec_seq132</th><th>DinoToy</th><th>Bowl</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">公寓，不限范围</td><td class="num">−16.6%</td><td class="num">−6.5%</td><td class="num">−25.9%</td><td class="num">−9.0%</td></tr>
+        <tr class="flip"><td class="mono">公寓，范围匹配</td><td class="num">−16.6%</td><td class="num">−6.5%</td><td class="num">−25.9%</td><td class="num">−9.0%</td></tr>
+        <tr><td class="mono">LiteOffice，不限范围</td><td class="num">−12.9%</td><td class="num">−6.2%</td><td class="num">−18.2%</td><td class="num">−3.9%</td></tr>
+        <tr class="flip"><td class="mono">LiteOffice，范围匹配</td><td class="num bad">−7.3%</td><td class="num bad">+1.2%</td><td class="num">−13.1%</td><td class="num">−2.7%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col" style="margin-top:16px">
+    <p>
+      范围匹配<strong>没能救回</strong> LiteOffice 的拟合，反而更差。所以问题不是范围，而是
+      <strong>120 帧近乎静止的画面估不出这个对象</strong>；公寓那条曲线则完全不受这个改动影响。
+      <strong>方向上的不对称来自拟合集，不来自"哪边是镜头的家"。</strong>
+    </p>
+    <h3 style="margin-top:22px">而且它是 backbone 特有的</h3>
+    <p>
+      同样的公寓目标，把冻结学生换成 <strong>DA3-Large</strong>：预注册的预测是"平均 |Δa| &gt; 0.20，即它是 backbone 特有的"——
+      <strong>实测 0.297，预测成立</strong>。DA3-Large 自己的曲线也平滑（1.063 → 1.144 → 1.109），
+      和 DA3-Small 的<strong>形状相关 0.763</strong>，但整体低约 0.30。它在自己的基线上照样有效（−15.8% / −12.8% / −18.9% / −5.0%）。
+      <strong>曲线的形状大体共享，水平不共享。</strong>
+    </p>
+    <div class="note warn">
+      <span class="eyebrow">更正：本节先前写的"可以发布 16 个数的镜头标定"不成立，已撤回</span>
+      <p>
+        <strong>站得住的</strong>：<strong>在足够的拟合集上</strong>拟合的逐 θ 曲线确实迁移 ——
+        240 帧、有真实运动、深度范围宽的公寓集，给出的曲线能带到另一个房间和另一台设备，并在那里追平 122,900 参数的 LoRA。
+        这条（上面的表）不受范围匹配影响。
+      </p>
+      <p>
+        <strong>不成立的</strong>：这 16 个数<strong>不是常数</strong>。它们<strong>随 backbone 变</strong>（平均 |Δa| 0.297），
+        而且<strong>依赖于有一个好的拟合集</strong>。
+        所以正确的说法是一个<strong>标定流程</strong>而不是一个镜头常数：
+        <strong>按（镜头 × backbone）在几百帧有运动的数据上拟合 16 个数，之后它能迁移到新房间。</strong>
+        有用，但比我先前写的弱得多。
+      </p>
+    </div>
     <p style="color:var(--ink-faint)">
       边界：一次拟合、无种子（这是 240 帧上的最小二乘，相关的不确定性是抽帧而不是种子）。
       跨房间仍然只有 120 帧、两个近乎静止的序列，而它现在同时扛着两条主张。

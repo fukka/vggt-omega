@@ -641,11 +641,43 @@ h18_2_radial_probe:
     converge on the same 16-parameter object and magnitude, and this one does
     not need H9's per-sequence test-time adaptation.
   practical: >
-    Ship a 16-number radial calibration instead of a LoRA: it transfers better.
-    The LoRA is the right choice only when the deployment room is the training
-    room. Neither needs a depth label.
+    WITHDRAWN 2026-09-08 by h18_3/h18_4 — the earlier wording ("ship a
+    16-number radial calibration") claimed a constant. What stands: a per-theta
+    curve fitted on a SUFFICIENT set (240 frames, real motion, wide depth range)
+    transfers across rooms and devices and matches a 122,900-parameter LoRA
+    there. But the numbers are backbone-specific and depend on the fitting set,
+    so it is a CALIBRATION PROCEDURE per (lens, backbone), not a lens constant.
+    Still label-free.
   artefacts: [autoresearch/experiments/h14-rect-distill/results/omega/radial_probe.json]
   next:
-    - "Does the radial curve fitted on Apartment beat one fitted on LiteOffice itself? If a curve fitted anywhere works everywhere, it is a lens constant and can be published as one."
-    - "Fit it per backbone. If DA3-Large and VGGT need different curves, the 16 numbers are a (lens x backbone) constant, not a lens constant."
-    - "Scale the cross-room evidence: 120 frames over two near-static sequences now carries two separate claims."
+    - "DONE (h18_3): fitted on LiteOffice and brought back. Gain bar passed (78%/95%) but the coefficient bar failed at 0.493 against a 0.20 falsification line, and a range-matched refit makes the LiteOffice curve WORSE (-7.3%, +1.2%), so that curve is unstable to its fitting pixels rather than describing a different lens."
+    - "DONE (h18_4): backbone-specific confirmed, mean |da| 0.297; shape correlates 0.763, level differs by ~0.30."
+    - "OPEN: what makes a fitting set sufficient? The Apartment fit is invariant to range matching and the LiteOffice one is not. Sweep the number of fitting frames on the Apartment to find where the curve stabilises — that is the number a calibration procedure would have to quote."
+    - "OPEN: scale the cross-room evidence. 120 frames over two near-static sequences now carries several claims."
+
+# --------------------------------------------------------------- h18_3/h18_4
+h18_3_lens_constant:
+  status: "gain bar PASSED, coefficient bar FAILED — 'lens constant' withdrawn"
+  result: >
+    LiteOffice-fitted curve applied to the Apartment recovers 78% (seq136) and
+    95% (dec_seq132) of the Apartment-fitted gain, against a >=60% bar. But
+    mean |a(theta) difference| is 0.493 against a <0.10 bar and a >0.20
+    falsification line. Exploratory follow-up: restricting both fits to
+    predicted depth 0.5-4.5 m leaves the Apartment fit bit-identical and makes
+    the LiteOffice fit worse (-7.3%, +1.2% — harmful on dec_seq132). So the
+    LiteOffice curve is unstable to its fitting pixels; 120 near-static frames
+    cannot estimate the object. The asymmetry is about the fitting set, not the
+    direction.
+  artefacts:
+    - autoresearch/experiments/h14-rect-distill/results/omega/radial_fit_lite.json
+    - autoresearch/experiments/h14-rect-distill/results/omega/radial_apt_rng.json
+    - autoresearch/experiments/h14-rect-distill/results/omega/radial_lite_rng.json
+h18_4_backbone_specific:
+  status: "locked prediction PASSED"
+  result: >
+    Same Apartment targets, DA3-Large as the frozen student: mean |a(theta)
+    difference| from DA3-Small is 0.297, against a predicted >0.20. Its own
+    curve is smooth (1.063 -> 1.144 -> 1.109), shape-correlated at 0.763, about
+    0.30 lower in level, and effective on its own baseline (-15.8 / -12.8 /
+    -18.9 / -5.0). Shape is largely shared across backbones; level is not.
+  artefacts: [autoresearch/experiments/h14-rect-distill/results/omega/radial_large.json]
