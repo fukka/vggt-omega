@@ -1591,3 +1591,35 @@ lesson_look_for_the_measurement_before_building_it:
   same_family_as:
     - "H21 — check what is invariant before assuming a re-render needs the expensive model re-run."
     - "H25 — thirteen extracted sequences sat unused for a day while claims rested on one."
+
+# ------------------------------- reports refreshed 2026-09-08
+reports_current_as_of:
+  chinese: "35 sections, through §03v (H36/H36b). Artifact ebba1289 republished."
+  english: "carries the external_theta figure and the corrected external-validity caveat."
+  note: >
+    §08's uncertainty list now says external validity is HALF established: the
+    rim penalty replicates outside Aria (2.38 at ~48 deg vs our 2.17 +- 0.38),
+    the methods built on it do not have external evidence.
+
+# ------------------------------- H37 in flight 2026-09-08
+h37_border_four_backbones:
+  status: "protocol + runner locked and pushed; launch pending remote git reconcile"
+  question: >
+    H29 flagged the one published multi-backbone claim it could not support:
+    "DA3-Large is the worst of the four with a border" was measured on seq136
+    only, and H29 re-measured just two of the four. Does the ordering survive on
+    thirteen recordings — and is VGGT-Omega still the most border-tolerant, the
+    stated reason section 4.3 picked it as the teacher?
+  design: >
+    autoresearch/experiments/h37-border-four-backbones/code/run_h37.sh — the
+    H29 `models` arm with --models vggt,vggt_omega, same fourteen recordings,
+    same level angle, evaluation only.
+  bars_locked: >
+    B1 da3:large highest border cost of the four on a majority of thirteen.
+    B2 vggt_omega lowest of the four on a majority. B3 is the interesting one:
+    the seq136 amplification observation was formed on nine interventions that
+    ALREADY EXISTED and has never predicted out of sample. A border hurts, so
+    it predicts z > 0 for both new backbones; falsified if either reads low.
+  sanity_not_a_bar: >
+    Border cost positive on every recording for every backbone, or the run is
+    void (the H34 rule).
