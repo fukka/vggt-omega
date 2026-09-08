@@ -928,3 +928,34 @@ Used the time for work that does not need it:
   one swings between 0.60 and 1.26 and crosses below 1 in four bins. That makes
   the claim visible — it is not "another lens's curve", it is a curve that was
   not estimated.
+
+## 2026-09-08 — box still down; the report's conclusions caught up with its sections
+
+lambda_63 still unreachable, so no GPU work again. H18.5 stays locked and its
+runner stays committed and unrun.
+
+Spent the tick on something that was genuinely owed: **section 08 had not moved
+since before the whole H17/H18 block.** Seven new sections had been added
+(02b-02e, 03b, 03c) and the conclusions still listed roll augmentation as the
+top priority and did not mention the border/backbone finding, the label-free
+distillation result, or the 16-number curve at all. Rewritten and regrouped:
+
+* what is settled about the rim penalty itself;
+* what is settled about pose and framing — including the two findings with the
+  widest reach outside this project, that a hard border's cost is set by
+  DISTANCE not area, and that DA3-Large is the most accurate DA3 on a clean
+  frame and the worst of four with a border;
+* what is settled about label-free adaptation — the in-room/cross-room
+  inversion and the 16-number curve, with the constant claim already withdrawn;
+* the clean negatives;
+* an honest uncertainty list, now including that the 120-frame cross-room set
+  carries several claims at once;
+* a next-steps list that reflects reality: roll augmentation is explicitly
+  **demoted**, with the reason (section 02b says change the backbone, section
+  02c says only 1.5% of ADT frames go past 20 degrees), and kept only for the
+  extrapolable thing its second bar would measure.
+
+Also added the postscript H9 deserved: the curve it fitted from parallax anchors
+is the same object section 03c fitted from a rectified teacher, -15.4% against
+-16.6%. Two independent lines of this project were estimating the same thing,
+and the reader of section 06 should not have to reach section 03c to find out.
