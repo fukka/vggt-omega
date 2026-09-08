@@ -201,11 +201,23 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       （DA3-Small 2.13、DA3-Large 2.04、VGGT 2.57、VGGT-Ω 2.33）。绝对精度差 2.4 倍，比值却挤在一个窄带里 ——
       它不随模型变大而消失。（§01）
     </p></div>
-    <div class="row"><span class="who">A · 滚转：真实代价比看上去小一半，黑边是另一半</span><p>
-      把虚拟相机绕光轴滚转再成像（<strong>任何角度都没有黑边</strong>）：20° 以内全图误差 ≤ +13%，30° +46%，40° +131%，
-      边缘/中心比值到 30° 都在 2.2–2.6。直接旋转鱼眼图片得到的"30° 边缘翻倍"有<strong>三分之二是黑楔造的</strong>；
-      在 0° 上把 1.7% 的像素掩成硬黑，近边缘就差 <strong>38%</strong>。两条结论：模型对滚转不等变（可训，<strong>滚转增广</strong>已设计），
-      以及<strong>不要给模型硬黑边</strong>。（§02）
+    <div class="row"><span class="who">A · 滚转：模型不等变，但数据几乎不去那里</span><p>
+      喂一张<strong>完全没有黑边、矫正过的</strong>图并把虚拟相机绕光轴滚转：20° 内全图误差 ≤ +13%，30° <strong>+48%</strong>，40° +131% ——
+      模型确实不是滚转等变的，与文献报告的"水平先验"一致。但<strong>真实数据几乎不去那里</strong>：从 ADT 的重力向量量出的头部滚转
+      p99 只有 <strong>21.8°</strong>，98.5% 的帧落在模型的平坦区内。另一条独立且更大的发现：<strong>一条硬黑边本身就值 20° 滚转</strong>
+      （0° 上掩掉 1.7% 的像素，全图 +25%、近边缘 +38%）。（§02）
+    </p></div>
+    <div class="row"><span class="who">A′ · 真实的头有多歪（新）</span><p>
+      从 Aria 的重力向量直接读出 <strong>60,105 帧</strong>的头部滚转：中位 <strong>3.7°</strong>、p90 10.2°、p99 <strong>21.8°</strong>、
+      最大 34.5°，<strong>没有一帧超过 40°</strong>。模型的平坦区（±20°）覆盖 <strong>98.5%</strong> 的帧 —— 两个数独立测得，正好对上。
+      顺带用几何独立确认了正立四分之一转的方向。但逐序列差别很大（seq145 有 29.6% 的帧 &gt;10°），
+      而 ADT 只是第一人称数据里最温和的一端。（§02b）
+    </p></div>
+    <div class="row"><span class="who">A″ · 模型自己知道被转了吗（新）</span><p>
+      线性探针从冻结特征读滚转角：整体 <strong>12.75°</strong>（置换零假设 25.8°，R²=0.60），
+      但 <strong>同房间 6.8°、换了布置的房间 18.7°</strong> —— <strong>它主要记住的是房间</strong>。
+      锁定的判据是 &lt;10°（条件化无效）或 &gt;20°（IMU 带真信息），<strong>两个都没触发</strong>。
+      "旋转图片会靠黑楔泄题"这个预测被证伪：两条臂一模一样，因为成像圆盘是旋转对称的。（§02c）
     </p></div>
     <div class="row"><span class="who">B · H14 无标签蒸馏 ✗</span><p>
       让冻结模型看<strong>矫正后的透视图</strong>，把它自己的答案搬回鱼眼域当标签。主判据（两个留出序列都要赢对照）
@@ -540,6 +552,217 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
         <strong>预注册判据：</strong>①增广臂在 30° 的近边缘涨幅（现在 +39%）必须<strong>至少减半</strong>（≤ +20%），全图（现在 +46%）同样；
         ②它在 0° 的近边缘不得比对照臂差超过 2% —— 重力先验在 0° 是<em>有用的</em>，增广可能把它抹掉而付出代价；
         ③两个留出序列都要成立，以 decoration_seq132 为主。如果①过②不过，结论是"等变性和重力先验是一对权衡，要按部署时的姿态分布选"。
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ 02b 真实滚转 -->
+<section>
+  <div class="section-head"><span class="eyebrow">02b</span><h2>实验 A′ · 真实的头到底歪多少</h2>
+    <span class="chip done"><span class="dot"></span>60,105 帧，从重力向量读出</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      §02 说模型在 20° 以内基本不受影响、30° 以后明显变差。这只有在<strong>真实第一人称录像确实会歪到那个程度</strong>时才要紧。
+      本项目此前一直假设"ADT 里头部滚转很小"，但从来没量过。
+    </p>
+    <p>
+      不需要估计。Aria 的 MPS 闭环轨迹里<strong>同时存着设备位姿和重力向量</strong>，30 Hz 逐帧，世界系是重力对齐的。
+      所以滚转是<strong>读出来的</strong>：
+    </p>
+    <div class="note">
+      <p style="margin:0"><span class="mono">R<sub>world←cam</sub> = R<sub>world←dev</sub> · R<sub>cam←dev</sub><sup>T</sup></span>　→
+      <span class="mono">up<sub>cam</sub> = R<sub>world←cam</sub><sup>T</sup> · (−g/|g|)</span>　→
+      <span class="mono">roll = atan2(up<sub>x</sub>, −up<sub>y</sub>)</span></p>
+      <p style="margin:6px 0 0;color:var(--ink-faint);font-size:.9rem">
+        角度算在<strong>模型看到的那个画幅里</strong>，也就是加上正立四分之一转之后。四个 90° 偏移全部算了一遍，只报落在 0 附近的那个。
+      </p>
+    </div>
+    <h3 style="margin-top:22px">顺带得到的一个独立验证</h3>
+    <p>
+      四个偏移的中位 |roll| 分别是 <span class="mono">0°→92.7°、90°→176.3°、180°→87.3°、<b>270°→3.7°</b></span>。
+      只有一个能让佩戴者的头落在水平附近。这<strong>用几何独立确认了 <code>UPRIGHT_K=3</code></strong> ——
+      此前这个常数是靠比较四个朝向的 AbsRel 定的，属于用 loss 挑参数；现在它有了一个和 loss 无关的来源。
+    </p>
+  </div>
+
+  <figure style="margin-top:22px">
+    <div class="chartbox">
+      <svg viewBox="0 0 720 300" role="img" aria-label="ADT 六万帧的头部滚转直方图：绝大部分集中在负 10 度到正 5 度之间，中位数 3.7 度，99 百分位 21.8 度，没有任何一帧超过 40 度。模型的正负 20 度容忍带覆盖了 98.5% 的帧。">
+        <rect x="256.7" y="40" width="266.6" height="210" fill="var(--accent-soft)"></rect>
+        <g stroke="var(--rule)" stroke-width="1">
+          <line x1="90" y1="250" x2="690" y2="250"></line>
+          <line x1="90" y1="203.3" x2="690" y2="203.3"></line>
+          <line x1="90" y1="156.7" x2="690" y2="156.7"></line>
+          <line x1="90" y1="110" x2="690" y2="110"></line>
+          <line x1="90" y1="63.3" x2="690" y2="63.3"></line>
+        </g>
+        <g fill="var(--ink-faint)" font-family="IBM Plex Mono, monospace" font-size="11" text-anchor="end">
+          <text x="80" y="254">0%</text><text x="80" y="207">10%</text>
+          <text x="80" y="161">20%</text><text x="80" y="114">30%</text><text x="80" y="67">40%</text>
+        </g>
+        <g fill="var(--accent)">
+          <rect x="158.3" y="249.6" width="30" height="0.4"></rect>
+          <rect x="191.7" y="248.5" width="30" height="1.5"></rect>
+          <rect x="225.0" y="246.2" width="30" height="3.8"></rect>
+          <rect x="258.3" y="244.1" width="30" height="5.9"></rect>
+          <rect x="291.7" y="219.9" width="30" height="30.1"></rect>
+          <rect x="325.0" y="141.6" width="30" height="108.4"></rect>
+          <rect x="358.3" y="58.5" width="30" height="191.5"></rect>
+          <rect x="391.7" y="149.1" width="30" height="100.9"></rect>
+          <rect x="425.0" y="233.7" width="30" height="16.3"></rect>
+          <rect x="458.3" y="245.8" width="30" height="4.2"></rect>
+          <rect x="491.7" y="247.7" width="30" height="2.3"></rect>
+          <rect x="525.0" y="249.0" width="30" height="1.0"></rect>
+          <rect x="558.3" y="249.8" width="30" height="0.2"></rect>
+        </g>
+        <line x1="390" y1="34" x2="390" y2="250" stroke="var(--ink-faint)" stroke-width="1" stroke-dasharray="3 3"></line>
+        <g fill="var(--ink)" font-family="IBM Plex Mono, monospace" font-size="11.5" text-anchor="middle">
+          <text x="123.3" y="270">−40°</text><text x="256.7" y="270">−20°</text><text x="390" y="270">0°</text>
+          <text x="523.3" y="270">+20°</text><text x="656.7" y="270">+40°</text>
+        </g>
+        <text x="390" y="30" text-anchor="middle" fill="var(--accent-ink)"
+              font-family="Noto Sans SC, sans-serif" font-size="12">模型的平坦区 ±20° · 覆盖 98.5% 的帧</text>
+        <text x="640" y="120" text-anchor="end" fill="var(--ink-faint)"
+              font-family="Noto Sans SC, sans-serif" font-size="11.5">p99 = 21.8°　最大 34.5°　40° 以外一帧都没有</text>
+        <text x="390" y="290" text-anchor="middle" fill="var(--ink-faint)"
+              font-family="Noto Sans SC, sans-serif" font-size="11.5">横轴＝头戴相机绕光轴偏离水平的角度 · 纵轴＝帧数占比（60,105 帧，5° 一档）</text>
+      </svg>
+    </div>
+    <figcaption>
+      ADT 全部 21 个序列。<strong>模型的容忍带和数据的分布是对上的</strong>，而且这两个数是各自独立测出来的。
+    </figcaption>
+  </figure>
+
+  <div class="scroll" style="margin-top:18px">
+    <table>
+      <caption>逐序列（挑了两端和留出序列）。<strong>活动内容决定分布</strong>：同一间公寓、同一台设备，seq145 有 29.6% 的帧超过 10°，decoration_seq132 只有 0.8%。</caption>
+      <thead><tr><th>序列</th><th>帧数</th><th>中位</th><th>p90</th><th>p99</th><th>最大</th><th>&gt;10°</th><th>&gt;20°</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">clean_seq145</td><td class="num">2,859</td><td class="num">7.5</td><td class="num">12.5</td><td class="num">23.7</td><td class="num">29.2</td><td class="num bad">29.6%</td><td class="num">2.1%</td></tr>
+        <tr><td class="mono">clean_seq144</td><td class="num">2,871</td><td class="num">6.6</td><td class="num">15.4</td><td class="num">26.4</td><td class="num">30.8</td><td class="num bad">26.6%</td><td class="num">6.6%</td></tr>
+        <tr><td class="mono">clean_seq147</td><td class="num">2,846</td><td class="num">6.2</td><td class="num">13.4</td><td class="num">31.8</td><td class="num bad">34.5</td><td class="num">17.9%</td><td class="num">4.0%</td></tr>
+        <tr class="flip"><td class="mono">clean_seq136（留出）</td><td class="num">2,880</td><td class="num">2.7</td><td class="num">9.4</td><td class="num">20.0</td><td class="num">24.3</td><td class="num">8.8%</td><td class="num">1.0%</td></tr>
+        <tr class="flip"><td class="mono">decoration_seq132（留出）</td><td class="num">2,732</td><td class="num good">2.8</td><td class="num good">5.8</td><td class="num good">9.3</td><td class="num good">11.7</td><td class="num good">0.8%</td><td class="num good">0.0%</td></tr>
+        <tr><td class="mono">DinoToy_seq030（LiteOffice）</td><td class="num">2,783</td><td class="num">2.8</td><td class="num">6.3</td><td class="num">13.2</td><td class="num">16.0</td><td class="num">1.7%</td><td class="num">0.0%</td></tr>
+        <tr><td class="mono">BlackCeramicBowl_seq030</td><td class="num">2,916</td><td class="num good">0.7</td><td class="num good">3.5</td><td class="num">9.9</td><td class="num">12.6</td><td class="num good">1.0%</td><td class="num good">0.0%</td></tr>
+        <tr><td colspan="2"><b>合计 21 个序列</b></td><td class="num"><b>3.7</b></td><td class="num"><b>10.2</b></td><td class="num"><b>21.8</b></td><td class="num"><b>34.5</b></td><td class="num"><b>10.6%</b></td><td class="num"><b>1.5%</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:20px">
+    <h3>再想一层</h3>
+    <p>
+      <strong>在 ADT 上，水平先验不是 bug，而是一个和部署分布对上了的先验。</strong>
+      模型的平坦区是 ±20°，数据的 p99 是 21.8° —— 两个数分别来自一次 GPU 扫描和一次轨迹读取，事先没有互相校准过。
+      98.5% 的帧落在容忍带内。所以<strong>逐帧重力对齐在这份数据上买不到东西</strong>，这条决定现在有了量化依据，而不再是一个假设。
+    </p>
+    <p>
+      <strong>但"egocentric ⇒ 头很正"是个太快的结论。</strong>逐序列差别很大：seq145 有近三成的帧超过 10°，decoration_seq132 不到 1%。
+      ADT 的佩戴者在做<strong>站立、行走的家务脚本</strong>，这是第一人称数据里最温和的一端。
+      趴在桌上、躺着、钻到车底、骑行、体育运动 —— 这些场景本页一个都没测到，而它们正是会跑出 ±20° 的那些。
+      所以这条结论的正确形式是：<strong>ADT 这类家务型 egocentric 数据落在模型的容忍带内；这不能外推到 egocentric 全体。</strong>
+    </p>
+    <p>
+      <strong>一个还没解释的细节</strong>：分布不是对称的，有符号中位是 <span class="mono">−2.7°</span>，质量集中在 −10°…0°。
+      这可能是佩戴者真实的头部偏置，也可能是设备外参里残留的一个常数偏移 ——
+      <strong>一个常数偏移在这次测量里无法和真实偏置区分</strong>。它小到不影响任何结论（10° 才值 +2%），但不该当成"人的头是歪的"来讲。
+    </p>
+    <div class="note warn">
+      <span class="eyebrow">这一节改变了下一步的排序</span>
+      <p>
+        原本"滚转增广"排在第一优先。现在它的收益上限被这张图钉住了：<strong>在 ADT 上，增广最多只能改善那 1.5% 的帧</strong>。
+        它仍然值得跑（便宜，且判据 ② 会告诉我们"抹掉重力先验要付多少代价"，这是一条可外推的知识），
+        但它不再是<em>提升 ADT 数字</em>的路径。真正需要它的是姿态分布更宽的数据集，而那需要先找到这样一个带深度真值的第一人称数据集。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 02c 探针 -->
+<section>
+  <div class="section-head"><span class="eyebrow">02c</span><h2>实验 A″ · 模型自己知道它被转了吗</h2>
+    <span class="chip run"><span class="dot"></span>落在两个判据之间</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      "把 IMU 测到的滚转角喂给模型"这个提议，能不能奏效，取决于一件事：<strong>模型是不是已经知道了</strong>。
+      §05（H15）在本项目里已经给出过一次答案的形状 —— 把模型<em>能从图像自己推出来</em>的几何显式喂给它，是<strong>惰性的</strong>
+      （真实镜头场输给位置打乱的假场 10/16、输给不喂 10/16），而喂<em>错</em>的几何是有害的（16/16）。
+    </p>
+    <p>
+      所以先问：<strong>冻结特征里能不能线性读出滚转角？</strong>能 → 喂进去大概率白喂，该走增广或去旋转；不能 → IMU 带来的是模型确实缺的信息，条件化有真实空间。
+    </p>
+    <h3 style="margin-top:22px">怎么做</h3>
+    <ul class="plain">
+      <li>把帧滚转一个已知角度（从 −45°…+45° 的 10 个值里抽），取 DA3-Small <strong>最后一个编码器 block</strong> 的 token，池化成 4×4 网格（<em>不是</em>全局平均 —— 那会把朝向所在的布局信息抹掉），PCA 到 128 维，岭回归。</li>
+      <li>4 个训练序列拟合（1,600 样本），<strong>两个留出序列</strong>报告（800 样本）。</li>
+      <li><strong>零假设：把训练标签打乱，跑完全相同的流水线。</strong>这才是这个读出方式真正的随机水平 —— 后面会看到为什么必须这么做。</li>
+      <li>两条臂：<code>camera</code>（旋转虚拟相机再成像，无黑边）和 <code>picture</code>（旋转图片）。原本的预期是后者靠黑楔方向作弊。</li>
+    </ul>
+  </div>
+
+  <div class="scroll" style="margin-top:16px">
+    <table>
+      <caption>平均绝对角误差，越小说明滚转越"可读"。<code>R²</code> 是对角度本身的决定系数。</caption>
+      <thead><tr><th>臂</th><th>MAE</th><th>中位</th><th>R²</th><th>置换零假设</th><th>seq136</th><th>dec_seq132</th></tr></thead>
+      <tbody>
+        <tr class="flip"><td class="mono">camera（无黑边）</td><td class="num">12.75°</td><td class="num">7.72°</td><td class="num">0.600</td><td class="num">25.8°</td><td class="num good">6.8°</td><td class="num bad">18.7°</td></tr>
+        <tr><td class="mono">picture（旋转图片）</td><td class="num">12.76°</td><td class="num">8.25°</td><td class="num">0.600</td><td class="num">27.3°</td><td class="num good">6.7°</td><td class="num bad">18.8°</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:18px">
+    <h3>逐条判据</h3>
+  </div>
+  <div class="crit">
+    <div class="row"><span class="who">主判据 ～ 两不靠</span><p>
+      预注册写的是：<strong>&lt;10° ⇒ 滚转可读 ⇒ 条件化预计无效</strong>；<strong>&gt;20° ⇒ 特征不编码重力 ⇒ IMU 带来真信息</strong>。
+      实测 <strong>12.75°</strong>，<strong>两个分支都没触发</strong>。中位数 7.7° 在门槛内，均值被 dec_seq132 拖到门槛外。
+    </p></div>
+    <div class="row"><span class="who">黑楔对照 ✗ 被证伪</span><p>
+      预测 <code>picture</code> 臂至少容易一倍（黑楔方向泄题）。实测两条臂<strong>一模一样</strong>（12.75 对 12.76）。
+      原因是几何的：<strong>Aria 的成像圆盘绕主点近似旋转对称</strong>，转图片几乎不改变黑区。
+      这条<strong>独立支持了 §02 那个修正</strong> —— 黑楔从来不是滚转曲线陡峭的原因。
+    </p></div>
+    <div class="row"><span class="who">真正的分界在房间上</span><p>
+      seq136（同房间）<strong>6.8°</strong>，重新布置过的 dec_seq132 <strong>18.7°</strong>，而后者的零假设是 25.8°。
+      也就是说<strong>探针主要学会的是"这个房间在这个朝向下长什么样"</strong>，换了布置就只剩很弱的信号。
+      这和本页每一节的结论同形：dec_seq132 是唯一诚实的留出集。
+    </p></div>
+  </div>
+
+  <div class="col">
+    <h3 style="margin-top:22px">再想一层</h3>
+    <p>
+      <strong>诚实的读法：特征在见过的房间里编码滚转，在没见过的房间里几乎不编码。</strong>
+      在唯一诚实的留出序列上，探针（18.7°）只比"什么都不知道"（25.8°）好一点。
+      所以 H15 那条"喂它已经知道的东西是惰性的"论证<strong>不能直接搬过来</strong> —— 它并不真的知道，至少在新房间里不知道。
+      条件化因此保留了一定空间，但也没有强到值得优先做。
+    </p>
+    <p>
+      <strong>这个实验自己也是一堂读出方式的课。</strong>第一版回归 (sin, cos) 再取 <code>atan2</code>，得到的 MAE 是 <strong>70°</strong> ——
+      比"永远猜中位数"还差得多，看上去像"完全读不出"。真相是：滚转限制在 ±45° 时 <code>cos</code> 只在 0.707~1 之间变化，方差极小，
+      <code>R²(cos) = −72</code>，一个已经不错的 <code>sin</code> 估计（R² 0.61）被它彻底毁掉。
+      这个范围里没有绕圈问题，<strong>直接回归角度</strong>就行，MAE 立刻从 70° 变成 12.75°。
+      能发现这件事，靠的是<strong>标签置换零假设</strong>：一个线性探针不可能真的比常数预测更差，所以"比零假设差"只可能是读出错了，不可能是发现。
+    </p>
+    <div class="note warn">
+      <span class="eyebrow">这一节和 §02b 合起来，把整条滚转线的价值重新定了位</span>
+      <p>
+        <strong>科学价值</strong>：水平先验存在（§02，与文献一致）、它和 ADT 的姿态分布是对上的（§02b）、
+        特征只在房间内编码滚转（§02c）。这三条是可以写进论文的。
+      </p>
+      <p>
+        <strong>工程价值（在 ADT 上）：小。</strong>能被"用上 IMU"改善的只有那 1.5% 超过 20° 的帧。
+        <strong>要让这条线有工程价值，需要的是一个姿态分布更宽、且带深度真值的第一人称数据集</strong> ——
+        目前手上没有，这是这条线真正的瓶颈，而不是方法。
       </p>
     </div>
   </div>
@@ -1407,8 +1630,9 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <h3>确定的</h3>
     <ul class="plain">
       <li><strong>边缘惩罚是 2.0–2.6×，跨四个 backbone 成立，不随模型变大而消失。</strong>值得为它专门做方法。（§01）</li>
-      <li><strong>模型对滚转不等变，但没有那么脆</strong>：无黑边的干净协议下 20° 内 ≤ +13%、30° +46%、40° +131%，边缘/中心比值到 30° 不动。0° 那条惩罚是镜头的。（§02）</li>
-      <li><strong>硬黑边比旋转更伤</strong>：0° 掩掉 1.7% 像素，近边缘 +38%；直接旋转鱼眼图片的"30° 边缘翻倍"有三分之二是黑楔造的。和 H14 的 110° 教师翻负是同一件事：<strong>不裁、不掩、不填零；要旋转就旋转相机再成像。</strong>（§02, §03）</li>
+      <li><strong>模型对滚转不等变</strong>：无黑边的矫正输入下 20° 内 ≤ +13%、30° +48%、40° +131%；边缘/中心比值到 30° 不动，中心和边缘一起变差。与文献的"水平先验"一致。（§02）</li>
+      <li><strong>但真实第一人称数据几乎不去那里</strong>：ADT 60,105 帧的头部滚转中位 3.7°、p99 21.8°、无一超过 40°。模型的平坦区（±20°）和数据的分布是<strong>对上的</strong>，所以在 ADT 上逐帧重力对齐买不到东西。（§02b）</li>
+      <li><strong>一条硬黑边就值 20° 滚转</strong>：0° 上掩掉 1.7% 的锥体像素，全图 +25%、近边缘 +38%。和 H14 的 110° 教师翻负是同一件事：<strong>不裁、不掩、不填零。</strong>（§02, §03）</li>
       <li><strong>自蒸馏要盯教师的"准"，不要盯"广"</strong>（H14 / H14.2：教师优势只有 11–15%，铺满覆盖后学生更差）。覆盖不到的地方留空，比给一个更差的标签好。（§03–04）</li>
       <li><strong>把镜头几何显式喂给网络是惰性的</strong>（H15：输给打乱场 10/16、输给不喂 10/16），<strong>但喂错的几何是有害的</strong>（赢错配场 16/16）。这是一个可判定场景下的干净否定。（§05）</li>
       <li><strong>边缘的视差盈余里有真实的径向信息</strong>（H9：锚点误差 4%，两个对照 6/6，无深度真值），但"逐 θ 档一条曲线"这个模型类把它浪费了（仿射差距只缩小 6–26%，判据要求减半）。（§06）</li>

@@ -1,0 +1,85 @@
+{
+ "arms": {
+  "camera": {
+   "alpha": 1000.0,
+   "n_train": 1600,
+   "n_test": 800,
+   "n_pca": 128,
+   "mae_deg": 12.753674763110636,
+   "r2_angle": 0.5999174894300314,
+   "r2_sin": 0.614024629911819,
+   "median_ae_deg": 7.7191869595083915,
+   "per_seq_mae": {
+    "decoration_seq132": 18.694673615554603,
+    "clean_seq136": 6.812675910666672
+   },
+   "chance_mae_deg": 25.125,
+   "worse_than_chance": false
+  },
+  "camera_null": {
+   "alpha": 1000.0,
+   "n_train": 1600,
+   "n_test": 800,
+   "n_pca": 128,
+   "mae_deg": 25.808477844038023,
+   "r2_angle": -0.0795419951324634,
+   "r2_sin": -0.08151047052765703,
+   "median_ae_deg": 24.407499754125553,
+   "per_seq_mae": {
+    "decoration_seq132": 26.992747956146253,
+    "clean_seq136": 24.62420773192979
+   },
+   "chance_mae_deg": 25.125,
+   "worse_than_chance": true
+  },
+  "picture": {
+   "alpha": 1000.0,
+   "n_train": 1600,
+   "n_test": 800,
+   "n_pca": 128,
+   "mae_deg": 12.760454399179983,
+   "r2_angle": 0.6004854346914503,
+   "r2_sin": 0.6103020944649555,
+   "median_ae_deg": 8.251576772004455,
+   "per_seq_mae": {
+    "decoration_seq132": 18.8484429858854,
+    "clean_seq136": 6.672465812474566
+   },
+   "chance_mae_deg": 25.125,
+   "worse_than_chance": false
+  },
+  "picture_null": {
+   "alpha": 1000.0,
+   "n_train": 1600,
+   "n_test": 800,
+   "n_pca": 128,
+   "mae_deg": 27.280855601429412,
+   "r2_angle": -0.1870312526870226,
+   "r2_sin": -0.1968793007690599,
+   "median_ae_deg": 28.02410189862711,
+   "per_seq_mae": {
+    "decoration_seq132": 29.874766257929963,
+    "clean_seq136": 24.686944944928854
+   },
+   "chance_mae_deg": 25.125,
+   "worse_than_chance": true
+  }
+ },
+ "config": {
+  "root": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean",
+  "train_seqs": "clean_seq131,clean_seq133,clean_seq134,clean_seq135",
+  "test_seqs": "clean_seq136,decoration_seq132",
+  "frames": 400,
+  "angles": "-45,-35,-25,-15,-5,5,15,25,35,45",
+  "size": 504,
+  "view_fov": 89.0,
+  "view_size": 630,
+  "variant": "small",
+  "n_pca": 128,
+  "pool": 4,
+  "seed": 0,
+  "device": "cuda",
+  "out": "results/autoresearch-h17-roll/roll_probe.json",
+  "cache": "/netapp/datasets/f.zhang2/h17_probe_feats.npz"
+ }
+}

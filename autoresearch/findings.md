@@ -901,3 +901,51 @@ held-out sequence is still the smallest, shortest run (60 × 20, −27.3%).
 One seed, no error bars; the dec_seq132 rim numbers all sit in a −17…−27% band,
 while the near_centre trend is monotone in *steps*. Read the direction, not the
 gaps.
+
+## H17.3 — is roll legible in the frozen features? Between the bars, 2026-09-08
+
+`h17-roll-prior/code/roll_probe.py`. Ridge from last-encoder-block tokens
+(4x4 pooled, PCA 128) to the roll angle; 4 training sequences (1,600 samples),
+2 held-out (800). Null = the identical pipeline with permuted training labels.
+
+| arm | MAE | median | R2 | permuted null | seq136 | dec_seq132 |
+|---|---|---|---|---|---|---|
+| `camera` (no black at any angle) | **12.75°** | 7.72° | 0.600 | 25.8° | 6.8° | **18.7°** |
+| `picture` (rotate the picture) | 12.76° | 8.25° | 0.600 | 27.3° | 6.7° | 18.8° |
+
+Against the locked bars (<10 deg => conditioning inert; >20 deg => IMU carries
+information the model lacks): **12.75 fires neither**. The median (7.7) is
+inside, the mean is dragged out by dec_seq132.
+
+Two things the protocol did not expect:
+
+1. **The black-wedge control is falsified.** The two arms are identical
+   (12.75 vs 12.76) where the prediction was 2x. Reason: Aria's imaged disc is
+   near rotationally symmetric about the principal point, so rolling the
+   picture barely changes the black region. This independently supports the h16
+   correction above — the wedge was never what made the roll curve steep.
+2. **The probe mostly learned the room**: 6.8 deg on the same-room held-out
+   sequence, 18.7 deg on the rearranged one (null 25.8). So the features encode
+   roll *within a known room* and only weakly in a new one. H15's "conditioning
+   on what it already knows is inert" therefore does NOT transfer here — it does
+   not already know, not in a new room. Conditioning keeps some headroom, but
+   not enough to promote it.
+
+**Methodological lesson, worth keeping.** The first version regressed
+(sin, cos) and took atan2: MAE 70 deg, far worse than predicting a constant,
+which reads like "roll is unreadable". It was a readout bug. Within +-45 deg
+cos only spans [0.707, 1], its variance is tiny, R2_cos came out -72, and it
+destroyed an already-decent sin fit (R2 0.61). Direct angle regression (no
+wraparound in this range) took MAE from 70 to 12.75. **A linear probe cannot
+legitimately do worse than the constant predictor** — the label-permutation
+null is what made that visible, and it is now printed by default.
+
+### Where this leaves the roll line
+
+- Scientific value, holds up: the horizontal prior is real (§02, matches
+  arXiv 2608.00678 on four other backbones); it is *matched to ADT's actual
+  pose distribution* (§02b); the features encode roll only within-room (§02c).
+- Engineering value on ADT: **small**. Only the 1.5% of frames beyond 20 deg
+  can be helped by anything gravity-related.
+- The bottleneck for this line is **a head-mounted dataset with a wider pose
+  distribution and dense depth**, not a method. We do not have one.
