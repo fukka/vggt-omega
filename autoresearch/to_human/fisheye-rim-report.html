@@ -209,10 +209,18 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       但从 ADT 的重力向量量出的真实头部滚转 <strong>p99 只有 21.8°</strong>，98.5% 的帧落在模型的平坦区内 ——
       <strong>模型的容忍带和数据的分布独立测得却正好对上</strong>。（§02, §02b, §02c）
     
-      <strong>而真正要紧的那个数，§03r 终于算了出来：</strong>把惩罚曲线对真实滚转分布积分，
-      <strong>忽略滚转的期望代价是 1.46% ± 1.09</strong> —— 便宜到可以忽略。
-      但<strong>超过 ±20° 的 1.5% 帧承担了 26% 的代价</strong>，
-      所以"整体忽略"和"处理罕见大滚转"是<strong>两个不同的产品</strong>。</p></div>
+      <strong>把惩罚曲线对真实滚转分布积分（§03r/§03u）：忽略滚转的期望代价</strong>是
+      多视角模型 <strong>0.3–0.5%</strong>、单图模型 <strong>约 1.8%</strong>。
+      超过 ±20° 的 1.5% 帧承担了单图模型 <strong>23%</strong> 的代价，多视角模型只有 9.8% ——
+      "处理罕见大滚转"是 <strong>DA3 专属</strong>的建议。
+    </p>
+      <p><strong>而这条线开篇的第四问 —— "能不能把 IMU 用起来" —— 现在有答案了：</strong>
+      <strong>能，但别去转那张图，要把滚转折进渲染的重采样网格。</strong>
+      转图会留下黑边，而<strong>同角度下黑边要 +105.7%、重采样只要 +0.8%</strong>（§03aa，14 条录像）——
+      <strong>贵的几乎全是黑边</strong>。折进 warp 之后，用 MPS 的真实逐帧滚转做渲染对齐，
+      <strong>DA3-Small 拿回 2.65% ± 2.43</strong>（13 条录像，11/13），
+      <strong>在 |ψ| ≥ 8° 的帧上拿回 +10%</strong>；<strong>VGGT-Ω 什么都拿不回来</strong>。
+      不需要标签、不需要训练、不改模型。（§03x, §03y, §03aa）</p></div>
 
     <div class="row"><span class="who">③ 画幅边界：看距离，不看面积</span><p>
       黑边从占画幅 3.1% 加到 53.4%，在离边界 14° 处打分代价<strong>不随剂量增长</strong>；<em>紧贴</em>边界打分则是 <strong>+106%</strong>。
