@@ -64,3 +64,25 @@ it costs whatever anyone builds on it.
 
 5 angles × 4 backbones × 8 recordings × 20 frames. VGGT-Omega is the expensive
 arm. No training.
+
+---
+
+## Amendment, 2026-09-08, written after seeing 4 of 8 recordings and before the rest
+
+**The ratio is the wrong statistic and must be replaced by the difference.**
+
+The protocol above says "the +30/−30 cost ratio". On the partial data that
+quantity is not well defined for the multi-view models: their −30° penalty is
+0.6–3.7% and in one cell **−0.2%**, so the ratio explodes and one cell is
+already `nan`. Ratios against a near-zero denominator would have produced a
+headline like "VGGT is 5× asymmetric" that means nothing.
+
+**Primary statistic is therefore the difference `(+30°) − (−30°)` in percentage
+points**, which is well defined at any baseline. B1 and B2 are re-read against
+it: B1 asks whether that difference separates the single-image pair from the
+multi-view pair by more than the within-family recording spread.
+
+**This is a change made after seeing partial data, and it is recorded as such.**
+The justification is well-definedness, not which answer it produces — the
+partial ratios and the partial differences point the same way. Anyone auditing
+this should treat B1 as amended rather than as originally pre-registered.
