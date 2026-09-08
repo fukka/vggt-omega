@@ -1137,3 +1137,79 @@ specifically, or this is 20-frame noise. Not interpreted.
 
 Caveats: one sequence, 20 frames, one seed. The DA3-Large effect (7.4x) is far
 outside any plausible noise; the VGGT roll-with-border sign is not.
+
+## H18 — the 110 deg VGGT-Omega teacher. H14's idea was right; its teacher was the problem. 2026-09-08
+
+Bars locked in `h17-roll-prior/protocol.md` before training. Everything except
+the teacher held at H14's shipped settings (4 sequences x 60 frames, 20 epochs,
+seed 0, LoRA r=8). **No depth labels touch the teacher, the targets or the
+student in any arm except `gt`.**
+
+### Pre-check: the same view, only the backbone changes
+
+| teacher | cone cov | rim-band cov | frame fill | near_rim vs raw DA3-Small |
+|---|---|---|---|---|
+| DA3-Small 110 deg | 100% | 100% | 0.775 | **+33.3% / +39.3%** (inverts) |
+| **VGGT-Omega 110 deg** | **100%** | **100%** | 0.775 | **-65.0%** |
+| VGGT-Omega 95 deg | 83.7% | 71.9% | 0.987 | -70.4% |
+| DA3-Small 95 deg (H14 shipped) | 83.7% | 70.4% | 0.987 | -14.7% |
+
+Identical geometry, identical 22.5% black frame; one teacher inverts and the
+other is 4.4x stronger than H14's best. This is H17.6's border finding cashed
+out: VGGT-Omega is the backbone that tolerates a border adjacent to the zone of
+interest, so it can run the 110 deg view that covers the whole cone.
+
+### Students
+
+| arm | teacher | seq136 rim (near_ctr) | dec_seq132 rim (near_ctr) |
+|---|---|---|---|
+| `omega110` | VGGT-Omega, 110 deg **rectified** | **-52.7% (-34.5%)** | **-22.8% (+12.4%)** |
+| `omega_rt` | VGGT-Omega, **on the fisheye** | -47.1% (-38.7%) | -17.9% (+2.0%) |
+| `rect` | DA3-Small, 95 deg rectified | -13.2% (+43.3%) | +4.7% (-4.1%) |
+| `roundtrip` | DA3-Small, on the fisheye | -0.1% | +0.0% |
+| `gt` | dense depth labels | -57.9% (-39.0%) | -27.2% (+24.4%) |
+
+### Bars
+
+1. **Beat the control on both held-out sequences - PASS.** Against the DA3
+   `roundtrip` (-0.1 / +0.0) trivially, and against the *matched* control
+   `omega_rt` (-47.1 / -17.9) on both. This is H14's original P1, which `rect`
+   failed on decoration_seq132.
+2. **Recover at least half the labelled gain - PASS, by a lot.** 91% on seq136,
+   84% on dec_seq132. `rect` managed 23% and a negative fraction.
+3. **near_center not worse than +10% - PASS on seq136 (-34.5%), FAIL on
+   dec_seq132 (+12.4%), by 2.4 points.** The labelled `gt` arm degrades the
+   same zone by +24.4% on that sequence, so the label-free arm is *gentler*
+   than the ceiling on this axis; the bar is still failed as written.
+4. dec_seq132 primary - reported first throughout.
+
+### The control is what makes this readable
+
+`omega_rt` - the same teacher, the same two resamplings, no change of
+projection - was added because without it the result is uninterpretable.
+
+* **Most of the gain is "a stronger model was distilled"**: the fisheye teacher
+  alone recovers **81% / 66%** of the labelled gain.
+* **The rectified projection adds a further 5.7 / 4.9 points** at the rim
+  (10% / 18% of the labelled gain), consistent in direction on both sequences.
+* It also **causes** the bar-3 failure: `omega_rt` holds near_center at
+  -38.7% / +2.0% where `omega110` is -34.5% / +12.4%. The rectification buys
+  rim and spends near-centre.
+
+So H14's original mechanism (rectify to unlock what the model already knows) is
+**real but second-order**; teacher strength is first-order. That is a different
+claim from the one H14 set out to make, and it is the one the data supports.
+
+### What the claim now is, precisely
+
+Not self-distillation any more. "**A frozen stronger model can be distilled
+into a small fisheye-domain model with no depth labels at all, recovering
+66-84% of what dense ground truth buys at the near rim; rectifying the view
+first adds another 10-18%.**" It needs a stronger model to exist, which
+self-distillation did not - that cost has to be stated whenever this is quoted.
+
+Caveats: one seed; the student is DA3-Small throughout; the teacher runs
+single-frame so VGGT-Omega's multi-frame machinery is idle; `omega_rt` resizes
+504 -> 512 -> 504 because a patch-16 teacher cannot take a 504 px frame and
+padding was not an option (h17's dose curve), a 1.6% rescale against `resample0`
+measuring one bilinear pass as free.

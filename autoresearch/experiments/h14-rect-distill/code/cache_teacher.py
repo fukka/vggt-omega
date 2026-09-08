@@ -253,10 +253,38 @@ def main(argv=None) -> None:
             teacher[s.stem(n)] = d.float().cpu().numpy()
             scales[s.stem(n)] = info["log_scale"]
     else:
-        install(cam, (a.size, a.size), bb_s)
+        # The roundtrip control is "the TEACHER, minus the change of
+        # projection": same network, same two resamplings, same fusion, but it
+        # never sees a pinhole frame. With the default self-distillation
+        # teacher this is bit-identical to the original control; with a
+        # cross-model teacher it becomes the control that matters, separating
+        # "a stronger model was distilled" from "the rectified projection
+        # carried something the fisheye one could not".
+        # A patch-16 teacher cannot take the 504 px fisheye frame directly.
+        # PADDING is not an option -- h17's dose curve measured that a hard
+        # border adjacent to the zone of interest is the single largest insult
+        # this pipeline has found. So resize to the nearest multiple of the
+        # teacher's patch and resize the depth back. h16's `resample0` control
+        # measured one bilinear pass as free (0.1955 vs 0.1954), and this is a
+        # 1.6% rescale.
+        tps = bb_t.patch_size
+        tsz = int(round(a.size / tps)) * tps
+        if tsz != a.size:
+            print(f"[h14/{a.arm}] teacher runs the fisheye at {tsz} px "
+                  f"(patch {tps}); depth resized back to {a.size}")
+        install(cam if tsz == a.size else cam.resized(tsz, tsz), (tsz, tsz), bb_t)
+        def _fisheye_z(img):
+            if tsz == a.size:
+                return U.forward_z(bb_t, img)
+            up = torch.nn.functional.interpolate(
+                img[None], size=(tsz, tsz), mode="bilinear", align_corners=False)[0]
+            z_ = U.forward_z(bb_t, up)
+            return torch.nn.functional.interpolate(
+                z_[None, None], size=(a.size, a.size), mode="bilinear",
+                align_corners=False)[0, 0]
         for n in s.frames:
             with torch.no_grad():
-                z = U.forward_z(bb_s, s.src.image(n).to(a.device))
+                z = _fisheye_z(s.src.image(n).to(a.device))
             d, info = rig.roundtrip(z / cos_dev)
             teacher[s.stem(n)] = d.float().cpu().numpy()
             scales[s.stem(n)] = info["log_scale"]
