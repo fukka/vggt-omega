@@ -1,0 +1,116 @@
+{
+ "motion": {
+  "Apartment_release_clean_seq131_M1292": {
+   "spread_m": 1.5243585922515521,
+   "path_m": 38.22055531317854,
+   "bbox_diag_m": 6.255089231195324,
+   "n": 60
+  },
+  "Apartment_release_clean_seq133_M1292": {
+   "spread_m": 1.9405930798397064,
+   "path_m": 45.64994906077719,
+   "bbox_diag_m": 7.569085677742616,
+   "n": 60
+  },
+  "Apartment_release_clean_seq134_M1292": {
+   "spread_m": 1.967418996514676,
+   "path_m": 38.87554437776018,
+   "bbox_diag_m": 7.275397141283493,
+   "n": 60
+  },
+  "Apartment_release_clean_seq135_M1292": {
+   "spread_m": 1.6086736414372562,
+   "path_m": 36.10021870158101,
+   "bbox_diag_m": 6.349660931348071,
+   "n": 60
+  },
+  "DinoToy_seq030": {
+   "spread_m": 0.1048922144393041,
+   "path_m": 2.337057534196719,
+   "bbox_diag_m": 1.3728480024832652,
+   "n": 55
+  },
+  "BlackCeramicBowl_seq030": {
+   "spread_m": 0.21006379534618733,
+   "path_m": 2.4344830488713605,
+   "bbox_diag_m": 1.3381063801393254,
+   "n": 45
+  }
+ },
+ "eval_order": [
+  "Apartment_release_clean_seq136_M1292",
+  "Apartment_release_decoration_seq132_M1292",
+  "DinoToy_seq030",
+  "BlackCeramicBowl_seq030"
+ ],
+ "config": {
+  "cache_root": "/netapp/datasets/f.zhang2/h14_teacher_cache_omega110",
+  "arm": "omega110",
+  "fit_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq133_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq134_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq135_M1292,/user/f.zhang2/Documents/adt_liteoffice_extracted/DinoToy_seq030,/user/f.zhang2/Documents/adt_liteoffice_extracted/BlackCeramicBowl_seq030",
+  "eval_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq136_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_decoration_seq132_M1292,/user/f.zhang2/Documents/adt_liteoffice_extracted/DinoToy_seq030,/user/f.zhang2/Documents/adt_liteoffice_extracted/BlackCeramicBowl_seq030",
+  "subset": 30,
+  "draws": 5,
+  "px_per_frame": 20000,
+  "size": 504,
+  "max_frames": 60,
+  "variant": "small",
+  "depth_max_m": 10.0,
+  "seed": 0,
+  "device": "cuda",
+  "out": "autoresearch/experiments/h20-motion-split/results/motion_split.json"
+ },
+ "arms": {
+  "high": {
+   "mean_pairwise_da": 0.0689149936932423,
+   "spread_m_mean": 2.020649492159669,
+   "gain_mean": [
+    -19.97758507895245,
+    -9.399363563482543,
+    -30.482955104929847,
+    -9.277334530159816
+   ],
+   "gain_sd": [
+    1.0959920316863188,
+    1.3792041778438218,
+    0.9564890675681418,
+    0.21600883526475909
+   ],
+   "coef_a_mean": [
+    1.2925881561234132,
+    1.3400267263646,
+    1.371389915103434,
+    1.352960512372631,
+    1.3544251983275926,
+    1.3516099636200871,
+    1.3271521624557863,
+    1.3047149782355891
+   ]
+  },
+  "low": {
+   "mean_pairwise_da": 0.3771158424275872,
+   "spread_m_mean": 0.4994147640268084,
+   "gain_mean": [
+    -11.491681682550588,
+    -1.4438899005309433,
+    -21.101081977289763,
+    -8.866320876319644
+   ],
+   "gain_sd": [
+    9.039733082327226,
+    9.384604571495656,
+    7.633126051741385,
+    0.7388683207024965
+   ],
+   "coef_a_mean": [
+    1.454197571401836,
+    1.5862952684370697,
+    1.630400186017844,
+    1.6119351393191792,
+    1.5850578420390178,
+    1.5532952094544723,
+    1.502932709992533,
+    1.4120829437561795
+   ]
+  }
+ }
+}

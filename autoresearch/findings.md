@@ -1760,3 +1760,75 @@ footage does. That points at the curve being substantially **device-independent*
 — closer to a one-off fit on any well-moving footage than to a per-device
 calibration. That is a much better deployment story than the one H19 set out to
 test, and it is now the thing worth testing.
+
+## H20 — the mechanism survives a within-device control, and becomes a dose-response
+
+`h20-motion-split/results/motion_split.json`, full reading in that experiment's
+`analysis.md`. All three pre-registered bars pass.
+
+### H20a — "near-static" was never measured. Now it is.
+
+Camera centre per frame from GT pose (`C = -R^T t`):
+
+| sequence | spread from centroid | path length |
+|---|---|---|
+| Apartment seq131 / 133 / 134 / 135 | 1.52 / 1.94 / 1.97 / 1.61 m | 38 / 46 / 39 / 36 m |
+| **DinoToy** | **0.105 m** | **2.34 m** |
+| **BlackCeramicBowl** | **0.210 m** | **2.43 m** |
+
+9-19x in spread, 15-20x in path, no overlap. The Apartment wearer walks ~40 m
+and the LiteOffice wearer moves 2.4 m in total.
+
+**This closes a hole rather than opening one.** H19's published mechanism rested
+on calling LiteOffice near-static, and that label had been inherited from H9's
+remark about a static wearer starving the parallax anchors — never measured in
+this line. It was right, but it was an assumption until now.
+
+### H20b — same device, same room, only the motion differs
+
+| arm | camera spread | \|da\| | seq136 | dec132 | DinoToy | Bowl |
+|---|---|---|---|---|---|---|
+| `high` | 2.021 m | 0.069 | -20.0 +- 1.1 | -9.4 +- 1.4 | -30.5 +- 1.0 | -9.3 +- 0.2 |
+| `low` | 0.499 m | 0.377 | -11.5 +- 9.0 | -1.4 +- 9.4 | -21.1 +- 7.6 | -8.9 +- 0.7 |
+
+5.5x worse stability, worse transfer on all four sequences, and the draw-to-draw
+spread explodes (+-9.0 against +-1.1). **The mechanism published on 2026-09-08
+survives a control that holds the device fixed**, so H19's confound is closed
+without a third device.
+
+### The upgrade: a dose-response, not a binary
+
+Rim gain on DinoToy against camera travel. First three rows are the same camera
+in the same room:
+
+| fitting set | spread | -> DinoToy |
+|---|---|---|
+| Apartment, 30 most spread out | 2.021 m | -30.5% |
+| Apartment, all 240 | 1.768 m | -26.0% |
+| Apartment, 30 least spread out | 0.499 m | -21.1% |
+| LiteOffice Bowl, its own 60 | 0.210 m | -2.6% |
+
+Monotone across a 10x range of camera motion, three points device-matched.
+
+**Practical form: the fitting frames should span roughly 2 m of walking.** That
+is a specification someone can act on; "30 frames with motion in them" was not.
+
+### Two traps this leaves behind
+
+**A single low-motion fit looks fine.** The `low` arm's mean a(theta) over five
+draws is a smooth arch (1.454 -> 1.630 -> 1.412). Averaging hides what
+|da| = 0.377 reports. Eyeballing one fit would not catch this — H18.6's LOO R^2
+check is the thing that does, and this is a second reason to keep it.
+
+**|da| is not comparable across arms with different draw structure.** `low`
+re-draws a random anchor, so its fits sample different corners of the apartment;
+LiteOffice has one place to be, so its draws agree with each other while
+agreeing on something wrong. Compare transfer, not |da|, across those two.
+
+### Lesson for the constraints list
+
+Two "how much data" answers in this line now needed a qualifier that was not in
+the number: H18.5's 30 frames needed "with motion", and H19's "motion" needed
+"about 2 m of it". Each time the number alone was published first and the
+qualifier arrived from the next experiment. The general form is in the H19
+entry; H20 is the second instance, which makes it a pattern rather than a slip.

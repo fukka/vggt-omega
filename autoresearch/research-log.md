@@ -1239,3 +1239,39 @@ also breaks the static/device confound H19 cannot break on its own.
 
 B1 (is the native fit radial?) is not established — the margin flips sign with
 the fitting-range choice. Recorded as not-a-result rather than quoted.
+
+## 2026-09-08 (later still) — H20: the published claim held, and got sharper
+
+Wrote H20's protocol so that it could overturn what I had published hours
+earlier, then ran it. It did not overturn it. All three bars passed.
+
+The reason to run it was that H19's mechanism — "the fit needs motion, not a
+lens match" — rested on calling LiteOffice near-static, and I could not find any
+measurement of that anywhere in this line. It came from H9's remark about a
+static wearer starving the parallax anchors. So a published claim was resting on
+an inherited assumption, and that is worth an experiment whichever way it goes.
+
+H20a settled it: 0.105 / 0.210 m of camera spread against 1.52-1.97 m, and 2.4 m
+of path against 36-46 m. No overlap. The assumption was correct.
+
+H20b is the part that matters more. Holding the device, room, pool, frame count
+and teacher fixed and varying only how far apart the selected frames' cameras
+were: stability degrades 5.5x and transfer falls on all four evaluation
+sequences. So the mechanism survives a control that closes H19's confound, and
+it did so without needing the third device I had written into the H20 candidate.
+
+What I did not expect was the upgrade. Three device-matched points plus the
+LiteOffice one lie on a monotone curve across a 10x range of camera motion. The
+claim goes from binary to graded, and it acquires a number a person can act on:
+the fitting frames should span roughly 2 m of walking. Plotted it in
+assets/motion_fig.py and put the figure in both reports.
+
+Two traps recorded in findings.md. A single low-motion fit LOOKS fine — the mean
+curve over five draws is a smooth arch while |da| is 0.377 — so H18.6's LOO R^2
+check earns its keep a second time. And |da| is not comparable between arms whose
+draws vary in different ways, which is why B3 rests on transfer.
+
+Worth noting the pattern: this is the second time a "how much data" number was
+published without a qualifier that the next experiment supplied. H18.5's 30
+frames needed "with motion"; H19's "motion" needed "about 2 m of it". Recorded
+as a pattern rather than a one-off.

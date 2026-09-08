@@ -859,3 +859,43 @@ cleared_2026_09_08:
     The conda env for every autoresearch run on lambda_63 is `raytun3r`
     (torch 2.11.0+cu128). Recorded here because recovering it after a context
     loss cost a round trip.
+
+# ------------------------------------------------- H20 resolved 2026-09-08
+h20_outcome:
+  status: ALL THREE BARS PASS — H19's published mechanism survives, and sharpens
+  artifact: autoresearch/experiments/h20-motion-split/results/motion_split.json
+  analysis: autoresearch/experiments/h20-motion-split/analysis.md
+  b1_near_static_now_measured: >
+    Camera spread 0.105 m (DinoToy) / 0.210 m (Bowl) against 1.52-1.97 m for the
+    four Apartment sequences; path 2.34 / 2.43 m against 36-46 m. No overlap.
+    The label had been inherited from H9 and never measured in this line.
+  b2_b3_within_device: >
+    Same device, room, 240-frame pool, 30-frame count and teacher; only the
+    camera spread of the selected frames differs. high (2.021 m): |da| 0.069,
+    DinoToy -30.5 +-1.0. low (0.499 m): |da| 0.377, DinoToy -21.1 +-7.6. 5.5x
+    worse stability, worse transfer on all four sequences. H19's confound is
+    closed WITHOUT the third device the H20 candidate had asked for.
+  the_upgrade: >
+    Dose-response, not binary. DinoToy gain against camera spread: 2.021 m
+    -30.5%, 1.768 m -26.0%, 0.499 m -21.1%, 0.210 m -2.6%. Monotone across a 10x
+    range, three of four points device-matched. Actionable form: the fitting
+    frames should span ROUGHLY 2 M OF WALKING.
+  traps_recorded:
+    - "A single low-motion fit LOOKS fine: mean a(theta) over 5 draws is a smooth arch (1.454->1.630->1.412) while |da| is 0.377. H18.6's LOO R^2 check is what catches it."
+    - "|da| is not comparable between arms whose draws vary differently. `low` re-draws a random anchor across the apartment; LiteOffice has one place to be, so its draws agree on something wrong. Compare transfer."
+  pattern_worth_naming: >
+    Second time a "how much data" number went out without a qualifier the next
+    experiment supplied. H18.5's 30 frames needed "with motion"; H19's "motion"
+    needed "about 2 m of it". Treat any future N-frames answer as incomplete
+    until the content of the frames is specified.
+
+h21_candidate:
+  question: >
+    Is the curve device-INDEPENDENT once motion is controlled? H20 shows motion
+    explains the LiteOffice failure, but the original H20 question is still open:
+    would a curve fitted on WELL-MOVING footage from a third device match the
+    Apartment one? If yes, calibration is a one-off, not per-device.
+  what_it_needs: >
+    Moving footage from a third device — still the only thing this line cannot
+    get from what is on disk. Check the 13 extra Apartment sequences first, but
+    they are all M1292, so they do not answer it.
