@@ -228,7 +228,9 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <div class="row"><span class="who">A⁗ · 硬黑边：距离，不是面积（新）</span><p>
       把黑边从占画幅 3.1% 加到 53.4%，在离边界 14° 处打分，代价<strong>不随剂量增长</strong>（+22% / +13% / +17% / +17% / +6.6% / +32%，非单调）；
       而紧贴边界打分是 <strong>+106%</strong>。<strong>硬边界毁掉紧邻它的一圈，对整幅图另收约 +18% 固定费用。</strong>
-      这<strong>推翻了本页自己先前"黑得越多越糟"的读法</strong>，并给 §03 的 110° 教师一个更好的解释：黑角正压在它本该改善的 zone 上。（§02e）
+      这<strong>推翻了本页自己先前"黑得越多越糟"的读法</strong>。跨 backbone 更分裂：<span class="mono">vggt_omega +29% ≪ da3:small +106% ≈ vggt +107% ≪ <b>da3:large +636%</b></span> ——
+      <strong>DA3-Large 在干净画幅上最准，加一条边界后是四个里最差的（7.4 倍退化）。</strong>
+      同时这为 H14 打开了一条新臂：<strong>110° 的 VGGT-Ω 教师，100% 锥体覆盖</strong>。（§02e）
     </p></div>
     <div class="row"><span class="who">B · H14 无标签蒸馏 ✗</span><p>
       让冻结模型看<strong>矫正后的透视图</strong>，把它自己的答案搬回鱼眼域当标签。主判据（两个留出序列都要赢对照）
@@ -1036,9 +1038,64 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       所以 §02 里"旋转鱼眼画幅比旋转相机更陡"，一部分确实来自边界，只是<strong>无法定量归因</strong>——见 §02 的第⑤条。
     </p>
     <p style="color:var(--ink-faint)">
-      边界：20 帧、单种子、单序列、只有 DA3-Small。§02b 已经证明滚转敏感度强烈依赖 backbone，边界敏感度大概率也是，
-      本节对 VGGT 家族什么都没说。
+      上面这条剂量曲线是 20 帧、单种子、单序列、只有 DA3-Small。下面把它推到四个 backbone 上。
     </p>
+  </div>
+  <div class="col" style="margin-top:26px">
+    <h3>换个 backbone 呢？预注册的预测被证伪了</h3>
+    <p style="margin-bottom:14px">
+      §02b 里滚转敏感度按预训练家族干净地一分为二，所以我<strong>跑之前锁定的预测</strong>是：
+      两个 VGGT 变体在"紧贴边界"这一项上都低于 +40%（DA3-Small 是 +106%）。<strong>没有兑现。</strong>
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>把 89° 矫正视角掩成内切圆，<strong>紧贴边界</strong>（θ ≤ 44°）打分。右两列是 30° 滚转相对各自 0° 的涨幅。</caption>
+      <thead><tr><th>backbone</th><th>无黑边</th><th>加黑边</th><th>代价（全图）</th><th>代价（近边缘）</th><th>30° 无黑边</th><th>30° 有黑边</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">da3:small</td><td class="num">0.1545</td><td class="num">0.3178</td><td class="num bad">+106%</td><td class="num bad">+141%</td><td class="num">+46%</td><td class="num">+84%</td></tr>
+        <tr class="flip"><td class="mono">da3:large</td><td class="num good">0.0690</td><td class="num bad">0.5077</td><td class="num bad">+636%</td><td class="num bad">+814%</td><td class="num">+52%</td><td class="num">+24%</td></tr>
+        <tr><td class="mono">vggt (1B)</td><td class="num">0.0828</td><td class="num">0.1710</td><td class="num bad">+107%</td><td class="num bad">+127%</td><td class="num good">+11%</td><td class="num">−29%</td></tr>
+        <tr class="flip"><td class="mono">vggt_omega</td><td class="num good">0.0507</td><td class="num good">0.0655</td><td class="num good">+29%</td><td class="num good">+53%</td><td class="num good">+11%</td><td class="num good">+10%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col" style="margin-top:16px">
+    <p>
+      <strong>滚转鲁棒性和边界鲁棒性是两条不同的轴。</strong>§02b 里四个模型按预训练家族分成 46–52% 和 11% 两组；
+      这里的排序完全不同：<span class="mono">vggt_omega (+29%) ≪ da3:small (+106%) ≈ vggt (+107%) ≪ da3:large (+636%)</span>。
+      "多视角预训练买来鲁棒性"这句话<strong>对滚转成立，对边界不成立</strong> —— 让 VGGT-Ω 耐边界的那个东西，不是它和 VGGT 共有的东西。
+    </p>
+    <div class="note warn">
+      <span class="eyebrow">影响最广的一条：DA3-Large 的精度是脆的</span>
+      <p>
+        在干净画幅上 DA3-Large 是两个 DA3 里准 <strong>2.2 倍</strong>的那个（0.0690 对 0.1545）。
+        加<strong>一条</strong>硬边界，它变成四个模型里<strong>最差的</strong>（0.5077，而 DA3-Small 是 0.3178、VGGT-Ω 是 0.0655）——
+        <strong>7.4 倍的退化，而这个改动没有碰到任何一个被打分的像素。</strong>
+      </p>
+      <p>
+        也就是说：<strong>按干净基准的精度选 backbone，会选中 DA3-Large，然后被任何真实的画幅伪影（信箱边、裁剪填充、遮光罩、被掩掉的区域）打掉一个数量级。</strong>
+        干净基准的精度<em>不</em>预测画幅鲁棒性。
+      </p>
+    </div>
+    <div class="note">
+      <span class="eyebrow">它为 H14 打开了一扇门 —— 而且只为一个 backbone 打开</span>
+      <p>
+        协议里预先写死了这个决定：<strong>如果两个 VGGT 变体都低于 +40%，就去跑 110° 教师。</strong>
+        只有 VGGT-Ω 达标，而它恰好也是最合适的那个：<strong>耐边界（+29%）、这里最准（0.0507）、且耐滚转（30° 只涨 11%）</strong>。
+      </p>
+      <p>
+        所以 H14 的下一条臂是<strong>110° 的 VGGT-Ω 教师</strong>：<strong>100% 锥体覆盖</strong>，
+        §03 那个"准和广是对立的"张力被<em>拆掉</em>而不是继续在上面权衡，而且仍然<strong>不需要任何标签</strong>。
+        判据沿用 H14 的 P1–P3，主判据序列改为 <code>decoration_seq132</code>。
+      </p>
+    </div>
+    <p style="color:var(--ink-faint)">
+      一个异常，只记不解释：<code>vggt</code> 在有黑边时<em>转了反而更好</em>（掩码 0° 是 0.1710，±30° 是 0.1202 / 0.1238，−29%）。
+      表里其他每一格滚转都要付代价。要么是 VGGT 的掩码-0° 这一格本身异常，要么是 20 帧的噪声。
+      DA3-Large 那 7.4 倍远超噪声；这个符号不是。
+    </p>
+
   </div>
 </section>
 

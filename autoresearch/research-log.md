@@ -733,3 +733,34 @@ Two guards were added along the way and both earned their keep: the dose script
 refuses any border that would eat into the scored cap (it caught that an 89 deg
 view leaves only 5 px outside a 44 deg cap), and the probe prints a
 label-permutation null (it caught the atan2 readout bug earlier in the day).
+
+## 2026-09-08 (later still) — H17.6, and the ladder closes
+
+**The ladder is complete** (48k gradient steps held fixed, distinct frames
+240 → 2,400 → 4,800 → 11,418): seq136 rim −67.1 → −71.3%, decoration_seq132 rim
+−21.7 → −20.9% (flat), decoration_seq132 near-centre +58 → +145% (monotone).
+48x the data at constant compute moves the honest held-out sequence not at all
+and multiplies its near-centre damage by 2.5.
+
+**H17.6 was locked, run, and falsified**, which is the most useful outcome this
+block has produced. The prediction was that border robustness would split by
+pretraining family the way roll robustness did. It does not:
+vggt_omega +29%, da3:small +106%, vggt +107%, da3:large +636%. Roll and border
+robustness are different axes; multi-view pretraining buys the first and not the
+second.
+
+Two things follow, and one of them is the pay-off for the whole h17 block.
+
+* **DA3-Large's accuracy is brittle.** Best of the DA3 pair on a clean frame
+  (0.0690 vs 0.1545), worst of all four with one border (0.5077). A 7.4x
+  degradation from a change touching no scored pixel. Picking a backbone on
+  clean-benchmark accuracy is actively misleading here.
+* **The 110 deg teacher door opens, for exactly one backbone.** The protocol
+  pre-committed this decision before the numbers existed: under +40% means run
+  it. Only VGGT-Omega qualified — and it is also the most accurate and the most
+  roll-robust model measured. So H14's next arm is a 110 deg VGGT-Omega
+  teacher with 100% cone coverage, which dissolves the accuracy-vs-coverage
+  tension that killed H14 rather than trading along it.
+
+The build now asserts on the stale strings from this morning's process failure,
+and it caught one unbalanced `</div>` in this session's edits before publishing.
