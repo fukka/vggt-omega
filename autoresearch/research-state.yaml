@@ -1247,3 +1247,33 @@ gotcha_argparse_negative_list:
     "-40,-30,..." works because it never passes through argparse; passing the
     same string explicitly fails.
   fix: "--angles=-40,-30,-20,0,20,30,40 (the = form), never a space."
+
+# ------------------------------- H28 complete (both arms) 2026-09-08
+h28_outcome:
+  status: B2 and B3 PASS, B1 MARGINAL — foundation holds, two numbers restated
+  artifacts: autoresearch/experiments/h28-foundation-variance/results/
+  analysis: autoresearch/experiments/h28-foundation-variance/analysis.md
+  THE_ASYMMETRY: >
+    seq136 inflated every METHOD by x1.33-x2.36 (H25-H27) but is ORDINARY for
+    the PHENOMENON: -0.11 sd on rim/centre, +0.07 and +0.52 sd on the 20 and 30
+    degree roll penalties. It flattered what we built, not what we measured.
+  restate_1_the_range: >
+    "The rim is 2.0-2.6x worse than the centre, in every model" — that interval
+    was never a spread across models, it was four single-recording numbers that
+    landed close together. Across 13: da3:small 1.39-2.65, da3:large 1.14-2.98.
+    Mean survives (2.17, 2.13). Honest form: about 2.2x, spread roughly 1.4-2.7.
+  restate_2_the_40_degree_number: >
+    "+131% at +-40 deg" is 2.32 sd high. Representative value +91.7% +- 16.8.
+    The ONLY place in the orientation section where seq136 is unrepresentative.
+  unaffected: >
+    Rim about 2x the centre on every recording tried; +12/+40/+92 is still a
+    steep curve; H17's DA3-vs-VGGT gap is a ratio between models on the same
+    frames so the baseline shift does not touch it; +-20 deg stays cheap
+    (+12.4%), which is what the "98.5% of real frames" claim depends on.
+  caveat_the_spread_adds: >
+    At +-20 deg sd is 6.7 on a mean of 12.4 and the range reaches 21.3%.
+    "+-20 deg is nearly free" is an average, not a guarantee.
+  b1_recorded_as_undecided: >
+    sd/mean 0.176 against a 0.15 pass bar and 0.25 falsification bar. Rounding
+    it to "passes" would have been the third convenient reading to go out
+    unchallenged in this line.

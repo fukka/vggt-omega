@@ -1509,3 +1509,39 @@ What is left, and I want it stated rather than quietly carried: the cross-room
 numbers were never on seq136 so this arc does not touch them, and they are still
 120 frames over two near-static recordings. That is now unambiguously the
 largest open exposure in the line, and no amount of Apartment footage fixes it.
+
+## 2026-09-08 (late) — H28: the foundation was on sounder ground than the methods
+
+After the correction arc I went back to check the thing both reports open with,
+which had never been re-measured: the rim/centre ratio and the roll table, both
+seq136-only.
+
+The result is an asymmetry I did not expect. seq136 inflated every METHOD by
+1.33x to 2.36x, and is ordinary for the PHENOMENON: -0.11 sd on the rim/centre
+ratio, +0.07 and +0.52 sd on the 20 and 30 degree roll penalties. It flattered
+what we built, not what we measured.
+
+Two numbers still have to be restated. The "2.0-2.6x in every model" interval
+was never a spread across models — it was four single-recording numbers that
+happened to land close together, and across thirteen recordings the ratio runs
+1.14 to 2.98. And "+131% at 40 degrees" is 2.3 sd high; the representative value
+is +92%.
+
+Neither touches a conclusion. The rim is still about twice as bad as the centre
+everywhere tried, the roll curve is still steep, and +-20 degrees is still cheap
+— which is the one H17 actually leans on for the "98.5% of real frames" claim.
+The spread does add one honest caveat there: at +-20 the sd is 6.7 on a mean of
+12.4, so "nearly free" is an average, not a guarantee.
+
+B1 came out marginal, 0.176 against a 0.15 pass bar and a 0.25 falsification
+bar. Recorded as undecided. Rounding that to "passes" would have been the easy
+thing and would have been the third time in this line that a convenient reading
+went out unchallenged.
+
+Also cost an hour to a gotcha worth writing down: argparse reads a bare
+"-40,-30,..." as a flag, so the roll arm failed on all fourteen sequences before
+I noticed. The runner's default works only because it never passes through
+argparse.
+
+The download question I put to the user two ticks ago is still unanswered, so
+the shared filesystem at 98% remains untouched.

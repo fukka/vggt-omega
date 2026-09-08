@@ -2264,3 +2264,64 @@ improved.
 **Untouched.** The cross-room numbers were never measured on seq136, so this arc
 does not reach them. They remain 120 frames over two near-static recordings and
 are now, unambiguously, **the largest open exposure in this line.**
+
+## H28 — the foundation holds; two published numbers do not
+
+`h28-foundation-variance/`, both runners unchanged on the same thirteen
+recordings. Reading in that experiment's `analysis.md`.
+
+### The asymmetry, which is the main result
+
+H25-H27 found seq136 inflated **every method** by x1.33 to x2.36. H28 finds it
+was **ordinary for the phenomenon**:
+
+| | thirteen recordings | seq136 | |
+|---|---|---|---|
+| rim / centre, DA3-Small | 2.171 +- 0.382 | 2.13 | **-0.11 sd** |
+| rim / centre, DA3-Large | 2.127 +- 0.476 | 2.04 | -0.19 sd |
+| raw rim error, DA3-Small | 0.396 +- 0.056 | 0.389 | ordinary |
+| roll penalty +-20 deg | +12.4% +- 6.7 | +12.8% | +0.07 sd |
+| roll penalty +-30 deg | +40.4% +- 11.1 | +46.3% | +0.52 sd |
+| roll penalty +-40 deg | +91.7% +- 16.8 | **+130.6%** | **+2.32 sd** |
+
+**That recording flattered what we built, not what we measured.** The opening
+sections of both reports were resting on sounder ground than the distillation
+sections were.
+
+**B2 passes** (-0.11 sd). **B3 passes both halves** at +-30 deg (sd/mean 0.275
+against a 1/3 bar; seq136 +0.52 sd). **B1 is marginal** — 0.176 against a pass
+bar of 0.15 and a falsification bar of 0.25 — and is recorded as undecided
+rather than rounded either way.
+
+### Two numbers to restate
+
+**"The rim is 2.0-2.6x worse than the centre, in every model."** That interval
+was never a spread across models. It was four numbers, each from ONE recording,
+that happened to land close together. Across thirteen, DA3-Small runs
+**1.39-2.65** and DA3-Large **1.14-2.98**. The mean survives (2.17, 2.13 against
+the published 2.13, 2.04); the tight interval does not. Honest form: **about
+2.2x on average, spread roughly 1.4 to 2.7 between recordings.**
+
+**"+131% at +-40 deg."** Representative value is **+92% +- 17**. This is the only
+place in the orientation section where seq136 is not representative.
+
+### What is unaffected
+
+* the rim is about twice as bad as the centre on every recording tried;
+* +12% -> +40% -> +92% is still a steep curve, and H17's DA3-vs-VGGT gap was a
+  ratio between models on the same frames, so a shift in the common baseline
+  does not touch it;
+* **+-20 deg stays cheap** (+12.4%), which is what H17's "98.5% of real frames
+  sit inside the comfortable range" depends on.
+
+Caveat the spread adds: at +-20 deg the sd is 6.7 on a mean of 12.4 and the
+range reaches 21.3%. "+-20 deg is nearly free" is true on average, not on every
+recording.
+
+### Gotcha
+
+The roll arm failed on all fourteen sequences with `argument --angles: expected
+one argument`. Values beginning with `-` are read by argparse as flags. The
+runner's DEFAULT `-40,-30,...` works because it never passes through argparse;
+passing the same string explicitly does not. Use `--angles=-40,...`, never a
+space.
