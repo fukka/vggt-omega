@@ -1849,3 +1849,61 @@ pattern_an_arm_added_for_one_reason:
     H39 rendered both rotation signs to keep a convention from being chosen by
     score. That also gave H38's price/prize decomposition for free, with no GPU.
   same_family_as: "h21 (check what is invariant before re-running the expensive model), h36b (look for the measurement before building it)."
+
+# ------------------------------------------------- H40 resolved 2026-09-08
+h40_border_vs_resample:
+  status: "B1 and B3 PASS both backbones; B2 FAILS on da3:small and the failure corrects H39b"
+  artifacts: autoresearch/experiments/h40-border-vs-resample/results/ (28 JSONs + summary.json)
+  analysis: autoresearch/experiments/h40-border-vs-resample/analysis.md
+  what_it_removes: >
+    The caveat section 03z had to carry. Its 0.047 came from H38's 64.1% at
+    +-30 deg over H39b's 3.03% at the real roll of 4-7 deg, and the price grows
+    with angle, so it was an upper bound. I had written that isolating it at 30
+    "cannot be done on this data". That was true of the construction, not of the
+    question.
+  matched_30_deg_14_recordings:
+    da3_small: "two resamplings +0.81% +- 0.67 (13/14); a border +105.73% +- 29.61; both +114.50%"
+    vggt_omega: "two resamplings +1.19% +- 0.84 (14/14); a border +6.63% +- 8.26; both +7.21%"
+    ratio: "130x for da3:small, 5.6x for vggt_omega, against a bar of 4x"
+  THE_STATEMENT: "The border is not most of the price. It is essentially all of it."
+  b3_structural: >
+    `both` lands within 7-9% of the PRODUCT of the two single-factor costs.
+    Border and resampling are INDEPENDENT MULTIPLICATIVE FACTORS on the error.
+    Nothing in this line had established that.
+  B2_FAILURE_CORRECTS_H39B: >
+    Resampling at 30 deg is 0.81%, BELOW H39b's real-roll 3.03% — the opposite of
+    the pre-registered expectation. Not the same operation: H40 re-interpolates
+    an already-rendered view (~1%), H39 warps from a DIFFERENTLY ORIENTED view
+    and reads a different part of the lens. AND H39b's S carries a Jensen term
+    it never accounted for: grav_p has residual roll 0, grav_m has 2*psi, device
+    has psi, and f is convex, so [f(0)+f(2psi)]/2 - f(psi) > 0 and GROWS with
+    psi — exactly the growth H39b's P2 attributed to resampling.
+  what_survives_untouched: >
+    H39's headline -2.65% +- 2.43 is a direct A/B between device and grav_p with
+    no decomposition in it. What is restated is calling S "the price:
+    resampling". Correct: S is the symmetric part, containing the operation's
+    real cost (~1 point of interpolation plus a different lens region) AND a
+    Jensen term from the convexity of the roll penalty.
+  void_design_recorded: >
+    First construction VOID and its own check said so. I confused the view's
+    RAYS staying inside the 54.83 deg cone with a square RASTER keeping its
+    corners under rotation; 15.3% went black and DA3-Small's "resampling" read
+    +80.4% — measuring a border again, the one quantity being separated out.
+    Repair: rotate on a canvas of side >= vs*sqrt(2) and crop, so the crop's
+    corners sit inside the canvas's inscribed disc. Printed 0.0000 black
+    everywhere afterwards.
+  limits:
+    - "One angle (30 deg). The multiplicative composition is established there and nowhere else."
+    - "A 60 deg crop, not the 89 deg view the rest of the line uses; every number here is a ratio WITHIN this experiment."
+    - "The border here is an inscribed-disc annulus; H38's was corner triangles. H37/H38 found shape matters little but not at this FOV."
+
+rule_check_the_construction_not_the_result:
+  rule: "A sanity check on the CONSTRUCTION is worth more than one on the result."
+  why: >
+    Four cases in this line, and in every one the broken version produced a
+    number that read like a finding: H34's untransformed baseline (a 4x-broken
+    input gave a clean-looking asymmetry flip), H36's whole-image bar (a broken
+    depth convention gave rim/centre 4.28 and 7.17), H39's B2 (a wrong roll
+    convention gave two arms equally bad, and later a spurious vggt_omega
+    positive), H40's black-pixel fraction (a rotated raster gave "resampling
+    costs +80%").
