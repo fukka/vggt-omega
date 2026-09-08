@@ -2008,3 +2008,30 @@ Worth noting what went right: H43 published a hedged conclusion *and named the
 run that would remove the hedge*, then that run reversed the hedge. The
 provisional verdict was labelled as resting on extrapolation, so replacing it
 cost a paragraph rather than a retraction.
+
+### The tick that closed the line, and caught the English report up
+
+No GPU. Three pieces of work, all of them overdue rather than new.
+
+**The English report had not been touched since H36b**, and four of its own
+statements had moved — two of them recommendations. Corrected in place rather
+than rewritten: the capacity claim, the tilt-asymmetry passage (retired, with
+the reason given in the reader's terms), the "do not spend effort on camera
+tilt" bullet (which now leads with the thing that *is* worth doing), and an open
+question that H40 had closed and nobody had gone back to strike out. One figure
+added, because the new recommendation is the most actionable thing in the
+document and deserved a picture.
+
+**A second outer-loop synthesis**, covering the ten experiments since the last
+one. `findings.md` had become a log again.
+
+**One argument that cost nothing.** The residual asymmetry cannot be purely
+geometric: four models seeing identical pixels lean different ways, and a
+principal-point offset or a rendering handedness would push all four the same
+way. That narrows it and does not solve it, and it is recorded as narrowing
+rather than as an answer.
+
+Worth noting the shape of the last several ticks: the experiments that moved the
+most were the ones that re-measured something already published, and the two
+most useful were **CPU-only arithmetic on artefacts already committed** (H39b's
+decomposition and H43's origin account). Neither needed data that did not exist.
