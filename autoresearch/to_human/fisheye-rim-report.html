@@ -237,6 +237,12 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       <strong>不通过</strong>：seq136 −13.2% 赢，decoration_seq132 +4.7% 输。
       教师的边缘优势只有 <strong>−11.5% ~ −14.7%</strong>，还只覆盖该 zone 的 70%。（§03）
     </p></div>
+    <div class="row"><span class="who">B′ · H18 换掉教师，H14 活了 ✓（新）</span><p>
+      §02e 说耐黑边是 backbone 的性质，于是用 <strong>VGGT-Ω 跑 110° 教师</strong>：同样的画幅、同样 22.5% 黑边，
+      DA3 教师翻负 +33%，VGGT-Ω 是 <strong>−65%</strong>，而且<strong>覆盖 100% 的边缘环带</strong>。
+      学生（<strong>零深度标签</strong>）拿到 <strong>−52.7% / −22.8%</strong>，相当于稠密真值增益的 <strong>91% / 84%</strong>（原来是 23% 和负数）。
+      但匹配对照说清楚了分解：<strong>大头是"蒸馏了更强的模型"（81%/66%），矫正投影另加 10–18%</strong>。（§03b）
+    </p></div>
     <div class="row"><span class="who">C · H14.2 环形视角 ✗</span><p>
       拆掉"虚拟视角必须是方的"这条隐藏约束，教师对边缘环带的覆盖从 <strong>70% 提到 99.3%</strong> ——
       几何上做到了，但教师在边缘反而变差（<strong>+9.5%</strong>），学生跟着更差。<strong>学生跟的是教师的"准"，不是"广"。</strong>（§04）
@@ -1368,6 +1374,117 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     </div>
   </div>
 </section>
+
+<!-- ============================================================ 03b H18 -->
+<section>
+  <div class="section-head"><span class="eyebrow">03b</span><h2>实验 B′ · H18：换掉教师，H14 的想法活了</h2>
+    <span class="chip done"><span class="dot"></span>4 条判据过 3 条</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      §03 里 H14 死于一个可诊断的原因：教师太弱（边缘只比学生好 11.5–14.7%）而且只覆盖 70% 的边缘环带；
+      想开到 110° 拿满覆盖，画幅 22.5% 变黑，教师就<strong>全面翻负</strong>。<strong>准和广是对立的。</strong>
+    </p>
+    <p>
+      §02e 把这个对立拆开了：<strong>翻负不是因为"黑得多"，是因为黑边紧贴着 <code>near_rim</code></strong> ——
+      而且<strong>耐不耐这条边界，是 backbone 的性质</strong>：VGGT-Ω 付 +29%，DA3-Small 付 +106%，DA3-Large 付 +636%。
+      §02e 的协议里预先写死了这个决定：<em>如果哪个 backbone 低于 +40%，就去跑 110° 教师。</em>只有 VGGT-Ω 达标。
+    </p>
+    <h3 style="margin-top:22px">预检：同一个视角，只换 backbone</h3>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>各 60 帧，教师与<strong>原始 DA3-Small</strong> 逐像素同集打分。前两行的几何、画幅、黑边<strong>完全一样</strong>。</caption>
+      <thead><tr><th>教师</th><th>锥体覆盖</th><th>边缘环带覆盖</th><th>画幅填充</th><th>近边缘增益</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">DA3-Small 110°</td><td class="num">100%</td><td class="num">100%</td><td class="num bad">0.775</td><td class="num bad">+33.3% / +39.3%</td></tr>
+        <tr class="flip"><td class="mono"><b>VGGT-Ω 110°</b></td><td class="num good">100%</td><td class="num good">100%</td><td class="num bad">0.775</td><td class="num good"><b>−65.0%</b></td></tr>
+        <tr><td class="mono">VGGT-Ω 95°</td><td class="num">83.7%</td><td class="num">71.9%</td><td class="num">0.987</td><td class="num good">−70.4%</td></tr>
+        <tr><td class="mono">DA3-Small 95°（H14 出厂配置）</td><td class="num">83.7%</td><td class="num">70.4%</td><td class="num">0.987</td><td class="num">−14.7%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p style="margin-top:16px">
+      同样的 110° 画幅、同样 22.5% 的黑边：一个翻负，另一个是 H14 最好配置的 <strong>4.4 倍</strong>，而且覆盖率从 70% 到 <strong>100%</strong>。
+      <strong>"准和广对立"这条张力被拆掉了，不是在上面权衡。</strong>
+    </p>
+    <h3 style="margin-top:22px">学生：五条臂</h3>
+    <p style="margin-bottom:14px">
+      除了教师，其他一切都锁在 H14 的出厂设置（4 序列 × 60 帧、20 轮、种子 0、LoRA r=8）。
+      <strong>除 <code>gt</code> 外，没有任何一条臂在任何环节接触过深度真值。</strong>
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption><code>omega_rt</code> 是<strong>关键对照</strong>：同一个教师、同样两次重采样、<strong>唯独不换投影</strong>。没有它这个结果无法解读。</caption>
+      <thead><tr><th>臂</th><th style="text-align:left">教师</th><th>seq136 边缘（近中心）</th><th>dec_seq132 边缘（近中心）</th><th>用真值</th></tr></thead>
+      <tbody>
+        <tr class="flip"><td class="mono">omega110</td><td style="text-align:left">VGGT-Ω，110° <b>矫正视角</b></td><td class="num good">−52.7% (−34.5%)</td><td class="num good">−22.8% (+12.4%)</td><td>否</td></tr>
+        <tr class="flip"><td class="mono">omega_rt</td><td style="text-align:left">VGGT-Ω，<b>直接看鱼眼</b></td><td class="num good">−47.1% (−38.7%)</td><td class="num good">−17.9% (+2.0%)</td><td>否</td></tr>
+        <tr><td class="mono">rect</td><td style="text-align:left">DA3-Small，95° 矫正视角</td><td class="num">−13.2% (+43.3%)</td><td class="num bad">+4.7% (−4.1%)</td><td>否</td></tr>
+        <tr><td class="mono">roundtrip</td><td style="text-align:left">DA3-Small，直接看鱼眼</td><td class="num">−0.1%</td><td class="num">+0.0%</td><td>否</td></tr>
+        <tr><td class="mono">gt</td><td style="text-align:left"><b>稠密深度真值</b></td><td class="num">−57.9% (−39.0%)</td><td class="num">−27.2% (+24.4%)</td><td>是</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:20px">
+    <h3>逐条判据（训练前锁定）</h3>
+  </div>
+  <div class="crit">
+    <div class="row"><span class="who">P1 赢对照 ✓</span><p>
+      两个留出序列都要赢对照。对 DA3 的 <code>roundtrip</code> 是碾压，对<strong>匹配的</strong> <code>omega_rt</code>
+      也都赢（−52.7 对 −47.1、−22.8 对 −17.9）。<strong>这正是 <code>rect</code> 当年在 dec_seq132 上失败的那一条。</strong>
+    </p></div>
+    <div class="row"><span class="who">P2 拿回一半 ✓</span><p>
+      要拿回有标签臂增益的至少一半。实际 <strong>seq136 拿回 91%、dec_seq132 拿回 84%</strong>。
+      <code>rect</code> 当年是 23% 和一个负数。
+    </p></div>
+    <div class="row"><span class="who">P3 中心不塌 ✗（差 2.4 点）</span><p>
+      近中心不得恶化超过 +10%。seq136 是 <strong>−34.5%（通过）</strong>，dec_seq132 是 <strong>+12.4%（不通过）</strong>。
+      注意：有标签的 <code>gt</code> 臂在同一序列同一 zone 上是 <strong>+24.4%</strong> —— 无标签臂比上限还温和，但判据按字面算仍是没过。
+    </p></div>
+    <div class="row"><span class="who">P4 主序列 ✓</span><p>dec_seq132 作主判据序列，全文先报它。</p></div>
+  </div>
+
+  <div class="col">
+    <h3 style="margin-top:22px">再想一层：对照说了什么</h3>
+    <p>
+      <code>omega_rt</code> 是我在看到 −52.7% 之后补跑的，因为没有它，这个数<strong>无法区分两种解释</strong>：
+      "矫正投影解锁了模型已知的东西"（H14 的机制），还是"只不过蒸馏了一个更强的模型"。
+    </p>
+    <ul class="plain">
+      <li><strong>大头是后者。</strong>鱼眼教师单独就拿回标签增益的 <strong>81% / 66%</strong>，完全不需要矫正。</li>
+      <li><strong>矫正投影确实另加 5.7 / 4.9 个点</strong>（相当于标签增益的 10% / 18%），两个序列方向一致。</li>
+      <li><strong>而且它就是 P3 失败的原因</strong>：<code>omega_rt</code> 的近中心是 −38.7% / +2.0%，<code>omega110</code> 是 −34.5% / +12.4%。
+        <strong>矫正买到边缘，花掉近中心。</strong></li>
+    </ul>
+    <p>
+      所以 <strong>H14 的机制是真的，但它是二阶的；一阶是教师强度</strong>。这和 H14 当初想证明的<em>不是</em>同一件事，
+      但它是数据支持的那件事。
+    </p>
+    <div class="note">
+      <span class="eyebrow">现在这条主张的准确表述</span>
+      <p>
+        <strong>不再是自蒸馏。</strong>正确的说法是：
+        <strong>一个冻结的更强模型可以在完全没有深度标签的情况下蒸馏进一个小的鱼眼域模型，
+        在近边缘拿回稠密真值所买增益的 66–84%；先把视角矫正一下再多拿 10–18%。</strong>
+      </p>
+      <p>
+        代价必须一起说：<strong>它需要存在一个更强的模型</strong>，而自蒸馏不需要。
+        引用这个结果的任何地方都要带上这一句。
+      </p>
+    </div>
+    <p style="color:var(--ink-faint)">
+      边界：单种子；学生全程是 DA3-Small；教师<strong>单帧</strong>运行，VGGT-Ω 的多帧机制没有参与；
+      <code>omega_rt</code> 把鱼眼帧 504 → 512 → 504 缩放了一次（patch-16 的教师吃不了 504 px，而<strong>补边不是选项</strong> —— §02e），
+      1.6% 的缩放，参照 <code>resample0</code> 测得的"一次双线性重采样是免费的"。
+    </p>
+  </div>
+</section>
+
 
 <!-- ============================================================ 04 C H14.2 -->
 <section>

@@ -552,3 +552,39 @@ h17_roll_prior:
     - "PRIMARY: a 110 deg VGGT-Omega teacher for H14 (see h17_6). It is the one backbone measured to tolerate a border adjacent to the zone of interest, and it is also the most accurate and the most roll-robust. This is the concrete pay-off of the whole h17 block."
     - "Separating projection from boundary is still open; H17.5's inscribed-disc mask was an order of magnitude more severe than fisheye_disc, so it did not decompose them. Any future attempt must severity-match the two masks."
     - "Find a head-mounted dataset with a wider pose distribution AND dense depth. Without one, H17.4 cannot be worth running."
+
+# ------------------------------------------------------------------ H18
+# The pay-off of the h17 block. Bars locked in h17-roll-prior/protocol.md
+# before training; results in findings.md.
+h18_omega_teacher:
+  question: >
+    H14 died because its teacher was thin (-14.7% at the rim) and covered only
+    70% of the rim band, and widening to 110 deg inverted it. H17.6 showed
+    border tolerance is backbone-specific. Does a border-tolerant teacher
+    dissolve H14's accuracy-vs-coverage tension?
+  status: "3 of 4 locked bars passed"
+  result: >
+    Pre-check, same 110 deg view and same 22.5% black frame: DA3-Small teacher
+    +33/+39% (inverts), VGGT-Omega teacher -65.0%, both at 100% rim coverage.
+    Students, no depth labels anywhere: omega110 -52.7% / -22.8% at near_rim on
+    the two held-out sequences, i.e. 91% / 84% of what the dense-label ceiling
+    buys. H14's own rect arm got -13.2% / +4.7%.
+  the_control_that_decides_the_reading: >
+    omega_rt (same teacher, same resampling, NO change of projection) recovers
+    81% / 66% on its own. So teacher strength is first-order and the rectified
+    projection is second-order, worth a further 5.7 / 4.9 points at the rim —
+    and it is also what causes the near_center bar to fail (+12.4% vs the
+    control's +2.0%). H14's mechanism is real but not the main effect.
+  claim_now: >
+    NOT self-distillation. "A frozen stronger model can be distilled into a
+    small fisheye-domain model with no depth labels, recovering 66-84% of what
+    dense ground truth buys at the near rim; rectifying the view first adds
+    another 10-18%." It requires a stronger model to exist — state that cost
+    with the result, every time.
+  artefacts:
+    - autoresearch/experiments/h14-rect-distill/results/omega/
+    - results/autoresearch-h14-omega/ (on lambda_63 and the results branch)
+  next:
+    - "Seeds and error bars: this is one seed, and it is now the project's headline positive result."
+    - "Cross-room: run omega110 on LiteOffice. The label-free arm previously BEAT the labelled one across rooms; with a much stronger teacher that comparison is the interesting one."
+    - "Does the student saturate? It recovers 84-91% of the label ceiling from a teacher that is 4.4x stronger than the old one — try a larger student or more LoRA rank to see whether the remaining gap is student capacity."

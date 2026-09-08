@@ -764,3 +764,35 @@ Two things follow, and one of them is the pay-off for the whole h17 block.
 
 The build now asserts on the stale strings from this morning's process failure,
 and it caught one unbalanced `</div>` in this session's edits before publishing.
+
+## 2026-09-08 — H18: the roll line pays off in H14
+
+The chain the whole h17 block turned out to be: roll sensitivity is a
+pretraining-data property (H17.2) -> the black border is what actually hurts,
+and by distance not area (02e dose curve) -> border tolerance is
+backbone-specific, VGGT-Omega +29% vs DA3-Small +106% vs DA3-Large +636%
+(H17.6) -> therefore VGGT-Omega can run the 110 deg teacher that inverted for
+DA3 -> H18.
+
+Pre-check first, as H14 always does: same view, same 22.5% black, DA3-Small
+teacher +33/+39% (inverts), VGGT-Omega -65.0%, both at 100% rim coverage. H14's
+shipped teacher was -14.7% at 70%. Bars were locked before training.
+
+Students: -52.7% / -22.8% at the near rim with **no depth labels**, against a
+labelled ceiling of -57.9% / -27.2%. 91% and 84% of the label gain. Three of
+four bars pass; near_center on dec_seq132 misses by 2.4 points.
+
+**The control changed what this means.** I ran omega_rt (same teacher, same
+resampling, no rectification) after seeing -52.7%, because without it the number
+cannot distinguish "the rectified projection unlocked something" from "a
+stronger model was distilled". It recovers 81% / 66% on its own. So teacher
+strength is first-order; H14's mechanism is real but second-order (5.7 / 4.9
+points) and is also what causes the near_center failure. The report says this
+plainly rather than quoting -52.7% on its own.
+
+Two implementation notes worth keeping. `cache_teacher.py` now takes
+`--teacher-model`, and its roundtrip arm follows the teacher rather than the
+student — otherwise the matched control is impossible to express. And a patch-16
+teacher cannot take the 504 px fisheye frame; padding was rejected on the
+strength of 02e's dose curve, so it resizes 504 -> 512 -> 504, a 1.6% rescale
+against `resample0` measuring one bilinear pass as free.
