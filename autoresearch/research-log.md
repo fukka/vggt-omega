@@ -1926,3 +1926,20 @@ construction is worth more than a sanity check on the result.** H34's untransfor
 baseline, H36's whole-image bar, H39's B2, and now H40's black-pixel fraction —
 four cases, and in every one the broken version produced a number that read
 like a finding.
+
+### H41 — two corrections for the price of one measurement
+
+H41 was designed to test one thing: whether H40's Jensen argument survives
+contact with a properly measured roll curve. It does, with no free parameters
+and in the direction the clamped extrapolation requires.
+
+The second result was not designed for. H32's "the penalty is not monotone near
+zero" — a finding it recorded as an informative failure of its own sanity check
+— turns out to be an artefact of measuring against a device-aligned zero on
+frames that carry 4° of real roll. **Fix the origin and the anomaly disappears.**
+
+Two experiments in a row have now produced a correction by fixing a *reference*
+rather than by measuring something new: H40 corrected H39b's label by noticing
+what its two arms' residual rolls actually were, and H41 corrected H32 by
+putting the zero where zero is. Worth watching for: **when a curve looks odd
+near its origin, suspect the origin.**

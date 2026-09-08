@@ -3180,3 +3180,63 @@ conclusion rather than merely blurring it.
 The pre-registered check printed `0.1534 <-- NOT BORDER-FREE` on the first line
 of every recording. **Fourth time in this line a construction-level sanity bar
 has caught something no amount of looking at the scores would have.**
+
+## H41 — the roll curve measured against the right origin, and two things fall out
+
+Every roll number in this line rests on a penalty curve that had never been
+sampled where the data lives: H16 measured ±10/20/30/40 on one recording, H28
+re-measured ±20/30/40 on thirteen, and H32 found the curve *not monotone* near
+zero. Ninety percent of real frames sit inside ±10°.
+
+Measured properly: thirteen recordings, `da3:small`, each frame rendered at
+`roll_deg = ψ + d` so the residual is exactly −d, normalised by that frame's own
+`d = 0` render. Recording-to-recording sd is under 0.05 inside ±11°.
+
+| residual | −22° | −15° | −11° | −8° | −6° | −4° | −2° | **0°** | +2° | +4° | +6° | +8° | +11° | +15° | +22° |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| g | 1.307 | 1.158 | 1.086 | 1.050 | 1.031 | 1.015 | 1.014 | **1.000** | 1.011 | 1.034 | 1.038 | 1.064 | 1.099 | 1.188 | 1.354 |
+
+### H32's near-zero anomaly was its origin, not the model
+
+H32 reported the penalty **below** baseline at −5° (−1.1% ± 2.8, negative on
+9/13) and flat from −10° to +5°, and concluded "B3 was the wrong sanity check".
+Against an exact per-frame gravity-aligned zero the curve is **monotone from
+zero on both sides**, minimum at 0, no dip.
+
+H32's 0° was the **device**-aligned render, and those frames carry a median 4°
+of real head roll — so its origin was already several degrees off level and the
+true minimum sat near −4°, exactly where it saw the dip. **A curve measured
+against the wrong origin looks non-monotone.** Second correction in two
+experiments that comes from fixing a reference rather than measuring something
+new.
+
+### H40's Jensen argument becomes arithmetic
+
+| at ψ = 11° | predicted from the curve alone | H39b measured |
+|---|---|---|
+| prize A = [g(2ψ) − 1] / 2g(ψ) | **+16.10%** | +21.52% |
+| price S = [1 + g(2ψ)] / 2g(ψ) − 1 | **+7.11%** | +11.51% |
+
+No free parameters, both inside the locked factor-of-2 windows, and **both
+under-predict in the direction the construction requires**: that cell reaches
+28°, so 2ψ reaches 56°, far outside the ±22° grid, and the interpolation clamps
+at the endpoint. The shortfall is the clamp, not a discrepancy.
+
+**And the low-roll cell reconciles three experiments.** At ψ = 1.5°, Jensen
+predicts **+0.29%** for S; H39b measured **+0.95%**; H40 charged **+0.81%** for
+two grid samples. Three methods, one number.
+
+So H40's correction to H39b stands quantitatively: the symmetric part of H39's
+two arms is mostly the curvature of this curve, not a price. And H39's own
+headline — −2.65% ± 2.43 — has now survived three consecutive experiments trying
+to reinterpret its parts, because it is a direct A/B with no decomposition in
+it.
+
+### What it does not settle
+
+The ±22° asymmetry here is 1.354 against 1.307, positive residual costlier by
+**3.6%** — the same sign H32 and H33 found, nothing like H32's 24.4% against
+56.5% at ±30°. The two are not comparable (different origin, different angle,
+and H32's frames' own roll biased one side). H33 left the asymmetry undecided
+and H34 was void trying; **nothing here changes that, and it is not offered as
+if it did.**
