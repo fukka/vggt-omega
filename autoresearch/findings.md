@@ -3362,3 +3362,50 @@ device-origin Δ is positive under both extrapolations and on 10 and 12 of 13
 recordings. That is why B2 is the one quoted. A wide-angle run (0, ±26, ±30) is
 in flight to remove the extrapolation and make the comparison angle-matched with
 H32.
+
+## H43b — the guess removed, and all three bars pass
+
+The wide-angle run extended the grid to **−30° … +30° for every backbone**, so
+each device-origin evaluation at ±22° is an interpolation and nothing is
+guessed. Same three bars, same thresholds.
+
+| backbone | Δ true zero | Δ device zero |
+|---|---|---|
+| `da3:small` | +4.70% | **+22.36%** |
+| `da3:large` | +7.77% | **+16.92%** |
+| `vggt` | **−6.99%** | **+10.75%** (positive on **12/13**) |
+| `vggt_omega` | −0.87% | +3.11% |
+
+| bar | H43 (extrapolated) | H43b (measured) |
+|---|---|---|
+| B1 offset inflates | 31–32/52, marginal | **34/52 PASS** |
+| B2 `vggt` sign flips | PASS | **PASS 12/13** |
+| B3 inflation tracks the offset | −0.345 / −0.441 **FAIL** | **−0.467 PASS** |
+
+**H43's hedge was extrapolation error, not the data** — which is what its own
+analysis said at the time, and why it named this run as the fix.
+
+### The statement
+
+**Roughly four fifths of the published asymmetry is the origin.** DA3-Small:
+**+22.4 points** about the device zero against **+4.7** about the true one. For
+scale, H32 measured +32.1 points at ±30° against a device origin — same
+direction, larger angle, same order.
+
+**Every published asymmetry number in this line is retired as a statement about
+a model.** H32's "+30° costs 2.3× what −30° costs" and H33's per-backbone
+differences are device-origin measurements on footage with a −3.1° median tilt,
+and that is simply what a device origin does to a convex curve.
+
+### What stays unexplained, and stays that way
+
+Δ about the true zero is **not zero and does not have one sign**: `da3:large`
+**+7.77%** (the largest of the four, on the backbone H33 called "at chance"),
+`vggt` **−6.99%** (the only one dearer on the negative side), `da3:small`
++4.70%, `vggt_omega` −0.87%.
+
+H32 found the asymmetry, H33 could not attribute it, H34 was void trying, H42
+added a point that did not line up, and H43/H43b explain the **published**
+version away without explaining the **residual** one. **No mechanism is
+offered.** What has changed is that the residual is the only version left, and
+it is four times smaller than what was published.

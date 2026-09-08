@@ -1985,3 +1985,26 @@ than with B2's success.
 the device-origin column needed guessing beyond it. B2 does not depend on that
 guess and B1/B3 do, so B2 is the one quoted and the other two are labelled. The
 wide-angle run launched alongside removes the guess entirely.
+
+### H43b — and the third instance of one bug class in one tick
+
+The wide-angle run's first pass covered three backbones because `run_h42.sh`
+hardcodes its model list, and `da3:small` — the backbone every published
+asymmetry number is about — was the one left out. The span check in
+`asymmetry_noextrap.py` then read `da3:small`'s grid for *every* model and
+reported "0/13 covered", which was true of that backbone and false of the other
+three.
+
+That is the **third time this tick** something proven was pointed at a new
+configuration and met a distinction it never had to make: H40 imported `rot`
+from the module that did not have it, H42 sent `vggt_omega` to
+`torch.load("pretrained")`, and this checked one model's grid for all four.
+Each cost minutes and no results, because each failed loudly. **The pattern is
+not carelessness about correctness — it is that a script's implicit assumptions
+are invisible until the configuration changes.** The cheap defence stands:
+read the argument list and the per-model assumptions before launching.
+
+Worth noting what went right: H43 published a hedged conclusion *and named the
+run that would remove the hedge*, then that run reversed the hedge. The
+provisional verdict was labelled as resting on extrapolation, so replacing it
+cost a paragraph rather than a retraction.
