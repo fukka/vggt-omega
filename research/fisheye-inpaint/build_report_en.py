@@ -27,8 +27,8 @@ OUT = os.path.join(HERE, "to_human", "report.html")
 INPUTS = OrderedDict([
     ("fisheye_masked", ("1", "Raw · black", "the fisheye frame as the camera gives it, black in the corners", "disc")),
     ("persp_masked",   ("2", "Rectified · black", "straightened to a flat photo, black wedges where nothing was imaged", "bitten")),
-    ("fisheye_full",   ("3", "Raw · filled", "same fisheye frame, corners filled with the real scene", "full")),
-    ("persp_full",     ("4", "Rectified · filled", "straightened, wedges filled with the real scene", "full")),
+    ("fisheye_full",   ("3", "Raw · filled", "same fisheye frame, corners filled from the Blender render", "full")),
+    ("persp_full",     ("4", "Rectified · filled", "straightened, wedges filled from the Blender render", "full")),
     ("persp_crop",     ("5", "Cropped", "straightened at a narrower zoom, so no black exists at all", "crop")),
 ])
 CTRL = ("persp_crop_lores", ("5b", "Cropped · blurred", "input 5 softened to input 4's level of detail", "cropb"))
@@ -484,24 +484,26 @@ it does not change the width.</p>
 same number. The model emits both; they agree within 0.8°. The vertical one is plotted.</p>
 
 <h2>Result 3 — cheap filling already takes nearly all of it</h2>
-<p>How much of the gain does the dumbest filler get for free? "Smeared" repeats the nearest real pixel outward.
-It invents nothing. All four numbers in a row are AbsRel on the same pixels — the only thing that changes is what
-went into the corners.</p>
+<p>Three ways to fill the same corners, scored on the same pixels. <b>Nearest-pixel</b> copies the closest real
+pixel outward: it invents nothing and needs no model. <b>Blender</b> is the true scene — the ceiling.</p>
 <div class="scroll"><table>
-<thead><tr><th></th><th class="n">Black</th><th class="n">Smeared</th><th class="n">Real scene</th><th class="n">Left for a smarter filler</th></tr></thead>
+<thead><tr><th></th><th class="n">Black</th><th class="n">Nearest-pixel fill</th><th class="n">Blender fill (true scene)</th></tr></thead>
 <tbody>
-{"".join(f'<tr><td>{proj_lab}, {mode_lab}</td><td class="n">{lad[proj]["rows"]["black"]["AbsRel"]:.4f}</td>'
+{"".join(f'<tr><td>{proj_lab}, {mode_lab}</td>'
+         f'<td class="n">{lad[proj]["rows"]["black"]["AbsRel"]:.4f}</td>'
          f'<td class="n">{lad[proj]["rows"]["replicate"]["AbsRel"]:.4f}</td>'
-         f'<td class="n">{lad[proj]["rows"]["ORACLE"]["AbsRel"]:.4f}</td>'
-         f'<td class="n"><strong>{lad[proj]["rows"]["replicate"]["AbsRel"] - lad[proj]["rows"]["ORACLE"]["AbsRel"]:+.4f}</strong></td></tr>'
+         f'<td class="n">{lad[proj]["rows"]["ORACLE"]["AbsRel"]:.4f}</td></tr>'
          for lad, mode_lab in ((LAD1, "1 frame"), (LAD8, "8 frames"))
          for proj, proj_lab in (("fisheye", "Fisheye"), ("persp", "Rectified")))}
 </tbody></table></div>
-<p>Read one row left to right. Black is worst. Smearing recovers most of the distance. The real scene adds only
-the last column, which is <strong>the entire budget for a generative filler: at most {max(left):.3f} AbsRel</strong>.
-In the bottom row that budget is negative — smearing already beats the truth, because real corner detail is
-complicated, a smear is simple, and the model prefers simple.</p>
-<p class="note">Incidental, but worth carrying: a flat grey fill <em>helps</em> on a rectified frame
+<p class="note">AbsRel, lower is better.</p>
+<p>In every row, nearest-pixel covers most of the distance from black to the true scene. What is left between
+those last two columns is {left[0]:.4f}, {left[1]:.4f}, {left[2]:.4f} and {left[3]:.4f}. In the last row it is
+negative — nearest-pixel is already <em>better</em> than the truth, because real corner detail is complicated,
+a smear is simple, and the model prefers simple.</p>
+<p><strong>That gap is the whole budget for a generative filler: at most {max(left):.3f} AbsRel.</strong></p>
+<p class="note">Flat grey, and two classical inpainting algorithms, were also tried. All did worse than
+nearest-pixel. One of them is worth remembering: a flat grey fill <em>helps</em> on a rectified frame
 ({LAD1['persp']['rows']['black']['AbsRel']:.4f} → {LAD1['persp']['rows']['mean']['AbsRel']:.4f}) and is much
 <em>worse than black</em> on a raw fisheye ({LAD1['fisheye']['rows']['black']['AbsRel']:.4f} →
 {LAD1['fisheye']['rows']['mean']['AbsRel']:.4f}). Fill advice does not transfer across projections.</p>
