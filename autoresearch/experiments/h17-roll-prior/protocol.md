@@ -402,3 +402,71 @@ bought.
 Recorded scale: 4 training sequences x 60 frames to fit; evaluated on seq136,
 decoration_seq132 and both LiteOffice sequences at 60 frames each. Frozen
 DA3-Small throughout. No depth labels anywhere.
+
+## H18.3 — is the 16-number curve a LENS constant? (locked 2026-09-08, before running)
+
+### The question
+
+H18.2 fitted 16 numbers on the Apartment training sequences and carried them
+unchanged to LiteOffice — another room, another device — where they matched or
+beat a 122,900-parameter LoRA. The reading recorded was "this is a property of
+the lens, not the room". That reading has only been tested in one direction.
+
+If the curve really is a lens constant, then **fitting it on LiteOffice and
+applying it to the Apartment should work about as well as the reverse**. If it
+only works one way, it is not a constant — it is something about the Apartment
+that happens to help elsewhere, which is a much weaker claim and the write-up
+would have to be walked back.
+
+Two devices are involved, and their cones differ (Aria M1292 theta_max 54.83
+deg; LiteOffice 61283 56.63 deg). The theta bins are defined as fractions of
+each camera's own theta_max, so a curve fitted on one is applied to the other in
+NORMALISED incidence angle. That is the only way the transfer is even
+expressible, and it is worth stating: what is claimed constant is the curve in
+theta/theta_max, not in degrees.
+
+### Arms
+
+| fit on | applied to | already have |
+|---|---|---|
+| Apartment (4 train seqs, 240 frames) | all four eval sequences | yes (H18.2) |
+| **LiteOffice (2 seqs, 120 frames)** | all four eval sequences | this experiment |
+
+The LiteOffice fit needs omega110 teacher targets for those two sequences, which
+is one `cache_teacher.py` call each. **No depth labels in either direction.**
+
+Note the asymmetry that cannot be removed: LiteOffice is fitted on 120 frames of
+near-static capture, the Apartment on 240 frames with real motion. A weaker
+LiteOffice-fitted curve could be a smaller/poorer fitting set rather than a
+failure of constancy, and will be reported that way if it happens.
+
+### Prediction (locked)
+
+**The LiteOffice-fitted curve recovers at least 60% of the Apartment-fitted
+curve's near_rim gain on the two Apartment sequences** (Apartment-fitted gives
+−16.6% on seq136 and −6.5% on decoration_seq132).
+
+**And the two coefficient vectors agree**: mean absolute difference in `a(theta)`
+below 0.10, against an `a` that ranges 1.34–1.47 across bins.
+
+**Falsified if** the LiteOffice-fitted curve recovers under 30% on the Apartment
+sequences, or if `a(theta)` differs by more than 0.20 on average — either would
+mean the 16 numbers are domain-specific and "lens constant" must be withdrawn.
+
+### H18.4 — or is it a (lens x backbone) constant? (same lock)
+
+Fit the same curve with **DA3-Large** as the frozen student instead of
+DA3-Small, on the same Apartment targets. If the two backbones need materially
+different curves, the 16 numbers describe a *pair* (lens, backbone) and cannot
+be published as a lens calibration.
+
+**Prediction (locked).** `a(theta)` for DA3-Large differs from DA3-Small by more
+than 0.20 on average — i.e. it IS backbone-specific. Reasoning: H17.2 and H17.6
+both found these two backbones behave very differently under geometric
+perturbation despite DA3-Large being the more accurate, so expecting a shared
+correction curve would be inconsistent with what is already measured.
+
+Note the offset caveat: the cached targets carry a per-frame `log_offset_vs_raw`
+computed against DA3-Small. The fit's intercept `b` absorbs a constant offset,
+but the per-frame variation becomes noise in the DA3-Large fit. `a(theta)`, the
+quantity the prediction is about, is not affected by an offset.
