@@ -1634,3 +1634,38 @@ single recording is the rearranged-room column, which H25 showed is the
 representative recording, and the cross-room numbers, which were never on seq136
 and are blocked on the shared-filesystem decision I put to the user several ticks
 ago and have not acted on.
+
+## 2026-09-08 (end of day) — H32: the roll line finally has the number it was missing
+
+This line has been stating three numbers side by side — the model is flat to
++-20 degrees, real roll's p99 is 21.8 degrees, so 98.5% of frames are
+comfortable — without ever multiplying them together. The penalty curve had only
+been measured at 0, +-20, +-30, +-40, and 90% of the roll mass sits below 15
+degrees where there were no measurements at all. The headline rested on an
+interpolation nobody had done.
+
+Done now, with a dense grid on the thirteen recordings against H17's histogram.
+The expected cost is 1.46% +- 1.09. Roll really is nearly free on ordinary
+indoor footage, and it is a measurement rather than a coincidence.
+
+B2 failed and that is the part worth having. Frames beyond +-20 degrees are 1.5%
+of the data and carry 26.5% of the cost, an 18x concentration. So the
+recommendation splits: ignoring roll wholesale is fine, but if anyone does spend
+effort here it should go on the rare large roll, not on a gravity prior applied
+everywhere. Those are different products.
+
+B3 failed too, informatively. The curve is not monotone — it is flat to within
+noise from -10 to +5 and dips slightly negative around -5. That makes the
+integral smaller, so B1 is unaffected, but it means B3 was the wrong sanity
+check to have written.
+
+The unexpected find is that every published roll figure averaged the +- pair,
+and the pair is not symmetric: at 30 degrees, -30 costs 24% and +30 costs 56%,
+positive costlier on 11 of 13. The published "+-30 = +46%" is the midpoint of two
+quite different numbers. That is the second time in this line that averaging two
+arms hid something, after the rim/centre band in H28, so it goes into findings as
+a pattern rather than an incident.
+
+Also noted without over-reading: the wearers' signed median roll is -2.70
+degrees and the penalty minimum sits near -5. 9 of 13, p ~ 0.13. A hint, and no
+mechanism offered.

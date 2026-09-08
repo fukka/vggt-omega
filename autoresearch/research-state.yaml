@@ -1377,3 +1377,40 @@ verification_campaign_closed:
   still_on_one_recording:
     - "the rearranged-room column — one recording, but H25 showed it is the representative one"
     - "the cross-room numbers — never measured on seq136, blocked on the shared-filesystem decision put to the user and not acted on"
+
+# ------------------------------------------------- H32 resolved 2026-09-08
+h32_outcome:
+  status: B1 PASSES; B2 and B3 fail, both informatively
+  artifact: autoresearch/experiments/h32-expected-cost/results/
+  analysis: autoresearch/experiments/h32-expected-cost/analysis.md
+  THE_NUMBER_THE_LINE_WAS_MISSING: >
+    Expected whole-image penalty under the real roll distribution:
+    1.46% +- 1.09 over 13 recordings (range 0.29-3.94, seq136 1.15%).
+    Replaces a coincidence of three separately measured numbers with the
+    integral nobody had computed. Ignoring roll costs about 1.5%.
+  b2_the_tail_is_disproportionate: >
+    Frames beyond +-20 deg are 1.48% of the data and carry 26.5% +- 16.8 of the
+    expected cost — an 18x concentration, just over the 25% bar. Roll IN GENERAL
+    is not worth handling; THE RARE LARGE ROLL is. Different products: a gravity
+    prior everywhere vs a detector for the rare tilted frame.
+  b3_failed_informatively: >
+    Penalty is NOT monotone: -1.1% +- 2.8 at -5 deg (negative on 9/13), +0.1% at
+    -10. Flat to within noise from -10 to +5 rather than rising from zero. Makes
+    the integral smaller so B1 is unaffected; B3 was the wrong sanity check.
+  ASYMMETRY_THE_AVERAGING_HID: >
+    Every published roll figure averaged the +- pair. At 30 deg: -30 costs
+    +24.4%, +30 costs +56.5% — positive 2.3x costlier, +30 costlier on 11/13,
+    gap +32.0 pts. Not established at 15-20 deg (8-9 of 13), so a large-angle
+    effect. Published "+-30 = +46%" is the midpoint of 24 and 56.
+  alignment_recorded_as_a_hint: >
+    Real distribution signed median -2.70 deg (H17 rejected calibration as the
+    cause); penalty minimum near -5 deg. 9/13, sign test p ~ 0.13. A hint, no
+    mechanism offered.
+
+pattern_averaging_hides_things:
+  rule: >
+    If two arms are averaged before publication, check whether they differ
+    before quoting the mean.
+  instances:
+    - "H28: the rim/centre 2.0-2.6x band was four single-recording numbers, not a spread across models."
+    - "H32: the +-30 deg roll penalty is the midpoint of 24% and 56%."

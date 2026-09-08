@@ -2485,3 +2485,50 @@ Nothing published in this line rests on a single recording now, except the
 **rearranged-room** column (one recording, but H25 showed it is the
 representative one) and the **cross-room** numbers, which were never measured on
 seq136 and are blocked on a data decision put to the user and not acted on.
+
+## H32 — roll costs 1.46% in practice, but 1.5% of frames carry a quarter of it
+
+`h32-expected-cost/`, 11 angles x 13 recordings combined with H17's histogram
+over 60,105 frames. No new data. Reading in that experiment's `analysis.md`.
+
+**B1 passes.** Expected whole-image penalty under the real roll distribution:
+**1.46% +- 1.09** (range 0.29-3.94; seq136 1.15%), against a 5% bar.
+
+This replaces a coincidence with a measurement. The line had been stating three
+numbers that were never multiplied together — flat to +-20 deg, p99 = 21.8 deg,
+"98.5% comfortable". Multiplied, the answer is **about one and a half percent**.
+
+**B2 fails, and it is the useful part.** Frames beyond +-20 deg are **1.48%** of
+the data and carry **26.5% +- 16.8** of the expected cost — an **18x
+concentration**. So *roll in general* is not worth handling, but **the rare
+large roll is**: those are different products, a gravity prior applied
+everywhere versus a detector for the rare tilted frame.
+
+**B3 fails informatively.** The penalty is not monotone: -1.1% +- 2.8 at -5 deg
+(negative on 9/13) and +0.1% at -10. The curve is flat to within noise between
+-10 and +5 rather than rising from zero. That makes the integral smaller, not
+larger, so B1 is unaffected — but B3 as written was the wrong sanity check.
+
+**An alignment, not a finding.** The real distribution's signed median is
+**-2.70 deg** (H17 checked and rejected calibration); the penalty minimum sits
+near **-5 deg**. Wearers' typical tilt lands near the model's cheapest angle.
+9/13, sign test p ~ 0.13 — a hint. No mechanism offered.
+
+### What the +- averaging hid
+
+Every published roll figure averaged the +- pair. Measured separately at 30 deg:
+**-30 costs +24.4%, +30 costs +56.5%** — positive roll is **2.3x** costlier,
++30 costlier on **11/13**, gap +32.0 pts. At 15-20 deg the asymmetry is not
+established (8-9 of 13), so it is a large-angle effect. The published
+"+-30 deg = +46%" is the midpoint of 24 and 56.
+
+**Second time in this line that averaging two arms hid something** — the first
+was the rim/centre band in H28. Worth treating as a pattern: if two arms are
+averaged before publication, check whether they differ before quoting the mean.
+
+### The corrected practical statement
+
+Ignoring head roll costs about **1.5%** of depth error on ordinary indoor
+footage — cheap enough to ignore. If you spend effort on it, spend it on
+**positive roll beyond 20 deg**: 1.5% of frames, a quarter of the cost, and more
+than twice as expensive as the same angle the other way.
