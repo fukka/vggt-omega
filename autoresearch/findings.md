@@ -1972,3 +1972,60 @@ The rule added after H21 — *before publishing a characterisation, name the axi
 it was never varied along* — worked as intended this time. H21's mechanism was
 caught by computing r(theta)/r(theta_max) with no data at all, before H22 ran,
 and the protocol opened by correcting it rather than testing around it.
+
+## H23 — not upsampling loss either. Two mechanisms down, effect intact.
+
+`h23-upsample/results/{src504,src1008}.json`, reading in that experiment's
+`analysis.md`. ADT frames are natively 1408x1408 and this line had always read
+them at 504, so a rim-expanding warp at 504 was inventing detail sitting in the
+file. Two arms, byte-identical supervision, only the source resolution differs.
+
+| fitted on | rim area | @504 | @1008 | change |
+|---|---|---|---|---|
+| orthographic | 68.3% | -28.4% | -27.0% | +1.4 |
+| equidistant | 75.0% | -25.8% | -24.2% | +1.6 |
+| the real lens | 79.4% | -20.1% | -18.1% | +2.0 |
+| rectilinear | 86.6% | -10.5% | -8.6% | +1.9 |
+| **spread** | | **18.0** | **18.5** | **+0.5** |
+
+**B1 refuted** (bar: spread shrinks >=30%, falsified <10%) — it grew, on both
+recordings. **B2 refuted** — rectilinear did not gain more than orthographic;
+the drift is a near-uniform +1.4 to +2.0 across all four. **B3 passes**, so the
+arms really did differ only in rim detail.
+
+### The count of dead mechanisms is now two
+
+1. "More rim pixels make a better fitting set" — H22, refuted, it is the exact
+   opposite.
+2. "Rim-expanding geometries lose because their extra pixels are invented" —
+   H23, refuted.
+
+**The hypothesis recorded in H22's analysis is withdrawn.**
+
+### What the residual now has to be
+
+Not pixel-level detail: doubling the available detail changes nothing. It has to
+be about **where the angular content sits across the image radius** — same rays,
+same sharpness, different arrangement. That rhymes with the border result, where
+position in the frame mattered and area did not.
+
+**No third guess is offered.** Two have been refuted on this one effect, and the
+standing rule about naming the unvaried axis applies to mechanisms as much as to
+characterisations.
+
+### The recommendation survives and gains a robustness check
+
+The monotone ordering reproduces at both source resolutions with the same slope,
+so "fit on a rim-compressing geometry" is not an artefact of reading at 504.
+
+Incidental worth keeping: at 1008 every geometry is ~1.5-2 points worse on the
+same room. A uniform offset, not a differential — the sharper input sits further
+from what the 504-derived teacher cache represents. Matters only if the cache is
+ever re-derived at higher resolution.
+
+### An experiment NOT to run as designed
+
+Separating "where content sits" from "how much angle each pixel covers" by
+scaling the same lens into a smaller disc introduces a border, and the border
+result says that is catastrophic. Confounded by construction. Recorded as an
+open problem rather than queued.

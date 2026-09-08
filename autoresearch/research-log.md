@@ -1343,3 +1343,36 @@ which is a better result than either "it always holds" or "it never does".
 Mechanism is left as a labelled hypothesis with a competing explanation stated
 alongside, because I got the last one wrong and the row/column orderings are
 degenerate here in a way this experiment cannot separate.
+
+## 2026-09-08 (night) — H23: the second mechanism dies too
+
+H22 deliberately left two explanations standing rather than picking one, and
+H23 was built to separate them. It killed the one I favoured.
+
+ADT frames are natively 1408x1408 and this whole line had been reading them at
+504, so a rim-expanding warp was inventing detail that was in the file. Feeding
+the warp a 1008 source — twice the real detail, identical supervision, nothing
+else changed — moves the spread from 18.0 to 18.5 points on one recording and
+11.7 to 13.6 on the other. It does not shrink. The bar said falsified below 10%
+shrinkage; it grew.
+
+So two mechanisms are now dead for the same effect: "more rim pixels is better"
+(H22, the opposite is true) and "rim-expanders lose to interpolation" (H23). The
+hypothesis in H22's analysis is withdrawn from findings and from both reports.
+
+I deliberately did not offer a third. The residual is narrower and more
+interesting than before — whatever orders these geometries is not about
+pixel-level detail at all, since doubling the detail does nothing, so it has to
+be about where the angular content sits across the image radius. That rhymes
+with the border result. But that is a description of what is left, not a
+mechanism, and this effect has now eaten two of my guesses.
+
+Also recorded an experiment NOT to run: scaling the same lens into a smaller
+disc would move content inward without changing the radial mapping, which is
+exactly the probe wanted — but it introduces a border, and the border result
+says that is catastrophic. Confounded by construction, so it goes in findings as
+an open problem rather than a queued ticket. Better to write down why a tempting
+design is broken than to run it and discover the confound afterwards.
+
+The useful part: H22's recommendation replicates at a second source resolution
+with the same slope, so it is not an artefact of the 504 pipeline.

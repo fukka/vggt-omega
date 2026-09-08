@@ -988,3 +988,40 @@ h23_candidate:
     loss predicts the spread shrinks, an angular-distribution cause predicts it
     does not.
   cost: one GPU pass, same machinery, no new data.
+
+# ------------------------------------------------- H23 resolved 2026-09-08
+h23_outcome:
+  status: B1 and B2 REFUTED — the upsampling hypothesis is withdrawn
+  artifacts:
+    - autoresearch/experiments/h23-upsample/results/src504.json
+    - autoresearch/experiments/h23-upsample/results/src1008.json
+  analysis: autoresearch/experiments/h23-upsample/analysis.md
+  headline: >
+    Reading the source at 1008 instead of 504 — twice the real detail, from
+    natively 1408x1408 files, with byte-identical supervision — leaves the
+    ordering unchanged and the spread UNCHANGED (18.0 -> 18.5 pts on seq136,
+    11.7 -> 13.6 on dec132). The bar was a 30% shrink, falsified below 10%.
+  mechanisms_now_ruled_out:
+    - "H22: more rim pixels make a better fitting set. Refuted; it is the exact opposite."
+    - "H23: rim-expanding geometries lose because their extra pixels are interpolated. Refuted."
+  what_the_residual_must_be: >
+    Not pixel-level detail, since doubling it does nothing. It has to be about
+    WHERE the angular content sits across the image radius — same rays, same
+    sharpness, different arrangement. Rhymes with the border result, where
+    position mattered and area did not. NO THIRD GUESS IS OFFERED: two have
+    already been refuted on this one effect.
+  recommendation_unaffected: >
+    The monotone ordering reproduces at both source resolutions with the same
+    slope, so "fit on a rim-compressing geometry" is not an artefact of the 504
+    pipeline. Incidental: at 1008 every geometry is ~1.5-2 points worse on
+    seq136 — a uniform offset, the sharper input sitting further from what the
+    504-derived teacher cache represents. Matters only if that cache is ever
+    re-derived at higher resolution.
+
+do_not_run_as_designed:
+  probe: >
+    Scaling the same lens into a smaller disc to move content inward without
+    changing the radial mapping. It is exactly the probe the open mechanism
+    needs, and it is CONFOUNDED BY CONSTRUCTION: it introduces a border, and the
+    border result says a border next to the scored region is catastrophic.
+    Written down so nobody runs it and finds the confound afterwards.
