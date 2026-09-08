@@ -1826,3 +1826,27 @@ building a measurement in a new domain, look for one that already exists. H21 wa
 the same shape (check what is invariant before re-running the expensive model)
 and so was H25 (thirteen sequences sat extracted and unused while every claim
 rested on one).
+
+## 2026-09-08 — H37, and a git reconcile that cost more than the experiment
+
+**Report first.** The Chinese report gained §03v (H36 void + H36b external
+replication) and §08's uncertainty list now says external validity is *half*
+established. Artifact `ebba1289` republished at 35 sections (`667d3db`).
+
+**H37 launched, ran and closed inside the tick.** Protocol and runner locked
+before the run (`391f9dc`, `e9236fb`); the analysis script committed while the
+run was still going (`e2a...`) so the verdict logic could not be shaped by the
+numbers it would read. All three bars passed, sanity clean (`396a88d`).
+
+**Operational, worth writing down.** The remote repo had 77 untracked files
+colliding with the pull. I wrote a per-file loop to compare each against the
+origin blob and delete the identical ones. It hung after 14 files — process
+alive, no git children, no progress for 14 minutes. Killed it and used
+`git stash push -u`, one command, fully reversible, which worked immediately.
+*Do not hand-write a loop for something git has a native operation for.* Same
+family as the H36b lesson from two ticks ago: look for the thing that already
+exists before building it.
+
+**The local blocking waiter was OOM-killed a fourth time** at a 90 s poll
+interval. Re-armed at 150 s and it survived. The remote job was unaffected, as
+always; the cost is a turn to notice.

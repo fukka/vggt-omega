@@ -2818,3 +2818,77 @@ remain Aria-only.**
 exists.** The answer had been sitting in `results/depthfisheye-sws-v3/` the whole
 time. Same lesson as H21 (check what is invariant before re-running the expensive
 model) and H25 (thirteen sequences sat extracted and unused for a day).
+
+## H37 — the border ordering holds 13/13 at both ends, and seq136 predicted out of sample
+
+H29 named the one thing it could not support: *"DA3-Large is the best of the
+four on a clean frame and the worst with a border" was four backbones on ONE
+recording; H29 re-measured two.* This ran the missing two.
+
+| backbone | 13 recordings | seq136 (published) | z | range |
+|---|---|---|---|---|
+| `vggt_omega` | **+6.0% ± 4.6** | +29.1% | +5.01 | +1.2 … +19.0 |
+| `vggt` | **+48.4% ± 18.0** | +106.5% | +3.22 | +28.3 … +86.7 |
+| `da3:small` | **+59.0% ± 14.1** | +105.7% | +3.32 | +29.3 … +74.0 |
+| `da3:large` | **+268.9% ± 61.5** | +635.5% | +5.96 | +148.6 … +345.7 |
+
+**DA3-Large is worst on 13 of 13. VGGT-Omega is best on 13 of 13.** No
+exception at either end. The ordering is a property of the backbones.
+
+That matters beyond §4.2's warning. §4.3 chose the VGGT-Omega teacher *because*
+H17.6 measured it as the border-tolerant one. H31 had verified the choice was
+right; this verifies the reason was right. The two are not the same thing, and
+until now only one of them was checked on more than one recording.
+
+**The published gap was half the real one.** DA3-Large costs 21.8× VGGT-Omega
+on seq136 and **45.1×** on the thirteen-recording means. seq136 amplified
+DA3-Large by ×2.36 and VGGT-Omega by ×4.88, so it flattered the weaker side
+more and compressed the ratio — the same mechanism that made every ratio in
+H26/H27 improve when the absolute numbers came down. Fourth time now.
+
+*Do not quote the mean of per-recording ratios* (70.4 ± 61.8, range 16.7–255.2).
+VGGT-Omega's cost reaches +1.2%, so dividing by it explodes. H33's trap, live
+again; the ratio of means is the citable form.
+
+### The bar that was actually interesting
+
+H31 restated the seq136 pattern as *it amplifies the magnitude of whatever you
+do to it, in whichever direction the intervention points* — fitted on nine
+interventions that all already existed. An observation fitted on its own
+evidence explains everything and predicts nothing.
+
+So B3 pre-registered a prediction: a border hurts, so seq136 must read **high**
+for both new backbones. It read **z = +3.22** and **z = +5.01**.
+
+Eleven of eleven now, two of them genuinely out of sample, against three
+unperturbed measurements at −0.11, +0.07, +0.52. Still an observation. Still no
+mechanism offered. But it has now earned the standing instruction that came
+with it: *assume any intervention measured only on seq136 is inflated.*
+
+### What this does not say
+
+* **`vggt` vs `da3:small` is not separated.** Published as a near-tie (+106.5
+  vs +105.7); on thirteen recordings `vggt` is lower on 8 of 13, means +48.4 vs
+  +59.0, ranges overlapping almost completely. This experiment cannot order
+  them and should not be read as doing so.
+* **Border tolerance is still not a family property, and that is now firmer.**
+  H17.6 concluded it from one recording; here the two VGGT variants differ by
+  **8×** on thirteen-recording means with `vggt_omega` lower 13/13. Roll
+  robustness *is* a pretraining-family property (H17.2, +11% for both VGGT
+  variants); border tolerance is not. Two axes, each now on thirteen
+  recordings, and they disagree about the same pair of models.
+* **No mechanism.** Two mechanism guesses have already died on the neighbouring
+  effect (H22, H23). None is offered.
+
+### The pattern this is the third instance of
+
+The actionable variable keeps turning out to be *which model*, not *how big*:
+
+* rim penalty — VGGT-Omega best absolute **and** steepest field, but scaling DA3
+  does not fix the field;
+* roll — changing the pretraining family buys 4× (H35), scaling DA3-Small to
+  DA3-Large buys nothing (1.80% → 1.85%);
+* border — 45× between backbones (here), while DA3-Large, the *more accurate*
+  DA3 on a clean frame, is the worst of the four.
+
+Clean-benchmark accuracy does not predict any of the three robustness axes.
