@@ -33,6 +33,99 @@ plt.rcParams["font.family"] = ["PingFang SC", "Hiragino Sans GB", "Noto Sans CJK
                                "Arial Unicode MS", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
 
+# All display strings live here so the same run can produce a Chinese research
+# log and an English report from one set of numbers -- a figure translated by
+# hand is a figure that can drift from its data.
+LANGS = ("zh", "en")
+L = {}          # set by set_lang()
+
+STRINGS = {
+ "cells": {
+   "zh": {"fisheye_masked": ("①", "RAW · BLACK", "原始鱼眼 · 黑角"),
+          "persp_masked":   ("②", "RECT · BLACK", "矫正透视 · 黑楔形"),
+          "fisheye_full":   ("③", "RAW · FILLED", "原始鱼眼 · 真值补全"),
+          "persp_full":     ("④", "RECT · FILLED", "矫正透视 · 真值补全"),
+          "persp_crop":     ("⑤", "RECT · CROP", "内接矫正 · 天然无黑区"),
+          "persp_crop_lores": ("⑤ᵇ", "CROP · BLURRED", "内接矫正,降到 ④ 的采样率")},
+   "en": {"fisheye_masked": ("1", "RAW · BLACK", "raw fisheye, black corners"),
+          "persp_masked":   ("2", "RECT · BLACK", "rectified, black wedges"),
+          "fisheye_full":   ("3", "RAW · FILLED", "raw fisheye, true corners"),
+          "persp_full":     ("4", "RECT · FILLED", "rectified, true wedges"),
+          "persp_crop":     ("5", "RECT · CROP", "inscribed crop, no black"),
+          "persp_crop_lores": ("5b", "CROP · BLURRED", "crop, bandlimited to 4")},
+ },
+ "zh": {
+   "input": "模型输入", "pred": "预测深度", "errmap": "AbsRel 图", "gt": "真值深度(渲染 Z-pass)",
+   "single": "单帧", "multi": "8 帧", "cbar": "AbsRel(0–0.3 截断)",
+   "panel_title": "窗口 {wi:02d} · {seq}/{fr} · 五格同一帧;评分区以外为灰;①③ 同区、②④ 同区、⑤ 全幅(各自区域)",
+   "black_frac": "纯黑像素 {blk:.2f}% · 评分区 {gr:.1f}%",
+   "traj_gt": "真值", "along": "沿路径 (m)", "across": "横向 (m)",
+   "traj_win": "窗口 {i:02d} · {seq} · 起始 {fr}",
+   "traj_title": "8 帧窗口相机轨迹 · 预测经 Sim(3) 对齐到真值后画在该窗口的主轴坐标系里(米)· ★ = 第一帧 · 注意横纵尺度不同",
+   "fov_title": "相机头推断的水平 FoV · {lab}", "fov_y": "FoV_h (deg)",
+   "fov_gt24": "②④ 真值 {gt:.1f}°", "fov_gt5": "⑤ 真值 {gt:.1f}°",
+   "eff_x": ["鱼眼\n③−①", "透视\n④−②", "交互项\n(④−②)−(③−①)"],
+   "eff_titles": ["Δ AbsRel · 单帧(真值 − 黑;负 = 真值更好)", "Δ AbsRel · 8 帧",
+                  "Δ AUC@30 · 8 帧(正 = 真值更好)", "Δ ATE (m) · 8 帧(负 = 真值更好)"],
+   "eff_sup": "每个点 = 一个窗口的配对差;方块 = 均值,须 = 按窗口聚类的 95% bootstrap CI;* = CI 不含零",
+   "crop_titles": ["Δ AbsRel · 单帧 · 各自区域", "Δ AbsRel · 单帧 · 公共区域(⑤ 的)",
+                   "Δ AbsRel · 8 帧 · 各自区域", "Δ AbsRel · 8 帧 · 公共区域",
+                   "Δ AUC@30 · 8 帧(正 = ⑤ 更好)"],
+   "crop_sup": "⑤ 内接裁剪 减 其它格子:点 = 一个窗口,方块 = 均值,须 = 按窗口聚类 95% CI,* = 不含零;深度负 = ⑤ 更好",
+   "f4_pairs": ["④ 补真值 124.7°", "⑤ᵇ 降采样 106.9°", "⑤ 裁剪 106.9°"],
+   "f4_t0": "AbsRel · 最小公共区域\n(空心 = 单帧,实心 = 8 帧)",
+   "f4_t1": "Δ AbsRel · 公共区域(负 = ⑤ 更好)",
+   "f4_x1": ["⑤−④\n单帧", "⑤−⑤ᵇ\n单帧", "⑤−④\n8 帧", "⑤−⑤ᵇ\n8 帧"],
+   "f4_t2": "相机位姿 AUC@30 · 8 帧(越高越好)",
+   "f4_t3": "多帧收益(单帧 − 8 帧 AbsRel;正 = 多帧有用)",
+   "f4_sup": "⑤ 内接裁剪 vs ④ 补满真值的宽视场 · ⑤ᵇ = ⑤ 降到 ④ 的采样率(把「视场」与「清晰度」拆开)· * = 95% CI 不含零",
+ },
+ "en": {
+   "input": "input to the model", "pred": "predicted depth", "errmap": "relative error",
+   "gt": "ground truth (rendered)",
+   "single": "1 frame", "multi": "8 frames", "cbar": "AbsRel (clipped at 0.3)",
+   "panel_title": "Window {wi:02d} · {seq}/{fr} — one frame, all five inputs. Grey = not scored.",
+   "black_frac": "pure black {blk:.2f}% · scored {gr:.1f}%",
+   "traj_gt": "ground truth", "along": "along path (m)", "across": "across path (m)",
+   "traj_win": "Window {i:02d} · {seq} · from {fr}",
+   "traj_title": "Camera path of each 8-frame window, predictions Sim(3)-aligned to truth and drawn in that window's own axes (metres). Star = first frame. Note the axes are not equally scaled.",
+   "fov_title": "Field of view the camera head infers · {lab}", "fov_y": "horizontal FoV (deg)",
+   "fov_gt24": "true FoV of 2 and 4: {gt:.1f}°", "fov_gt5": "true FoV of 5: {gt:.1f}°",
+   "eff_x": ["fisheye\n3 − 1", "rectified\n4 − 2", "interaction\n(4−2) − (3−1)"],
+   "eff_titles": ["AbsRel change, 1 frame\n(true content minus black; lower is better)",
+                  "AbsRel change, 8 frames",
+                  "AUC@30 change, 8 frames\n(higher is better)",
+                  "ATE change (m), 8 frames\n(lower is better)"],
+   "eff_sup": "Each dot is one window. Square = mean over 96 frames, whisker = 95% bootstrap CI resampling windows. * = interval excludes zero.",
+   "crop_titles": ["AbsRel, 1 frame, own regions", "AbsRel, 1 frame, shared region",
+                   "AbsRel, 8 frames, own regions", "AbsRel, 8 frames, shared region",
+                   "AUC@30, 8 frames (higher = 5 better)"],
+   "crop_sup": "Input 5 (inscribed crop) minus each other input. Dot = one window, square = mean, whisker = 95% CI over windows. Negative depth = 5 is better.",
+   "f4_pairs": ["4  wide + filled\n124.7°", "5b  crop, blurred\n106.9°", "5  crop\n106.9°"],
+   "f4_t0": "AbsRel on the shared region\n(hollow = 1 frame, solid = 8 frames)",
+   "f4_t1": "AbsRel difference on the shared region\n(negative = 5 is better)",
+   "f4_x1": ["5 − 4\n1 frame", "5 − 5b\n1 frame", "5 − 4\n8 frames", "5 − 5b\n8 frames"],
+   "f4_t2": "Camera pose AUC@30, 8 frames\n(higher is better)",
+   "f4_t3": "Gain from using 8 frames instead of 1\n(positive = multi-frame helps)",
+   "f4_sup": "Input 5 (crop) against input 4 (wide, wedges filled with true content). 5b is 5 blurred to 4's sampling rate, which separates 'field of view' from 'sharpness'. * = 95% CI excludes zero.",
+ },
+}
+
+
+def set_lang(lang):
+    """Point the module's labels at one language, once, before any figure."""
+    global L, CELLS, CTRL, LABEL
+    assert lang in LANGS
+    L = STRINGS[lang]
+    c = STRINGS["cells"][lang]
+    CELLS = OrderedDict((k, c[k]) for k in
+                        ("fisheye_masked", "persp_masked", "fisheye_full", "persp_full", "persp_crop"))
+    CTRL = ("persp_crop_lores", c["persp_crop_lores"])
+    LABEL = dict(CELLS, **{CTRL[0]: CTRL[1]})
+    if lang == "en":
+        plt.rcParams["font.family"] = ["Helvetica Neue", "Arial", "DejaVu Sans"]
+
+
 CELLS = OrderedDict([
     ("fisheye_masked", ("①", "RAW · BLACK", "原始鱼眼 · 黑角")),
     ("persp_masked",   ("②", "RECT · BLACK", "矫正透视 · 黑楔形")),
@@ -177,8 +270,8 @@ def fig_panels(raw_dir, res_by_mode, wi, out_img):
     """One window's first frame: for each cell, input | pred s1 | err s1 | pred s8 | err s8 | GT."""
     rows = list(CELLS)
     fig, axes = plt.subplots(len(rows), 6, figsize=(18, 3.15 * len(rows)), constrained_layout=True)
-    col_titles = ["模型输入", "预测深度 · single", "AbsRel 图 · single",
-                  "预测深度 · 8-frame", "AbsRel 图 · 8-frame", "真值深度(渲染 Z-pass)"]
+    col_titles = [L["input"], f'{L["pred"]} · {L["single"]}', f'{L["errmap"]} · {L["single"]}',
+                  f'{L["pred"]} · {L["multi"]}', f'{L["errmap"]} · {L["multi"]}', L["gt"]]
     fdir = None
     for r, st in enumerate(rows):
         # At seq_len=1 every "window" is one frame, so the single-frame dump of
@@ -193,11 +286,11 @@ def fig_panels(raw_dir, res_by_mode, wi, out_img):
         fdir = str(z1["frame_dir"])
         gt, m = z1["gt"].astype(np.float32), z1["mask"].astype(bool)
         vmin, vmax = np.percentile(gt[m], [2, 98])
-        cid, cname, zh = CELLS[st]
+        cid, cname, zh = LABEL[st]
         ax = axes[r]
         ax[0].imshow(z1["rgb"])
         ax[0].set_ylabel(f"{cid} {cname}\n{zh}", fontsize=11, fontweight="bold")
-        for c, (z, sl, lab) in enumerate([(z1, 1, "single"), (z8, 8, "8-frame")]):
+        for c, (z, sl, lab) in enumerate([(z1, 1, L["single"]), (z8, 8, L["multi"])]):
             pred = z["pred"].astype(np.float32)
             pm = res_by_mode["single" if sl == 1 else "8-frame"][st]["_per_frame_metrics"][fdir]
             ax[1 + 2 * c].imshow(np.where(m, pred, np.nan), vmin=vmin, vmax=vmax, cmap="turbo")
@@ -210,9 +303,9 @@ def fig_panels(raw_dir, res_by_mode, wi, out_img):
         if r == 0:
             for a, t in zip(ax, col_titles):
                 a.set_title(t, fontsize=11.5, loc="left")
-    fig.colorbar(im, ax=axes[:, 4].tolist(), fraction=0.03, pad=0.01, shrink=.6, label="AbsRel(0–0.3 截断)")
+    fig.colorbar(im, ax=axes[:, 4].tolist(), fraction=0.03, pad=0.01, shrink=.6, label=L["cbar"])
     seq = os.path.basename(os.path.dirname(fdir)).replace("Apartment_release_", "")
-    fig.suptitle(f"窗口 {wi:02d} · {seq}/{os.path.basename(fdir)} · 五格同一帧;评分区以外为灰;①③ 同区、②④ 同区、⑤ 全幅(各自区域)",
+    fig.suptitle(L["panel_title"].format(wi=wi, seq=seq, fr=os.path.basename(fdir)),
                  fontsize=13, x=0.005, ha="left")
     fig.savefig(out_img, dpi=62, facecolor="white", pil_kwargs={"quality": 86, "optimize": True})
     plt.close(fig)
@@ -228,7 +321,8 @@ def fig_inputs(raw_dir, wi, out_png):
             a.axis("off"); continue
         a.imshow(z["rgb"]); cid, cname, zh = LABEL[st]
         blk = float((z["rgb"].max(-1) == 0).mean()) * 100
-        a.set_title(f"{cid} {cname}\n{zh}\n纯黑像素 {blk:.2f}% · 评分区 {z['mask'].mean()*100:.1f}%", fontsize=9.5)
+        a.set_title(f"{cid} {cname}\n{zh}\n" + L["black_frac"].format(blk=blk, gr=z["mask"].mean() * 100),
+                    fontsize=9.5)
         a.set_xticks([]); a.set_yticks([])
     fig.tight_layout()
     fig.savefig(out_png, dpi=72, bbox_inches="tight", facecolor="white",
@@ -272,7 +366,7 @@ def fig_trajectories(res8, out_png, max_windows=12):
         _u, _s, vt = np.linalg.svd(gt - mu)
         P = vt[:2]                      # along-path, cross-path
         g2 = (gt - mu) @ P.T
-        ax.plot(g2[:, 0], g2[:, 1], "k-o", lw=2.4, ms=5.5, label="真值", zorder=5)
+        ax.plot(g2[:, 0], g2[:, 1], "k-o", lw=2.4, ms=5.5, label=L["traj_gt"], zorder=5)
         ax.plot(g2[0, 0], g2[0, 1], "k*", ms=14, zorder=6)
         for st in CELLS:
             w = res8[st]["_windows"].get(wk)
@@ -283,18 +377,17 @@ def fig_trajectories(res8, out_png, max_windows=12):
                 continue
             _, _, al = _umeyama(p, gt)
             a2 = (al - mu) @ P.T
-            cid = CELLS[st][0]
+            cid = LABEL[st][0]
             ax.plot(a2[:, 0], a2[:, 1], "-o", color=COLORS[st], lw=1.4, ms=3.8, alpha=.9,
                     label=f"{cid}  AUC@30 {w['auc30']:.2f} · ATE {w['ate_m']*100:.0f} cm · rot {w['rot_err_deg']:.1f}°")
         seq = wk.split("/")[-2].replace("Apartment_release_", "")
-        ax.set_title(f"窗口 {i:02d} · {seq} · 起始 {wk.split('/')[-1]}", fontsize=10)
-        ax.set_xlabel("沿路径 (m)", fontsize=9); ax.set_ylabel("横向 (m)", fontsize=9)
+        ax.set_title(L["traj_win"].format(i=i, seq=seq, fr=wk.split("/")[-1]), fontsize=10)
+        ax.set_xlabel(L["along"], fontsize=9); ax.set_ylabel(L["across"], fontsize=9)
         ax.grid(alpha=.3); ax.tick_params(labelsize=8)
         ax.legend(fontsize=7.5, loc="best", framealpha=.9)
     for j in range(n, nrow * ncol):
         axes[j // ncol, j % ncol].axis("off")
-    fig.suptitle("8 帧窗口相机轨迹 · 预测经 Sim(3) 对齐到真值后画在该窗口的主轴坐标系里(米)· ★ = 第一帧 · 注意横纵尺度不同",
-                 fontsize=12, x=0.005, ha="left")
+    fig.suptitle(L["traj_title"], fontsize=12, x=0.005, ha="left")
     fig.savefig(out_png, dpi=80, facecolor="white")
     plt.close(fig)
 
@@ -302,7 +395,7 @@ def fig_trajectories(res8, out_png, max_windows=12):
 def fig_fov(res1, res8, out_png):
     fig, axes = plt.subplots(1, 2, figsize=(14.5, 4.4), sharey=True)
     rng = np.random.default_rng(0)
-    for ax, (res, lab) in zip(axes, [(res1, "single-frame"), (res8, "8-frame")]):
+    for ax, (res, lab) in zip(axes, [(res1, L["single"]), (res8, L["multi"])]):
         for i, st in enumerate(CELLS):
             r = res[st]
             f = np.array([v[0] for v in r["_per_frame_fov"].values()])
@@ -311,13 +404,13 @@ def fig_fov(res1, res8, out_png):
             ax.text(i, f.max() + 1.2, f"{f.mean():.1f}°±{f.std():.1f}", ha="center", fontsize=9)
         gt = res["persp_full"]["gt_fov_h_deg"]
         ax.axhline(gt, color="#a86a15", ls="--", lw=1.2)
-        ax.text(len(CELLS) - .55, gt + .6, f"②④ 真值 {gt:.1f}°", ha="right", fontsize=9, color="#a86a15")
+        ax.text(len(CELLS) - .55, gt + .6, L["fov_gt24"].format(gt=gt), ha="right", fontsize=9, color="#a86a15")
         gtc = res["persp_crop"]["gt_fov_h_deg"]
         ax.axhline(gtc, color=COLORS["persp_crop"], ls=":", lw=1.2)
-        ax.text(-0.45, gtc + .6, f"⑤ 真值 {gtc:.1f}°", ha="left", fontsize=9, color=COLORS["persp_crop"])
+        ax.text(-0.45, gtc + .6, L["fov_gt5"].format(gt=gtc), ha="left", fontsize=9, color=COLORS["persp_crop"])
         ax.set_xticks(range(len(CELLS))); ax.set_xticklabels([f"{CELLS[s][0]} {CELLS[s][1]}" for s in CELLS], fontsize=8.5)
-        ax.set_title(f"相机头推断的水平 FoV · {lab}", fontsize=11, loc="left"); ax.grid(axis="y", alpha=.3)
-    axes[0].set_ylabel("FoV_h (deg)")
+        ax.set_title(L["fov_title"].format(lab=lab), fontsize=11, loc="left"); ax.grid(axis="y", alpha=.3)
+    axes[0].set_ylabel(L["fov_y"])
     fig.tight_layout()
     fig.savefig(out_png, dpi=80, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -325,10 +418,8 @@ def fig_fov(res1, res8, out_png):
 
 def fig_effects(effects, out_png):
     """Per-window paired deltas (dots) with the clustered mean ± CI (bar), depth and pose."""
-    panels = [("AbsRel", "single", "Δ AbsRel · single(真值 − 黑;负 = 真值更好)"),
-              ("AbsRel", "8-frame", "Δ AbsRel · 8-frame"),
-              ("auc30", "8-frame", "Δ AUC@30 · 8-frame(正 = 真值更好)"),
-              ("ate_m", "8-frame", "Δ ATE (m) · 8-frame(负 = 真值更好)")]
+    panels = list(zip(("AbsRel", "AbsRel", "auc30", "ate_m"),
+                      ("single", "8-frame", "8-frame", "8-frame"), L["eff_titles"]))
     fig, axes = plt.subplots(1, 4, figsize=(18, 4.2))
     for ax, (metric, mode, title) in zip(axes, panels):
         e = effects[mode][metric]
@@ -346,9 +437,9 @@ def fig_effects(effects, out_png):
                     ha="left", va="center", fontsize=9, color=col, fontweight="bold")
         ax.axhline(0, color="k", lw=.8)
         ax.set_xlim(-0.5, 2.85)
-        ax.set_xticks(range(3)); ax.set_xticklabels(["鱼眼\n③−①", "透视\n④−②", "交互项\n(④−②)−(③−①)"], fontsize=9)
+        ax.set_xticks(range(3)); ax.set_xticklabels(L["eff_x"], fontsize=9)
         ax.set_title(title, fontsize=10.5, loc="left"); ax.grid(axis="y", alpha=.3)
-    fig.suptitle("每个点 = 一个窗口的配对差;方块 = 均值,须 = 按窗口聚类的 95% bootstrap CI;* = CI 不含零", fontsize=11, x=0.01, ha="left")
+    fig.suptitle(L["eff_sup"], fontsize=11, x=0.01, ha="left")
     fig.tight_layout()
     fig.savefig(out_png, dpi=80, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -356,11 +447,10 @@ def fig_effects(effects, out_png):
 
 def fig_crop_effects(numbers, out_png):
     """persp_crop minus each other arm, per window, own vs common region, depth and pose."""
-    panels = [("crop_effects_own", "single", "AbsRel", "Δ AbsRel · 单帧 · 各自区域"),
-              ("crop_effects_common", "single", "AbsRel", "Δ AbsRel · 单帧 · 公共区域(⑤ 的)"),
-              ("crop_effects_own", "8-frame", "AbsRel", "Δ AbsRel · 8 帧 · 各自区域"),
-              ("crop_effects_common", "8-frame", "AbsRel", "Δ AbsRel · 8 帧 · 公共区域"),
-              ("crop_effects_own", "8-frame", "auc30", "Δ AUC@30 · 8 帧(正 = ⑤ 更好)")]
+    panels = list(zip(("crop_effects_own", "crop_effects_common", "crop_effects_own",
+                       "crop_effects_common", "crop_effects_own"),
+                      ("single", "single", "8-frame", "8-frame", "8-frame"),
+                      ("AbsRel", "AbsRel", "AbsRel", "AbsRel", "auc30"), L["crop_titles"]))
     fig, axes = plt.subplots(1, len(panels), figsize=(4.2 * len(panels), 4.3))
     for ax, (key, mode, metric, title) in zip(axes, panels):
         e = numbers[key][mode][metric]
@@ -377,10 +467,9 @@ def fig_crop_effects(numbers, out_png):
             ax.text(i + 0.18, cb["mean"], fmt.format(cb["mean"]) + ("*" if cb["excludes_zero"] else ""),
                     ha="left", va="center", fontsize=8.5, color=col, fontweight="bold")
         ax.axhline(0, color="k", lw=.8); ax.set_xlim(-0.5, len(CROP_VS) - 0.2)
-        ax.set_xticks(range(len(CROP_VS))); ax.set_xticklabels([f"⑤−{LABEL[s][0]}" for s in CROP_VS], fontsize=9)
+        ax.set_xticks(range(len(CROP_VS))); ax.set_xticklabels([f"{LABEL['persp_crop'][0]}−{LABEL[s][0]}" for s in CROP_VS], fontsize=9)
         ax.set_title(title, fontsize=10, loc="left"); ax.grid(axis="y", alpha=.3)
-    fig.suptitle("⑤ 内接裁剪 减 其它格子:点 = 一个窗口,方块 = 均值,须 = 按窗口聚类 95% CI,* = 不含零;深度负 = ⑤ 更好",
-                 fontsize=11, x=0.005, ha="left")
+    fig.suptitle(L["crop_sup"], fontsize=11, x=0.005, ha="left")
     fig.tight_layout()
     fig.savefig(out_png, dpi=80, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -389,8 +478,7 @@ def fig_crop_effects(numbers, out_png):
 def fig_five_vs_four(numbers, out_png):
     """The question the whole cell-5 arm exists for, in one figure."""
     fig, axes = plt.subplots(1, 4, figsize=(18, 4.4))
-    pairs = [("persp_full", "④ 补真值 124.7°"), ("persp_crop_lores", "⑤ᵇ 降采样 106.9°"),
-             ("persp_crop", "⑤ 裁剪 106.9°")]
+    pairs = list(zip(("persp_full", "persp_crop_lores", "persp_crop"), L["f4_pairs"]))
 
     ax = axes[0]                                   # depth on the common region
     for j, (mode, mk) in enumerate((("single", "o"), ("8-frame", "s"))):
@@ -400,7 +488,7 @@ def fig_five_vs_four(numbers, out_png):
                     mfc=COLORS[st] if j else "white", mew=2)
     ax.set_xticks(range(3)); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
     ax.set_xlim(-.5, 2.5); ax.margins(y=.16)
-    ax.set_title("AbsRel · 最小公共区域\n(空心 = 单帧,实心 = 8 帧)", fontsize=10.5, loc="left")
+    ax.set_title(L["f4_t0"], fontsize=10.5, loc="left")
     ax.set_ylabel("AbsRel ↓"); ax.grid(axis="y", alpha=.3)
 
     ax = axes[1]                                   # the two crop contrasts
@@ -421,8 +509,8 @@ def fig_five_vs_four(numbers, out_png):
             ax.text(x + .12, cb["mean"], f"{cb['mean']:+.4f}" + ("*" if cb["excludes_zero"] else ""),
                     fontsize=8.5, color=COLORS[st], fontweight="bold", va="center")
     ax.axhline(0, color="k", lw=.8); ax.set_xlim(-.4, 3.6)
-    ax.set_xticks([0, .7, 2, 2.7]); ax.set_xticklabels(["⑤−④\n单帧", "⑤−⑤ᵇ\n单帧", "⑤−④\n8 帧", "⑤−⑤ᵇ\n8 帧"], fontsize=8.5)
-    ax.set_title("Δ AbsRel · 公共区域(负 = ⑤ 更好)", fontsize=10.5, loc="left"); ax.grid(axis="y", alpha=.3)
+    ax.set_xticks([0, .7, 2, 2.7]); ax.set_xticklabels(L["f4_x1"], fontsize=8.5)
+    ax.set_title(L["f4_t1"], fontsize=10.5, loc="left"); ax.grid(axis="y", alpha=.3)
 
     ax = axes[2]                                   # pose
     P = numbers["pose"]["8-frame"]
@@ -433,7 +521,7 @@ def fig_five_vs_four(numbers, out_png):
         ax.text(i, P[st]["auc30"] + .012, f"{P[st]['auc30']:.3f}\nATE {P[st]['ate_m']*100:.1f}cm",
                 ha="center", fontsize=9)
     ax.set_xticks(range(3)); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
-    ax.set_ylim(0, 1.12); ax.set_title("相机位姿 AUC@30 · 8 帧(越高越好)", fontsize=10.5, loc="left")
+    ax.set_ylim(0, 1.18); ax.set_title(L["f4_t2"], fontsize=10.5, loc="left")
     ax.grid(axis="y", alpha=.3)
 
     ax = axes[3]                                   # multi-frame gain per setting
@@ -448,10 +536,9 @@ def fig_five_vs_four(numbers, out_png):
                 color=COLORS[st], fontweight="bold", va="center")
     ax.axhline(0, color="k", lw=.8); ax.set_xlim(-.4, 2.9)
     ax.set_xticks(range(3)); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
-    ax.set_title("多帧收益(单帧 − 8 帧 AbsRel;正 = 多帧有用)", fontsize=10.5, loc="left")
+    ax.set_title(L["f4_t3"], fontsize=10.5, loc="left")
     ax.grid(axis="y", alpha=.3)
-    fig.suptitle("⑤ 内接裁剪 vs ④ 补满真值的宽视场 · ⑤ᵇ = ⑤ 降到 ④ 的采样率(把「视场」与「清晰度」拆开)· * = 95% CI 不含零",
-                 fontsize=11, x=0.005, ha="left")
+    fig.suptitle(L["f4_sup"], fontsize=11, x=0.005, ha="left")
     fig.tight_layout()
     fig.savefig(out_png, dpi=80, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -463,7 +550,9 @@ def main():
     ap.add_argument("--run", required=True, help="the --region own run (all settings)")
     ap.add_argument("--run-crop", required=True, help="the --region crop run (five arms)")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--lang", default="zh", choices=LANGS)
     args = ap.parse_args()
+    set_lang(args.lang)
     results = json.load(open(os.path.join(args.run, "results.json")))
     report = open(os.path.join(args.run, "report.txt")).read()
     n = check_against_report(results, report)
