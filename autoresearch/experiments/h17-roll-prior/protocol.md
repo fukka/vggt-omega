@@ -545,3 +545,29 @@ costs in practice.
 Scale: 240 fitting frames, 240 evaluation frames, one backbone, one seed for the
 GPU pass; the five draws per cell are the uncertainty that matters here, since
 the fit is least squares and the sampling of frames is the random part.
+
+## H18.6 — does the smooth form rescue a bad fit? (locked 2026-09-08, before running)
+
+Written during the lambda_63 outage, from an analysis that needed no GPU: a
+quadratic in theta/theta_max captures 94–99% of the Apartment-fitted curves'
+variation and only 7–59% of the LiteOffice ones. The working fits are smooth;
+the failing one is not.
+
+**Prediction (locked).** Re-fit the LiteOffice curve with `a(theta)` and
+`b(theta)` each constrained to a quadratic — six parameters instead of sixteen —
+and its cross-room transfer **improves**, recovering at least half the gap to
+the Apartment-fitted curve on the two Apartment sequences (Apartment-fitted
+gives −16.6% / −6.5%; the raw LiteOffice fit gives −12.9% / −6.2%, and the
+range-matched one −7.3% / +1.2%, so the range-matched pair is where the room to
+improve is).
+
+**And the smooth form must not cost anything where the fit was already good**:
+the Apartment curve re-fitted as a quadratic must stay within 1 point of its
+sixteen-parameter version on all four evaluation sequences.
+
+**Falsified if** smoothing leaves the LiteOffice transfer unchanged or worse —
+then the jaggedness is real structure rather than estimation noise, and the
+"smoothness as a fit-quality check" reading in findings.md must be withdrawn.
+
+Runs alongside H18.5 in the same pass; it is two extra least-squares fits on
+samples that pass will already have cached.

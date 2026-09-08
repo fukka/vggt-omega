@@ -1424,3 +1424,43 @@ This is the second claim I have had to walk back in this session — the first w
 the black-wedge attribution in section 02. Both were published before the
 control that would have caught them existed. In both cases the control was
 cheap and I ran it one tick later.
+
+## H18.6 (CPU, during the outage) — the 16 numbers are really 6, and smoothness is a free fit-quality check
+
+Purely descriptive: fit a low-order polynomial in theta/theta_max through the
+eight per-bin coefficients already computed, and ask how much of each curve it
+captures. No GPU, no new data.
+
+| fit | a: R^2 quadratic | b: R^2 quadratic | max residual as % of that curve's own spread |
+|---|---|---|---|
+| Apartment, DA3-Small | 0.936 | 0.993 | a 13.9%, b 3.3% |
+| Apartment, DA3-Large | 0.989 | 0.979 | a 5.9%, b 7.1% |
+| LiteOffice, raw | 0.301 | 0.329 | a 38.3%, b 33.1% |
+| LiteOffice, range-matched | 0.590 | 0.071 | a 33.0%, b 43.7% |
+
+Two things follow.
+
+**1. The working curves are smooth, so 16 numbers are really 6.** A quadratic in
+each of `a` and `b` captures 94–99% of the Apartment fits' variation. If that
+holds up, the calibration procedure ships **three coefficients for the exponent
+and three for the offset**, not sixteen bin values — and a smooth form
+extrapolates to bin edges instead of stepping across them.
+
+**2. Smoothness is a fit-quality check that costs nothing and needs no held-out
+data.** The LiteOffice curves — which H18.3 showed transfer badly and which I
+described as "jagged" from eyeballing the numbers — are quantitatively not
+smooth: a quadratic misses a third to a half of their variation. So "is a
+quadratic enough?" flags a bad calibration **at calibration time**, before any
+evaluation. That is exactly what a deployment procedure needs, since in
+deployment there is no held-out room to check against.
+
+**Caveat, and it is not small.** These are eight points fitted with three
+parameters, so the absolute R^2 values are optimistic. The signal here is the
+**contrast** — 0.94–0.99 against 0.07–0.59, consistent across four independent
+fits — not any single number.
+
+**Prediction this generates, for the box (added to H18.5's protocol).** If the
+LiteOffice curve's jaggedness is noise rather than structure, then *smoothing it
+with the quadratic form should improve its transfer*. If smoothing does not help,
+the jaggedness is real and the smooth-form story is wrong. Either answer is
+worth having and neither has been tested.
