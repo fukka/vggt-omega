@@ -1,0 +1,40 @@
+{
+ "seq": "Apartment_release_clean_seq140_M1292",
+ "frames": 20,
+ "models": {
+  "vggt_omega": {
+   "absrel": {
+    "direct": 0.08661323586870144,
+    "rt": 0.08685455090583799,
+    "masked": 0.08854359647537306,
+    "rt_masked": 0.08884844252173542
+   },
+   "cost_pct": {
+    "direct": 0.0,
+    "rt": 0.2786121944483799,
+    "masked": 2.228713183742359,
+    "rt_masked": 2.5806756099291395
+   },
+   "multiplicative_pct": 2.513534844899934,
+   "black_direct": 0.0,
+   "black_rotated": 0.0,
+   "crop_px": 624,
+   "canvas_px": 896,
+   "fov_big_deg": 79.31853424278235
+  }
+ },
+ "config": {
+  "seq": "/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq140_M1292",
+  "delta_deg": 30.0,
+  "size": 504,
+  "max_frames": 20,
+  "models": "vggt_omega",
+  "omega_ckpt": "checkpoints/VGGT-Omega-1B-512/model.pt",
+  "view_fov": 60.0,
+  "view_size": 630,
+  "common_theta_deg": 28.0,
+  "depth_max_m": 10.0,
+  "device": "cuda",
+  "out": "autoresearch/experiments/h40-border-vs-resample/results/om_seq140.json"
+ }
+}

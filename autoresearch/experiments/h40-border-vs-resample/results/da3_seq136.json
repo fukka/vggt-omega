@@ -1,0 +1,40 @@
+{
+ "seq": "Apartment_release_clean_seq136_M1292",
+ "frames": 20,
+ "models": {
+  "da3:small": {
+   "absrel": {
+    "direct": 0.14417421915634265,
+    "rt": 0.14704897915323434,
+    "masked": 0.32490149811033614,
+    "rt_masked": 0.33711333276135425
+   },
+   "cost_pct": {
+    "direct": 0.0,
+    "rt": 1.9939487196211525,
+    "masked": 125.35339536537573,
+    "rt_masked": 133.82358838773266
+   },
+   "multiplicative_pct": 129.84682650688643,
+   "black_direct": 0.0,
+   "black_rotated": 0.0,
+   "crop_px": 630,
+   "canvas_px": 896,
+   "fov_big_deg": 78.7802308619085
+  }
+ },
+ "config": {
+  "seq": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq136_M1292",
+  "delta_deg": 30.0,
+  "size": 504,
+  "max_frames": 20,
+  "models": "da3:small",
+  "omega_ckpt": "checkpoints/VGGT-Omega-1B-512/model.pt",
+  "view_fov": 60.0,
+  "view_size": 630,
+  "common_theta_deg": 28.0,
+  "depth_max_m": 10.0,
+  "device": "cuda",
+  "out": "autoresearch/experiments/h40-border-vs-resample/results/da3_seq136.json"
+ }
+}
