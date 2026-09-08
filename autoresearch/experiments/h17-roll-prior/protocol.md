@@ -205,3 +205,59 @@ DA3-Small only, seq136, 20 frames, one seed — same scale as every other arm in
 h16/h17, so the comparison is like-for-like. This does not establish the
 boundary effect across backbones; H17.2 showed roll sensitivity itself is
 backbone-dependent, so the boundary sensitivity may be too.
+
+## H17.6 — is border sensitivity backbone-dependent too? (locked 2026-09-08, before running)
+
+### Why this one has a payoff, not just an answer
+
+H17.2 found roll sensitivity is a **pretraining-data** property: multi-view
+backbones rise +11% at 30 deg where single-image ones rise +46-52%. The dose
+curve explicitly says nothing about VGGT — it is DA3-Small only — so the
+standing rule ("a hard border wrecks the band next to it") is, as measured, a
+rule about one backbone family.
+
+If it turns out to be a DA3 property rather than a general one, one specific
+door opens. **H14's central tension was accuracy vs coverage**: the 95 deg
+teacher is accurate but sees 70% of the rim band; the 110 deg teacher covers
+100% of the cone but 22.5% of its frame is black and it inverted in every zone.
+Section 02e now says that inversion was the black corners sitting *against*
+`near_rim`. A backbone that tolerates a border adjacent to the zone of interest
+could therefore run the 110 deg teacher and get **100% rim coverage with a
+teacher that is still accurate** — which is exactly what H14 needed and could
+not have.
+
+### Method
+
+Two measurements per backbone, both from code already written:
+
+1. **Adjacent** (`roll_boundary.py`, extended with `--models`): mask the 89 deg
+   rectified view to its inscribed disc, score on theta <= 44 deg, i.e. right
+   against the border. DA3-Small pays +106% all-image / +141% near_rim at 0 deg.
+2. **Distant** (same run, 30 deg roll included): whether the border also
+   amplifies roll for that backbone, as it does for DA3-Small (+47.6% -> +84%).
+
+View size rounded to each backbone's patch (624 for VGGT-Omega, 630 otherwise),
+as in H17.2; the disc is defined on the frame so it is the same angular cap
+either way.
+
+### Prediction (locked)
+
+**Both VGGT variants pay under +40% all-image at 0 deg for the adjacent
+border**, against DA3-Small's +106% — the same direction and roughly the same
+factor as the roll result.
+
+**Falsified if** either VGGT variant pays more than DA3-Small, or if all four
+land within 20 percentage points (which would make border sensitivity a
+property of the depth task rather than of pretraining, unlike roll).
+
+### The decision this feeds
+
+If both VGGT variants come in under +40%, the next H14 experiment is
+**a 110 deg VGGT teacher**: full cone coverage, no coverage/accuracy trade-off,
+still label-free. That would be tested against the existing `rect`
+(95 deg DA3) and `roundtrip` arms on the same two held-out sequences, with
+`decoration_seq132` primary. If they come in high, the 110 deg door stays shut
+and H14's next version remains "narrower teacher + rim-band mask" as recorded.
+
+Not a bar, recorded: one sequence, 20 frames, one seed, same scale as every
+other arm in h16/h17.
