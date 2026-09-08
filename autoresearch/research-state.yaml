@@ -2064,9 +2064,42 @@ h43_asymmetry_origin:
     EXTRAPOLATED VALUES; B2 WAS NOT — vggt's true-zero Delta is measured and its
     device-origin Delta is positive under both extrapolations and on 10 and 12
     of 13. That is why B2 is the one quoted.
-  followup_in_flight: >
-    Wide-angle run (deltas 0, +-26, +-30, four backbones, 13 recordings) to
-    remove the extrapolation and make the comparison angle-matched with H32.
+  SUPERSEDED_BY_H43B: >
+    The wide-angle run finished and the extrapolation is gone. B1 goes marginal
+    -> PASS (34/52), B3 goes FAIL -> PASS (-0.467), B2 strengthens to 12/13.
+    H43's hedge was extrapolation error, not the data. See h43b_no_extrapolation.
+
+h43b_no_extrapolation:
+  status: "ALL THREE BARS PASS with nothing extrapolated"
+  artifact: autoresearch/experiments/h43-asymmetry-origin/results/noextrap.json
+  grid: "-30 .. +30 deg for all four backbones, so every device-origin evaluation at +-22 is an interpolation"
+  delta_true_zero_vs_device_zero:
+    da3_small:  "+4.70%  ->  +22.36%"
+    da3_large:  "+7.77%  ->  +16.92%"
+    vggt:       "-6.99%  ->  +10.75%  (positive on 12/13)"
+    vggt_omega: "-0.87%  ->   +3.11%"
+  bars: "B1 34/52 PASS (was 31-32 marginal); B2 PASS 12/13; B3 -0.467 PASS (was -0.345/-0.441 FAIL)"
+  THE_STATEMENT: >
+    ROUGHLY FOUR FIFTHS OF THE PUBLISHED ASYMMETRY IS THE ORIGIN. da3:small is
+    +22.4 points about the device zero against +4.7 about the true one. For
+    scale H32 measured +32.1 points at +-30 against a device origin — same
+    direction, larger angle, same order.
+  RETIRED: >
+    Every published asymmetry number in this line, as a statement about a model.
+    H32's "+30 costs 2.3x what -30 costs" and H33's per-backbone differences are
+    device-origin measurements on footage with a -3.1 deg median tilt.
+  STAYS_UNEXPLAINED_AND_STAYS_THAT_WAY: >
+    Delta about the true zero is NOT zero and does NOT have one sign: da3:large
+    +7.77% (largest of the four, on the backbone H33 called "at chance"), vggt
+    -6.99% (only one dearer on the negative side), da3:small +4.70%, vggt_omega
+    -0.87%. H32 found it, H33 could not attribute it, H34 was void, H42 did not
+    line up, and H43/H43b explain the PUBLISHED version away without explaining
+    the RESIDUAL one. NO MECHANISM OFFERED. What changed: the residual is the
+    only version left and it is ~4x smaller than what was published.
+  limits:
+    - "+-22 deg is the largest angle whose device-origin arms stay inside the measured grid for every recording (mu reaches -7.8)."
+    - "mu is the signed median over 15-20 frames per recording, not all 2,880."
+    - "Still a prediction from a curve measured on the same footage; the fully independent test is re-running H32's own +-30 sweep against a gravity origin. Not needed for the conclusion, which only requires the two origins to differ — and they do, by a sign, on vggt."
 
 rule_origin_paid_three_times:
   rule: "When a curve looks odd near its origin, suspect the origin."
