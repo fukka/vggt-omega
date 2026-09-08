@@ -6,6 +6,9 @@ source ~/miniconda3/etc/profile.d/conda.sh
 conda activate raytun3r
 
 MODELS="${1:?models}"; TAG="${2:?tag}"; GPU="${3:-0}"
+# $4 = space-separated sequence numbers from adt_apartment_extra.
+# Default is the six-recording roll-spread set H39 was run on.
+NUMS="${4:-136 138 142 144 145 149}"
 export CUDA_VISIBLE_DEVICES="$GPU"
 
 CLEAN=/user/f.zhang2/Documents/projectaria_tools_adt_data_clean
@@ -17,9 +20,14 @@ mkdir -p "$OUT"
 # Chosen for roll spread (H17.1 per-sequence): 145 (7.50 deg median |roll|,
 # 29.6% beyond 10) and 144 (6.61, 26.6) and 142 (6.46, 20.4) at the high end,
 # 136 (2.69, 8.7), 138 (2.94, 5.3) and 149 (2.92, 3.6) at the low end.
-SEQS="$CLEAN/Apartment_release_clean_seq136_M1292"
-for n in 138 142 144 145 149; do
-  SEQS="$SEQS $EXTRA/Apartment_release_clean_seq${n}_M1292"
+# seq136 is the only one under the clean tree; the rest are in the extras.
+SEQS=""
+for n in $NUMS; do
+  if [ "$n" = "136" ]; then
+    SEQS="$SEQS $CLEAN/Apartment_release_clean_seq136_M1292"
+  else
+    SEQS="$SEQS $EXTRA/Apartment_release_clean_seq${n}_M1292"
+  fi
 done
 
 for s in $SEQS; do
@@ -31,4 +39,4 @@ for s in $SEQS; do
     --seq "$s" --calib "$CALIB" --models "$MODELS" --max-frames 60 \
     --out "$f" || echo "[h39] FAILED $TAG $tag"
 done
-echo "[h39] $TAG done: $(ls "$OUT"/${TAG}_*.json 2>/dev/null | wc -l) of 6"
+echo "[h39] $TAG done: $(ls "$OUT"/${TAG}_*.json 2>/dev/null | wc -l) files"
