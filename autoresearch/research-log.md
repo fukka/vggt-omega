@@ -1138,3 +1138,29 @@ de-roll is far cheaper than per-frame alignment and would remove 5–7° on a th
 of the sequences, but §02's curve prices 10° at +2%, so 6° is worth under 1%.
 The finding closes an uncertainty and explains a pattern. It does not buy
 accuracy, and saying so is the point.
+
+## 2026-09-08 — fourteenth tick down; answered the last checkable caveat, and it strengthened the claim
+
+lambda_63 still unreachable. Continued the caveat audit started two ticks ago.
+
+H18.6 had flagged its own limit: "eight points fitted with three parameters, so
+the absolute R^2 values are optimistic; the signal is the contrast". Leave-one-out
+answers it directly — the held-out bin never enters the fit, so extra parameters
+earn nothing.
+
+**The honest criterion widened the gap rather than closing it.** In-sample the
+contrast was 0.94–0.99 against 0.07–0.59. Under LOO it is **0.71–0.96 against
+−0.81 to −3.38**, against a constant-predictor reference of −0.306 at n=8. Every
+Apartment curve genuinely interpolates a bin it never saw; every LiteOffice curve
+predicts a held-out bin *worse than the mean of the other seven*.
+
+That also upgrades the fit-quality check from a red flag to a calibrated one:
+**LOO R² above the constant-predictor baseline means there is a curve, below it
+means there is not** — and both quantities come from the fit alone, with no
+held-out room. That is the form a deployment procedure can actually use.
+
+Operational note worth keeping: the publish timed out mid-upload with "outcome
+unknown". Rather than republish blind I read the live artifact back and grepped
+it for the new strings — it had the previous tick's content and not this one, so
+the upload had genuinely failed. Verifying before republishing costs one call and
+is the difference between knowing and guessing.

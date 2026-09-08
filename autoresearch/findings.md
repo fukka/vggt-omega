@@ -1552,3 +1552,39 @@ uncertainty and explains a pattern; it does not buy accuracy.
 
 The two LiteOffice sequences (device 61283) sit at +0.43 and −2.81, mean −1.19 —
 consistent with the same picture, but two sequences say nothing on their own.
+
+## H18.6 follow-up (CPU) — the caveat asked for an honest criterion; it widens the gap
+
+H18.6 recorded its own limit: "eight points fitted with three parameters, so the
+absolute R^2 values are optimistic; the signal is the contrast". Leave-one-out
+answers that directly — the held-out bin never touches the fit, so extra
+parameters buy nothing.
+
+| fit | coef | in-sample R² | **LOO R²** |
+|---|---|---|---|
+| Apartment, DA3-Small | a | 0.936 | **0.708** |
+| Apartment, DA3-Small | b | 0.993 | **0.961** |
+| Apartment, DA3-Large | a | 0.989 | **0.948** |
+| Apartment, DA3-Large | b | 0.979 | **0.884** |
+| LiteOffice, raw | a | 0.301 | **−1.984** |
+| LiteOffice, raw | b | 0.329 | **−2.078** |
+| LiteOffice, range-matched | a | 0.590 | **−0.808** |
+| LiteOffice, range-matched | b | 0.071 | **−3.381** |
+
+The reference is the LOO R² of a **constant** predictor, which is −0.306 at n=8.
+
+**The honest criterion widens the gap rather than closing it.** In-sample the
+contrast was 0.94–0.99 against 0.07–0.59; under LOO it is **0.71–0.96 against
+−0.81 to −3.38**. Every Apartment curve genuinely interpolates a bin it never
+saw. Every LiteOffice curve predicts a held-out bin **worse than the mean of the
+other seven** — there is no smooth curve there to interpolate, only scatter.
+
+**This also turns the fit-quality check into a calibrated one.** H18.6 proposed
+"is a quadratic enough?" as a red flag that needs no held-out room. It now has a
+threshold that needs no tuning either: **LOO R² above the constant-predictor
+baseline (−0.306 for 8 bins) means there is a curve; below it means there is
+not.** Both quantities come from the fit alone.
+
+Caveat that remains: eight bins is few, and LOO on eight points is itself noisy.
+What carries weight is that all four Apartment measurements land above the
+baseline and all four LiteOffice ones land below it, with no overlap.

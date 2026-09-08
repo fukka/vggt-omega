@@ -1753,9 +1753,44 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       所以<strong>"一个二次式够不够"能在标定当场就把坏标定标出来</strong>，不必等到有留出房间可比。
       <strong>而部署时恰恰没有留出房间可比。</strong>
     </p>
+    <p>
+      <strong>那个 caveat 我后来查了，而它让结论更强而不是更弱。</strong>
+      "8 个点、3 个参数，R² 偏乐观"是对的，所以改用<strong>留一交叉验证</strong> ——
+      被留出的那一档从不参与拟合，多出来的参数换不到任何好处。
+      参照基准是<strong>常数预测</strong>的留一 R²，在 n=8 时是 −0.306。
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>留一 R² 低于常数基线，意味着二次式预测一个没见过的档<strong>比直接用其余七档的均值还差</strong> —— 那里没有可插值的曲线，只有散点。</caption>
+      <thead><tr><th>拟合</th><th>系数</th><th>样本内 R²</th><th>留一 R²</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">公寓 · DA3-Small</td><td class="mono">a</td><td class="num">0.936</td><td class="num good">0.708</td></tr>
+        <tr><td class="mono">公寓 · DA3-Small</td><td class="mono">b</td><td class="num">0.993</td><td class="num good">0.961</td></tr>
+        <tr><td class="mono">公寓 · DA3-Large</td><td class="mono">a</td><td class="num">0.989</td><td class="num good">0.948</td></tr>
+        <tr><td class="mono">公寓 · DA3-Large</td><td class="mono">b</td><td class="num">0.979</td><td class="num good">0.884</td></tr>
+        <tr class="flip"><td class="mono">LiteOffice · 原始</td><td class="mono">a</td><td class="num">0.301</td><td class="num bad">−1.984</td></tr>
+        <tr class="flip"><td class="mono">LiteOffice · 原始</td><td class="mono">b</td><td class="num">0.329</td><td class="num bad">−2.078</td></tr>
+        <tr class="flip"><td class="mono">LiteOffice · 范围匹配</td><td class="mono">a</td><td class="num">0.590</td><td class="num bad">−0.808</td></tr>
+        <tr class="flip"><td class="mono">LiteOffice · 范围匹配</td><td class="mono">b</td><td class="num">0.071</td><td class="num bad">−3.381</td></tr>
+        <tr><td colspan="3"><b>参照：常数预测（n=8）</b></td><td class="num">−0.306</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col" style="margin-top:16px">
+    <p>
+      <strong>诚实的判据把差距拉大了，而不是抹平。</strong>样本内的对比是 0.94–0.99 对 0.07–0.59；
+      留一之后是 <strong>0.71–0.96 对 −0.81 ~ −3.38</strong>。
+      四条公寓曲线<strong>都能真的插值出一个没见过的档</strong>，四条 LiteOffice 曲线<strong>都比常数预测还差</strong>。
+    </p>
+    <p>
+      <strong>而且这让上面那个"免费的质量检查"变成有刻度的。</strong>
+      "一个二次式够不够"原本只是个红旗；现在它有了一个<strong>不需要调参的门槛</strong>：
+      <strong>留一 R² 高于常数预测基线就说明有曲线，低于就说明没有</strong> —— 两个量都只用拟合本身算得出来。
+    </p>
     <p style="color:var(--ink-faint)">
-      注意，这个 caveat 不小：<strong>8 个点、3 个参数</strong>，所以 R² 的绝对值是偏乐观的。
-      这里的信号是<strong>对比</strong>（0.94–0.99 对 0.07–0.59，四次独立拟合上一致），不是任何单个数字。
+      仍然存在的 caveat：8 个档很少，而 8 个点上的留一本身也是有噪声的。
+      真正撑住结论的是<strong>四个公寓测量全在基线之上、四个 LiteOffice 测量全在基线之下，没有重叠</strong>。
       由此产生的预测已锁定待跑：<strong>如果 LiteOffice 那条曲线的锯齿是噪声，那么把它约束成二次式应该改善它的迁移</strong>；
       如果不改善，说明锯齿是真实结构，上面第②条要撤回。
     </p>
