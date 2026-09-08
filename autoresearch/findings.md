@@ -1633,3 +1633,65 @@ independent noise. So:
 
 Kept out of the human report: it is a negative result about my own instrument,
 not about the problem.
+
+## H18.5 — the sweep ran, and it falsified its own pre-registered bar
+
+The runner finished on GPU0 (`autoresearch/experiments/h14-rect-distill/results/omega/radial_sweep.json`,
+5 draws per cell, seed 0). The locked bars were: *stability reaches mean pairwise
+|da| < 0.10 by 60 spread frames; spread beats single at every matched count;
+falsified if single matches spread.*
+
+```
+  mode  n_fr   stab      seq136        dec132          Dino          Bowl
+spread     2   0.485   -11.0+-12.9    -1.4+-13.3   -20.4+-14.8    -8.0+- 2.5
+spread     4   0.237   -13.0+- 5.5    -3.0+- 5.2   -21.9+- 3.2    -8.4+- 0.4
+spread     8   0.085   -15.1+- 2.6    -5.0+- 0.9   -23.1+- 3.6    -8.5+- 0.9
+spread    15   0.190   -15.5+- 3.9    -5.3+- 4.3   -24.7+- 4.3    -8.8+- 0.6
+spread    30   0.069   -13.9+- 2.1    -4.3+- 1.5   -23.0+- 2.3    -8.6+- 0.5
+spread    60   0.081   -15.3+- 1.9    -5.3+- 1.7   -24.7+- 1.9    -8.8+- 0.1
+spread   120   0.025   -16.4+- 0.5    -6.2+- 0.5   -25.9+- 0.6    -9.0+- 0.1
+spread   240   0.000   -16.6+- 0.0    -6.5+- 0.0   -26.0+- 0.0    -8.9+- 0.0
+single     2   0.530   -17.1+- 8.7     0.3+-18.2   -23.0+-12.9    -8.6+- 1.8
+single     4   0.225   -15.8+- 5.0    -5.3+- 3.4   -25.4+- 5.1    -8.8+- 2.0
+single     8   0.152   -12.7+- 3.1    -1.6+- 2.8   -21.9+- 3.1    -8.4+- 0.5
+single    15   0.141   -16.7+- 2.9    -6.4+- 3.5   -26.1+- 3.3    -9.0+- 0.2
+single    30   0.060   -16.1+- 1.1    -6.6+- 0.6   -25.4+- 1.6    -8.7+- 0.5
+single    60   0.000   -17.9+- 0.0    -7.1+- 0.0   -27.9+- 0.0    -9.3+- 0.0
+```
+
+**Bar 1 passed, and by a wider margin than asked.** |da| < 0.10 arrives at 8
+spread frames, not 60. By 30 frames every sequence sits within ~1–3 points of
+the full-set fit.
+
+**Bar 2 failed, which was the pre-registered falsification condition.** Across
+the five non-degenerate matched counts, single wins three (4, 15, 30) and spread
+wins two (2, 8). Single *matches* spread. **H18.5 is refuted.**
+
+Read the degenerate rows carefully before quoting them: `spread_240` and
+`single_60` exhaust their own pools, so every draw is the same draw and their
+0.000 is arithmetic, not convergence. The `single_60` vs `spread_240` transfer
+comparison (-17.9 vs -16.6 on seq136) is therefore one point estimate against
+another with no error bar on either. It is suggestive, not measured.
+
+**What this rules out.** The mechanism the CPU pre-study modelled — that within-
+bin `log(pred)` spread is what identifies the slope, so frames from different
+viewpoints buy precision that same-viewpoint frames cannot — is not what governs
+the real estimator. The simulation (see the section above) predicted a large
+spread/single gap that grows with viewpoint separation. There is no gap. The
+pre-study was internally consistent and empirically wrong, which is the outcome
+it was explicitly built to be checkable against.
+
+**What replaces it.** Frame count alone, and it saturates by ~30. The most likely
+reason single does as well: a single ADT sequence is a person walking around a
+room, so consecutive frames already sweep a wide depth range — the "narrow slice
+of depth" the simulation assumed a single viewpoint sees does not describe a
+head-worn recording. That is a hypothesis, not a measurement; it predicts the
+gap should reappear on genuinely static footage, which LiteOffice nearly is.
+
+**Practical consequence, and it is the useful one.** The radial calibration costs
+about 30 frames — a second of video — from one ordinary recording. That is a very
+different deployment story from "collect varied footage per device".
+
+**Still open, and now the blocking question:** every fit here was scored against
+ground truth afterwards. Whether the curve can be fitted from the teacher alone
+on an unseen device is what decides deployability.

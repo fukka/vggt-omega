@@ -758,7 +758,6 @@ lambda_63_outage:
     costs nothing for the ten already done. WHOEVER PICKS THIS UP MUST RESTART
     IT — the tmux session does not survive the reboot and nothing else will.
   blocked_on_the_box:
-    - "H18.5 — protocol locked (500ca6b), runner committed (7d4e642), one GPU pass then the whole sweep in numpy. This is the first thing to run."
     - "The RolledView rotation test in h17-roll-prior/code/test_roll.py, which skips without the full env."
     - "Pushing the h18 omega/radial artefacts to the `results` branch. They are safe on `organized` under autoresearch/experiments/*/results/, but the branch convention wants them on `results`, and that worktree lives on the box."
   nothing_is_stranded: >
@@ -766,3 +765,44 @@ lambda_63_outage:
     zero unpushed commits, and all 27 h17/h18 result JSONs committed to the
     repo rather than living only on the box. Every number in the report is
     reproducible from git even if the box never returns.
+
+# ------------------------------------------------- H18.5 resolved 2026-09-08
+h18_5_outcome:
+  status: REFUTED against its own pre-registered bar
+  artifact: autoresearch/experiments/h14-rect-distill/results/omega/radial_sweep.json
+  run: "tmux `sweep` on lambda_63 GPU0, MARKER_SWEEP=0, 5 draws/cell, seed 0"
+  bar_1_stability: PASSED — "|da| < 0.10 by 8 spread frames, not the 60 asked for"
+  bar_2_spread_beats_single: >
+    FAILED. Across the five non-degenerate matched counts single wins three
+    (4, 15, 30) and spread two (2, 8). "single matches spread" was the locked
+    falsification condition, so this refutes H18.5.
+  collateral: >
+    Takes the CPU pre-study's mechanism with it. That simulation predicted a
+    large spread/single gap growing with viewpoint separation; there is none.
+    It was labelled a characterisation-not-a-result before the data existed,
+    which is why this reads as a clean refutation.
+  do_not_quote: >
+    spread_240 and single_60 exhaust their own pools, so their 0.000 stability
+    is arithmetic, not convergence, and the -17.9 vs -16.6 transfer comparison
+    between them is one point estimate against another with no error bar.
+  usable_finding: >
+    ~30 frames from a single ordinary recording is enough to fit the radial
+    curve to within a few points of the full-set answer. Deployment cost is far
+    lower than "collect varied footage per device".
+  next_question_this_opens: >
+    Every fit so far was checked against ground truth afterwards. Whether the
+    curve can be fitted from the teacher alone on an unseen device is now the
+    blocking question for deployability.
+
+reports:
+  chinese_lab_record:
+    file: autoresearch/to_human/fisheye-rim-report.html
+    artifact: ebba1289-3024-4aad-8eff-2edee5e1e8a0
+    role: dense technical log, keeps the self-corrections
+  english_narrative:
+    file: autoresearch/to_human/depth-at-the-rim.html
+    artifact: c6461af3-0b37-41ac-a32c-0c21aa6f4f69
+    role: >
+      standalone motivation/data/method/results/conclusion for a reader who has
+      not followed the project. NOT a translation — do not try to keep the two
+      in sync section by section.

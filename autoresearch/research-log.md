@@ -1164,3 +1164,41 @@ unknown". Rather than republish blind I read the live artifact back and grepped
 it for the new strings — it had the previous tick's content and not this one, so
 the upload had genuinely failed. Verifying before republishing costs one call and
 is the difference between knowing and guessing.
+
+## 2026-09-08 — H18.5 ran and was refuted; English report published
+
+lambda_63 came back (uptime 33 days — it was a network partition, not the
+reboot I had assumed, and the extraction job had in fact finished all 13
+sequences during the outage rather than dying at 10). H18.5 launched on GPU0 in
+tmux `sweep` and completed, `MARKER_SWEEP=0`.
+
+**The result went against the locked bar.** Stability converges far faster than
+predicted (|da| < 0.10 at 8 spread frames, not 60), but "spread beats single at
+every matched count" fails 3 of 5, and "single matches spread" was written into
+the protocol as the falsification condition. So H18.5 is refuted on its own
+terms, and it takes the CPU pre-study's mechanism down with it — the simulation
+predicted a large, growing spread/single gap and there is none.
+
+Worth being blunt about the sequencing: I wrote that simulation during the
+outage precisely because the box was unavailable, and I flagged it at the time
+as a characterisation of the estimator rather than a result about ADT. That
+framing is the only reason this is a clean refutation rather than an
+embarrassment — the prediction was on record before the data existed.
+
+Two rows in the sweep are degenerate (`spread_240`, `single_60` exhaust their
+pools, so 0.000 is arithmetic). Noted in findings.md so nobody quotes them as
+convergence.
+
+The usable finding is the practical one: ~30 frames from one ordinary recording
+is enough to fit the radial curve.
+
+**Also today:** built and published a separate clean English report at
+`autoresearch/to_human/depth-at-the-rim.html`
+(artifact c6461af3-0b37-41ac-a32c-0c21aa6f4f69), structured motivation / data /
+method / results / conclusion. It is a standalone narrative, not a translation
+of the Chinese lab record — the Chinese report stays the dense technical log
+with the self-corrections in it. The sweep result is folded into §4.4, and it
+replaced a "what we would do next" bullet that the run had just answered.
+
+Next on the box: the affine re-score to settle the -12.9/-7.3 puzzle, the
+RolledView test in test_roll.py, and pushing the h18 artefacts to `results`.
