@@ -1,0 +1,87 @@
+{
+ "kb4_fingerprint": "b4ccab10f5ecfb09",
+ "kb4_slope": 1.12219937916676,
+ "kb4_slope_mode": "secant",
+ "theta_max_deg": 62.32734000000001,
+ "theta_d_max": 1.220747895351443,
+ "focal_out_norm": 0.262,
+ "output_size": 512,
+ "supersample": 3,
+ "isp": true,
+ "K_fisheye": [
+  222.16000000000003,
+  222.16000000000003,
+  250.37818181818182,
+  260.04
+ ],
+ "Knew_pinhole": [
+  134.144,
+  134.144,
+  256.0,
+  256.0
+ ],
+ "sha": {
+  "fisheye_full": {
+   "rgb_sha": "b4a9029be8eedec3",
+   "depth_sha": "7f330e08860a6309"
+  },
+  "fisheye_masked": {
+   "rgb_sha": "7241e635b256fb99",
+   "depth_sha": "11085b1dd38cb95d"
+  },
+  "persp_full": {
+   "rgb_sha": "24f80074bc1d7fbd",
+   "depth_sha": "1c5035d249d585d0"
+  },
+  "persp_masked": {
+   "rgb_sha": "fe2212d8ebc68a2a",
+   "depth_sha": "c05ff34730bdcefb"
+  }
+ },
+ "sequence": "Apartment_release_clean_seq131_M1292",
+ "frame_idx": 830,
+ "timestamp_ns": 13877614687712,
+ "traj_residual_us": 95,
+ "T_WC": [
+  [
+   0.27185806751573344,
+   0.5776996855275706,
+   -0.7696468439927217,
+   -0.43249923655943867
+  ],
+  [
+   -0.9615263224293024,
+   0.13023331263392054,
+   -0.24188099461507176,
+   1.581029072174669
+  ],
+  [
+   -0.03950091647280858,
+   0.8057929992384778,
+   0.5908784307927195,
+   1.5925852673920609
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "n_objects": 354,
+ "n_lights": 43,
+ "eq_w": 3072,
+ "eq_h": 1536,
+ "cycles_samples": 256,
+ "ceiling_energy": null,
+ "ceiling_size": null,
+ "ceiling_y": null,
+ "cycles_device": "OPTIX",
+ "lights_json": "out/lightfit/fitted_CHOSEN.json",
+ "n_lights_used": 43,
+ "n_ceiling": 6,
+ "view_exposure": -1.21,
+ "world_strength": 0.0,
+ "adaptive_threshold": 0.01,
+ "blender_seconds": 223.66847586631775
+}

@@ -1,0 +1,436 @@
+# Copyright (c) 2026.
+"""Compose the figures and the numbers for the fisheye-inpaint document from ONE
+run of finetune.eval.exp_rendered (results.json + qual/raw/*.npz).
+
+Everything the HTML shows comes out of here, so a number in the document can be
+traced to a file in the run directory and nothing is typed in by hand. The
+bootstrap is re-implemented byte-for-byte (same seed, same draw order) and the
+script refuses to write anything if its AbsRel intervals do not match the ones
+the evaluator printed in report.txt -- a mismatch would mean the two are not
+describing the same data.
+
+Usage::
+
+    python research/fisheye-inpaint/make_final_figures.py \\
+        --run <copied runs/ev_final> --out research/fisheye-inpaint/to_human/final
+"""
+from __future__ import annotations
+
+import argparse
+import glob
+import json
+import os
+import re
+from collections import OrderedDict
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+
+# CJK labels: fall through to whatever the machine has.
+plt.rcParams["font.family"] = ["PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC",
+                               "Arial Unicode MS", "DejaVu Sans"]
+plt.rcParams["axes.unicode_minus"] = False
+
+CELLS = OrderedDict([
+    ("fisheye_masked", ("①", "RAW · BLACK", "原始鱼眼 · 黑角")),
+    ("persp_masked",   ("②", "RECT · BLACK", "矫正透视 · 黑楔形")),
+    ("fisheye_full",   ("③", "RAW · FILLED", "原始鱼眼 · 真值补全")),
+    ("persp_full",     ("④", "RECT · FILLED", "矫正透视 · 真值补全")),
+])
+COLORS = {"fisheye_masked": "#98362f", "persp_masked": "#a86a15",
+          "fisheye_full": "#33704a", "persp_full": "#0b6b6e"}
+POSE_KEYS = ("rot_err_deg", "trans_err_deg", "rra15", "rta15", "auc30", "ate_m", "sim3_scale")
+
+
+# --------------------------------------------------------------------------- #
+# statistics -- identical to finetune.eval.exp_rendered.cluster_bootstrap
+# --------------------------------------------------------------------------- #
+def cluster_bootstrap(a, b, group_of, n_boot=10000, seed=0):
+    keys = sorted(set(a) & set(b) & set(group_of))
+    if len(keys) < 3:
+        return None
+    by_group = OrderedDict()
+    for k in keys:
+        by_group.setdefault(group_of[k], []).append(a[k] - b[k])
+    gkeys = list(by_group)
+    if len(gkeys) < 2:
+        return None
+    vals = [np.asarray(by_group[g], dtype=float) for g in gkeys]
+    d_all = np.concatenate(vals)
+    rng = np.random.default_rng(seed)
+    draws = rng.integers(0, len(gkeys), size=(n_boot, len(gkeys)))
+    boots = np.array([np.concatenate([vals[j] for j in row]).mean() for row in draws])
+    lo, hi = np.percentile(boots, [2.5, 97.5])
+    return {"n_pairs": int(len(d_all)), "n_groups": len(gkeys), "mean": float(d_all.mean()),
+            "ci_lo": float(lo), "ci_hi": float(hi), "excludes_zero": bool(lo > 0 or hi < 0)}
+
+
+def paired_effects(res, metric, unit="frame"):
+    """full - masked per projection, plus the interaction, window-clustered.
+
+    unit='frame': per-frame metric from _per_frame_metrics, clustered by window.
+    unit='window': per-window metric from _per_window (pose), one value per window.
+    """
+    def vals(st):
+        r = res.get(st) or {}
+        if unit == "frame":
+            return {k: v[metric] for k, v in (r.get("_per_frame_metrics") or {}).items()}, r.get("_group_of") or {}
+        return {k: v[metric] for k, v in (r.get("_per_window") or {}).items()}, r.get("_window_group") or {}
+    out = {}
+    diffs = {}
+    for proj in ("fisheye", "persp"):
+        a, ga = vals(f"{proj}_full")
+        b, _ = vals(f"{proj}_masked")
+        cb = cluster_bootstrap(a, b, ga)
+        if cb is None:
+            return out
+        out[proj] = cb
+        diffs[proj] = {k: a[k] - b[k] for k in set(a) & set(b)}
+        out[proj]["per_group"] = _per_group_means(diffs[proj], ga)
+    common = sorted(set(diffs["persp"]) & set(diffs["fisheye"]))
+    dd = {k: diffs["persp"][k] - diffs["fisheye"][k] for k in common}
+    _, gp = vals("persp_full")
+    out["interaction"] = cluster_bootstrap(dd, {k: 0.0 for k in dd}, gp)
+    out["interaction"]["per_group"] = _per_group_means(dd, gp)
+    return out
+
+
+def _per_group_means(d, group_of):
+    g = OrderedDict()
+    for k in sorted(d):
+        g.setdefault(group_of.get(k, k), []).append(d[k])
+    return {k: float(np.mean(v)) for k, v in g.items()}
+
+
+def check_against_report(results, report_txt):
+    """The re-implemented bootstrap must reproduce the evaluator's AbsRel lines."""
+    pat = re.compile(r"^\[(\S+)\] true content vs black.*?(?=^\[|\Z)", re.S | re.M)
+    line = re.compile(r"^\s+(fisheye|persp|INTERACTION)\s+([+-]\d\.\d{4})\s+CI\(win\) \[([+-]\d\.\d{4}), ([+-]\d\.\d{4})\]", re.M)
+    n = 0
+    for blk in pat.finditer(report_txt):
+        mode = blk.group(1)
+        eff = paired_effects(results[mode], "AbsRel")
+        for m in line.finditer(blk.group(0)):
+            key = {"fisheye": "fisheye", "persp": "persp", "INTERACTION": "interaction"}[m.group(1)]
+            got = (eff[key]["mean"], eff[key]["ci_lo"], eff[key]["ci_hi"])
+            want = tuple(float(x) for x in m.group(2, 3, 4))
+            if any(abs(g - w) > 5e-5 for g, w in zip(got, want)):
+                raise SystemExit(f"bootstrap mismatch vs report.txt [{mode}] {key}: {got} vs {want}")
+            n += 1
+    if n < 6:
+        raise SystemExit(f"only {n} report lines checked -- report.txt format changed?")
+    return n
+
+
+# --------------------------------------------------------------------------- #
+# figures
+# --------------------------------------------------------------------------- #
+def _load_raw(raw_dir, setting, sl, wi):
+    f = os.path.join(raw_dir, f"{setting}_s{sl}_w{wi:02d}.npz")
+    if not os.path.isfile(f):
+        return None
+    z = np.load(f)
+    return {k: z[k] for k in z.files}
+
+
+def fig_panels(raw_dir, res_by_mode, wi, out_img):
+    """One window's first frame: for each cell, input | pred s1 | err s1 | pred s8 | err s8 | GT."""
+    rows = list(CELLS)
+    fig, axes = plt.subplots(len(rows), 6, figsize=(18, 12.6), constrained_layout=True)
+    col_titles = ["模型输入", "预测深度 · single", "AbsRel 图 · single",
+                  "预测深度 · 8-frame", "AbsRel 图 · 8-frame", "真值深度(渲染 Z-pass)"]
+    fdir = None
+    for r, st in enumerate(rows):
+        # At seq_len=1 every "window" is one frame, so the single-frame dump of
+        # 8-frame window wi is frame 8*wi; assert on the frame dir, not the index.
+        z8 = _load_raw(raw_dir, st, 8, wi)
+        z1 = _load_raw(raw_dir, st, 1, 8 * wi)
+        if z1 is None or z8 is None:
+            for a in axes[r]:
+                a.axis("off")
+            continue
+        assert str(z1["frame_dir"]) == str(z8["frame_dir"])
+        fdir = str(z1["frame_dir"])
+        gt, m = z1["gt"].astype(np.float32), z1["mask"].astype(bool)
+        vmin, vmax = np.percentile(gt[m], [2, 98])
+        cid, cname, zh = CELLS[st]
+        ax = axes[r]
+        ax[0].imshow(z1["rgb"])
+        ax[0].set_ylabel(f"{cid} {cname}\n{zh}", fontsize=11, fontweight="bold")
+        for c, (z, sl, lab) in enumerate([(z1, 1, "single"), (z8, 8, "8-frame")]):
+            pred = z["pred"].astype(np.float32)
+            pm = res_by_mode["single" if sl == 1 else "8-frame"][st]["_per_frame_metrics"][fdir]
+            ax[1 + 2 * c].imshow(np.where(m, pred, np.nan), vmin=vmin, vmax=vmax, cmap="turbo")
+            err = np.where(m, np.abs(pred - gt) / np.maximum(gt, 1e-6), np.nan)
+            im = ax[2 + 2 * c].imshow(err, vmin=0, vmax=0.3, cmap="magma")
+            ax[2 + 2 * c].set_xlabel(f"AbsRel {pm['AbsRel']:.4f} · δ₁ {pm['delta1']:.3f}", fontsize=10.5)
+        ax[5].imshow(np.where(m, gt, np.nan), vmin=vmin, vmax=vmax, cmap="turbo")
+        for a in ax:
+            a.set_xticks([]); a.set_yticks([]); a.set_facecolor("#c9d2d1")
+        if r == 0:
+            for a, t in zip(ax, col_titles):
+                a.set_title(t, fontsize=11.5, loc="left")
+    fig.colorbar(im, ax=axes[:, 4].tolist(), fraction=0.03, pad=0.01, shrink=.6, label="AbsRel(0–0.3 截断)")
+    seq = os.path.basename(os.path.dirname(fdir)).replace("Apartment_release_", "")
+    fig.suptitle(f"窗口 {wi:02d} · {seq}/{os.path.basename(fdir)} · 四格同一帧;评分区以外为灰,四格评分区相同(按各自投影)",
+                 fontsize=13, x=0.005, ha="left")
+    fig.savefig(out_img, dpi=62, facecolor="white", pil_kwargs={"quality": 86, "optimize": True})
+    plt.close(fig)
+    return fdir
+
+
+def fig_inputs(raw_dir, wi, out_png):
+    fig, axes = plt.subplots(1, 4, figsize=(16, 4.4))
+    for a, st in zip(axes, CELLS):
+        z = _load_raw(raw_dir, st, 1, wi)
+        a.imshow(z["rgb"]); cid, cname, zh = CELLS[st]
+        blk = float((z["rgb"].max(-1) == 0).mean()) * 100
+        a.set_title(f"{cid} {cname}\n{zh} · 纯黑像素 {blk:.2f}% · 评分区 {z['mask'].mean()*100:.1f}%", fontsize=10.5)
+        a.set_xticks([]); a.set_yticks([])
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=72, bbox_inches="tight", facecolor="white",
+                pil_kwargs={"quality": 88, "optimize": True})
+    plt.close(fig)
+
+
+def _centres(E):
+    E = np.asarray(E, float)
+    return -np.einsum("nji,nj->ni", E[:, :, :3], E[:, :, 3])
+
+
+def _umeyama(src, dst):
+    mu_s, mu_d = src.mean(0), dst.mean(0)
+    sc, dc = src - mu_s, dst - mu_d
+    H = (sc.T @ dc) / len(src)
+    U, D, Vt = np.linalg.svd(H)
+    d = np.ones(3); d[-1] = np.sign(np.linalg.det(Vt.T @ U.T))
+    R = Vt.T @ np.diag(d) @ U.T
+    s = float(np.dot(D, d)) / max(float(np.mean(np.sum(sc ** 2, 1))), 1e-12)
+    return s, R, (s * (R @ sc.T).T) + mu_d
+
+
+def fig_trajectories(res8, out_png, max_windows=12):
+    """Each window in its own frame: GT centres rotated so x runs along the path.
+
+    A 2 m walk with centimetre lateral wander is a flat line in world axes; the
+    PCA frame spreads it out. Predictions are Sim(3)-aligned to GT first, then
+    put through the same rotation, so a deviation from the black line IS the
+    error the ATE measures.
+    """
+    wkeys = list((res8["persp_full"]["_windows"]).keys())[:max_windows]
+    n = len(wkeys)
+    ncol, nrow = 3, int(np.ceil(n / 3))
+    fig, axes = plt.subplots(nrow, ncol, figsize=(5.6 * ncol, 4.3 * nrow), constrained_layout=True)
+    axes = np.atleast_2d(axes)
+    for i, wk in enumerate(wkeys):
+        ax = axes[i // ncol, i % ncol]
+        gt = _centres(res8["persp_full"]["_windows"][wk]["gt_E"])
+        mu = gt.mean(0)
+        _u, _s, vt = np.linalg.svd(gt - mu)
+        P = vt[:2]                      # along-path, cross-path
+        g2 = (gt - mu) @ P.T
+        ax.plot(g2[:, 0], g2[:, 1], "k-o", lw=2.4, ms=5.5, label="真值", zorder=5)
+        ax.plot(g2[0, 0], g2[0, 1], "k*", ms=14, zorder=6)
+        for st in CELLS:
+            w = res8[st]["_windows"].get(wk)
+            if not w or "pred_E" not in w:
+                continue
+            p = _centres(w["pred_E"])
+            if np.var(p, 0).sum() < 1e-12:
+                continue
+            _, _, al = _umeyama(p, gt)
+            a2 = (al - mu) @ P.T
+            cid = CELLS[st][0]
+            ax.plot(a2[:, 0], a2[:, 1], "-o", color=COLORS[st], lw=1.4, ms=3.8, alpha=.9,
+                    label=f"{cid}  AUC@30 {w['auc30']:.2f} · ATE {w['ate_m']*100:.0f} cm · rot {w['rot_err_deg']:.1f}°")
+        seq = wk.split("/")[-2].replace("Apartment_release_", "")
+        ax.set_title(f"窗口 {i:02d} · {seq} · 起始 {wk.split('/')[-1]}", fontsize=10)
+        ax.set_xlabel("沿路径 (m)", fontsize=9); ax.set_ylabel("横向 (m)", fontsize=9)
+        ax.grid(alpha=.3); ax.tick_params(labelsize=8)
+        ax.legend(fontsize=7.5, loc="best", framealpha=.9)
+    for j in range(n, nrow * ncol):
+        axes[j // ncol, j % ncol].axis("off")
+    fig.suptitle("8 帧窗口相机轨迹 · 预测经 Sim(3) 对齐到真值后画在该窗口的主轴坐标系里(米)· ★ = 第一帧 · 注意横纵尺度不同",
+                 fontsize=12, x=0.005, ha="left")
+    fig.savefig(out_png, dpi=80, facecolor="white")
+    plt.close(fig)
+
+
+def fig_fov(res1, res8, out_png):
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.2), sharey=True)
+    rng = np.random.default_rng(0)
+    for ax, (res, lab) in zip(axes, [(res1, "single-frame"), (res8, "8-frame")]):
+        for i, st in enumerate(CELLS):
+            r = res[st]
+            f = np.array([v[0] for v in r["_per_frame_fov"].values()])
+            ax.scatter(i + rng.uniform(-.18, .18, len(f)), f, s=12, color=COLORS[st], alpha=.6)
+            ax.plot([i - .3, i + .3], [f.mean()] * 2, color="k", lw=2)
+            ax.text(i, f.max() + 1.2, f"{f.mean():.1f}°±{f.std():.1f}", ha="center", fontsize=9)
+        gt = res["persp_full"]["gt_fov_h_deg"]
+        ax.axhline(gt, color="#a86a15", ls="--", lw=1.2)
+        ax.text(3.45, gt + .6, f"透视真值 {gt:.1f}°", ha="right", fontsize=9, color="#a86a15")
+        ax.set_xticks(range(4)); ax.set_xticklabels([f"{CELLS[s][0]} {CELLS[s][1]}" for s in CELLS], fontsize=9)
+        ax.set_title(f"相机头推断的水平 FoV · {lab}", fontsize=11, loc="left"); ax.grid(axis="y", alpha=.3)
+    axes[0].set_ylabel("FoV_h (deg)")
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=80, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
+def fig_effects(effects, out_png):
+    """Per-window paired deltas (dots) with the clustered mean ± CI (bar), depth and pose."""
+    panels = [("AbsRel", "single", "Δ AbsRel · single(真值 − 黑;负 = 真值更好)"),
+              ("AbsRel", "8-frame", "Δ AbsRel · 8-frame"),
+              ("auc30", "8-frame", "Δ AUC@30 · 8-frame(正 = 真值更好)"),
+              ("ate_m", "8-frame", "Δ ATE (m) · 8-frame(负 = 真值更好)")]
+    fig, axes = plt.subplots(1, 4, figsize=(18, 4.2))
+    for ax, (metric, mode, title) in zip(axes, panels):
+        e = effects[mode][metric]
+        for i, key in enumerate(("fisheye", "persp", "interaction")):
+            if key not in e:
+                continue
+            cb = e[key]
+            pg = np.array(list(cb["per_group"].values()))
+            col = {"fisheye": "#33704a", "persp": "#0b6b6e", "interaction": "#5f7376"}[key]
+            ax.scatter(np.full(len(pg), i) + np.linspace(-.15, .15, len(pg)), pg, s=16, color=col, alpha=.55)
+            ax.errorbar([i], [cb["mean"]], yerr=[[cb["mean"] - cb["ci_lo"]], [cb["ci_hi"] - cb["mean"]]],
+                        fmt="s", color=col, ms=7, capsize=5, lw=2, zorder=5)
+            fmt = "{:+.3f}" if metric in ("auc30", "ate_m") else "{:+.4f}"
+            ax.text(i + 0.2, cb["mean"], fmt.format(cb["mean"]) + ("*" if cb["excludes_zero"] else ""),
+                    ha="left", va="center", fontsize=9, color=col, fontweight="bold")
+        ax.axhline(0, color="k", lw=.8)
+        ax.set_xlim(-0.5, 2.85)
+        ax.set_xticks(range(3)); ax.set_xticklabels(["鱼眼\n③−①", "透视\n④−②", "交互项\n(④−②)−(③−①)"], fontsize=9)
+        ax.set_title(title, fontsize=10.5, loc="left"); ax.grid(axis="y", alpha=.3)
+    fig.suptitle("每个点 = 一个窗口的配对差;方块 = 均值,须 = 按窗口聚类的 95% bootstrap CI;* = CI 不含零", fontsize=11, x=0.01, ha="left")
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=80, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
+# --------------------------------------------------------------------------- #
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run", required=True)
+    ap.add_argument("--out", required=True)
+    args = ap.parse_args()
+    results = json.load(open(os.path.join(args.run, "results.json")))
+    report = open(os.path.join(args.run, "report.txt")).read()
+    n = check_against_report(results, report)
+    print(f"[figures] bootstrap reproduces {n} report lines")
+    os.makedirs(args.out, exist_ok=True)
+    raw = os.path.join(args.run, "qual", "raw")
+    res1, res8 = results["single"], results["8-frame"]
+
+    # ---- numbers
+    numbers = {"cells": {}, "effects": {}, "pose": {}, "fov": {}, "ladder": {}, "windows": []}
+    for mode, res in results.items():
+        numbers["cells"][mode] = {st: {k: res[st][k] for k in ("AbsRel", "RMSE", "delta1", "n_frames", "n_groups", "fov_h_deg", "fov_h_std")}
+                                  for st in res}
+        numbers["effects"][mode] = {m: paired_effects(res, m) for m in ("AbsRel", "delta1", "RMSE")}
+        if mode != "single":
+            for m in ("auc30", "rot_err_deg", "trans_err_deg", "ate_m", "rra15", "rta15"):
+                numbers["effects"][mode][m] = paired_effects(res, m, unit="window")
+            numbers["pose"][mode] = {st: {k: res[st][k] for k in POSE_KEYS} | {"n_windows": res[st]["n_windows"]}
+                                     for st in res if "auc30" in res[st]}
+        numbers["fov"][mode] = {st: {"mean": res[st]["fov_h_deg"], "std": res[st]["fov_h_std"],
+                                     "gt": res[st].get("gt_fov_h_deg"), "abs_err": res[st].get("fov_h_abs_err_deg")}
+                                for st in res}
+        # fill ladder: gain over black as % of oracle, clustered CI
+        lad = {}
+        for proj in ("fisheye", "persp"):
+            blk = {k: v["AbsRel"] for k, v in res[f"{proj}_masked"]["_per_frame_metrics"].items()}
+            orc = {k: v["AbsRel"] for k, v in res[f"{proj}_full"]["_per_frame_metrics"].items()}
+            go = res[f"{proj}_masked"]["_group_of"]
+            span = float(np.mean([blk[k] - orc[k] for k in sorted(set(blk) & set(orc))]))
+            rows = {}
+            for st in sorted(s for s in res if s.startswith(f"{proj}_fill_")) + [f"{proj}_full"]:
+                v = {k: vv["AbsRel"] for k, vv in res[st]["_per_frame_metrics"].items()}
+                gain = {k: blk[k] - v[k] for k in sorted(set(v) & set(blk))}
+                cb = cluster_bootstrap(gain, {k: 0.0 for k in gain}, go)
+                name = "ORACLE" if st.endswith("_full") else st.split("_fill_")[1]
+                rows[name] = {"AbsRel": float(np.mean(list(v.values()))), "gain": float(np.mean(list(gain.values()))),
+                              "pct": 100 * float(np.mean(list(gain.values()))) / span, "ci_lo": cb["ci_lo"], "ci_hi": cb["ci_hi"]}
+            rows["black"] = {"AbsRel": float(np.mean(list(blk.values()))), "gain": 0.0, "pct": 0.0, "ci_lo": 0.0, "ci_hi": 0.0}
+            lad[proj] = {"span": span, "rows": rows}
+        numbers["ladder"][mode] = lad
+    # multi-frame minus single, per setting
+    numbers["multi_vs_single"] = {}
+    for st in res1:
+        a = {k: v["AbsRel"] for k, v in res1[st]["_per_frame_metrics"].items()}
+        b = {k: v["AbsRel"] for k, v in res8[st]["_per_frame_metrics"].items()}
+        d = {k: b[k] - a[k] for k in set(a) & set(b)}
+        numbers["multi_vs_single"][st] = cluster_bootstrap(d, {k: 0.0 for k in d}, res8[st]["_group_of"])
+
+    # ---- what the model actually received: pure-black and graded fractions,
+    # measured on the dumped tensors of all 96 single-frame inputs, not on the
+    # analytic mask alone.
+    numbers["inputs"] = {}
+    for st in CELLS:
+        blk, grd = [], []
+        for f in sorted(glob.glob(os.path.join(raw, f"{st}_s1_w*.npz"))):
+            z = np.load(f)
+            blk.append(float((z["rgb"].max(-1) == 0).mean()))
+            grd.append(float(z["mask"].mean()))
+        numbers["inputs"][st] = {"black_pct": 100 * float(np.mean(blk)), "graded_pct": 100 * float(np.mean(grd)),
+                                 "n": len(blk)}
+
+    # ---- where in the image the fill effect lives: AbsRel in a band within
+    # 16 px of the hole boundary vs the interior, black vs true content, on all
+    # 96 single-frame inputs. Prose about "a bright ring at the border" is
+    # otherwise an eyeballed claim.
+    from scipy import ndimage
+    numbers["band"] = {}
+    for proj in ("fisheye", "persp"):
+        acc = {"band_black": [], "band_full": [], "int_black": [], "int_full": []}
+        for f in sorted(glob.glob(os.path.join(raw, f"{proj}_masked_s1_w*.npz"))):
+            zm, zf = np.load(f), np.load(f.replace("_masked_", "_full_"))
+            assert str(zm["frame_dir"]) == str(zf["frame_dir"])
+            m, gt = zm["mask"].astype(bool), zm["gt"].astype(np.float32)
+            dist = ndimage.distance_transform_edt(m)
+            band, inner = m & (dist <= 16), m & (dist > 16)
+            for tag, z in (("black", zm), ("full", zf)):
+                e = np.abs(z["pred"].astype(np.float32) - gt) / np.maximum(gt, 1e-6)
+                acc[f"band_{tag}"].append(float(e[band].mean()))
+                acc[f"int_{tag}"].append(float(e[inner].mean()))
+        r = {k: float(np.mean(v)) for k, v in acc.items()}
+        r["band_gain_pct"] = 100 * (r["band_black"] - r["band_full"]) / r["band_black"]
+        r["int_gain_pct"] = 100 * (r["int_black"] - r["int_full"]) / r["int_black"]
+        numbers["band"][proj] = r
+    # ---- per-window wins: in how many of the 12 windows is true content better?
+    numbers["wins"] = {}
+    for mode, res in results.items():
+        for proj in ("fisheye", "persp"):
+            f, b = res[f"{proj}_full"], res[f"{proj}_masked"]
+            g = OrderedDict()
+            for d, mm in f["_per_frame_metrics"].items():
+                g.setdefault(f["_group_of"][d], []).append(mm["AbsRel"] - b["_per_frame_metrics"][d]["AbsRel"])
+            w = {"absrel_better": int(sum(np.mean(v) < 0 for v in g.values())), "n": len(g)}
+            if "_per_window" in f:
+                a = {k: v["auc30"] for k, v in f["_per_window"].items()}
+                bb = {k: v["auc30"] for k, v in b["_per_window"].items()}
+                d = [a[k] - bb[k] for k in a]
+                w.update({"auc_higher": int(sum(x > 1e-9 for x in d)), "auc_equal": int(sum(abs(x) <= 1e-9 for x in d)),
+                          "auc_lower": int(sum(x < -1e-9 for x in d))})
+            numbers["wins"][f"{mode}/{proj}"] = w
+
+    # ---- figures
+    wkeys = list(res8["persp_full"]["_windows"].keys())
+    for wi, wk in enumerate(wkeys):
+        fdir = fig_panels(raw, results, wi, os.path.join(args.out, f"panels_w{wi:02d}.jpg"))
+        numbers["windows"].append({"index": wi, "key": wk, "first_frame": fdir,
+                                   "group": res8["persp_full"]["_windows"][wk]["group"]})
+        if wi < 4:
+            fig_inputs(raw, wi, os.path.join(args.out, f"inputs_w{wi:02d}.jpg"))
+    fig_trajectories(res8, os.path.join(args.out, "trajectories.png"))
+    fig_fov(res1, res8, os.path.join(args.out, "fov.png"))
+    fig_effects(numbers["effects"], os.path.join(args.out, "effects.png"))
+    with open(os.path.join(args.out, "numbers.json"), "w") as fh:
+        json.dump(numbers, fh, indent=1, ensure_ascii=False)
+    print(f"[figures] wrote {len(wkeys)} panel figures + inputs/trajectories/fov/effects + numbers.json -> {args.out}")
+
+
+if __name__ == "__main__":
+    main()
