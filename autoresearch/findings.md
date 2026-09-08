@@ -2153,3 +2153,58 @@ mean over these thirteen with an sd, never a single sequence.
 This is the third standing rule, and it subsumes the second: printing absolute
 numbers beside relative ones does not help if the absolute number itself comes
 from one lucky recording.
+
+## H26 — the adapter was inflated too, and the conclusions come out stronger
+
+`h26-lora-variance/results/`, 52 evaluations (3 `omega110` seeds + `omega_rt`
+control × 13 recordings). Checkpoints unchanged. Reading in that experiment's
+`analysis.md`.
+
+| | published (seq136) | thirteen recordings |
+|---|---|---|
+| adapter `omega110` | -51.5% | **-38.59% +- 4.97** |
+| control `omega_rt` | -47.6% | -34.92% +- 5.67 |
+| 16-number curve (H25) | -16.6% | -7.02% +- 1.67 |
+| adapter / curve | 3.10x | **5.50x** |
+| adapter - control | -3.9 pts | -3.66 pts |
+
+**B1 fails at 2.60 sd** — the adapter figure was inflated by the same recording,
+but less than half as badly as the curve's 5.74 sd.
+
+**B2 fails in the opposite direction to the worry.** The ratio went UP, from
+3.10x to 5.50x, because the curve was flattered about twice as much as the
+adapter. **The published number understated the adapter's in-room advantage.**
+
+**B3 passes 13/13 — the one that mattered.** `omega110` beats the un-rectified
+control on every single recording, gap -3.66 points against seq136's -3.9. H18's
+central in-room reading went from one recording to thirteen without moving.
+
+### Which recording beats which seed
+
+Three `omega110` seeds average -39.44, -39.62, -36.72 — a range of 2.9 points
+against a within-seed sequence sd of ~5. **Which recording you score on matters
+more than which seed you train.** Every future run here should budget for that.
+
+### Incidental: the student improves the centre
+
+`omega110` improves near-centre by **-31.4%** on average rather than damaging it,
+the opposite of the 16-number curve's +26.8% (H25). Consistent with the student
+being trained on the teacher's depth everywhere while the curve is a per-angle
+correction fitted to rim-dominated statistics. **Not** the same measurement as
+the data-ladder table's +58% to +145%, which comes from rim-weighted arms; the
+two must not be quoted against each other.
+
+### Still untested
+
+The **"89% and 82% of what real labels buy"** ratio divides by a GT-trained arm
+also measured on seq136 and not re-run. Given that everything on seq136 is
+inflated and by different factors, that ratio should not be quoted until the
+denominator is re-measured.
+
+### Net
+
+Two published headline numbers were wrong and both are corrected downward. All
+three claims resting on them survive or strengthen: the adapter beats the curve
+by more than published, the rectified teacher beats its control 13/13 instead of
+1/1, and the effect is consistently signed everywhere tried. The correction cost
+two numbers and bought a much firmer floor.

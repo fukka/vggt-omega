@@ -1443,3 +1443,39 @@ Third standing rule, and it subsumes the second: a single designated held-out
 sequence quoted everywhere is not a held-out set. Printing absolute numbers
 beside relative ones does not help when the absolute number comes from one lucky
 recording.
+
+## 2026-09-08 (very late) — H26: both numbers wrong, conclusions firmer
+
+Re-measured the H18 students and the un-rectified control on the same thirteen
+recordings H25 used. 52 evaluations, no retraining.
+
+B1 fails: the adapter's -51.5% is 2.60 sd above the thirteen-recording mean of
+-38.59%. So it was inflated by seq136 too — but less than half as badly as the
+16-number curve's 5.74 sd.
+
+B2 fails in the direction I had not considered. I had worried the adapter-vs-
+curve ratio might collapse; instead it GREW, 3.10x to 5.50x, because the curve
+was flattered about twice as much as the adapter. The published figure
+understated the adapter's in-room advantage.
+
+B3 passes 13 of 13, and it was the one that mattered. The rectified teacher
+beats the un-rectified control on every recording, gap -3.66 points against
+seq136's -3.9. H18's central in-room comparison had never been checked on more
+than one recording; it now holds on thirteen without moving.
+
+Worth carrying forward: the three seeds span 2.9 points while the sequence sd is
+about 5. Which recording you score on matters more than which seed you train,
+and this line has been spending its variance budget on seeds.
+
+Also noted an incidental that contradicts nothing but could easily be misquoted:
+the omega110 students improve the near-centre by 31%, the opposite of the
+16-number curve's damage. Different objects — the student learns the teacher
+everywhere, the curve is a per-angle fit on rim-dominated statistics — and the
+data-ladder table's centre damage comes from different, rim-weighted arms
+entirely. Wrote that separation into findings so nobody cross-quotes them.
+
+Still untested and flagged as such: the "89%/82% of what real labels buy" ratio
+divides by a GT-trained arm that has not been re-measured.
+
+Net: two headline numbers corrected downward, and every conclusion that rested
+on them survived or got stronger.

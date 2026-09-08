@@ -1111,3 +1111,41 @@ h26_candidate:
     recordings. Decides whether the headline of the whole distillation section
     survives, and whether the adapter-vs-curve ratio holds.
   cost: eval only, no training; the blocker is locating the student checkpoints.
+
+# ------------------------------------------------- H26 resolved 2026-09-08
+h26_outcome:
+  status: B1 and B2 fail, B3 passes 13/13 — numbers corrected, conclusions stronger
+  artifacts: autoresearch/experiments/h26-lora-variance/results/ (52 eval JSONs)
+  analysis: autoresearch/experiments/h26-lora-variance/analysis.md
+  corrected_numbers:
+    adapter_omega110: "-51.5% (seq136) -> -38.59% +- 4.97 over 13 recordings (2.60 sd out)"
+    control_omega_rt: "-47.6% (seq136) -> -34.92% +- 5.67"
+    curve_16_numbers: "-16.6% (seq136) -> -7.02% +- 1.67 (H25, 5.74 sd out)"
+    adapter_over_curve: "published 3.10x -> 5.50x on 13-recording means"
+    adapter_minus_control: "-3.9 pts (seq136) -> -3.66 pts (13 recordings)"
+  b2_failed_the_other_way: >
+    The ratio GREW rather than collapsing, because the curve was flattered about
+    twice as much as the adapter. The published figure UNDERSTATED the adapter's
+    in-room advantage.
+  b3_is_the_one_that_mattered: >
+    omega110 beats the un-rectified omega_rt control on 13 of 13 recordings.
+    H18's central in-room comparison had never been checked on more than one
+    recording and now holds on thirteen without moving.
+  seeds_vs_sequences: >
+    Three omega110 seeds span 2.9 points; the within-seed sequence sd is ~5.
+    WHICH RECORDING YOU SCORE ON MATTERS MORE THAN WHICH SEED YOU TRAIN. This
+    line has been spending its variance budget on seeds.
+  incidental_do_not_cross_quote: >
+    omega110 students IMPROVE near-centre by -31.4%, opposite to the 16-number
+    curve's +26.8% damage. Different objects. And neither is the data-ladder
+    table's +58% to +145%, which comes from rim-weighted arms.
+  still_untested: >
+    The "89% and 82% of what real labels buy" ratio divides by a GT-trained arm
+    also measured on seq136 and not re-run. Do not quote until re-measured.
+
+h27_candidate:
+  question: >
+    Re-measure the GT-trained arm on the 13 recordings so the "89%/82% of what
+    real labels buy" headline can be restated or withdrawn. Last in-room figure
+    still resting on seq136 alone.
+  cost: eval only, same machinery as H26; needs the gt-trained checkpoint located.
