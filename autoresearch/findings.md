@@ -3240,3 +3240,62 @@ The ±22° asymmetry here is 1.354 against 1.307, positive residual costlier by
 and H32's frames' own roll biased one side). H33 left the asymmetry undecided
 and H34 was void trying; **nothing here changes that, and it is not offered as
 if it did.**
+
+## H42 — the family split is a property of the whole curve; two published claims move
+
+H41 measured the roll curve properly for one backbone and named its own limit.
+This ran it on the other three. Thirteen recordings, 15 residual angles, each
+backbone normalised by its own level error.
+
+| residual | `da3:small` | `da3:large` | `vggt` | `vggt_omega` |
+|---|---|---|---|---|
+| −22° | 1.307 | 1.226 | 1.093 | 1.061 |
+| −11° | 1.086 | 1.078 | 1.036 | 1.029 |
+| **0°** | **1.000** | **1.000** | **1.000** | **1.000** |
+| +11° | 1.099 | 1.089 | 1.014 | 1.028 |
+| +22° | 1.354 | 1.304 | 1.023 | 1.052 |
+
+**At ±22° the two families do not overlap** — every DA3 value ≥ 1.226, every
+VGGT value ≤ 1.093. H17.2's claim that roll sensitivity is a pretraining-data
+property rested on one number per backbone on seq136, the recording H25–H31
+showed amplifies every intervention. It is now a statement about the entire
+curve on thirteen recordings against a gravity-aligned origin.
+
+**VGGT-Omega's own curve predicts its own null.** From the curve alone at
+ψ = 11°: A_pred **+2.52%** against H39b's measured +0.56%, S_pred **−0.21%**
+against −0.48%. H39 found nothing recoverable there and B2 refused to call the
+−1.04% a result; the reason is now measured — *the curve is flat*. Second
+independent closing of that loop, and the two closings use opposite curves:
+H41 a steep one, H42 a flat one. (Magnitudes of 1–3% against a
+recording-to-recording sd of several percent; sign and magnitude are all that
+is claimed.)
+
+**Every backbone bottoms out at residual 0**, so H41's explanation of §03u's
+near-zero dip — the device zero sitting a median 4° off level — is a property
+of the *reference*, not a DA3-Small quirk.
+
+### "Capacity does not substitute" — the wrong half is withdrawn
+
+H17.2 measured +52% for DA3-Large against +46% for DA3-Small at 30° on seq136
+and concluded capacity makes roll robustness *worse*. Here, on thirteen
+recordings with a proper origin, **DA3-Large is flatter on both sides**
+(1.226/1.304 against 1.307/1.354), and H35 had already found their integrated
+expected costs identical (1.85% against 1.80%).
+
+Across all three measurements: **within the DA3 family, capacity makes little
+difference to roll robustness in either direction.** The "more sensitive" half
+goes. The half that matters — *changing the pretraining family* buys 4× — is
+untouched and now rests on whole curves rather than single angles.
+
+### The asymmetry gets murkier, not clearer
+
+Three of four backbones cost more at positive residual, matching H32 and H33.
+**`vggt` inverts**: 1.093 at −22° against 1.023 at +22°, where H33 had it 8/8
+the other way at ±30°.
+
+Different angle, different origin, different construction — **not a
+contradiction that can be adjudicated here, and no mechanism is offered.** H32
+found the asymmetry, H33 could not attribute it, H34 was void trying, and this
+is a fourth data point that does not line up. The honest position is that it is
+**less clean now than when H32 found it**, and nothing in the reports should
+lean on it.

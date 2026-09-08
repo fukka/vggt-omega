@@ -1943,3 +1943,24 @@ rather than by measuring something new: H40 corrected H39b's label by noticing
 what its two arms' residual rolls actually were, and H41 corrected H32 by
 putting the zero where zero is. Worth watching for: **when a curve looks odd
 near its origin, suspect the origin.**
+
+### H42 — and the same bug class twice in one tick
+
+H42's first launch failed on every recording: `residual_curve.py` hardcoded
+`weights="pretrained"`, which H41 never noticed because it only ever ran
+`da3:small`. Passing a model list the script had not seen sent `vggt_omega` to
+`torch.load("pretrained")`, and the exception aborted `main()` before any output
+was written.
+
+That is the **second time this tick** a script reused in a new configuration met
+a parameter it never needed — H40 imported `rot` from the module that did not
+have it. Both were caught on the first log check and cost minutes, not results.
+
+The pattern is worth naming because it is cheap to prevent: **when a proven
+script is pointed at a new model, dataset, or geometry, read its argument list
+before launching, not its results afterwards.**
+
+Both of H42's substantive corrections are to claims that came from seq136 at a
+single angle. That is now four experiments in a row (H41, H42, and H39/H40's
+label corrections) whose main output is a previously published number moving.
+The line is in the phase where re-measuring is worth more than measuring.
