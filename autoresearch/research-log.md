@@ -1850,3 +1850,20 @@ exists before building it.
 **The local blocking waiter was OOM-killed a fourth time** at a 90 s poll
 interval. Re-armed at 150 s and it survived. The remote job was unaffected, as
 always; the cost is a turn to notice.
+
+### H38, and a tail I misread
+
+H38 launched on both GPUs (backbones split by device), ran in about fifteen
+minutes, and closed the fourth part of the opening question. Protocol, runner
+and analysis script all committed before the numbers existed.
+
+**One wasted diagnostic, worth recording.** At 90 s I read `tail -8` of the
+running log, saw DA3-Small's baseline at 0.2341 against the published 0.1545,
+and concluded the script was not reproducing `roll_boundary.py`. It was: the
+tail was showing a *later recording*, because the per-angle print line names
+the angle and not the sequence. Two diagnostic runs to find that out, and both
+confirmed exact reproduction (0.1545 and 0.0690).
+
+The fix is in the script, not in the discipline: **a progress line inside a
+loop over recordings must name the recording.** Checking the reproduction was
+right; comparing against an unlabelled line was not.

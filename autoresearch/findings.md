@@ -2892,3 +2892,81 @@ The actionable variable keeps turning out to be *which model*, not *how big*:
   DA3 on a clean frame, is the worst of the four.
 
 Clean-benchmark accuracy does not predict any of the three robustness axes.
+
+## H38 — the fourth part of the opening question, answered: read the roll, don't rotate the picture
+
+The roll line was opened by a human question in four parts. Three were answered
+(H17.2 they assume level; H17.1 it is violated mildly; H35 it costs 0.46–1.80%).
+The fourth — *use the IMU* — was deprioritised as H17.4 with the argument that
+there is almost nothing to recover. **That argument sized the prize and never
+sized the price.**
+
+The obvious way to use a known roll is to rotate the image level, infer, and
+rotate the planar-z prediction back (which `upright.forward_z`'s docstring
+establishes is exact). But rotating a square view leaves four black corner
+triangles — and H37 had just measured what a border beside the scored zone
+costs, 13/13 with no exception.
+
+Three arms per angle, six recordings, four backbones. `null` rotates by −a then
++a: identical resampling, identical black corners, **no roll removed**.
+
+### It is a net loss almost everywhere
+
+| backbone | prize (+30° roll) | price (`null`) | net |
+|---|---|---|---|
+| `vggt_omega` | +6.0% | +6.8% | **−0.1%** |
+| `vggt` | +12.3% | +42.5% | +26.8% |
+| `da3:small` | +45.4% | +58.1% | **−12.0%** (6/6) |
+| `da3:large` | +25.2% | +268.6% | +31.9% |
+
+The one real win in eight cells is DA3-Small at +30°, which is **the most
+roll-damaged (backbone, sign) pair in the experiment**. VGGT-Omega's prize and
+price are the same size, so the most border-tolerant model available still
+gains nothing. DA3-Large de-rotated sits +64 to +70% above its own
+level-camera reference — worse than leaving the roll alone.
+
+### The border cost reproduces on a different border shape
+
+| backbone | H38 corners | H37 annulus |
+|---|---|---|
+| `vggt_omega` | +7.4% | +6.0% |
+| `vggt` | +40.9% | +48.4% |
+| `da3:small` | +64.1% | +59.0% |
+| `da3:large` | +234.8% | +268.9% |
+
+Four small corner triangles cost what a full annulus costs. Different shape,
+different area, different script, different recordings, same ordering and
+nearly the same magnitudes.
+
+**Third independent route to "cost is proximity, not area."** H17.5 got it from
+one border, H29's dose curve from sweeping the width (non-monotone, the weakest
+of the three), and this from changing the shape at fixed proximity. This is the
+cleanest of the three.
+
+### B1 failed, and the failure is the asymmetry a third time
+
+De-rotation helps DA3-Small on 6/6 recordings at +30° and 2/6 at −30°. Not
+inconsistent: +30° costs it +45.4% and −30° only +27.8%, so there is less to
+recover on the negative side while the price is higher (+70.1% vs +58.1%).
+H32 found the asymmetry, H33 could not attribute it, H34 was void trying — and
+here it decides whether a deployment recommendation holds at one sign or two.
+Recorded as a fail because the pre-registered claim was that the operation
+works, and it works in one cell out of eight.
+
+### What to do instead — and this is the useful half
+
+`raw` at 0° **is** the deployable operation: render the view level directly out
+of the fisheye by folding the known roll into the resampling grid. No border,
+no lost content, and it is exactly the level-camera reference every de-rotated
+arm fails to reach.
+
+> **Use the gravity vector in the resampling, not after it.**
+
+The caveat is real. This only works if the pipeline resamples the fisheye at
+all. Feed the raw fisheye frame straight in and there is no warp to fold the
+roll into — and then rotating the image is the only move available, and it is a
+net loss for three of four backbones.
+
+That closes the fourth part of the opening question with a concrete answer
+rather than a deprioritisation, and it does it without needing the wider-pose
+dataset H17.4 was waiting for.
