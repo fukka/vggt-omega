@@ -1213,3 +1213,76 @@ single-frame so VGGT-Omega's multi-frame machinery is idle; `omega_rt` resizes
 504 -> 512 -> 504 because a patch-16 teacher cannot take a 504 px frame and
 padding was not an option (h17's dose curve), a 1.6% rescale against `resample0`
 measuring one bilinear pass as free.
+
+## H18 follow-up — three seeds, and a cross-room result that INVERTS the reading, 2026-09-08
+
+### Three seeds
+
+| arm | seq136 rim | dec_seq132 rim | dec_seq132 near_ctr |
+|---|---|---|---|
+| `omega110` | −51.5 ± 2.0 | −22.4 ± 1.8 | **+16.4 ± 3.9** |
+| `omega_rt` | −47.6 ± 1.1 | −17.8 ± 1.0 | +6.6 ± 4.3 |
+
+Bar 2 (>= half the labelled gain) passes on all three seeds; **bar 3
+(near_center <= +10%) fails on all three** (12.4 / 20.1 / 16.9), so that failure
+is robust, not a one-seed artefact. The rectification advantage at the rim is
++3.9 / +4.6 points in the mean and favours `omega110` on 6/6 seed-sequence
+cells, but one seed nearly ties (49.2 vs 48.9 on seq136), so it is directionally
+consistent and small rather than decisive.
+
+### Cross-room, and this is the part that changes the story
+
+Same seed-0 checkpoints, evaluated on LiteOffice (other room, other device,
+scored with its own `camera.json`). near_rim:
+
+| arm | DinoToy_seq030 | BlackCeramicBowl_seq030 |
+|---|---|---|
+| `omega110` (VGGT-Ω, **rectified**) | **−20.0%** | **−9.0%** |
+| `omega_rt` (VGGT-Ω, on the fisheye) | **+0.8%** | **−0.1%** |
+| `rect` (DA3-Small, rectified) | **−28.5%** | **−10.7%** |
+| `gt` (dense labels) | −11.8% | −5.0% |
+
+**The arm that carried most of the in-room gain transfers nothing.**
+`omega_rt` goes from −47.6% in-room to +0.8% / −0.1% across rooms. Every
+rectified arm transfers; the un-rectified one does not.
+
+So the decomposition **inverts** between the two tests:
+
+| | in-room (held-out sequence) | across rooms |
+|---|---|---|
+| teacher strength alone (`omega_rt`) | −47.6% — first-order | **≈ 0** |
+| adding the rectified projection | +3.9 points — second-order | **the entire effect** |
+
+**This corrects what I published an hour ago.** The earlier write-up said
+"teacher strength is first-order, H14's mechanism second-order" without the
+qualifier. That is true **in-room only**. Across rooms it is the other way
+round, and the cross-room test is the one this project has repeatedly found to
+be the honest one.
+
+### What it suggests, stated as a hypothesis and not a result
+
+Both targets are deterministic functions of the image, so "determinism" is not
+the distinction. The plausible one: the rectified path teaches a *systematic
+radial relation* — the same geometric correction everywhere, which is a
+low-dimensional thing a 122.9k-parameter LoRA can only represent globally. The
+fisheye path teaches "be like VGGT-Ω on these images", a much
+higher-dimensional target the student can fit room-specifically. Untested.
+
+### A trade-off falls out
+
+The **weaker** DA3-Small rectified teacher transfers *best* (−28.5% / −10.7%),
+better than the far stronger VGGT-Ω rectified teacher (−20.0% / −9.0%), while
+being far worse in-room (−13.2% / +4.7% vs −52.7% / −22.8%). Stronger teacher →
+more in-room gain, slightly less transfer. Both rectified arms beat the labelled
+ceiling across rooms, which extends the earlier cross-room reversal to a much
+stronger teacher.
+
+### Where that leaves the claim
+
+* **In-room**: a frozen stronger model distilled label-free recovers 82-89% of
+  the dense-label gain at the rim; the rectified projection is a small part of
+  that.
+* **Across rooms**: only the rectified projection survives, and it beats dense
+  labels. "Distil a stronger model" does not transfer at all.
+* Anyone quoting the in-room number without the cross-room one gets the
+  mechanism backwards.
