@@ -1678,3 +1678,54 @@ operational_do_not_hand_write_a_git_loop:
   fix: "git stash push -u — one command, fully reversible, worked immediately."
   rule: "Do not hand-write a loop for something git has a native operation for."
   same_family_as: "h36b — look for the thing that already exists before building it."
+
+# ------------------------------------------------- H38 resolved 2026-09-08
+h38_derotate:
+  status: "B2 and B3 PASS; B1 FAILS informatively — the roll line's opening question is closed"
+  artifacts: autoresearch/experiments/h38-derotate/results/ (12 JSONs + summary.json)
+  analysis: autoresearch/experiments/h38-derotate/analysis.md
+  what_it_closes: >
+    H17.4 (use the IMU) had been deprioritised on the argument that there is
+    almost nothing to recover. That argument sized the PRIZE and never sized the
+    PRICE. This measures both, and does NOT need the wider-pose dataset H17.4
+    was waiting for.
+  prize_vs_price_at_plus30:
+    vggt_omega: "prize +6.0%, price +6.8%, net -0.1%"
+    vggt:       "prize +12.3%, price +42.5%, net +26.8%"
+    da3_small:  "prize +45.4%, price +58.1%, net -12.0% (6/6)"
+    da3_large:  "prize +25.2%, price +268.6%, net +31.9%"
+  b3_the_strong_one: >
+    The price of the operation reproduces H37's border costs on a completely
+    different border SHAPE — four corner triangles vs a full annulus:
+    +7.4/+40.9/+64.1/+234.8 here against +6.0/+48.4/+59.0/+268.9 there.
+    THIRD independent route to "cost is proximity, not area" (H17.5 one border,
+    H29 the dose sweep which is non-monotone and the weakest, this one changing
+    the shape at fixed proximity — the cleanest).
+  b1_failed_on_the_asymmetry: >
+    De-rotation helps da3:small 6/6 at +30 and 2/6 at -30. Not inconsistent:
+    +30 costs it +45.4% and -30 only +27.8%, so less to recover while the price
+    is higher (+70.1% vs +58.1%). H32's asymmetry deciding a deployment
+    recommendation, third appearance.
+  THE_RECOMMENDATION: >
+    USE THE GRAVITY VECTOR IN THE RESAMPLING, NOT AFTER IT. raw@0 IS the
+    deployable operation — render the view level directly out of the fisheye by
+    folding the known roll into the warp. No border, no lost content, and it is
+    the level-camera reference every de-rotated arm fails to reach.
+  caveat_that_must_travel_with_it: >
+    Only applies if the pipeline resamples the fisheye at all. Feed the raw
+    fisheye frame straight to the model and there is no warp to fold the roll
+    into; rotating the image is then the only move and it is a net loss for
+    three of four backbones.
+  limits:
+    - "Six recordings, not thirteen. sd reported on every cell."
+    - "A synthetic roll at a fixed angle, not the wearer's real frame-by-frame roll (H17.1 measured that distribution, H35 integrated against it)."
+    - "No mechanism for vggt being hurt more than da3:small despite a lower border price. It has less roll to recover — arithmetic, not an explanation."
+
+operational_progress_lines_must_name_the_recording:
+  symptom: >
+    Read `tail -8` of a running log, saw da3:small at 0.2341 against the
+    published 0.1545, and concluded the new script did not reproduce
+    roll_boundary.py. It did — the tail was a LATER RECORDING.
+  cause: "The per-angle print named the angle and not the sequence."
+  cost: "Two diagnostic runs; both confirmed exact reproduction (0.1545, 0.0690)."
+  fix: "Any progress line inside a loop over recordings must name the recording. Applied to derotate.py."

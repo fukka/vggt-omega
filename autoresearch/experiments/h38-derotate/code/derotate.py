@@ -206,8 +206,12 @@ def main(argv=None):
                     preds[f] = np.where(cov, d.float().cpu().numpy(), 0.0)
                 results[arm][str(deg)] = zones(preds, cone & cov & common)
             r = {k: results[k][str(deg)]["all"] for k in results}
-            print(f"  {deg:>6.1f}deg   raw {r['raw']:.4f}   derot {r['derot']:.4f}"
-                  f"   null {r['null']:.4f}", flush=True)
+            # The sequence name goes on every progress line. A tail of this
+            # log inside a loop over recordings is otherwise unattributable,
+            # and comparing an unlabelled line against a published number
+            # cost two diagnostic runs on 2026-09-08.
+            print(f"  [{s.name}] {deg:>6.1f}deg   raw {r['raw']:.4f}"
+                  f"   derot {r['derot']:.4f}   null {r['null']:.4f}", flush=True)
         all_models[spec] = results
         del bb
         torch.cuda.empty_cache()
