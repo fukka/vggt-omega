@@ -128,7 +128,20 @@ def main(argv=None) -> None:
                    help="630 keeps centre sampling at parity with the fisheye "
                         "at 504 (ratio 1.009); see rect_teacher.virtual_pinhole")
     p.add_argument("--max-frames", type=int, default=60)
-    p.add_argument("--variant", default="small")
+    p.add_argument("--variant", default="small",
+                   help="the STUDENT's DA3 variant; also the teacher's unless "
+                        "--teacher-model says otherwise")
+    p.add_argument("--teacher-model", default="",
+                   help="run the teacher on a DIFFERENT backbone, e.g. "
+                        "vggt_omega. Empty means self-distillation (the "
+                        "original H14 claim). Either way no depth labels are "
+                        "used, so the label-free property survives; what "
+                        "changes is that the claim becomes cross-model "
+                        "distillation. H17.6 measured that vggt_omega is the "
+                        "one backbone that tolerates a border adjacent to the "
+                        "zone of interest (+29% vs DA3-Small's +106%), which "
+                        "is what makes a 110 deg teacher possible at all.")
+    p.add_argument("--omega-ckpt", default="checkpoints/VGGT-Omega-1B-512/model.pt")
     p.add_argument("--depth-max-m", type=float, default=10.0)
     p.add_argument("--score-teacher", action="store_true",
                    help="also score the teacher against GT (diagnostic only)")
@@ -148,13 +161,19 @@ def main(argv=None) -> None:
 
     s = Seq(os.path.expanduser(a.seq), a.size, a.max_frames)
     cam = s.src.camera
+    _patch = 16 if a.teacher_model.startswith("vggt_omega") else 14
+    if a.teacher_size % _patch:
+        a.teacher_size = int(round(a.teacher_size / _patch)) * _patch
+        print(f"[h14/{a.arm}] teacher frame rounded to {a.teacher_size} "
+              f"(patch {_patch})")
     if a.layout == "ring":
         rig = RT.Rig.ring(cam, centre_fov_deg=89.0, centre_size=a.teacher_size,
                           n_ring=a.n_ring, tilt_deg=a.ring_tilt,
                           ring_fov_x_deg=a.ring_fov_x, ring_width=a.ring_width,
-                          ring_height=a.ring_height)
+                          ring_height=a.ring_height, patch=_patch)
     else:
-        rig = RT.Rig.single(cam, fov_deg=a.teacher_fov, size=a.teacher_size)
+        rig = RT.Rig.single(cam, fov_deg=a.teacher_fov, size=a.teacher_size,
+                            patch=_patch)
     covered = rig.covered
     cone = cam.valid_mask(a.size, a.size)
     cov = rig.coverage
@@ -176,8 +195,22 @@ def main(argv=None) -> None:
             f"for a diagnostic sweep.")
 
     from raytun3r.backbones import build_backbone
-    bb = build_backbone("da3", weights="pretrained", device=a.device,
-                        variant=a.variant)
+    # The STUDENT (and the raw-fisheye reference the targets are scaled
+    # against) is always the DA3 variant being adapted. The TEACHER may be a
+    # different backbone; when it is, `log_offset_vs_raw` still removes the
+    # teacher's scale relative to the STUDENT's own output, which is what the
+    # trainer needs.
+    bb_s = build_backbone("da3", weights="pretrained", device=a.device,
+                          variant=a.variant)
+    if a.teacher_model:
+        tname, _, tvar = a.teacher_model.partition(":")
+        tkw = {"variant": tvar} if tvar else {}
+        tw = a.omega_ckpt if tname == "vggt_omega" else "pretrained"
+        bb_t = build_backbone(tname, weights=tw, device=a.device, **tkw)
+        print(f"[h14/{a.arm}] teacher={a.teacher_model} (patch {bb_t.patch_size}), "
+              f"student/reference=da3-{a.variant} (patch {bb_s.patch_size})")
+    else:
+        bb_t = bb_s
 
     theta = cam.incidence_grid(a.size, a.size)
     cos_fish = torch.cos(theta).clamp_min(1e-6)
@@ -189,9 +222,10 @@ def main(argv=None) -> None:
     # divides by the VIEW's cos, the fisheye path by the fisheye's. Installing
     # a camera and letting _finalize divide would use the wrong axis for any
     # tilted view.
-    def install(camera, hw):
-        bb.install(None, camera, hw, patch_undistort=False, border_token=False,
-                   dpt_grid=False, depth_convention="z")
+    def install(camera, hw, net=None):
+        (net or bb_t).install(None, camera, hw, patch_undistort=False,
+                              border_token=False, dpt_grid=False,
+                              depth_convention="z")
 
     out = Path(a.out)
     (out / "npz").mkdir(parents=True, exist_ok=True)
@@ -213,16 +247,16 @@ def main(argv=None) -> None:
                 install(view.pin, hw)
                 installed["hw"] = hw
             with torch.no_grad():
-                return U.forward_z(bb, warped)
+                return U.forward_z(bb_t, warped)
         for n in s.frames:
             d, info = rig.teach(forward_z, s.src.image(n).to(a.device))
             teacher[s.stem(n)] = d.float().cpu().numpy()
             scales[s.stem(n)] = info["log_scale"]
     else:
-        install(cam, (a.size, a.size))
+        install(cam, (a.size, a.size), bb_s)
         for n in s.frames:
             with torch.no_grad():
-                z = U.forward_z(bb, s.src.image(n).to(a.device))
+                z = U.forward_z(bb_s, s.src.image(n).to(a.device))
             d, info = rig.roundtrip(z / cos_dev)
             teacher[s.stem(n)] = d.float().cpu().numpy()
             scales[s.stem(n)] = info["log_scale"]
@@ -230,7 +264,7 @@ def main(argv=None) -> None:
     # ---- pass 2: the raw-fisheye reference -------------------------------
     # Always run, not only under --score-teacher: the per-frame log offset
     # below is part of the TARGET, not a diagnostic.
-    install(cam, (a.size, a.size))
+    install(cam, (a.size, a.size), bb_s)
     cov_np = covered.numpy()
     offsets = {}
     if a.score_teacher:
@@ -250,7 +284,7 @@ def main(argv=None) -> None:
     for n in s.frames:
         stem = s.stem(n)
         with torch.no_grad():
-            zr = U.forward_z(bb, s.src.image(n).to(a.device))
+            zr = U.forward_z(bb_s, s.src.image(n).to(a.device))
         raw = (zr / cos_dev).float().cpu().numpy()
         tea = teacher[stem]
         both = cov_np & (raw > 1e-6) & (tea > 1e-6)
@@ -295,6 +329,7 @@ def main(argv=None) -> None:
         "teacher_size": a.teacher_size, "layout": a.layout,
         "n_views": len(rig.views), "view_sizes": rig.sizes,
         "backbone": f"da3-{a.variant}",
+        "teacher_backbone": a.teacher_model or f"da3-{a.variant}",
         "depth_convention": "range", "cone_coverage": cov,
         "rim_band_coverage": rim_cov,
         "mean_frame_fill": rig.fill_fraction, "precheck_only": a.precheck_only,

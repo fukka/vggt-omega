@@ -261,3 +261,81 @@ and H14's next version remains "narrower teacher + rim-band mask" as recorded.
 
 Not a bar, recorded: one sequence, 20 frames, one seed, same scale as every
 other arm in h16/h17.
+
+## H18 — the 110 deg VGGT-Omega teacher (locked 2026-09-08, before training)
+
+### Why this exists
+
+H17.6's decision rule fired: VGGT-Omega is the one backbone measured to tolerate
+a hard border adjacent to the zone of interest (+29% where DA3-Small pays
++106%). The pre-check now confirms the consequence, and the margin is not
+subtle. Same 110 deg view, same 22.5% black frame, only the teacher's backbone
+changes:
+
+| teacher | cone cov | rim-band cov | frame fill | near_rim vs raw DA3-Small |
+|---|---|---|---|---|
+| DA3-Small 110 deg | 100% | 100% | 0.775 | **+33.3% / +39.3%** (inverts) |
+| VGGT-Omega 110 deg | 100% | 100% | 0.775 | **−65.0%** |
+| VGGT-Omega 95 deg | 83.7% | 71.9% | 0.987 | −70.4% |
+| DA3-Small 95 deg (H14's shipped config) | 83.7% | 70.4% | 0.987 | −14.7% |
+
+H14's whole difficulty was that the teacher's rim advantage was thin
+(−11.5…−14.7%) and covered only 70% of the band. The new teacher is **4.4x
+stronger and covers 100%**. The accuracy-vs-coverage trade-off is dissolved,
+not traded along.
+
+### What changes about the claim
+
+This is **cross-model** distillation, not self-distillation. It is still
+completely **label-free** — no depth ground truth touches the teacher, the
+targets, or the student — but "the model teaches itself" becomes "a stronger
+frozen model teaches a smaller one, through a projection the smaller one cannot
+use directly". Both are useful; they are not the same claim and the report must
+not blur them.
+
+### Arms
+
+| arm | teacher | student | uses labels |
+|---|---|---|---|
+| `omega110` | VGGT-Omega, 110 deg view, 100% cone | DA3-Small + LoRA on raw fisheye | no |
+| `rect` (existing) | DA3-Small, 95 deg view, 70% rim | same | no |
+| `roundtrip` (existing) | DA3-Small on the fisheye, same resampling | same | no |
+| `gt` (existing) | dense depth ground truth | same | **yes** |
+
+Everything except the teacher is held at H14's shipped settings: 4 training
+sequences x 60 frames, 20 epochs, seed 0, LoRA r=8 on blocks 8-11.
+
+### Bars (locked)
+
+1. **Primary.** `omega110` must beat `roundtrip` at near_rim on **both** held-out
+   sequences. This is H14's original P1, which `rect` failed on
+   decoration_seq132 (+4.7%).
+2. **Magnitude.** It must recover at least **half** of the `gt` arm's near_rim
+   gain on each sequence (gt is −57.9% on seq136, −27.2% on dec_seq132). `rect`
+   recovered 22.8% and a negative fraction respectively. Half is a deliberately
+   demanding bar; the teacher is 4.4x stronger, so a weak result would mean the
+   student cannot absorb it, which is itself worth knowing.
+3. **Centre not sacrificed.** near_center must not degrade by more than 10%.
+   `rect` degraded it +43.3% on seq136, inherited from its teacher's own
+   near_center offset. VGGT-Omega's 110 deg teacher is −46.0% at near_center, so
+   this failure mode should be gone; if it is not, the damage is coming from the
+   student or the transfer, not from the teacher.
+4. **decoration_seq132 is primary.** seq136 is a sanity check only — the data
+   ladder showed it behaves like a training sequence.
+
+### Falsification and what each outcome means
+
+* All four bars pass -> H14's idea was right and its teacher was the problem.
+  The label-free line becomes live again.
+* Bar 1 passes, bar 2 fails -> the student is the bottleneck, not the teacher.
+  Next lever is student capacity or the loss, not the teacher.
+* Bar 1 fails on dec_seq132 with a −65% teacher -> the transfer itself does not
+  survive a change of room, which would be a much stronger negative result than
+  H14's original one and would close the label-free line properly.
+
+### Boundary conditions, recorded now
+
+One seed. The pre-check is 60 frames on two sequences. VGGT-Omega runs
+single-frame here, so its multi-frame machinery is idle and the comparison is
+representation-vs-representation. Teacher frame is 624 px (patch 16) against
+DA3's 630 (patch 14) — the same 110 deg field, 1% fewer pixels.
