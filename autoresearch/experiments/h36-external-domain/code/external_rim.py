@@ -37,6 +37,14 @@ def main(argv=None):
     p.add_argument("--variant", default="small")
     p.add_argument("--max-depth", type=float, default=40.0)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--theta-cap-deg", type=float, default=80.0,
+                   help="Score only inside this incidence angle. The range "
+                        "convention divides planar z by cos(theta), which "
+                        "explodes as cos crosses zero at 90 deg — on this ~190 "
+                        "deg lens that produced predictions of 1.5e6 and an "
+                        "AbsRel of 5.99. Aria's 54.83 deg cone never exposed it. "
+                        "Truncating keeps the conversion well defined; the cost "
+                        "is that 'rim' now means the rim of a TRUNCATED cone.")
     p.add_argument("--out", default=None)
     a = p.parse_args(argv)
 
@@ -56,12 +64,18 @@ def main(argv=None):
         cam = s["cam"]
         C = ds.calib[cam]
         th = C.incidence_grid(a.size, a.size).numpy()
-        tmax = float(C.theta_max)
-        rim = th >= RIM_FRAC * tmax
+        cap = np.radians(a.theta_cap_deg)
+        tmax = min(float(C.theta_max), cap)
+        rim = (th >= RIM_FRAC * tmax) & (th <= tmax)
         ctr = th <= CTR_FRAC * tmax
-        gt = s["depth"].numpy(); ok = s["valid"].numpy()
+        gt = s["depth"].numpy(); ok = s["valid"].numpy() & (th <= tmax)
+        # depth_convention MUST be "range": SynWoodScape's GT is euclidean range
+        # (depthfisheye.verify_depth_convention establishes it), and this lens
+        # goes past 90 deg where planar z has no meaning. The first run copied
+        # depth_convention="z" from the Aria call site, which converts to range
+        # separately, and produced AbsRel 2.640 — caught by B3.
         bb.install(None, C, (a.size, a.size), patch_undistort=False,
-                   border_token=False, dpt_grid=False, depth_convention="z")
+                   border_token=False, dpt_grid=False, depth_convention="range")
         with torch.no_grad():
             pr = bb.forward(s["image"][None, None].to(a.device)).depth[0].float().cpu().numpy()
         v = ok & (pr > 1e-6) & np.isfinite(pr)

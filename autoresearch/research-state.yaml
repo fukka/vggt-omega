@@ -1527,3 +1527,32 @@ h35_outcome:
     multi-view-pretrained model and ~1.8% for a single-image one. Both cheap.
     The tail beyond +-20 deg is worth chasing only on the single-image models.
     Measured, not inferred from three separately-quoted numbers.
+
+# ------------------------------- H36 in flight; structural finding already banked
+h36_structural_finding:
+  what: >
+    The raytun3r depth-convention machinery ASSUMES A SUB-90-DEGREE CONE.
+    `install(depth_convention="range")` converts planar z to range by dividing
+    by cos(theta); on SynWoodScape's ~190 degree lens cos crosses zero at 90 and
+    the prediction reaches 1.5e6, giving AbsRel 5.99. The other setting,
+    depth_convention="z", instead compares planar z against range ground truth
+    and gives AbsRel 2.64. NEITHER SETTING IS CORRECT past 90 degrees.
+  why_it_never_surfaced: >
+    Aria's cone is 54.83 degrees. Every experiment in this line stayed inside
+    it, so the conversion was always well defined.
+  evidence: >
+    Diagnostic on three frames: gt median 1.2-1.9 m, prediction median 2.2-2.4
+    (sane), prediction MAX 1.1e6 to 2.1e6 (not sane). corr(pred, gt) +0.07 to
+    +0.32; corr(1/pred, gt) negative, so it is not inverse depth — it is the
+    cos-divide exploding at the rim.
+  consequence_for_anyone_reusing_this_tooling: >
+    Applying this line's evaluation code to a wide automotive fisheye hits this
+    immediately. Score inside a truncated cone (<= 80 deg) or rework the
+    conversion. Documented in backbones.py's own docstring, which warns the
+    same class of bug is "an order of magnitude larger than the effect being
+    measured" at 170 degrees.
+  mistake_pattern_repeated: >
+    Second time this session that COPYING A CALL SITE'S FLAGS INTO A NEW DOMAIN
+    carried the old domain's assumptions. H34 mirrored the image and not the
+    ground truth; H36 copied depth_convention from the Aria path. Both were
+    caught only by a sanity bar on an untransformed baseline.
