@@ -1733,3 +1733,30 @@ would rather say so than keep generating activity.
 The asymmetry rests where H33 left it: DA3-Small only, DA3-Large shows none,
 some part possibly our own rendering, extent unknown. Both reports already say
 that, so nothing needs changing.
+
+## 2026-09-08 (end) — H35 closes the roll line with the number it should have led with
+
+H32 gave the expected roll cost for DA3-Small, the most roll-sensitive model in
+the set. The report recommends VGGT-Omega as the teacher, so the number a reader
+would act on was never computed. H35 computes it for all four backbones on the
+same six recordings with the dense grid.
+
+VGGT-Omega costs 0.46% against DA3-Small's 1.80% — 4x cheaper. I had expected the
+integral to compress H17's 4-5x sensitivity gap, because it weights the flat
+low-angle region far more heavily than H17's 30-degree comparison did. It barely
+compresses, which means that gap is not an artefact of looking at large angles.
+
+Two things narrow as a result. The tail advice — "if you spend effort on roll,
+spend it on the rare tilt beyond 20 degrees" — holds for DA3-Small at 23% but
+not for VGGT-Omega at 10%. It is DA3-specific and both reports should say so.
+
+And DA3-Large costs 1.85%, identical to DA3-Small's 1.80%, despite being much
+better at 30 degrees. The integral lives under 15 degrees where they are alike.
+Scaling the single-image model buys nothing on the cost you actually pay;
+changing the pretraining buys 4x. That rhymes with the rim-penalty result, where
+a bigger model also did not help and a differently-pretrained one did.
+
+The roll line can close on that: 0.3-0.5% for a multi-view model, 1.8% for a
+single-image one, both cheap, tail only worth chasing on the latter. It is
+measured now rather than inferred by putting three separate numbers side by side,
+which is how this line stated it for most of its life.

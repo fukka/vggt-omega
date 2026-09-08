@@ -1496,3 +1496,34 @@ operational_blocking_waiters_get_oom_killed:
     Do not switch to polling from the model instead — that is the thing the
     token rules forbid. One long-interval blocking waiter is still the right
     pattern; it just needs a slower loop.
+
+# ------------------------------------------------- H35 resolved 2026-09-08
+h35_outcome:
+  status: B1 and B2 PASS; B3 narrows the tail advice to DA3-like models
+  artifact: autoresearch/experiments/h35-cost-per-backbone/results/
+  analysis: autoresearch/experiments/h35-cost-per-backbone/analysis.md
+  expected_roll_cost_per_backbone:
+    da3_small: "1.80% +- 1.31   (+-20 +14.0%, +-30 +42.0%, tail share 23.0%)"
+    da3_large: "1.85% +- 1.33   (+-20 +9.3%,  +-30 +27.8%, tail share 14.9%)"
+    vggt: "0.34% +- 0.23   (+-20 +2.9%,  +-30 +7.0%,  tail share 17.1%)"
+    vggt_omega: "0.46% +- 0.25   (+-20 +2.6%,  +-30 +4.8%,  tail share 9.8%)"
+  b1_the_gap_survives_integration: >
+    VGGT-Omega 0.46% vs DA3-Small 1.80%, ratio 0.25 — 4x cheaper. I expected the
+    integral to compress H17's 4-5x gap since it weights the flat low-angle
+    region far more than H17's 30-degree comparison. It barely compresses, so
+    the pretraining-family gap is not an artefact of large angles.
+  b3_tail_advice_narrows: >
+    H32's "beyond +-20 deg carries 26% of the cost" holds for DA3-Small (23.0%)
+    and NOT for VGGT-Omega (9.8%). "Handle the rare large roll" is DA3-SPECIFIC
+    advice; on a multi-view model there is barely any cost to concentrate.
+  bigger_is_not_the_axis: >
+    DA3-Large 1.85% is identical to DA3-Small 1.80% despite being far better at
+    30 deg (+27.8 vs +42.0). The integral lives under 15 deg where they are
+    alike. Scaling the single-image model buys nothing on the cost actually
+    paid; changing the pretraining buys 4x. Same shape as the rim-penalty
+    finding.
+  ROLL_LINE_CLOSING_STATEMENT: >
+    On ordinary indoor footage, ignoring head roll costs 0.3-0.5% for a
+    multi-view-pretrained model and ~1.8% for a single-image one. Both cheap.
+    The tail beyond +-20 deg is worth chasing only on the single-image models.
+    Measured, not inferred from three separately-quoted numbers.

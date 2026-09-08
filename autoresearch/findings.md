@@ -2619,3 +2619,49 @@ rendering), which both reports already state. Nothing needs changing.
 **Lesson worth keeping: any test that transforms the input needs a bar on the
 untransformed baseline.** B3 was routine and it is the only reason this did not
 go out as a finding.
+
+## H35 — for the model you would actually ship, roll costs 0.46%
+
+`h35-cost-per-backbone/`, dense grid, four backbones on the SAME six recordings,
+integrated against H17's 60,105 frames. Reading in that experiment's
+`analysis.md`.
+
+| backbone | expected cost | +-20 deg | +-30 deg | tail share |
+|---|---|---|---|---|
+| DA3-Small | **1.80% +- 1.31** | +14.0% | +42.0% | **23.0%** |
+| DA3-Large | 1.85% +- 1.33 | +9.3% | +27.8% | 14.9% |
+| VGGT | **0.34% +- 0.23** | +2.9% | +7.0% | 17.1% |
+| VGGT-Omega | **0.46% +- 0.25** | +2.6% | +4.8% | **9.8%** |
+
+**B1 passes.** VGGT-Omega 0.46% against DA3-Small 1.80% — ratio 0.25, **4x
+cheaper**. I expected the integral to compress H17's 4-5x gap, since it weights
+the flat low-angle region far more heavily than H17's 30-degree comparison. **It
+barely compresses.** The pretraining-family gap is not an artefact of looking at
+large angles.
+
+**B2 passes.** DA3-Small reads 1.80% here against H32's 1.46% +- 1.09 on
+thirteen recordings — inside the spread, so subset and runner agree with H32.
+
+**B3 — the tail advice is DA3-specific.** H32's "frames beyond +-20 deg carry
+26% of the cost" holds for DA3-Small (23.0%) and NOT for VGGT-Omega (9.8%), a
+13-point gap. The multi-view curves are flat enough that the rare tilt stops
+being disproportionate. **"Handle the rare large roll" narrows to DA3-like
+models**; on a multi-view model there is barely any cost to concentrate.
+
+### Bigger is not the axis
+
+DA3-Large costs 1.85%, statistically identical to DA3-Small's 1.80%, despite
+being far better at large angles (+27.8% vs +42.0% at 30 deg). The integral is
+dominated by the region under 15 deg where they are alike. **Scaling the
+single-image model does not reduce the roll cost you would actually pay;
+changing the pretraining does, by 4x.** Same shape as the rim-penalty finding —
+a bigger model does not fix it, a differently-pretrained one does.
+
+### The statement the roll line can close on
+
+On ordinary indoor footage, ignoring head roll costs **0.3-0.5%** for a
+multi-view-pretrained model and **~1.8%** for a single-image one. Both cheap. On
+a single-image model the rare tilt beyond +-20 deg is where a quarter of the cost
+sits; on a multi-view model there is nothing there worth chasing.
+
+Measured, not inferred from three separately-quoted quantities.
