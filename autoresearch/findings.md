@@ -735,3 +735,76 @@ Two experiments designed from this, not run:
 Also recorded: dec_seq132 is the only sequence that separates "learned the
 lens" from "memorised the room"; every future bar should make it the primary
 sequence and treat seq136 as a sanity check.
+
+## Roll controls: the black wedge was two thirds of the fall-off, 2026-09-07
+
+The roll curve (`fine_rotation.py`) rotates the fisheye frame with zero
+padding, so the black region changes with angle — a model that dislikes hard
+black edges traces the same curve as one that dislikes being rolled. Three arms
+(`h16-orientation/code/roll_controls.py`, seq136, 20 frames, all scored on the
+same theta<=44° disc; `results/autoresearch-h16-orientation/roll_controls_seq136.json`):
+
+| roll | pinhole (no black) all / rim / rim÷ctr | fisheye_frame | fisheye_disc (hard mask, fixed) |
+|---|---|---|---|
+| 0° | 0.1545 / 0.3292 / 2.40 | 0.1623 / 0.3788 / 2.47 | 0.2037 / 0.5255 / 3.03 |
+| ±20° | +13% / +10% / 2.4–2.6 | +28% / +34% / 2.6 | +60% / +88% / 3.5–3.8 |
+| ±30° | +46% / +39% / 2.2–2.4 | +89% / +126% / 3.2 | +150% / +225% / 5.9–6.0 |
+| ±40° | +131% / +138% / 3.0–3.6 | +193% / +303% / 4.9–5.1 | +200% / +260% / 5.8–6.5 |
+
+- `pinhole` rolls the *virtual camera* of an 89° co-axial view (corner ray
+  54.3° < 54.83° at every roll, fill 1.000) — no padding anywhere. This is the
+  clean curve: not equivariant (+46% at 30°), but rim/ctr does not move until 40°.
+  Centre and rim degrade together (30°: centre +44%, rim +39%).
+- `fisheye_frame` is the old arm re-run with the rotation centre corrected to the
+  upright principal point ((256.0, 256.5) → (246.0, 255.5); the old script used
+  the stored-frame coordinates — ≤4 px translation at 40°, numbers change only in
+  the third decimal). Its "rim doubles at 30°" is two thirds black wedge.
+- `fisheye_disc` masks the frame to the inscribed disc about the principal point
+  (r=245 px, 98.3% of the cone) at every angle. At **0°** that alone costs near_rim
+  +38% (0.536 vs 0.389) and all +25%. A hard black edge is a bigger perturbation
+  than a 20° roll. The arm then degrades faster than `fisheye_frame`, so it is a
+  measurement of hard-edge sensitivity, not a clean roll curve.
+- `resample0` (0° through the interpolator) = 0° to four decimals.
+
+Consequences written into the report (§02, §00, §08): the gravity-alignment
+decision stands (not worth it under 20°; if ever built, rotate the camera and
+re-image, never the picture); the roll-augmentation design now specifies
+camera-rolled rendering (`RolledView`) and the `pinhole` protocol for its bar
+(30° near_rim +39% → ≤ +20%; 0° within 2% of control); and a standing rule:
+**no hard black borders into the model** — no crops, masks, or zero padding —
+which is the same mechanism that inverted H14's 110° teacher.
+
+## Data plan, 2026-09-07
+
+The 60-frames-per-sequence cap (2.1% of the frames) was a default inherited
+from H5's trainer, never argued. Raising it within the Apartment (§07 ③) did
+not buy generalisation because every frame is the same room. What is on disk:
+
+- Apartment: 19 sequences downloaded (clean seq131–150 + decoration seq132),
+  ~2,850 RGB frames each; only 6 have depth extracted. 13 more (clean
+  seq137–150) have raw depth on disk and need `tools/extract_adt_sequence.py`.
+  Also downloaded, unextracted: golden_skeleton_seq100, meal_skeleton_seq131,
+  multiskeleton_party_seq101. ADT has 236 sequences but **two physical rooms**.
+- LiteOffice: 2 sequences downloaded (~2,750 frames each), 60 extracted; 52
+  sequences exist upstream, all the same room, device 61283.
+- **ScanNet++ on /netapp: 1,018 scenes, DSLR fisheye (~115° FOV) with rendered
+  depth, ~260 frames/scene, and a loader already in `raytun3r/data.py`
+  (`ScanNetPPFisheye`).** This is the many-rooms fisheye+depth set the line
+  has been missing.
+
+Plan (in order):
+1. Extract all frames of the 6 + 13 Apartment sequences and both LiteOffice
+   sequences (CPU, hours); stride 5 for training (30 fps → 6 fps, ~570
+   frames/seq), all frames for eval.
+2. Held-out by *scene*, not by sequence: train on Apartment clean seq131–150
+   (~11k frames at stride 5), hold out decoration_seq132 (rearranged),
+   LiteOffice (second room, second device), and a ScanNet++ split.
+3. Add ScanNet++ as the main training set for the labelled arm and as the
+   cross-device held-out for the label-free arms: e.g. 200 scenes train /
+   50 held-out, ~50k / 13k frames. Its lens is a different KB4 (115°), so it
+   also tests H15's "real geometry is inert" on a real second lens.
+4. Re-run H14 `rect` (label-free) on the enlarged Apartment + LiteOffice set —
+   it needs no depth, so every RGB frame counts — with dec_seq132 and
+   LiteOffice as the primary bars.
+Frame counts at 240×20 epochs took 3 min; 11k×5 epochs is ~1 h, 50k×5 is ~4 h
+on one RTX 6000 Ada — all feasible on lambda_63.
