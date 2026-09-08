@@ -193,90 +193,52 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 <section>
   <div class="section-head"><span class="eyebrow">00</span><h2>一页纸的结论</h2></div>
   <div class="col">
-    <p>如果只看一屏，看这个。每一条后面括号里是对应的节。</p>
+    <p>七条。每条后面括号里是展开它的那一节。</p>
   </div>
   <div class="crit">
-    <div class="row"><span class="who">边缘惩罚是真的</span><p>
-      近边缘 AbsRel 是中心的 <strong>2.0–2.6 倍</strong>，<strong>四个 backbone 全部成立</strong>
-      （DA3-Small 2.13、DA3-Large 2.04、VGGT 2.57、VGGT-Ω 2.33）。绝对精度差 2.4 倍，比值却挤在一个窄带里 ——
-      它不随模型变大而消失。（§01）
+    <div class="row"><span class="who">① 边缘惩罚是真的</span><p>
+      近边缘 AbsRel 是中心的 <strong>2.0–2.6 倍</strong>，四个 backbone 全部成立。绝对精度差 2.4 倍，比值却挤在一个窄带里 ——
+      <strong>它不随模型变大而消失</strong>，所以值得专门做方法。（§01）
     </p></div>
-    <div class="row"><span class="who">A · 滚转：模型不等变，但数据几乎不去那里</span><p>
-      喂一张<strong>完全没有黑边、矫正过的</strong>图并把虚拟相机绕光轴滚转：20° 内全图误差 ≤ +13%，30° <strong>+48%</strong>，40° +131% ——
-      模型确实不是滚转等变的，与文献报告的"水平先验"一致。但<strong>真实数据几乎不去那里</strong>：从 ADT 的重力向量量出的头部滚转
-      p99 只有 <strong>21.8°</strong>，98.5% 的帧落在模型的平坦区内。另一条独立且更大的发现：<strong>一条硬黑边本身就值 20° 滚转</strong>
-      （0° 上掩掉 1.7% 的像素，全图 +25%、近边缘 +38%）。（§02）
+
+    <div class="row"><span class="who">② 姿态：模型不等变，但数据几乎不去那里</span><p>
+      喂完全没有黑边的矫正图并滚转虚拟相机：30° 全图误差 +48%。<strong>而这是预训练数据的性质</strong> ——
+      单图预训练的 DA3 涨 46–52%，多视角几何预训练的 VGGT / VGGT-Ω 只涨 <strong>11%</strong>，且更准。
+      但从 ADT 的重力向量量出的真实头部滚转 <strong>p99 只有 21.8°</strong>，98.5% 的帧落在模型的平坦区内 ——
+      <strong>模型的容忍带和数据的分布独立测得却正好对上</strong>。（§02, §02b, §02c）
     </p></div>
-    <div class="row"><span class="who">A′ · 换个 backbone 就基本没这问题（新）</span><p>
-      同一条干净曲线跑四个 backbone，30° 时相对各自 0° 的涨幅：<strong>单图预训练的 da3:small +46%、da3:large +52%</strong>，
-      <strong>多视角几何预训练的 vggt +11%、vggt_omega +11%</strong>（40° 是 131%/114% 对 23%/11%）。
-      预注册判据通过。<strong>水平先验是预训练数据的性质，不是深度任务的</strong> —— 而且容量不解决：
-      DA3-Large 精度是 Small 的 2.2 倍，滚转敏感度反而更差。<strong>最便宜的滚转鲁棒性来自换 backbone。</strong>（§02b）
+
+    <div class="row"><span class="who">③ 画幅边界：看距离，不看面积</span><p>
+      黑边从占画幅 3.1% 加到 53.4%，在离边界 14° 处打分代价<strong>不随剂量增长</strong>；<em>紧贴</em>边界打分则是 <strong>+106%</strong>。
+      而<strong>耐不耐边界是 backbone 特有的，和滚转是两条不同的轴</strong>：
+      <span class="mono">vggt_omega +29% ≪ da3:small +106% ≈ vggt +107% ≪ <b>da3:large +636%</b></span>。
+      <strong>DA3-Large 在干净画幅上最准，加一条边界后是四个里最差的（7.4 倍退化，且没碰到任何被打分的像素）。</strong>（§02e）
     </p></div>
-    <div class="row"><span class="who">A″ · 真实的头有多歪（新）</span><p>
-      从 Aria 的重力向量直接读出 <strong>60,105 帧</strong>的头部滚转：中位 <strong>3.7°</strong>、p90 10.2°、p99 <strong>21.8°</strong>、
-      最大 34.5°，<strong>没有一帧超过 40°</strong>。模型的平坦区（±20°）覆盖 <strong>98.5%</strong> 的帧 —— 两个数独立测得，正好对上。
-      顺带用几何独立确认了正立四分之一转的方向。但逐序列差别很大（seq145 有 29.6% 的帧 &gt;10°），
-      而 ADT 只是第一人称数据里最温和的一端。（§02c）
+
+    <div class="row"><span class="who">④ 无标签适配成立了 ✓</span><p>
+      正是③让它成立：VGGT-Ω 耐边界，所以能跑 <strong>110° 教师、100% 锥体覆盖</strong>（同样的画幅，DA3 教师会翻负 +33%，它是 −65%）。
+      学生<strong>零深度标签</strong>拿到近边缘 <strong>−51.5% / −22.4%</strong>，相当于稠密真值增益的 <strong>89% / 82%</strong>。
+      H14 原来的教师只有 −13.2% / +4.7% —— <strong>想法是对的，问题在教师。</strong>（§03b）
     </p></div>
-    <div class="row"><span class="who">A‴ · 模型自己知道被转了吗（新）</span><p>
-      线性探针从冻结特征读滚转角：整体 <strong>12.75°</strong>（置换零假设 25.8°，R²=0.60），
-      但 <strong>同房间 6.8°、换了布置的房间 18.7°</strong> —— <strong>它主要记住的是房间</strong>。
-      锁定的判据是 &lt;10°（条件化无效）或 &gt;20°（IMU 带真信息），<strong>两个都没触发</strong>。
-      "旋转图片会靠黑楔泄题"这个预测被证伪：两条臂一模一样，因为成像圆盘是旋转对称的。（§02d）
+
+    <div class="row"><span class="who">⑤ 但跨房间只剩 6 个数</span><p>
+      房间内教师强度一阶、矫正投影二阶；<strong>跨房间不换投影的那条臂迁移为零</strong>，矫正投影是全部。
+      而<strong>跨得过房间的全部内容，是一条逐入射角的径向曲线</strong> —— 16 个分档参数（实际由二次式压成 <strong>6 个</strong>）
+      在跨房间上<strong>追平 122,900 参数的 LoRA</strong>。
+      它随 backbone 变、也依赖拟合集，所以是<strong>按（镜头 × backbone）做的标定流程</strong>，不是镜头常数。
+      §06 用视差锚点拟合的<strong>是同一个对象</strong>。（§03b, §03c, §06）
     </p></div>
-    <div class="row"><span class="who">A⁗ · 硬黑边：距离，不是面积（新）</span><p>
-      把黑边从占画幅 3.1% 加到 53.4%，在离边界 14° 处打分，代价<strong>不随剂量增长</strong>（+22% / +13% / +17% / +17% / +6.6% / +32%，非单调）；
-      而紧贴边界打分是 <strong>+106%</strong>。<strong>硬边界毁掉紧邻它的一圈，对整幅图另收约 +18% 固定费用。</strong>
-      这<strong>推翻了本页自己先前"黑得越多越糟"的读法</strong>。跨 backbone 更分裂：<span class="mono">vggt_omega +29% ≪ da3:small +106% ≈ vggt +107% ≪ <b>da3:large +636%</b></span> ——
-      <strong>DA3-Large 在干净画幅上最准，加一条边界后是四个里最差的（7.4 倍退化）。</strong>
-      同时这为 H14 打开了一条新臂：<strong>110° 的 VGGT-Ω 教师，100% 锥体覆盖</strong>。（§02e）
+
+    <div class="row"><span class="who">⑥ 三个干净的否定</span><p>
+      <strong>H14.2</strong>：把教师覆盖从 70% 铺到 99.3%，教师变差 9.5%，学生跟着更差 ——<em>学生跟的是准，不是广</em>（§04）。
+      <strong>H15</strong>：把镜头几何显式喂给网络是惰性的（输给打乱场 10/16、输给不喂 10/16），但喂<em>错</em>的几何有害（16/16）（§05）。
+      <strong>H9</strong>：两个对照 6/6、无深度真值，但预注册主判据 0/6 ——<em>一个有效的边缘重标定，不是径向畸变的解</em>（§06）。
     </p></div>
-    <div class="row"><span class="who">B · H14 无标签蒸馏 ✗</span><p>
-      让冻结模型看<strong>矫正后的透视图</strong>，把它自己的答案搬回鱼眼域当标签。主判据（两个留出序列都要赢对照）
-      <strong>不通过</strong>：seq136 −13.2% 赢，decoration_seq132 +4.7% 输。
-      教师的边缘优势只有 <strong>−11.5% ~ −14.7%</strong>，还只覆盖该 zone 的 70%。（§03）
-    </p></div>
-    <div class="row"><span class="who">B′ · H18 换掉教师，H14 活了 ✓（新）</span><p>
-      §02e 说耐黑边是 backbone 的性质，于是用 <strong>VGGT-Ω 跑 110° 教师</strong>：同样的画幅、同样 22.5% 黑边，
-      DA3 教师翻负 +33%，VGGT-Ω 是 <strong>−65%</strong>，而且<strong>覆盖 100% 的边缘环带</strong>。
-      学生（<strong>零深度标签</strong>）拿到 <strong>−52.7% / −22.8%</strong>，相当于稠密真值增益的 <strong>91% / 84%</strong>（原来是 23% 和负数）。
-      但匹配对照给出的分解<strong>在两个检验之间是反的</strong>：<strong>房间内</strong>大头是"蒸馏了更强的模型"，矫正只多加 3.9 点；
-      <strong>跨房间</strong>那条不换投影的臂<strong>迁移为零</strong>（+0.8% / −0.1%），<strong>矫正投影是全部</strong>。
-      所以真正可迁移的是 H14 原来那个机制。（§03b）
-    </p></div>
-    <div class="row"><span class="who">B″ · 跨房间的全部内容＝16 个数（新）</span><p>
-      把学生换成一个<strong>只能表达径向关系</strong>的东西（每个 θ 档一条直线，共 <strong>16 个参数</strong>），
-      只在训练序列上拟合、原样搬走：跨房间 <strong>−26.0% / −8.9%</strong>，
-      <strong>追平甚至反超那个 122,900 参数的 LoRA</strong>（−20.0% / −9.0%），而房间内只有它的三分之一。
-      去掉 θ 依赖的 2 参数对照在 4 个序列里 3 个比不做还差。
-      <strong>可迁移的是镜头的径向重标定；LoRA 多出来的容量拟合的是房间。</strong>
-      而且它和 §06 用视差锚点拟合的<strong>同一个函数形式撞上了同一个量级</strong>（−16.6% 对 −15.4%）。
-      但反向检验说明这 <strong>16 个数不是"镜头常数"</strong>：它随 backbone 变（|Δa| 0.297），也依赖拟合集的质量。
-      是一个<strong>按（镜头 × backbone）做的标定流程</strong>，不是一个可发布的常数。（§03c）
-    </p></div>
-    <div class="row"><span class="who">C · H14.2 环形视角 ✗</span><p>
-      拆掉"虚拟视角必须是方的"这条隐藏约束，教师对边缘环带的覆盖从 <strong>70% 提到 99.3%</strong> ——
-      几何上做到了，但教师在边缘反而变差（<strong>+9.5%</strong>），学生跟着更差。<strong>学生跟的是教师的"准"，不是"广"。</strong>（§04）
-    </p></div>
-    <div class="row"><span class="who">D · H15 显式镜头几何 ✗</span><p>
-      把镜头的局部形变场用 FiLM 喂给网络，在两只<strong>从未见过的镜头</strong>上：真实场输给位置打乱的假场 <strong>10/16</strong>、
-      输给不喂场 <strong>10/16</strong>，但赢错配镜头的场 <strong>16/16</strong>。
-      <strong>网络在用这个通道，但真实几何不比一个任意固定图案更有用；喂错的几何会实打实地伤害。</strong>（§05）
-    </p></div>
-    <div class="row"><span class="who">E · H9 视差锚点 TTA ~</span><p>
-      用边缘的<strong>视差盈余</strong>三角化出米制锚点（示例帧上锚点误差中位数 <strong>4.1%</strong>，而模型在同一处是 44%），
-      逐序列反解模型的径向压缩曲线，<strong>全程无深度真值</strong>。两个对照 <strong>6/6</strong> 打赢，冻结模型 <strong>5/6</strong> 打赢；
-      但预注册的主判据（仿射差距减半）<strong>0/6</strong>。（§06）
-    </p></div>
-    <div class="row"><span class="who">F · 泛化才是瓶颈</span><p>
-      跨房间时无标签臂<strong>反超</strong>有标签臂（−28.5% / −10.7% 对 −11.8% / −5.0%，两个序列一致）；
-      而把有标签臂的数据加到 10 倍，同房间序列一路变好、重新布置过的序列<strong>近中心从 +27.8% 恶化到 +100.7%</strong>。
-      <strong>更多同房间数据只买记忆，不买泛化。</strong>（§07）
-    </p></div>
-    <div class="row"><span class="who">最值得做的两件事</span><p>
-      ① <strong>滚转增广</strong>（§02 给出的、还没跑的实验，判据已写）；
-      ② <strong>锚点蒸馏</strong>：把 H9 那些 4% 精度的米制锚点当稀疏标签去训 H14 那个学生 —— 两个实验各自缺的正好是对方有的。（§08）
+
+    <div class="row"><span class="who">⑦ 瓶颈是场景数，不是数据量</span><p>
+      固定计算量下，同一间房里把独立帧从 240 加到 <strong>11,418（48 倍）</strong>，在诚实的留出序列上买到的是<strong>零</strong>
+      （−21.7% → −20.9%），而近中心损伤从 +58% 单调恶化到 <strong>+145%</strong>。
+      跨房间才是分得开的那个检验，而它现在只有 <strong>120 帧</strong>，却同时扛着④⑤两条主张 —— <strong>本页最该补强的一处。</strong>（§07）
     </p></div>
   </div>
 </section>

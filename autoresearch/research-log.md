@@ -1022,3 +1022,28 @@ noise, constraining that fit to the quadratic form should improve its transfer;
 if it does not, the jaggedness is real structure and the fit-quality reading has
 to be withdrawn. That runs in the same pass as H18.5 for two extra least-squares
 fits.
+
+## 2026-09-08 — eighth tick down; fixed a defect I had introduced by accretion
+
+lambda_63 still unreachable. Checked the report for damage rather than looking
+for new work, and found some — mine.
+
+**Section 00 was no longer a one-page summary.** It is titled "一页纸的结论"
+and had grown to **14 rows and 6,283 characters**, roughly four or five screens.
+Every tick this session I appended a row for whatever had just finished and
+never re-read the whole. The section's own title had become false, and the
+user's original ask for this document was a clean report with a clear
+conclusion.
+
+Rewritten to **7 rows, 1,272 characters**. The five separate roll rows (A, A′,
+A″, A‴, A⁗) collapse into two — pose, and framing — which is how they actually
+group; the H18 material becomes two rows (the result, and what survives a change
+of room); the three clean negatives share one row instead of three. Nothing was
+dropped: every number still lives in its own section, and each row names the
+sections that expand it. The summary's job is orientation, not completeness.
+
+Worth recording as a pattern, since it is the third self-inflicted problem this
+session after the stale-fragment republish and the two withdrawn claims:
+**appending to a summary once per tick degrades it monotonically unless
+something re-reads the whole.** The build already asserts on known-stale
+strings; a length check on section 00 would have caught this one earlier.
