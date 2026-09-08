@@ -46,19 +46,32 @@ def gather():
 
 data = gather()
 seqs = sorted(s for s in data if all(m in data[s] for m in MODELS))
-span = {s: (min(data[s]["da3:small"]), max(data[s]["da3:small"])) for s in seqs}
+# The span must be checked PER MODEL: the wide-angle extension was run on
+# three backbones, and a span read off one of them says nothing about another.
+# The first version checked da3:small's span for every model and reported
+# 0/13 coverage, which was true of da3:small and false of the other three.
 need = {s: (data[s]["mu"] - A, data[s]["mu"] + A) for s in seqs}
-inside = [s for s in seqs
-          if span[s][0] <= need[s][0] and need[s][1] <= span[s][1]]
+
+
+def covered(s, m):
+    xs = data[s][m]
+    return min(xs) <= need[s][0] and need[s][1] <= max(xs)
+
+
+inside = [s for s in seqs if all(covered(s, m) for m in MODELS)]
 print(f"[h43b] {len(seqs)} recordings; grid covers what is needed on "
       f"{len(inside)}/{len(seqs)}")
 if len(inside) < len(seqs):
     for s in seqs:
-        if s not in inside:
-            print(f"   {s}: need [{need[s][0]:+.1f},{need[s][1]:+.1f}], "
-                  f"grid [{span[s][0]:+.0f},{span[s][1]:+.0f}]")
-print(f"[h43b] grid now spans {min(span[s][0] for s in seqs):+.0f} .. "
-      f"{max(span[s][1] for s in seqs):+.0f} degrees\n")
+        miss = [m for m in MODELS if not covered(s, m)]
+        if miss:
+            print(f"   {s}: need [{need[s][0]:+.1f},{need[s][1]:+.1f}]; "
+                  f"short on {', '.join(miss)}")
+for m in MODELS:
+    lo = min(min(data[s][m]) for s in seqs)
+    hi = max(max(data[s][m]) for s in seqs)
+    print(f"[h43b] {m:<12} grid spans {lo:+.0f} .. {hi:+.0f} degrees")
+print()
 
 rows, out = [], {}
 print(f"{'model':<12}{'Delta_grav':>12}{'Delta_dev':>11}{'inflated':>10}"
