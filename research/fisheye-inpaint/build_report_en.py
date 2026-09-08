@@ -31,8 +31,12 @@ INPUTS = OrderedDict([
     ("persp_full",     ("4", "Rectified · filled", "straightened, wedges filled from the Blender render", "full")),
     ("persp_crop",     ("5", "Cropped", "straightened at a narrower zoom, so no black exists at all", "crop")),
 ])
-CTRL = ("persp_crop_lores", ("5b", "Cropped · blurred", "input 5 softened to input 4's level of detail", "cropb"))
-ALL = OrderedDict(list(INPUTS.items()) + [CTRL])
+# The report shows the five inputs of the design. A sixth arm -- input 5 blurred
+# to input 4's sampling rate -- was run to rule out "input 5 only wins because it
+# is sharper"; it tracked input 5 on every readout. That control lives in the
+# Chinese research log rather than here, where it would cost a reader more than
+# it tells them.
+ALL = INPUTS
 
 PROV = {
     "eval_commit": "bcf4030", "branch": "fisheye-2x2",
@@ -254,11 +258,9 @@ def main():
 
 
     ir = "".join(
-        f'<div{" class=ctl" if k == CTRL[0] else ""}><div class="nm">{chip(k)}</div>'
-        f'<p>{ALL[k][2]}<br><span class="ci">'
-        + (f'black {INP[k]["black_pct"]:.1f}% · scored {INP[k]["graded_pct"]:.0f}%' if k in INP
-           else 'a control, not one of the four cells')
-        + '</span></p></div>' for k in ALL)
+        f'<div><div class="nm">{chip(k)}</div><p>{ALL[k][2]}<br>'
+        f'<span class="ci">black {INP[k]["black_pct"]:.1f}% · scored {INP[k]["graded_pct"]:.0f}%</span>'
+        f'</p></div>' for k in ALL)
 
     def cmp_row(label, va, vb, cb, vfmt="{:.4f}", dfmt="{:+.4f}", neg="", pos=""):
         """label | value of A | value of B | B minus A with its interval | verdict.
@@ -378,7 +380,7 @@ it.</strong></p>
 <h3>The inputs</h3>
 <p>Same instant, same camera, same panorama. They differ only in how it was sampled and what sits in the corners.</p>
 <div class="inputs">{ir}</div>
-{fig("inputs_w00", "The six inputs, dumped by the evaluation script before the model saw them. Not illustrations.")}
+{fig("inputs_w00", "The five inputs, dumped by the evaluation script before the model saw them. Not illustrations.")}
 <ul>
 <li>Inputs <b>1</b> and <b>3</b> share a field of view. So do <b>2</b> and <b>4</b>. That is the 2×2: projection × corners.</li>
 <li>The leftover black in 3, 4 and 5 (under {max(INP[k]['black_pct'] for k in ('fisheye_full','persp_full','persp_crop')):.1f}%) is shadow in a dim apartment, not missing render. Every input has it.</li>
@@ -511,11 +513,8 @@ nearest-pixel. One of them is worth remembering: a flat grey fill <em>helps</em>
 <h2>Result 4 — cropping beats a wide filled view</h2>
 <p>Input 5 sidesteps the problem: zoom in until the black is outside the frame. It costs ~17% of the lens's solid
 angle, and needs no filler, no model, no compute. That is what filling has to beat.</p>
-<p>But inputs 4 and 5 differ in two things: the field of view, <em>and</em> how many pixels each spends on the
-part they share (input 5 all of them, input 4 about half — a factor of
-{cm['Knew_crop'][0]/meta['Knew_pinhole'][0]:.2f}). So input 5 might just be sharper. Input <b>5b</b> settles it:
-input 5 band-limited to input 4's sampling rate. Same framing, input 4's detail.</p>
-{cells_table(CC1, CC8, ("persp_masked", "persp_full", "persp_crop", "persp_crop_lores"), hl="persp_crop")}
+<p>Scored on the directions both inputs can see, so the narrower view is not penalised for seeing less.</p>
+{cells_table(CC1, CC8, ("persp_masked", "persp_full", "persp_crop"), hl="persp_crop")}
 <p class="note">All four rows scored on the same slice of the world — the part input 5 can see.</p>
 {cmp_table("Input 4 — wide, filled", "Input 5 — cropped", [
   cmp_row("Depth, 1 frame (lower better)", CC1["persp_full"]["AbsRel"], CC1["persp_crop"]["AbsRel"], XC1["AbsRel"]["persp_full"], neg="5 is better", pos="4 is better"),
@@ -523,22 +522,10 @@ input 5 band-limited to input 4's sampling rate. Same framing, input 4's detail.
   cmp_row("AUC@30 (higher better)", P8["persp_full"]["auc30"], P8["persp_crop"]["auc30"], XO8["auc30"]["persp_full"], "{:.3f}", "{:+.3f}", neg="4 is better", pos="5 is better"),
   cmp_row("Trajectory error (lower better)", P8["persp_full"]["ate_m"]*100, P8["persp_crop"]["ate_m"]*100, cm100(XO8["ate_m"]["persp_full"]), "{:.1f} cm", "{:+.1f} cm", neg="5 is better", pos="4 is better"),
 ], what="Change")}
-<h4>Is input 5 just sharper?</h4>
-{cmp_table("Input 5b — same view, blurred", "Input 5 — cropped", [
-  cmp_row("Depth, 1 frame (lower better)", CC1["persp_crop_lores"]["AbsRel"], CC1["persp_crop"]["AbsRel"], XC1["AbsRel"]["persp_crop_lores"], neg="5 is better", pos="5b is better"),
-  cmp_row("Depth, 8 frames (lower better)", CC8["persp_crop_lores"]["AbsRel"], CC8["persp_crop"]["AbsRel"], XC8["AbsRel"]["persp_crop_lores"], neg="5 is better", pos="5b is better"),
-  cmp_row("AUC@30 (higher better)", P8["persp_crop_lores"]["auc30"], P8["persp_crop"]["auc30"], XO8["auc30"]["persp_crop_lores"], "{:.3f}", "{:+.3f}", neg="5b is better", pos="5 is better"),
-  cmp_row("Trajectory error (lower better)", P8["persp_crop_lores"]["ate_m"]*100, P8["persp_crop"]["ate_m"]*100, cm100(XO8["ate_m"]["persp_crop_lores"]), "{:.1f} cm", "{:+.1f} cm", neg="5 is better", pos="5b is better"),
-], what="Change")}
-<p>No. Blurring input 5 to input 4's level of detail changes almost nothing. One row is real but tiny —
-{abs(XC8['AbsRel']['persp_crop_lores']['mean']):.4f}, about
-{abs(XC8['AbsRel']['persp_full']['mean'])/abs(XC8['AbsRel']['persp_crop_lores']['mean']):.0f}× smaller than the
-gap with input 4 — and it points the wrong way: the blurred version is very slightly better.</p>
-{fig("five_vs_four", "Input 5 against input 4, with the sharpness control 5b beside it. In every panel 5b sits on 5, not on 4 — the gap is field of view, not pixel density.")}
-<p><strong>Cropping wins by {abs(XC1['AbsRel']['persp_full']['mean']):.4f} AbsRel at 1 frame and
-{abs(XC8['AbsRel']['persp_full']['mean']):.4f} at 8 — a {abs(XC8['AbsRel']['persp_full']['mean'])/abs(XC1['AbsRel']['persp_full']['mean']):.1f}× wider gap.</strong>
-The control 5b lands on 5 everywhere (pose {P8['persp_crop_lores']['auc30']:.3f} against
-{P8['persp_crop']['auc30']:.3f}). Sharpness explains none of it.</p>
+<p class="note">A control run, not shown here, rules out the obvious alternative: input 5 spends more pixels
+on the part of the scene it shares with input 4, so it could simply be sharper. Blurring input 5 down to input
+4's sampling rate leaves every number above essentially unchanged. The gap is the field of view, not the pixel
+density.</p>
 
 <h3>More content does not make multi-frame pay</h3>
 <div class="scroll"><table>
@@ -565,7 +552,7 @@ demonstrated cause.</strong></p>
 </div>
 
 <h3>What it looks like</h3>
-{fig("panels_w00", "One frame, all six inputs. Columns: input, depth from 1 frame, its error, the same from 8 frames, rendered truth. Grey = not scored. The brightest errors are large flat surfaces near the camera — in every input, unrelated to the black.")}
+{fig("panels_w00", "One frame, all five inputs. Columns: input, depth from 1 frame, its error, the same from 8 frames, rendered truth. Grey = not scored. The brightest errors are large flat surfaces near the camera — in every input, unrelated to the black.")}
 {fig("trajectories", "Recovered camera path per 8-frame window, aligned to truth. Input 5 (purple) tracks the black line; the wide inputs wander. The axes are not equally scaled — sideways deviations are centimetres.")}
 </section>
 

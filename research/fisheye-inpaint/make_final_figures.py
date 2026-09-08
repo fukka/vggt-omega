@@ -79,6 +79,7 @@ STRINGS = {
    "f4_t2": "相机位姿 AUC@30 · 8 帧(越高越好)",
    "f4_t3": "多帧收益(单帧 − 8 帧 AbsRel;正 = 多帧有用)",
    "f4_sup": "⑤ 内接裁剪 vs ④ 补满真值的宽视场 · ⑤ᵇ = ⑤ 降到 ④ 的采样率(把「视场」与「清晰度」拆开)· * = 95% CI 不含零",
+   "f4_sup_nc": "⑤ 内接裁剪 vs ④ 补满真值的宽视场 · 深度在两者共有的场景方向上打分 · * = 95% CI 不含零",
  },
  "en": {
    "input": "input to the model", "pred": "predicted depth", "errmap": "relative error",
@@ -108,13 +109,20 @@ STRINGS = {
    "f4_t2": "Camera pose AUC@30, 8 frames\n(higher is better)",
    "f4_t3": "Gain from using 8 frames instead of 1\n(positive = multi-frame helps)",
    "f4_sup": "Input 5 (crop) against input 4 (wide, wedges filled with true content). 5b is 5 blurred to 4's sampling rate, which separates 'field of view' from 'sharpness'. * = 95% CI excludes zero.",
+   "f4_sup_nc": "Input 5 (crop) against input 4 (wide, wedges filled from the Blender render). Depth is scored on the directions both can see. * = 95% CI excludes zero.",
  },
 }
 
 
-def set_lang(lang):
-    """Point the module's labels at one language, once, before any figure."""
-    global L, CELLS, CTRL, LABEL
+def set_lang(lang, drop_control=False):
+    """Point the module's labels at one language, once, before any figure.
+
+    ``drop_control`` leaves the sampling-matched arm out of the figures. It is
+    a control, not a cell of the design: once it has shown that sharpness does
+    not explain the crop's win, a document aimed at a reader rather than at the
+    record is clearer without it.
+    """
+    global L, CELLS, CTRL, LABEL, CROP_VS, SHOW_CTRL
     assert lang in LANGS
     L = STRINGS[lang]
     c = STRINGS["cells"][lang]
@@ -122,6 +130,10 @@ def set_lang(lang):
                         ("fisheye_masked", "persp_masked", "fisheye_full", "persp_full", "persp_crop"))
     CTRL = ("persp_crop_lores", c["persp_crop_lores"])
     LABEL = dict(CELLS, **{CTRL[0]: CTRL[1]})
+    SHOW_CTRL = not drop_control
+    CROP_VS = tuple(k for k in ("persp_masked", "persp_full", "fisheye_masked", "fisheye_full",
+                                "persp_crop_lores")
+                    if SHOW_CTRL or k != CTRL[0])
     if lang == "en":
         plt.rcParams["font.family"] = ["Helvetica Neue", "Arial", "DejaVu Sans"]
 
@@ -313,7 +325,7 @@ def fig_panels(raw_dir, res_by_mode, wi, out_img):
 
 
 def fig_inputs(raw_dir, wi, out_png):
-    show = list(CELLS) + [CTRL[0]]
+    show = list(CELLS) + ([CTRL[0]] if SHOW_CTRL else [])
     fig, axes = plt.subplots(1, len(show), figsize=(3.6 * len(show), 4.4))
     for a, st in zip(axes, show):
         z = _load_raw(raw_dir, st, 1, wi)
@@ -499,7 +511,8 @@ def fig_crop_effects(numbers, out_png):
 def fig_five_vs_four(numbers, out_png):
     """The question the whole cell-5 arm exists for, in one figure."""
     fig, axes = plt.subplots(1, 4, figsize=(18, 4.4))
-    pairs = list(zip(("persp_full", "persp_crop_lores", "persp_crop"), L["f4_pairs"]))
+    keep = [0, 1, 2] if SHOW_CTRL else [0, 2]
+    pairs = [list(zip(("persp_full", "persp_crop_lores", "persp_crop"), L["f4_pairs"]))[i] for i in keep]
 
     ax = axes[0]                                   # depth on the common region
     for j, (mode, mk) in enumerate((("single", "o"), ("8-frame", "s"))):
@@ -507,8 +520,8 @@ def fig_five_vs_four(numbers, out_png):
         for i, (st, _lab) in enumerate(pairs):
             ax.plot([i], [cc[st]["AbsRel"]], mk, color=COLORS[st], ms=11,
                     mfc=COLORS[st] if j else "white", mew=2)
-    ax.set_xticks(range(3)); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
-    ax.set_xlim(-.5, 2.5); ax.margins(y=.16)
+    ax.set_xticks(range(len(pairs))); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
+    ax.set_xlim(-.5, len(pairs) - .5); ax.margins(y=.16)
     ax.set_title(L["f4_t0"], fontsize=10.5, loc="left")
     ax.set_ylabel("AbsRel ↓"); ax.grid(axis="y", alpha=.3)
 
@@ -517,7 +530,7 @@ def fig_five_vs_four(numbers, out_png):
         pass
     for i, (X, lab) in enumerate(((numbers["crop_effects_common"]["single"], "单帧"),
                                   (numbers["crop_effects_common"]["8-frame"], "8 帧"))):
-        for j, st in enumerate(("persp_full", "persp_crop_lores")):
+        for j, st in enumerate(("persp_full", "persp_crop_lores") if SHOW_CTRL else ("persp_full",)):
             if st not in X["AbsRel"]:
                 continue
             cb = X["AbsRel"][st]
@@ -530,7 +543,10 @@ def fig_five_vs_four(numbers, out_png):
             ax.text(x + .12, cb["mean"], f"{cb['mean']:+.4f}" + ("*" if cb["excludes_zero"] else ""),
                     fontsize=8.5, color=COLORS[st], fontweight="bold", va="center")
     ax.axhline(0, color="k", lw=.8); ax.set_xlim(-.4, 3.6)
-    ax.set_xticks([0, .7, 2, 2.7]); ax.set_xticklabels(L["f4_x1"], fontsize=8.5)
+    if SHOW_CTRL:
+        ax.set_xticks([0, .7, 2, 2.7]); ax.set_xticklabels(L["f4_x1"], fontsize=8.5)
+    else:
+        ax.set_xticks([0, 2]); ax.set_xticklabels([L["f4_x1"][0], L["f4_x1"][2]], fontsize=9)
     ax.set_title(L["f4_t1"], fontsize=10.5, loc="left"); ax.grid(axis="y", alpha=.3)
 
     ax = axes[2]                                   # pose
@@ -541,7 +557,7 @@ def fig_five_vs_four(numbers, out_png):
         ax.bar(i, P[st]["auc30"], color=COLORS[st], width=.6)
         ax.text(i, P[st]["auc30"] + .012, f"{P[st]['auc30']:.3f}\nATE {P[st]['ate_m']*100:.1f}cm",
                 ha="center", fontsize=9)
-    ax.set_xticks(range(3)); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
+    ax.set_xticks(range(len(pairs))); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
     ax.set_ylim(0, 1.18); ax.set_title(L["f4_t2"], fontsize=10.5, loc="left")
     ax.grid(axis="y", alpha=.3)
 
@@ -555,11 +571,11 @@ def fig_five_vs_four(numbers, out_png):
         ax.errorbar([i], [g], yerr=[[g - lo], [hi - g]], fmt="s", color=COLORS[st], ms=9, capsize=5, lw=2)
         ax.text(i + .12, g, f"{g:+.4f}" + ("*" if cb["excludes_zero"] else ""), fontsize=9,
                 color=COLORS[st], fontweight="bold", va="center")
-    ax.axhline(0, color="k", lw=.8); ax.set_xlim(-.4, 2.9)
-    ax.set_xticks(range(3)); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
+    ax.axhline(0, color="k", lw=.8); ax.set_xlim(-.4, len(pairs) - .1 + .4)
+    ax.set_xticks(range(len(pairs))); ax.set_xticklabels([p[1] for p in pairs], fontsize=9)
     ax.set_title(L["f4_t3"], fontsize=10.5, loc="left")
     ax.grid(axis="y", alpha=.3)
-    fig.suptitle(L["f4_sup"], fontsize=11, x=0.005, ha="left")
+    fig.suptitle(L["f4_sup"] if SHOW_CTRL else L["f4_sup_nc"], fontsize=11, x=0.005, ha="left")
     fig.tight_layout()
     fig.savefig(out_png, dpi=80, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -572,8 +588,10 @@ def main():
     ap.add_argument("--run-crop", required=True, help="the --region crop run (five arms)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--lang", default="zh", choices=LANGS)
+    ap.add_argument("--drop-control", action="store_true",
+                    help="leave persp_crop_lores out of the figures (it is a control, not a cell)")
     args = ap.parse_args()
-    set_lang(args.lang)
+    set_lang(args.lang, args.drop_control)
     results = json.load(open(os.path.join(args.run, "results.json")))
     report = open(os.path.join(args.run, "report.txt")).read()
     n = check_against_report(results, report)

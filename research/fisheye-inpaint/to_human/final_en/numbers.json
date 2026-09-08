@@ -2117,28 +2117,6 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.029154829602631344,
       "Apartment_release_decoration_seq132_M1292_w1": -0.017227664045327627
      }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": -0.0007168542044956603,
-     "ci_lo": -0.0022218765599030994,
-     "ci_hi": 0.0010452509857852318,
-     "excludes_zero": false,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": -0.0004218239643655488,
-      "Apartment_release_clean_seq131_M1292_w0": 0.006718413558536712,
-      "Apartment_release_clean_seq131_M1292_w2": -0.005172025490983342,
-      "Apartment_release_clean_seq134_M1292_w2": -0.002107246611579088,
-      "Apartment_release_clean_seq134_M1292_w1": -0.0006445558146994691,
-      "Apartment_release_clean_seq134_M1292_w0": -0.00040620273684113437,
-      "Apartment_release_clean_seq136_M1292_w0": -0.0032337498074578143,
-      "Apartment_release_clean_seq136_M1292_w2": -0.0011768523505919564,
-      "Apartment_release_clean_seq136_M1292_w1": -0.0005407395271093526,
-      "Apartment_release_decoration_seq132_M1292_w2": 0.001080280401700837,
-      "Apartment_release_decoration_seq132_M1292_w0": 0.0010202967027762196,
-      "Apartment_release_decoration_seq132_M1292_w1": -0.0037180448133339867
-     }
     }
    },
    "delta1": {
@@ -2229,28 +2207,6 @@
       "Apartment_release_decoration_seq132_M1292_w0": 0.010781949939201493,
       "Apartment_release_decoration_seq132_M1292_w1": 0.005995193134870319
      }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": 0.001232788031693614,
-     "ci_lo": 5.293194558480222e-05,
-     "ci_hi": 0.002788819297334613,
-     "excludes_zero": true,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": 0.0014695309271022527,
-      "Apartment_release_clean_seq131_M1292_w0": -3.62396240234375e-05,
-      "Apartment_release_clean_seq131_M1292_w2": 0.0015239715576171875,
-      "Apartment_release_clean_seq134_M1292_w2": 4.1961669921875e-05,
-      "Apartment_release_clean_seq134_M1292_w1": 0.002730605891541865,
-      "Apartment_release_clean_seq134_M1292_w0": 9.393692016601562e-05,
-      "Apartment_release_clean_seq136_M1292_w0": 0.002590977199632527,
-      "Apartment_release_clean_seq136_M1292_w2": -0.0015063285827636719,
-      "Apartment_release_clean_seq136_M1292_w1": 2.6711483130978375e-05,
-      "Apartment_release_decoration_seq132_M1292_w2": -2.5272369384765625e-05,
-      "Apartment_release_decoration_seq132_M1292_w0": -0.0006047838345700218,
-      "Apartment_release_decoration_seq132_M1292_w1": 0.008488385141952562
-     }
     }
    },
    "RMSE": {
@@ -2340,28 +2296,6 @@
       "Apartment_release_decoration_seq132_M1292_w2": -0.05245586848581975,
       "Apartment_release_decoration_seq132_M1292_w0": -0.07969963542245487,
       "Apartment_release_decoration_seq132_M1292_w1": -0.024857640307894655
-     }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": -0.0040152046053290365,
-     "ci_lo": -0.0073978043141134245,
-     "ci_hi": -0.0007257272459450972,
-     "excludes_zero": true,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": -0.004099066277691871,
-      "Apartment_release_clean_seq131_M1292_w0": 0.006543113942779709,
-      "Apartment_release_clean_seq131_M1292_w2": -0.012908157684993413,
-      "Apartment_release_clean_seq134_M1292_w2": -0.008609187654940483,
-      "Apartment_release_clean_seq134_M1292_w1": -0.007230345536332502,
-      "Apartment_release_clean_seq134_M1292_w0": 0.001165409582836418,
-      "Apartment_release_clean_seq136_M1292_w0": -0.002274356173599031,
-      "Apartment_release_clean_seq136_M1292_w2": -0.013463356488656358,
-      "Apartment_release_clean_seq136_M1292_w1": -0.00036004888860748704,
-      "Apartment_release_decoration_seq132_M1292_w2": -2.7239648074679074e-05,
-      "Apartment_release_decoration_seq132_M1292_w0": 0.0011699147570837648,
-      "Apartment_release_decoration_seq132_M1292_w1": -0.008089135193752504
      }
     }
    }
@@ -2455,28 +2389,6 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.049741841372832905,
       "Apartment_release_decoration_seq132_M1292_w1": -0.057371560320915865
      }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": 0.0011263243791821687,
-     "ci_lo": 6.192096413833765e-05,
-     "ci_hi": 0.002404983484083594,
-     "excludes_zero": true,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": -0.0001107713803131388,
-      "Apartment_release_clean_seq131_M1292_w0": 0.005296421261533443,
-      "Apartment_release_clean_seq131_M1292_w2": -0.000792265476052355,
-      "Apartment_release_clean_seq134_M1292_w2": -0.0008958324532395299,
-      "Apartment_release_clean_seq134_M1292_w1": 0.0014057734698588375,
-      "Apartment_release_clean_seq134_M1292_w0": 0.0008291149861447537,
-      "Apartment_release_clean_seq136_M1292_w0": 0.005683286564051263,
-      "Apartment_release_clean_seq136_M1292_w2": 4.124724012030418e-05,
-      "Apartment_release_clean_seq136_M1292_w1": -0.0003889887779056579,
-      "Apartment_release_decoration_seq132_M1292_w2": 0.002065993588118327,
-      "Apartment_release_decoration_seq132_M1292_w0": 0.0002273745250632388,
-      "Apartment_release_decoration_seq132_M1292_w1": 0.00015453900280653753
-     }
     }
    },
    "delta1": {
@@ -2566,28 +2478,6 @@
       "Apartment_release_decoration_seq132_M1292_w2": 0.11783092011668832,
       "Apartment_release_decoration_seq132_M1292_w0": 0.018634501128843406,
       "Apartment_release_decoration_seq132_M1292_w1": 0.05840404350372058
-     }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": -0.00026900610916518716,
-     "ci_lo": -0.0016610941154158463,
-     "ci_hi": 0.0010850560749503797,
-     "excludes_zero": false,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": -0.00019663705180529567,
-      "Apartment_release_clean_seq131_M1292_w0": -0.0016870498657226562,
-      "Apartment_release_clean_seq131_M1292_w2": -7.343292236328125e-05,
-      "Apartment_release_clean_seq134_M1292_w2": -2.193450927734375e-05,
-      "Apartment_release_clean_seq134_M1292_w1": 0.00032965508403653976,
-      "Apartment_release_clean_seq134_M1292_w0": 1.7642974853515625e-05,
-      "Apartment_release_clean_seq136_M1292_w0": -0.005316564465700099,
-      "Apartment_release_clean_seq136_M1292_w2": 0.0034499168395996094,
-      "Apartment_release_clean_seq136_M1292_w1": 8.583840902506856e-06,
-      "Apartment_release_decoration_seq132_M1292_w2": -0.0003161430358886719,
-      "Apartment_release_decoration_seq132_M1292_w0": -0.0034251131503969245,
-      "Apartment_release_decoration_seq132_M1292_w1": 0.004003002951779855
      }
     }
    },
@@ -2679,28 +2569,6 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.1251265546605565,
       "Apartment_release_decoration_seq132_M1292_w1": -0.04946121767389601
      }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": 0.0008276844058910842,
-     "ci_lo": -0.0014140771079113323,
-     "ci_hi": 0.0030630707479456,
-     "excludes_zero": false,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": 0.0007486914626754649,
-      "Apartment_release_clean_seq131_M1292_w0": 0.005677105354193913,
-      "Apartment_release_clean_seq131_M1292_w2": 0.0007026252174852834,
-      "Apartment_release_clean_seq134_M1292_w2": -0.004678616165838057,
-      "Apartment_release_clean_seq134_M1292_w1": -0.004748367628655083,
-      "Apartment_release_clean_seq134_M1292_w0": 0.003732174377987496,
-      "Apartment_release_clean_seq136_M1292_w0": 0.00458697068460473,
-      "Apartment_release_clean_seq136_M1292_w2": 0.007749848918690284,
-      "Apartment_release_clean_seq136_M1292_w1": -8.560230927419886e-06,
-      "Apartment_release_decoration_seq132_M1292_w2": 0.0003826755483445736,
-      "Apartment_release_decoration_seq132_M1292_w0": 0.0007855844575992421,
-      "Apartment_release_decoration_seq132_M1292_w1": -0.004997919125467416
-     }
     }
    },
    "auc30": {
@@ -2790,28 +2658,6 @@
       "Apartment_release_decoration_seq132_M1292_w2": 0.4547619047619048,
       "Apartment_release_decoration_seq132_M1292_w0": 0.24404761904761896,
       "Apartment_release_decoration_seq132_M1292_w1": 0.5392857142857144
-     }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 12,
-     "n_groups": 12,
-     "mean": -0.0006944444444444328,
-     "ci_lo": -0.002876984126984126,
-     "ci_hi": 0.0013888888888888746,
-     "excludes_zero": false,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": 0.0011904761904761862,
-      "Apartment_release_clean_seq131_M1292_w0": 0.0011904761904762973,
-      "Apartment_release_clean_seq131_M1292_w2": 0.0023809523809524835,
-      "Apartment_release_clean_seq134_M1292_w2": -0.004761904761904745,
-      "Apartment_release_clean_seq134_M1292_w1": -0.0035714285714285587,
-      "Apartment_release_clean_seq134_M1292_w0": 0.0023809523809524835,
-      "Apartment_release_clean_seq136_M1292_w0": -0.0023809523809523725,
-      "Apartment_release_clean_seq136_M1292_w2": 0.0035714285714284477,
-      "Apartment_release_clean_seq136_M1292_w1": -0.008333333333333304,
-      "Apartment_release_decoration_seq132_M1292_w2": 0.004761904761904745,
-      "Apartment_release_decoration_seq132_M1292_w0": -0.0035714285714285587,
-      "Apartment_release_decoration_seq132_M1292_w1": -0.0011904761904762973
      }
     }
    },
@@ -2903,28 +2749,6 @@
       "Apartment_release_decoration_seq132_M1292_w0": -4.395391503289112,
       "Apartment_release_decoration_seq132_M1292_w1": -15.384702344270131
      }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 12,
-     "n_groups": 12,
-     "mean": -0.01334322985046909,
-     "ci_lo": -0.026081098466885982,
-     "ci_hi": -0.0011111553321454999,
-     "excludes_zero": true,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": -0.024686396584555376,
-      "Apartment_release_clean_seq131_M1292_w0": -0.035146425824696875,
-      "Apartment_release_clean_seq131_M1292_w2": -0.06281968509718722,
-      "Apartment_release_clean_seq134_M1292_w2": -0.01588694577220906,
-      "Apartment_release_clean_seq134_M1292_w1": 0.012544841365852766,
-      "Apartment_release_clean_seq134_M1292_w0": -0.014893156527597096,
-      "Apartment_release_clean_seq136_M1292_w0": -0.001196161701852383,
-      "Apartment_release_clean_seq136_M1292_w2": -0.01662440463509418,
-      "Apartment_release_clean_seq136_M1292_w1": -0.019521969785227133,
-      "Apartment_release_decoration_seq132_M1292_w2": 0.02534948335671333,
-      "Apartment_release_decoration_seq132_M1292_w0": -0.01356312685712896,
-      "Apartment_release_decoration_seq132_M1292_w1": 0.006325189857353086
-     }
     }
    },
    "trans_err_deg": {
@@ -3014,28 +2838,6 @@
       "Apartment_release_decoration_seq132_M1292_w2": -13.678260005233142,
       "Apartment_release_decoration_seq132_M1292_w0": -7.27158568453068,
       "Apartment_release_decoration_seq132_M1292_w1": -12.785134354396256
-     }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 12,
-     "n_groups": 12,
-     "mean": 0.021896837602197905,
-     "ci_lo": -0.023513602833493935,
-     "ci_hi": 0.06827632771184185,
-     "excludes_zero": false,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": 0.02011246497940955,
-      "Apartment_release_clean_seq131_M1292_w0": -0.003279622888900491,
-      "Apartment_release_clean_seq131_M1292_w2": -0.13604006984210293,
-      "Apartment_release_clean_seq134_M1292_w2": 0.11087016936091432,
-      "Apartment_release_clean_seq134_M1292_w1": 0.09673330975003447,
-      "Apartment_release_clean_seq134_M1292_w0": 0.008773760017638077,
-      "Apartment_release_clean_seq136_M1292_w0": 0.0613439441816348,
-      "Apartment_release_clean_seq136_M1292_w2": -0.027135576824667273,
-      "Apartment_release_clean_seq136_M1292_w1": 0.1747253398025307,
-      "Apartment_release_decoration_seq132_M1292_w2": -0.033062995196327494,
-      "Apartment_release_decoration_seq132_M1292_w0": 0.059676237703216506,
-      "Apartment_release_decoration_seq132_M1292_w1": -0.06995490981700536
      }
     }
    },
@@ -3127,28 +2929,6 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.04509647969713329,
       "Apartment_release_decoration_seq132_M1292_w1": -0.04688563398670938
      }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 12,
-     "n_groups": 12,
-     "mean": 0.000969860588419212,
-     "ci_lo": -0.0001382901940976146,
-     "ci_hi": 0.0027076559099273494,
-     "excludes_zero": false,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": -0.00046968840748364297,
-      "Apartment_release_clean_seq131_M1292_w0": -9.354139051719404e-07,
-      "Apartment_release_clean_seq131_M1292_w2": -0.0007715180451782575,
-      "Apartment_release_clean_seq134_M1292_w2": 4.941832252681501e-05,
-      "Apartment_release_clean_seq134_M1292_w1": 0.0007817226929881854,
-      "Apartment_release_clean_seq134_M1292_w0": 0.00035482399688684715,
-      "Apartment_release_clean_seq136_M1292_w0": 0.0012646643534560305,
-      "Apartment_release_clean_seq136_M1292_w2": -0.0010385305765268915,
-      "Apartment_release_clean_seq136_M1292_w1": 0.0010991506437340003,
-      "Apartment_release_decoration_seq132_M1292_w2": 0.0006244883977827957,
-      "Apartment_release_decoration_seq132_M1292_w0": -3.801928136218987e-05,
-      "Apartment_release_decoration_seq132_M1292_w1": 0.009782750378112024
-     }
     }
    },
    "rra15": {
@@ -3239,28 +3019,6 @@
       "Apartment_release_decoration_seq132_M1292_w0": 0.0,
       "Apartment_release_decoration_seq132_M1292_w1": 0.4285714285714286
      }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 12,
-     "n_groups": 12,
-     "mean": 0.0,
-     "ci_lo": 0.0,
-     "ci_hi": 0.0,
-     "excludes_zero": false,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": 0.0,
-      "Apartment_release_clean_seq131_M1292_w0": 0.0,
-      "Apartment_release_clean_seq131_M1292_w2": 0.0,
-      "Apartment_release_clean_seq134_M1292_w2": 0.0,
-      "Apartment_release_clean_seq134_M1292_w1": 0.0,
-      "Apartment_release_clean_seq134_M1292_w0": 0.0,
-      "Apartment_release_clean_seq136_M1292_w0": 0.0,
-      "Apartment_release_clean_seq136_M1292_w2": 0.0,
-      "Apartment_release_clean_seq136_M1292_w1": 0.0,
-      "Apartment_release_decoration_seq132_M1292_w2": 0.0,
-      "Apartment_release_decoration_seq132_M1292_w0": 0.0,
-      "Apartment_release_decoration_seq132_M1292_w1": 0.0
-     }
     }
    },
    "rta15": {
@@ -3350,28 +3108,6 @@
       "Apartment_release_decoration_seq132_M1292_w2": 0.5,
       "Apartment_release_decoration_seq132_M1292_w0": 0.0,
       "Apartment_release_decoration_seq132_M1292_w1": 0.5357142857142857
-     }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 12,
-     "n_groups": 12,
-     "mean": 0.0,
-     "ci_lo": 0.0,
-     "ci_hi": 0.0,
-     "excludes_zero": false,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": 0.0,
-      "Apartment_release_clean_seq131_M1292_w0": 0.0,
-      "Apartment_release_clean_seq131_M1292_w2": 0.0,
-      "Apartment_release_clean_seq134_M1292_w2": 0.0,
-      "Apartment_release_clean_seq134_M1292_w1": 0.0,
-      "Apartment_release_clean_seq134_M1292_w0": 0.0,
-      "Apartment_release_clean_seq136_M1292_w0": 0.0,
-      "Apartment_release_clean_seq136_M1292_w2": 0.0,
-      "Apartment_release_clean_seq136_M1292_w1": 0.0,
-      "Apartment_release_decoration_seq132_M1292_w2": 0.0,
-      "Apartment_release_decoration_seq132_M1292_w0": 0.0,
-      "Apartment_release_decoration_seq132_M1292_w1": 0.0
      }
     }
    }
@@ -3467,28 +3203,6 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.01943498812338722,
       "Apartment_release_decoration_seq132_M1292_w1": -0.007855235879560685
      }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": -0.0007168542044956603,
-     "ci_lo": -0.0022218765599030994,
-     "ci_hi": 0.0010452509857852318,
-     "excludes_zero": false,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": -0.0004218239643655488,
-      "Apartment_release_clean_seq131_M1292_w0": 0.006718413558536712,
-      "Apartment_release_clean_seq131_M1292_w2": -0.005172025490983342,
-      "Apartment_release_clean_seq134_M1292_w2": -0.002107246611579088,
-      "Apartment_release_clean_seq134_M1292_w1": -0.0006445558146994691,
-      "Apartment_release_clean_seq134_M1292_w0": -0.00040620273684113437,
-      "Apartment_release_clean_seq136_M1292_w0": -0.0032337498074578143,
-      "Apartment_release_clean_seq136_M1292_w2": -0.0011768523505919564,
-      "Apartment_release_clean_seq136_M1292_w1": -0.0005407395271093526,
-      "Apartment_release_decoration_seq132_M1292_w2": 0.001080280401700837,
-      "Apartment_release_decoration_seq132_M1292_w0": 0.0010202967027762196,
-      "Apartment_release_decoration_seq132_M1292_w1": -0.0037180448133339867
-     }
     }
    },
    "delta1": {
@@ -3579,28 +3293,6 @@
       "Apartment_release_decoration_seq132_M1292_w0": 0.0018901083265307483,
       "Apartment_release_decoration_seq132_M1292_w1": -0.012614195178460172
      }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": 0.001232788031693614,
-     "ci_lo": 5.293194558480222e-05,
-     "ci_hi": 0.002788819297334613,
-     "excludes_zero": true,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": 0.0014695309271022527,
-      "Apartment_release_clean_seq131_M1292_w0": -3.62396240234375e-05,
-      "Apartment_release_clean_seq131_M1292_w2": 0.0015239715576171875,
-      "Apartment_release_clean_seq134_M1292_w2": 4.1961669921875e-05,
-      "Apartment_release_clean_seq134_M1292_w1": 0.002730605891541865,
-      "Apartment_release_clean_seq134_M1292_w0": 9.393692016601562e-05,
-      "Apartment_release_clean_seq136_M1292_w0": 0.002590977199632527,
-      "Apartment_release_clean_seq136_M1292_w2": -0.0015063285827636719,
-      "Apartment_release_clean_seq136_M1292_w1": 2.6711483130978375e-05,
-      "Apartment_release_decoration_seq132_M1292_w2": -2.5272369384765625e-05,
-      "Apartment_release_decoration_seq132_M1292_w0": -0.0006047838345700218,
-      "Apartment_release_decoration_seq132_M1292_w1": 0.008488385141952562
-     }
     }
    },
    "RMSE": {
@@ -3690,28 +3382,6 @@
       "Apartment_release_decoration_seq132_M1292_w2": -0.04324202620390921,
       "Apartment_release_decoration_seq132_M1292_w0": -0.06292798499180094,
       "Apartment_release_decoration_seq132_M1292_w1": -0.023300716623200983
-     }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": -0.0040152046053290365,
-     "ci_lo": -0.0073978043141134245,
-     "ci_hi": -0.0007257272459450972,
-     "excludes_zero": true,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": -0.004099066277691871,
-      "Apartment_release_clean_seq131_M1292_w0": 0.006543113942779709,
-      "Apartment_release_clean_seq131_M1292_w2": -0.012908157684993413,
-      "Apartment_release_clean_seq134_M1292_w2": -0.008609187654940483,
-      "Apartment_release_clean_seq134_M1292_w1": -0.007230345536332502,
-      "Apartment_release_clean_seq134_M1292_w0": 0.001165409582836418,
-      "Apartment_release_clean_seq136_M1292_w0": -0.002274356173599031,
-      "Apartment_release_clean_seq136_M1292_w2": -0.013463356488656358,
-      "Apartment_release_clean_seq136_M1292_w1": -0.00036004888860748704,
-      "Apartment_release_decoration_seq132_M1292_w2": -2.7239648074679074e-05,
-      "Apartment_release_decoration_seq132_M1292_w0": 0.0011699147570837648,
-      "Apartment_release_decoration_seq132_M1292_w1": -0.008089135193752504
      }
     }
    }
@@ -3805,28 +3475,6 @@
       "Apartment_release_decoration_seq132_M1292_w0": -0.04126293219678075,
       "Apartment_release_decoration_seq132_M1292_w1": -0.04593281430405848
      }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": 0.0011263243791821687,
-     "ci_lo": 6.192096413833765e-05,
-     "ci_hi": 0.002404983484083594,
-     "excludes_zero": true,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": -0.0001107713803131388,
-      "Apartment_release_clean_seq131_M1292_w0": 0.005296421261533443,
-      "Apartment_release_clean_seq131_M1292_w2": -0.000792265476052355,
-      "Apartment_release_clean_seq134_M1292_w2": -0.0008958324532395299,
-      "Apartment_release_clean_seq134_M1292_w1": 0.0014057734698588375,
-      "Apartment_release_clean_seq134_M1292_w0": 0.0008291149861447537,
-      "Apartment_release_clean_seq136_M1292_w0": 0.005683286564051263,
-      "Apartment_release_clean_seq136_M1292_w2": 4.124724012030418e-05,
-      "Apartment_release_clean_seq136_M1292_w1": -0.0003889887779056579,
-      "Apartment_release_decoration_seq132_M1292_w2": 0.002065993588118327,
-      "Apartment_release_decoration_seq132_M1292_w0": 0.0002273745250632388,
-      "Apartment_release_decoration_seq132_M1292_w1": 0.00015453900280653753
-     }
     }
    },
    "delta1": {
@@ -3917,28 +3565,6 @@
       "Apartment_release_decoration_seq132_M1292_w0": 0.007800058994497969,
       "Apartment_release_decoration_seq132_M1292_w1": 0.04186261299781947
      }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": -0.00026900610916518716,
-     "ci_lo": -0.0016610941154158463,
-     "ci_hi": 0.0010850560749503797,
-     "excludes_zero": false,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": -0.00019663705180529567,
-      "Apartment_release_clean_seq131_M1292_w0": -0.0016870498657226562,
-      "Apartment_release_clean_seq131_M1292_w2": -7.343292236328125e-05,
-      "Apartment_release_clean_seq134_M1292_w2": -2.193450927734375e-05,
-      "Apartment_release_clean_seq134_M1292_w1": 0.00032965508403653976,
-      "Apartment_release_clean_seq134_M1292_w0": 1.7642974853515625e-05,
-      "Apartment_release_clean_seq136_M1292_w0": -0.005316564465700099,
-      "Apartment_release_clean_seq136_M1292_w2": 0.0034499168395996094,
-      "Apartment_release_clean_seq136_M1292_w1": 8.583840902506856e-06,
-      "Apartment_release_decoration_seq132_M1292_w2": -0.0003161430358886719,
-      "Apartment_release_decoration_seq132_M1292_w0": -0.0034251131503969245,
-      "Apartment_release_decoration_seq132_M1292_w1": 0.004003002951779855
-     }
     }
    },
    "RMSE": {
@@ -4028,28 +3654,6 @@
       "Apartment_release_decoration_seq132_M1292_w2": -0.07096356259192452,
       "Apartment_release_decoration_seq132_M1292_w0": -0.11067576500382861,
       "Apartment_release_decoration_seq132_M1292_w1": -0.04747152620283762
-     }
-    },
-    "persp_crop_lores": {
-     "n_pairs": 96,
-     "n_groups": 12,
-     "mean": 0.0008276844058910842,
-     "ci_lo": -0.0014140771079113323,
-     "ci_hi": 0.0030630707479456,
-     "excludes_zero": false,
-     "per_group": {
-      "Apartment_release_clean_seq131_M1292_w1": 0.0007486914626754649,
-      "Apartment_release_clean_seq131_M1292_w0": 0.005677105354193913,
-      "Apartment_release_clean_seq131_M1292_w2": 0.0007026252174852834,
-      "Apartment_release_clean_seq134_M1292_w2": -0.004678616165838057,
-      "Apartment_release_clean_seq134_M1292_w1": -0.004748367628655083,
-      "Apartment_release_clean_seq134_M1292_w0": 0.003732174377987496,
-      "Apartment_release_clean_seq136_M1292_w0": 0.00458697068460473,
-      "Apartment_release_clean_seq136_M1292_w2": 0.007749848918690284,
-      "Apartment_release_clean_seq136_M1292_w1": -8.560230927419886e-06,
-      "Apartment_release_decoration_seq132_M1292_w2": 0.0003826755483445736,
-      "Apartment_release_decoration_seq132_M1292_w0": 0.0007855844575992421,
-      "Apartment_release_decoration_seq132_M1292_w1": -0.004997919125467416
      }
     }
    }
