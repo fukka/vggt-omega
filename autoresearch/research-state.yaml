@@ -1330,3 +1330,17 @@ h30_outcome:
     published in-room figure in this line has been re-measured; this is for
     future work. The converse (a DESCRIPTIVE number on seq136 is
     representative) held every time checked but rests on three points.
+
+gotcha_precheck_needs_two_flags:
+  symptom: >
+    cache_teacher.py --precheck-only runs to completion, prints "pre-check only,
+    no cache written", and writes a manifest whose "precheck" key is NULL. No
+    error, no warning.
+  cause: >
+    The teacher-vs-raw comparison is computed under `if a.score_teacher:`, which
+    is a separate flag. --precheck-only only suppresses writing the cache.
+  fix: "Always pass BOTH: --precheck-only --score-teacher."
+  cost_when_missed: >
+    32 runs on 2026-09-08, including part of the expensive VGGT-Omega arm,
+    produced manifests with nothing in them. Caught only by inspecting the JSON
+    rather than trusting the exit code.
