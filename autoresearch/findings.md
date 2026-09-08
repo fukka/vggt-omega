@@ -2970,3 +2970,76 @@ net loss for three of four backbones.
 That closes the fourth part of the opening question with a concrete answer
 rather than a deprioritisation, and it does it without needing the wider-pose
 dataset H17.4 was waiting for.
+
+## H39 — the IMU pays, on the model that needs it, and H35's integral checks out
+
+H38 said *don't rotate the picture, fold the roll into the warp* — but that was
+an inference from H38's structure, not a measurement. H38's `raw@0` is aligned
+to the **device**, and device and gravity coincide only when the head is level.
+
+This measures the deployment operation on real frames with the real head roll,
+read from MPS the way H17.1 read it. Three arms: `device` (roll_deg 0, today's
+pipeline), `grav_p` (+ψ), `grav_m` (−ψ), scored on the per-frame intersection
+of the three arms' coverage.
+
+### DA3-Small: all three bars pass
+
+| | value |
+|---|---|
+| gain, pooled over 6 recordings | **−2.37% ± 2.26** (better on 5/6) |
+| H35's independently computed prediction | **1.80%** |
+| wrong-sign arm | +9.94% |
+| per-frame, &#124;ψ&#124; ≥ 8° | **+10.14%** |
+| per-frame, &#124;ψ&#124; < 3° | −1.26% |
+
+**B1 is the first external check this line has ever run.** H35 got 1.80% by
+integrating a *synthetic* roll curve against a *measured* roll distribution.
+H39 gets 2.37% ± 2.26 by a direct A/B on real frames. Two routes sharing almost
+nothing agree to within a third. Every previous bar in this line was against a
+null, a control or a permutation — never against an independent estimate of the
+same number.
+
+**B2 did its job twice.** It exists so a convention ambiguity could not be
+resolved by whichever number came out smaller. The wrong sign costs +9.94%
+against the right sign's −2.37%, a 4.2× asymmetry that identifies the sign by
+shape. It had already killed the discarded first launch, where both gravity
+arms came out +125% to +146% — equally bad, which is exactly its falsification
+condition.
+
+**B3's dose relation is clean, and its low cell is the honest null.** Frames
+under 3° of roll get −1.26%, i.e. slightly *worse*: with no roll to remove,
+aligning the render only costs resampling.
+
+The pre-registered sub-prediction holds too. H17.1 read seq142–148 as a
+contiguous block sitting 4–5° further tilted — a per-session mounting offset,
+exactly what a gravity-aligned render removes. Gain on seq142/144/145 is −3.88%
+against −0.86% on seq136/138/149.
+
+### VGGT-Omega: nothing to collect, and the failure points the same way
+
+Pooled +0.10% ± 3.26 against a wrong-sign arm of +0.72% — indistinguishable.
+B3 fails in the informative direction: the per-frame gain is *more negative* at
+high roll (−5.59%) than at low roll (−2.46%).
+
+Reading, offered as a reading: for an already roll-invariant model there is no
+roll to recover, so only the resampling difference between the two renders is
+left, and that grows with the angle rotated through. DA3-Small pays the same
+cost and simply wins by ten times more.
+
+**This does not contradict H35.** H35 said 0.46% is *available*; H39 says it
+cannot be collected this way because collecting it costs about that much.
+Second time the price and the prize came out equal for this backbone — H38 had
++6.0% against +6.8%.
+
+### The roll line, end to end
+
+> **Read the roll from the IMU and fold it into the rendering warp — if you are
+> running a single-image backbone.** Worth ~2.4% on ordinary indoor footage and
+> ~10% on the frames that need it. One rotation of the sampling grid. No labels,
+> no training, no change to the model. On a multi-view-pretrained backbone
+> there is nothing to collect.
+
+Four parts asked, four answered: they do assume level (H17.2); real footage
+violates it mildly (H17.1); it costs 0.46–1.80% (H35); and you can get some of
+it back, on one model family, by putting the gravity vector in the resampling
+rather than after it (H38, H39).

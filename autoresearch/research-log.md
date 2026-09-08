@@ -1867,3 +1867,26 @@ confirmed exact reproduction (0.1545 and 0.0690).
 The fix is in the script, not in the discipline: **a progress line inside a
 loop over recordings must name the recording.** Checking the reproduction was
 right; comparing against an unlabelled line was not.
+
+### H39 — a discarded launch that the protocol had already anticipated
+
+H39's first launch was thrown away without interpreting a single score. Two
+bugs, both visible in the run's own diagnostics: I re-derived the
+device→camera rotation instead of copying it and dropped the transpose, and I
+added the quarter-turn offset where `roll_distribution.main` subtracts it. The
+run printed a median |roll| of 168° against H17.1's 2.7°, and a worst
+timestamp join of 12 s.
+
+**B2 would have caught it anyway.** It was written to stop a convention
+ambiguity being resolved by whichever arm scored better, and its falsification
+condition is "the two gravity arms land within noise of each other". The broken
+run produced +125% and +146% — equally bad. A bar written for one purpose
+caught a different bug of the same kind.
+
+The general form, which is worth keeping: **copy a convention from the code
+that established it, and say in a comment that it is copied.** Re-deriving it
+looks like the same work and is not.
+
+Depth frames also start about a second before the trajectory, so frames whose
+nearest trajectory sample is further than one video frame (33 ms) away are now
+dropped and counted — 9 to 12 per recording.
