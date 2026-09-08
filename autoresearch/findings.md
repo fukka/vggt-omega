@@ -1354,3 +1354,73 @@ variance is not the relevant uncertainty; frame sampling is). Cross-room is
 still 120 frames over two near-static sequences and is now carrying two claims
 rather than one. `radial` beating `omega110` on DinoToy suggests the LoRA's
 room-specific fitting actively costs transfer, which is consistent but untested.
+
+## H18.3 / H18.4 — the 16 numbers are NOT a lens constant. Withdrawing yesterday's practical claim. 2026-09-08
+
+### H18.3 (locked): the transfer works, the coefficients do not
+
+Fit on LiteOffice (2 sequences, 120 frames), apply to the Apartment:
+
+| bar | result | verdict |
+|---|---|---|
+| recover >= 60% of the Apartment-fitted near_rim gain | seq136 78%, dec_seq132 95% | **PASS** |
+| mean abs difference in `a(theta)` < 0.10 (falsify > 0.20) | **0.493** | **FAIL by 2.5x the falsification line** |
+
+`a(theta)` fitted on the Apartment is smooth and unimodal
+(1.337 → 1.468 → 1.341); fitted on LiteOffice it is jagged
+(0.596, 0.951, 1.263, 1.228, 0.896, 0.737, 0.793, 0.915). The global exponents
+differ too: 1.368 vs 0.891.
+
+### Exploratory follow-up: is that just the fitting set?
+
+A log-log slope is not identified independently of the range it is fitted over,
+and LiteOffice spans 0.41–4.66 m against the Apartment's 0.44–10 m. So both fits
+were redone restricted to predicted depth in 0.5–4.5 m (a filter on the
+prediction, so still label-free):
+
+| fitted on | seq136 | dec_seq132 | DinoToy | Bowl |
+|---|---|---|---|---|
+| Apartment, unrestricted | −16.6% | −6.5% | −25.9% | −9.0% |
+| Apartment, range-matched | −16.6% | −6.5% | −25.9% | −9.0% |
+| LiteOffice, unrestricted | −12.9% | −6.2% | −18.2% | −3.9% |
+| **LiteOffice, range-matched** | **−7.3%** | **+1.2%** | −13.1% | −2.7% |
+
+**The Apartment fit does not move at all; the LiteOffice fit gets worse and turns
+harmful on decoration_seq132.** So range matching does not rescue it — the
+LiteOffice-fitted curve is simply unstable to how its fitting pixels are chosen,
+and 120 frames of near-static capture is not enough to estimate the object. The
+Apartment fit is not fragile in the same way.
+
+### H18.4 (locked): backbone-specific, as predicted
+
+Same Apartment targets, DA3-Large as the frozen student instead of DA3-Small.
+Predicted mean abs `a(theta)` difference > 0.20 (i.e. it IS backbone-specific);
+**measured 0.297. PASSES.** DA3-Large's own curve is smooth
+(1.063 → 1.144 → 1.109), shape-correlated with DA3-Small's at 0.763 but sitting
+about 0.30 lower. It works on its own baseline: −15.8% / −12.8% / −18.9% / −5.0%.
+
+So the *shape* of the curve is largely shared across backbones and the *level*
+is not.
+
+### CORRECTION to what I published one tick ago
+
+The last report said: **"ship a 16-number radial calibration instead of a LoRA;
+it transfers better."** That is not supported and is withdrawn.
+
+What survives:
+
+* **A per-theta curve fitted on a sufficient set transfers.** 240 Apartment
+  frames with real motion and a wide depth range give a curve that carries to
+  another room and another device, matching a 122,900-parameter LoRA there.
+  That result (H18.2) stands and is unaffected by range matching.
+* **The numbers are not a constant.** They are specific to the backbone
+  (H18.4, mean |da| 0.297) and they depend on having a good fitting set
+  (H18.3's LiteOffice curve is unstable).
+* So it is a **calibration procedure**, not a lens constant: fit 16 numbers per
+  (lens, backbone) on a few hundred frames with motion, and they then transfer
+  to new rooms. Useful, and much weaker than what I wrote.
+
+This is the second claim I have had to walk back in this session — the first was
+the black-wedge attribution in section 02. Both were published before the
+control that would have caught them existed. In both cases the control was
+cheap and I ran it one tick later.

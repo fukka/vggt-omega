@@ -77,6 +77,16 @@ def main(argv=None):
     p.add_argument("--max-frames", type=int, default=60)
     p.add_argument("--variant", default="small")
     p.add_argument("--depth-max-m", type=float, default=10.0)
+    p.add_argument("--fit-pred-range", default="",
+                   help="lo,hi in metres on the FROZEN PREDICTION, applied to "
+                        "the fitting pixels only. A log-log slope is not "
+                        "identified independently of the range it is fitted "
+                        "over, and LiteOffice spans 0.41-4.66 m against the "
+                        "Apartment's 0.44-10 m — so comparing coefficients "
+                        "fitted on the two without matching the range compares "
+                        "the fitting sets as much as the lenses. Uses the "
+                        "prediction, not ground truth, so this stays "
+                        "label-free.")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--out", default=None)
     a = p.parse_args(argv)
@@ -111,6 +121,9 @@ def main(argv=None):
             tgt = tgt * float(np.exp(-off.get(stem, 0.0)))   # what the trainer sees
             pr = frozen_range(s, n, cos_t)
             m = cov & (tgt > 1e-6) & (pr > 1e-6)
+            if a.fit_pred_range:
+                lo, hi = (float(x) for x in a.fit_pred_range.split(","))
+                m = m & (pr >= lo) & (pr <= hi)
             logs_p.append(np.log(pr[m])); logs_t.append(np.log(tgt[m])); bins.append(t_idx[m])
         print(f"[radial] fitted on {s.name}: {len(s.frames)} frames")
     LP, LT, BN = np.concatenate(logs_p), np.concatenate(logs_t), np.concatenate(bins)

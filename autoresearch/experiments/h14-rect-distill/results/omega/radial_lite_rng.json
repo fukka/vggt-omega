@@ -1,0 +1,123 @@
+{
+ "coef_global": [
+  0.9850074648857117,
+  -0.014631971716880798
+ ],
+ "coef_radial": [
+  [
+   1.161191701889038,
+   0.017000164836645126
+  ],
+  [
+   1.3601680994033813,
+   -0.04924199357628822
+  ],
+  [
+   1.5223839282989502,
+   -0.1018778383731842
+  ],
+  [
+   1.3997442722320557,
+   -0.060378700494766235
+  ],
+  [
+   1.045085072517395,
+   0.039541635662317276
+  ],
+  [
+   0.8356601595878601,
+   0.07490549236536026
+  ],
+  [
+   0.8351408243179321,
+   0.015021256171166897
+  ],
+  [
+   0.9388375878334045,
+   -0.132501021027565
+  ]
+ ],
+ "zones": {
+  "Apartment_release_clean_seq136_M1292": {
+   "frozen": {
+    "near_rim": 0.4269155060135551,
+    "near_center": 0.2463356725671473,
+    "all": 0.2048840414881047
+   },
+   "global": {
+    "near_rim": 0.4258655709886564,
+    "near_center": 0.24658918217485373,
+    "all": 0.20440424176855596
+   },
+   "radial": {
+    "near_rim": 0.3958483172269506,
+    "near_center": 0.3040172275971411,
+    "all": 0.21730925755983235
+   }
+  },
+  "Apartment_release_decoration_seq132_M1292": {
+   "frozen": {
+    "near_rim": 0.23199093395065434,
+    "near_center": 0.123452619384486,
+    "all": 0.16522409174973182
+   },
+   "global": {
+    "near_rim": 0.23160699871745805,
+    "near_center": 0.12354357704366518,
+    "all": 0.16495144137245363
+   },
+   "radial": {
+    "near_rim": 0.2347551523803801,
+    "near_center": 0.16301225981137385,
+    "all": 0.1948730705778585
+   }
+  },
+  "DinoToy_seq030": {
+   "frozen": {
+    "near_rim": 0.19201768161296853,
+    "near_center": 2.144895376806569,
+    "all": 0.14114403988186877
+   },
+   "global": {
+    "near_rim": 0.19193182534304853,
+    "near_center": 2.143594130070344,
+    "all": 0.14109929207552296
+   },
+   "radial": {
+    "near_rim": 0.16683109996058787,
+    "near_center": 2.114865890375814,
+    "all": 0.1133766049143435
+   }
+  },
+  "BlackCeramicBowl_seq030": {
+   "frozen": {
+    "near_rim": 0.4970968959256324,
+    "near_center": 0.8402708293665472,
+    "all": 0.3416081279520277
+   },
+   "global": {
+    "near_rim": 0.49745082940319935,
+    "near_center": 0.8401833638567627,
+    "all": 0.34167446177499744
+   },
+   "radial": {
+    "near_rim": 0.4838736988489305,
+    "near_center": 0.7850020607033076,
+    "all": 0.31645361556514295
+   }
+  }
+ },
+ "config": {
+  "cache_root": "/netapp/datasets/f.zhang2/h14_teacher_cache_omega110",
+  "arm": "omega110",
+  "train_seqs": "/user/f.zhang2/Documents/adt_liteoffice_extracted/DinoToy_seq030,/user/f.zhang2/Documents/adt_liteoffice_extracted/BlackCeramicBowl_seq030",
+  "eval_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq136_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_decoration_seq132_M1292,/user/f.zhang2/Documents/adt_liteoffice_extracted/DinoToy_seq030,/user/f.zhang2/Documents/adt_liteoffice_extracted/BlackCeramicBowl_seq030",
+  "size": 504,
+  "max_frames": 60,
+  "variant": "small",
+  "depth_max_m": 10.0,
+  "fit_pred_range": "0.5,4.5",
+  "device": "cuda",
+  "out": "/user/f.zhang2/projects/vggt-omega-organized/results/autoresearch-h14-omega/radial_lite_rng.json"
+ }
+}
