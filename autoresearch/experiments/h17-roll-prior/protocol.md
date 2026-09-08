@@ -339,3 +339,66 @@ One seed. The pre-check is 60 frames on two sequences. VGGT-Omega runs
 single-frame here, so its multi-frame machinery is idle and the comparison is
 representation-vs-representation. Teacher frame is 624 px (patch 16) against
 DA3's 630 (patch 14) — the same 110 deg field, 1% fewer pixels.
+
+## H18.2 — why does the rectified target transfer? (locked 2026-09-08, before running)
+
+### The question
+
+H18's cross-room result inverted its in-room one. In-room the un-rectified
+control `omega_rt` carries most of the gain (−47.6% vs `omega110`'s −51.5%);
+across rooms it carries **none** (+0.8% / −0.1%) while every rectified arm
+transfers. Both targets are deterministic functions of the image, so
+determinism is not the distinction.
+
+The hypothesis recorded in findings.md: **the rectified path teaches a
+systematic radial relation** — one correction curve that depends on incidence
+angle and nothing else — which is low-dimensional enough to be all a 122.9k
+LoRA can represent globally, and which is a property of the *lens* rather than
+of the room, so it carries. The fisheye path teaches "be like VGGT-Omega on
+these images", a target rich enough to be fitted per room.
+
+### The test
+
+Replace the student with something that **can only** express a radial relation,
+and see how much of the cross-room gain survives.
+
+Fit, on the four training sequences and nothing else, a correction from the
+frozen DA3-Small prediction to the `omega110` teacher target — the same targets
+the LoRA saw, scale-aligned the same way. Then apply the fitted curve unchanged
+to the held-out sequences and to LiteOffice.
+
+| arm | what it can express | parameters |
+|---|---|---|
+| `radial` | one log-log curve **per theta bin** (8 bins) | 16 |
+| `global` | one log-log curve for the whole image | 2 |
+| `omega110` (existing) | LoRA r=8 on blocks 8-11 | 122,900 |
+| `frozen` | nothing | 0 |
+
+`global` is the control that matters: it has no radial structure at all, so if
+it matches `radial` the effect is a scale/shift and not a radial relation. This
+is the same pair of arms H9 used, where `global` lost 6/6 — but there the
+supervision was parallax anchors, and here it is the rectified teacher.
+
+### Prediction (locked)
+
+**`radial`, with 16 parameters, reproduces at least half of `omega110`'s
+cross-room near_rim gain** (−20.0% on DinoToy, −9.0% on BlackCeramicBowl), and
+beats `global` on both LiteOffice sequences.
+
+**Falsified if** `radial` recovers less than a quarter of the cross-room gain —
+that would mean the transferable content is not radial and the hypothesis in
+findings.md is wrong; or if `global` matches `radial`, which would mean it is
+not radial *structure* but a global rescale, and the whole story collapses to
+"the teacher's depths are scaled differently".
+
+### Why this is worth a run even though it cannot win
+
+`radial` is not proposed as a method — 16 parameters will not beat a LoRA
+in-room. It is an instrument for reading what the LoRA learned. Whatever it
+recovers cross-room is a lower bound on how much of the transferable signal is
+purely radial, and the gap to `omega110` is what the other 122,884 parameters
+bought.
+
+Recorded scale: 4 training sequences x 60 frames to fit; evaluated on seq136,
+decoration_seq132 and both LiteOffice sequences at 60 frames each. Frozen
+DA3-Small throughout. No depth labels anywhere.
