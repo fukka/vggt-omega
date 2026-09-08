@@ -681,3 +681,29 @@ h18_4_backbone_specific:
     0.30 lower in level, and effective on its own baseline (-15.8 / -12.8 /
     -18.9 / -5.0). Shape is largely shared across backbones; level is not.
   artefacts: [autoresearch/experiments/h14-rect-distill/results/omega/radial_large.json]
+
+# ---------------------------------------------------------------- h18_5
+h18_5_fitting_set_sufficiency:
+  status: "protocol and runner committed; BLOCKED — lambda_63 unreachable 2026-09-08 ~02:30"
+  question: >
+    H18.3 showed one fitting set estimates the radial curve and another does
+    not, without saying what the difference is made of. How many frames, and
+    how spread out, does the 16-number fit need? That number is what turns
+    "fit 16 numbers per (lens, backbone)" into an actual procedure.
+  design: >
+    autoresearch/experiments/h14-rect-distill/code/radial_sweep.py. One GPU pass
+    caches fitting samples per frame and evaluation frames whole; the 2 x 8 x 5
+    sweep (frame count 2..240, crossed with spread-over-four-sequences vs
+    all-from-one, five draws each) then runs entirely in numpy. Reports
+    coefficient stability as mean pairwise |da| between draws — which needs no
+    held-out data — alongside cross-room transfer.
+  bars_locked: >
+    Stability reaches mean pairwise |da| < 0.10 by 60 spread frames and the
+    240-frame fit is within 0.10 of it; spread beats single at every matched
+    count; transfer saturates no later than stability. Falsified if 240 frames
+    have still not converged, or if single matches spread.
+  why_it_matters: >
+    The spread/single split separates "needs more pixels" from "needs more
+    viewpoints". LiteOffice has both confounded (120 frames AND near-static).
+    In deployment those have very different costs: record for longer, versus
+    ask the wearer to move around.

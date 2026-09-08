@@ -1658,6 +1658,37 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       <strong>120 帧近乎静止的画面估不出这个对象</strong>；公寓那条曲线则完全不受这个改动影响。
       <strong>方向上的不对称来自拟合集，不来自"哪边是镜头的家"。</strong>
     </p>
+  </div>
+  <figure style="margin-top:22px">
+    <div class="chartbox">
+      <svg viewBox="0 0 720 330" role="img" aria-label="三条拟合曲线的指数 a 随归一化入射角变化。公寓上拟合的两条都平滑单峰，DA3-Small 在 1.34 到 1.47 之间，DA3-Large 低约 0.3 在 1.06 到 1.14 之间；LiteOffice 上拟合的一条在 0.60 到 1.26 之间剧烈起伏，多处落到 1 以下。">
+        <g stroke="var(--rule)" stroke-width="1"><line x1="100" y1="249.1" x2="660" y2="249.1"></line><line x1="100" y1="207.3" x2="660" y2="207.3"></line><line x1="100" y1="123.6" x2="660" y2="123.6"></line><line x1="100" y1="81.8" x2="660" y2="81.8"></line><line x1="100" y1="40.0" x2="660" y2="40.0"></line></g>
+        <line x1="100" y1="165.5" x2="660" y2="165.5" stroke="var(--ink-faint)" stroke-width="1.2" stroke-dasharray="3 3"></line>
+        <text x="668" y="169.5" fill="var(--ink-faint)" font-family="Noto Sans SC, sans-serif" font-size="11">a=1 不修正</text>
+        <g fill="var(--ink-faint)" font-family="IBM Plex Mono, monospace" font-size="11" text-anchor="end"><text x="92" y="253.1">0.6</text><text x="92" y="211.3">0.8</text><text x="92" y="169.5">1.0</text><text x="92" y="127.6">1.2</text><text x="92" y="85.8">1.4</text><text x="92" y="44.0">1.6</text></g>
+        <polyline points="135,94.9 205,75.7 275,67.6 345,69.2 415,70.6 485,74.8 555,81.8 625,94.1" fill="none" stroke="var(--accent)" stroke-width="2.8" stroke-linejoin="round"></polyline><polyline points="135,152.3 205,144.4 275,138.7 345,136.8 415,135.4 485,136.7 555,139.1 625,142.7" fill="none" stroke="var(--pos)" stroke-width="2.2" stroke-linejoin="round"></polyline><polyline points="135,249.9 205,175.8 275,110.5 345,117.8 415,187.3 485,220.5 555,208.8 625,183.1" fill="none" stroke="var(--neg)" stroke-width="2.2" stroke-dasharray="6 4" stroke-linejoin="round"></polyline>
+        <g fill="var(--accent)"><circle cx="135" cy="94.9" r="3.5"></circle><circle cx="205" cy="75.7" r="3.5"></circle><circle cx="275" cy="67.6" r="3.5"></circle><circle cx="345" cy="69.2" r="3.5"></circle><circle cx="415" cy="70.6" r="3.5"></circle><circle cx="485" cy="74.8" r="3.5"></circle><circle cx="555" cy="81.8" r="3.5"></circle><circle cx="625" cy="94.1" r="3.5"></circle></g><g fill="var(--pos)"><circle cx="135" cy="152.3" r="3.5"></circle><circle cx="205" cy="144.4" r="3.5"></circle><circle cx="275" cy="138.7" r="3.5"></circle><circle cx="345" cy="136.8" r="3.5"></circle><circle cx="415" cy="135.4" r="3.5"></circle><circle cx="485" cy="136.7" r="3.5"></circle><circle cx="555" cy="139.1" r="3.5"></circle><circle cx="625" cy="142.7" r="3.5"></circle></g><g fill="var(--neg)"><circle cx="135" cy="249.9" r="3.5"></circle><circle cx="205" cy="175.8" r="3.5"></circle><circle cx="275" cy="110.5" r="3.5"></circle><circle cx="345" cy="117.8" r="3.5"></circle><circle cx="415" cy="187.3" r="3.5"></circle><circle cx="485" cy="220.5" r="3.5"></circle><circle cx="555" cy="208.8" r="3.5"></circle><circle cx="625" cy="183.1" r="3.5"></circle></g>
+        <g fill="var(--ink)" font-family="IBM Plex Mono, monospace" font-size="11" text-anchor="middle"><text x="135" y="292">0.06</text><text x="205" y="292">0.19</text><text x="275" y="292">0.31</text><text x="345" y="292">0.44</text><text x="415" y="292">0.56</text><text x="485" y="292">0.69</text><text x="555" y="292">0.81</text><text x="625" y="292">0.94</text></g>
+        <text x="118" y="312" fill="var(--ink-faint)" font-family="Noto Sans SC, sans-serif" font-size="11.5" text-anchor="start">中心</text>
+        <text x="642" y="312" fill="var(--ink-faint)" font-family="Noto Sans SC, sans-serif" font-size="11.5" text-anchor="end">边缘</text>
+        <g font-family="Noto Sans SC, sans-serif" font-size="11.5">
+          <line x1="112" y1="26" x2="140" y2="26" stroke="var(--accent)" stroke-width="2.8"></line>
+          <text x="146" y="30" fill="var(--ink)">公寓 240 帧 · DA3-Small</text>
+          <line x1="300" y1="26" x2="328" y2="26" stroke="var(--pos)" stroke-width="2.2"></line>
+          <text x="334" y="30" fill="var(--ink)">公寓 240 帧 · DA3-Large</text>
+          <line x1="490" y1="26" x2="518" y2="26" stroke="var(--neg)" stroke-width="2.2" stroke-dasharray="6 4"></line>
+          <text x="524" y="30" fill="var(--ink)">LiteOffice 120 帧</text>
+        </g>
+        <text x="380" y="326" text-anchor="middle" fill="var(--ink-faint)" font-family="Noto Sans SC, sans-serif" font-size="11.5">横轴＝归一化入射角 θ/θ&#8348;&#8336;&#8339; · 纵轴＝拟合出的指数 a(θ)，即 log(目标)=a·log(预测)+b 里的斜率</text>
+      </svg>
+    </div>
+    <figcaption>
+      同一个函数形式，三次拟合。<strong>两条在公寓上拟合的都平滑单峰、形状高度相似（相关 0.763），只是整体差约 0.30</strong> ——
+      形状是共享的，水平是 backbone 特有的。<strong>而在 120 帧近乎静止的 LiteOffice 上拟合的那条剧烈起伏、多处落到 1 以下</strong>：
+      它不是"另一只镜头的曲线"，而是<strong>一个没估准的曲线</strong>。
+    </figcaption>
+  </figure>
+  <div class="col">
     <h3 style="margin-top:22px">而且它是 backbone 特有的</h3>
     <p>
       同样的公寓目标，把冻结学生换成 <strong>DA3-Large</strong>：预注册的预测是"平均 |Δa| &gt; 0.20，即它是 backbone 特有的"——

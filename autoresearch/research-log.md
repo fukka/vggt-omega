@@ -901,3 +901,30 @@ Open, and now the most interesting question in this line: **what makes a fitting
 set sufficient?** The Apartment fit is invariant to range matching and the
 LiteOffice one is not. Sweeping the number of fitting frames until the curve
 stabilises would give the number a calibration procedure has to quote.
+
+## 2026-09-08 — lambda_63 went down; protocol and runner written ahead of it
+
+The box stopped answering SSH partway through this tick (three retries, all
+timeouts). It is shared and reboots unannounced — that is in the project notes —
+so no GPU work was launched. A single bounded waiter is running rather than a
+poll loop.
+
+Used the time for work that does not need it:
+
+* **H18.5 locked** — the question H18.3 left open, and the most interesting one
+  in this line: what makes a fitting set sufficient? Frame count 2..240 crossed
+  with spread-over-four-sequences vs all-from-one, five draws per cell,
+  reporting coefficient stability (mean pairwise |da| between draws, needs no
+  held-out data) alongside cross-room transfer. The spread/single split is the
+  part that matters: it separates "needs more pixels" from "needs more
+  viewpoints", which LiteOffice had confounded, and those have very different
+  costs in a deployment calibration.
+* **Runner written and committed** (`radial_sweep.py`), one GPU pass then the
+  whole sweep in numpy, so it costs a single forward pass over the data when the
+  box returns.
+* **Drew the curves.** Section 03c argued about coefficient shapes from a table.
+  The figure now shows all three fits: the two Apartment ones are smooth and
+  unimodal and differ mostly in level (correlation 0.763), while the LiteOffice
+  one swings between 0.60 and 1.26 and crosses below 1 in four bins. That makes
+  the claim visible — it is not "another lens's curve", it is a curve that was
+  not estimated.
