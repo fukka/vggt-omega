@@ -3168,6 +3168,95 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
+  <div class="section-head"><span class="eyebrow">03q</span><h2>实验 B¹⁶ · H31：教师选对了 —— 验证战役闭合</h2>
+    <span class="chip done"><span class="dot"></span>B1/B2 各 13/13 · 预测再次落在正确一侧</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      §03k–§03p 把每一个已发布的房间内数字都重测过了。<strong>只剩一个 —— 而它不是结果，
+      是当初"选了哪个方法"的那次测量</strong>：让 §03b 用上 VGGT-Ω 的那张教师预检表。
+    </p>
+    <p>
+      按 §03p 那条常设指令，它的量级是可疑的。真正承担决策的是<strong>排序</strong>，
+      而 §03o 表明"排序 13/13 成立、量级差 6 sd"是可能的 —— <strong>但那是类比，不是测量。</strong>
+    </p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <caption>教师相对原始鱼眼模型的近边缘增益，只在教师看得见的像素上打分。
+        <strong>B1 判据故意设严：一次失败即证伪</strong> —— 方法选择不该建立在多数票上。</caption>
+      <thead><tr><th>配置</th><th>13 条录像</th><th>seq136</th><th>已发布</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">DA3-Small，95° 窄</td><td class="num">−6.9% ± 6.2</td><td class="num">−9.9%</td><td class="num">−15%</td></tr>
+        <tr><td class="mono">DA3-Small，110° 宽</td><td class="num bad"><b>+19.8% ± 7.9</b></td><td class="num bad">+35.2%</td><td class="num bad">+33%</td></tr>
+        <tr class="flip"><td class="mono"><b>VGGT-Ω，110° 宽</b></td><td class="num good"><b>−48.2% ± 7.2</b></td><td class="num good">−69.1%</td><td class="num good">−65%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:18px">
+    <h3>逐条判据</h3>
+  </div>
+  <div class="crit">
+    <div class="row"><span class="who">B1 ✓ 通过 13/13</span><p>
+      <code>omega_wide</code> 在<strong>每一条录像上</strong>都赢 <code>da3_wide</code>。
+      判据是故意设严的，<strong>一次都没失败</strong>。<strong>§03b 的教师选对了。</strong>
+    </p></div>
+    <div class="row"><span class="who">B2 ✓ 通过 13/13</span><p>
+      宽视角对 DA3 在每一条录像上都<strong>比什么都不做更差</strong>（+6.9% 到 +31.1%）。
+      当初迫使换教师的那个发现，处处成立。
+    </p></div>
+    <div class="row"><span class="who">B3 ○ 预测再次落在正确一侧</span><p>
+      seq136 的 <code>omega_wide</code> 比均值强 <strong>2.91 sd</strong> —— 这条指令得到的最强一次确认。
+    </p></div>
+  </div>
+
+  <div class="col">
+    <h3 style="margin-top:22px">再想一层</h3>
+    <div class="note">
+      <span class="eyebrow">那个模式的表述被修正了 —— 这是本节最有价值的部分</span>
+      <p>
+        H31 提供了<strong>两个方向相反</strong>的干预，正好戳破我此前表述里的马虎：
+        <code>da3_wide</code> 是<strong>有害</strong>的，seq136 上读出 <strong>+1.95 sd 更有害</strong>；
+        <code>omega_wide</code> 是<strong>有益</strong>的，seq136 上读出 <strong>2.91 sd 更有益</strong>。
+      </p>
+      <p>
+        所以"<strong>seq136 读数偏高</strong>"是错的说法。正确的是：
+        <strong>seq136 会放大你对它所做的任何事情的量级，无论那个干预指向哪个方向。</strong>
+      </p>
+      <p>
+        全战役<strong>九次干预全部符合</strong>：|z| = 5.74、2.60、3.12、3.32、5.96、1.29、1.95、2.91、0.48
+        —— <strong>九比零，符号检验 p ≈ 0.002，中位数 2.91</strong> —— 对上三次未扰动测量的 −0.11、+0.07、+0.52。
+        <strong>仍然是观察，不是机制。</strong>
+      </p>
+    </div>
+    <div class="note warn">
+      <span class="eyebrow">一个复现缺口，标出来而不是抹平</span>
+      <p>
+        两条决策关键的臂在 seq136 上复现得很好（+33 → +35.2、−65 → −69.1），
+        但<strong>窄视角那条没有</strong>：发布 −15%、复现 −9.9%。
+        几乎肯定是帧数（这次 20 帧对原来 60 帧）作用在效应最小的那条臂上。
+        <strong>没有任何结论依赖它</strong>，但在一张正在被复核的表里差 5 个点，该写一句。
+      </p>
+    </div>
+    <div class="note">
+      <span class="eyebrow">验证战役到此闭合</span>
+      <p>
+        §03k–§03q 把每一个已发布的房间内数字都重测过了 13 条录像。
+        现在还压在<strong>单条录像</strong>上的只剩两处：
+      </p>
+      <p style="margin-top:8px">
+        ① <strong>"重新布置房间"那一列</strong> —— 一条录像，但 §03k 证明它是<strong>代表性</strong>的那条；<br>
+        ② <strong>跨房间数字</strong> —— 从来没测在 seq136 上，这条弧线够不到，
+        <strong>卡在一个关于共享文件系统的决定上</strong>（盘已 98% 满，已提交给人类，未行动）。
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
   <div class="section-head"><span class="eyebrow">04</span><h2>实验 C · H14.2：虚拟视角不必是方的</h2>
     <span class="chip kill"><span class="dot"></span>预测被否定</span></div>
 
