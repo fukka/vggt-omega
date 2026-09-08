@@ -1,0 +1,244 @@
+{
+ "cells": {
+  "apartment_radial": {
+   "fitset": "apartment",
+   "form": "radial",
+   "n_frames": 240,
+   "coef_a": [
+    1.336645817801132,
+    1.4300495301197322,
+    1.462763398707056,
+    1.4603391218797963,
+    1.4563240139192661,
+    1.4380454356339918,
+    1.4038607463518362,
+    1.3423953597151415
+   ],
+   "gain": [
+    -16.597878926673893,
+    -6.519039327477127,
+    -25.965405468971614,
+    -8.961923025042019
+   ],
+   "members": [
+    "Apartment_release_clean_seq131_M1292",
+    "Apartment_release_clean_seq133_M1292",
+    "Apartment_release_clean_seq134_M1292",
+    "Apartment_release_clean_seq135_M1292"
+   ]
+  },
+  "apartment_global": {
+   "fitset": "apartment",
+   "form": "global",
+   "n_frames": 240,
+   "coef_a": [
+    1.368809461593628,
+    1.368809461593628,
+    1.368809461593628,
+    1.368809461593628,
+    1.368809461593628,
+    1.368809461593628,
+    1.368809461593628,
+    1.368809461593628
+   ],
+   "gain": [
+    8.703834262318333,
+    6.5497991011225,
+    2.708177407424328,
+    -1.5689709251841433
+   ],
+   "members": [
+    "Apartment_release_clean_seq131_M1292",
+    "Apartment_release_clean_seq133_M1292",
+    "Apartment_release_clean_seq134_M1292",
+    "Apartment_release_clean_seq135_M1292"
+   ]
+  },
+  "dino_radial": {
+   "fitset": "dino",
+   "form": "radial",
+   "n_frames": 60,
+   "coef_a": [
+    1.8660679281186925,
+    2.033755220275165,
+    1.875597049878231,
+    1.4469614966489837,
+    1.0552128583190123,
+    0.9979790466834304,
+    1.0670966645615265,
+    1.153478858349708
+   ],
+   "gain": [
+    -7.875348481470368,
+    3.5482064916101175,
+    -18.013846543899305,
+    -3.717275212813953
+   ],
+   "members": [
+    "DinoToy_seq030"
+   ]
+  },
+  "dino_global": {
+   "fitset": "dino",
+   "form": "global",
+   "n_frames": 60,
+   "coef_a": [
+    1.1882566213607788,
+    1.1882566213607788,
+    1.1882566213607788,
+    1.1882566213607788,
+    1.1882566213607788,
+    1.1882566213607788,
+    1.1882566213607788,
+    1.1882566213607788
+   ],
+   "gain": [
+    3.924062807491824,
+    2.7076012717055287,
+    1.031737821336609,
+    -0.8450151590397192
+   ],
+   "members": [
+    "DinoToy_seq030"
+   ]
+  },
+  "bowl_radial": {
+   "fitset": "bowl",
+   "form": "radial",
+   "n_frames": 60,
+   "coef_a": [
+    0.8603068444627671,
+    1.0417300666881921,
+    1.3288633018093374,
+    1.3577262311663005,
+    1.031331690006654,
+    0.6987496506922616,
+    0.6093059432597516,
+    0.7290705103901963
+   ],
+   "gain": [
+    10.543723538669614,
+    14.44996852041973,
+    3.408731276977517,
+    0.9567289482560692
+   ],
+   "members": [
+    "BlackCeramicBowl_seq030"
+   ]
+  },
+  "bowl_global": {
+   "fitset": "bowl",
+   "form": "global",
+   "n_frames": 60,
+   "coef_a": [
+    0.8135481476783752,
+    0.8135481476783752,
+    0.8135481476783752,
+    0.8135481476783752,
+    0.8135481476783752,
+    0.8135481476783752,
+    0.8135481476783752,
+    0.8135481476783752
+   ],
+   "gain": [
+    -2.2946528803113764,
+    -1.6632970236328037,
+    -0.11283187194732758,
+    0.9232128671050832
+   ],
+   "members": [
+    "BlackCeramicBowl_seq030"
+   ]
+  },
+  "lite_both_radial": {
+   "fitset": "lite_both",
+   "form": "radial",
+   "n_frames": 120,
+   "coef_a": [
+    1.1647695830095472,
+    1.352053768435974,
+    1.518457292961864,
+    1.389292575531711,
+    1.0423214288916918,
+    0.8284038440034502,
+    0.8281658478053884,
+    0.9314302288085116
+   ],
+   "gain": [
+    -7.091151256548899,
+    1.267369343702529,
+    -12.839777372489003,
+    -2.5760811414678675
+   ],
+   "members": [
+    "DinoToy_seq030",
+    "BlackCeramicBowl_seq030"
+   ]
+  },
+  "lite_both_global": {
+   "fitset": "lite_both",
+   "form": "global",
+   "n_frames": 120,
+   "coef_a": [
+    0.9785329103469849,
+    0.9785329103469849,
+    0.9785329103469849,
+    0.9785329103469849,
+    0.9785329103469849,
+    0.9785329103469849,
+    0.9785329103469849,
+    0.9785329103469849
+   ],
+   "gain": [
+    -0.3491374891971266,
+    -0.2352378623142637,
+    -0.06231764263230355,
+    0.10206983412308634
+   ],
+   "members": [
+    "DinoToy_seq030",
+    "BlackCeramicBowl_seq030"
+   ]
+  }
+ },
+ "config": {
+  "cache_root": "/netapp/datasets/f.zhang2/h14_teacher_cache_omega110",
+  "arm": "omega110",
+  "fit_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq133_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq134_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq135_M1292,/user/f.zhang2/Documents/adt_liteoffice_extracted/DinoToy_seq030,/user/f.zhang2/Documents/adt_liteoffice_extracted/BlackCeramicBowl_seq030",
+  "eval_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq136_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_decoration_seq132_M1292,/user/f.zhang2/Documents/adt_liteoffice_extracted/DinoToy_seq030,/user/f.zhang2/Documents/adt_liteoffice_extracted/BlackCeramicBowl_seq030",
+  "px_per_frame": 20000,
+  "size": 504,
+  "max_frames": 60,
+  "variant": "small",
+  "depth_max_m": 10.0,
+  "fit_pred_range": "0.5,4.5",
+  "stability_draws": 5,
+  "stability_frames": 30,
+  "seed": 0,
+  "device": "cuda",
+  "out": "autoresearch/experiments/h19-native-calib/results/native_matched.json"
+ },
+ "eval_order": [
+  "Apartment_release_clean_seq136_M1292",
+  "Apartment_release_decoration_seq132_M1292",
+  "DinoToy_seq030",
+  "BlackCeramicBowl_seq030"
+ ],
+ "stability": {
+  "dino": {
+   "frames": 30,
+   "pool": 60,
+   "mean_pairwise_da": 0.13209833218821895
+  },
+  "bowl": {
+   "frames": 30,
+   "pool": 60,
+   "mean_pairwise_da": 0.11075945791421067
+  },
+  "apartment": {
+   "frames": 30,
+   "pool": 240,
+   "mean_pairwise_da": 0.08704531255313956
+  }
+ }
+}

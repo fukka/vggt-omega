@@ -290,7 +290,7 @@ ul.plain li strong{color:var(--ink)}
   <div class="part"><span class="n">Part 4</span><h2>Results</h2></div>
 
   <div class="col">
-    <p>Six findings, in the order we found them. Each one made the next possible.</p>
+    <p>Seven findings, in the order we found them. Each one made the next possible.</p>
 
     <h3>4.1 &nbsp;Tilting the camera hurts — for the wrong reason</h3>
     <p>
@@ -566,14 +566,54 @@ ul.plain li strong{color:var(--ink)}
   </div>
 
   <div class="headline">
-    <p class="big">About 30 frames is enough — and they can all come from one recording.</p>
-    <p>We were wrong on both halves. Varied viewpoints buy nothing over a single recording at
-      matched frame count. Two frames is genuinely too few: the answer swings 13 points between
-      draws. By thirty it is within a couple of points of the full-data fit.</p>
+    <p class="big">About 30 frames is enough — if someone is walking while they are recorded.</p>
+    <p>Varied viewpoints buy nothing over a single recording at matched frame count. Two frames is
+      too few: the answer swings 13 points between draws. By thirty it is within a couple of points
+      of the full-data fit. The catch is in 4.5 — the frames have to contain motion.</p>
   </div>
 
   <div class="col">
-    <h3>4.5 &nbsp;Three things that did not work</h3>
+    <h3>4.5 &nbsp;Motion in the footage beats having the right lens</h3>
+    <p>
+      Should you fit the curve on the camera it will run on? It is the same lens, so it ought to
+      win. We tested it on room 2's own footage — teacher-supervised, no ground truth anywhere in
+      the fit.
+    </p>
+    <p>It lost, badly.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <caption>The evaluation frames are <strong>identical across these rows</strong>. The only thing
+        that changes is which footage the curve was fitted on.</caption>
+      <thead><tr><th>Fitted on</th><th>Device</th><th>Footage</th><th>→ Room 2, seq A</th><th>→ Room 2, seq B</th></tr></thead>
+      <tbody>
+        <tr class="hi"><td class="mono">Apartment, 240 fr</td><td style="text-align:left">wrong</td><td style="text-align:left">walking</td><td class="n good">−26.0%</td><td class="n good">−8.9%</td></tr>
+        <tr><td class="mono">Room 2 seq B, 60 fr</td><td style="text-align:left">right</td><td style="text-align:left">near-static</td><td class="n bad">−2.6%</td><td class="n">—</td></tr>
+        <tr><td class="mono">Room 2 seq A, 60 fr</td><td style="text-align:left">right</td><td style="text-align:left">near-static</td><td class="n">—</td><td class="n bad">−3.8%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="headline">
+    <p class="big">The wrong lens with motion beats the right lens without it — by about 10×.</p>
+    <p>So the fit does not really need <em>your</em> camera. It needs frames where the camera moved.</p>
+  </div>
+
+  <div class="col">
+    <p>
+      We can say why, because it was measured. Refit on random 30-frame subsets and see how far the
+      answer moves between draws: <strong>0.060</strong> for walking footage, <strong>0.127</strong>
+      for near-static. Static frames are worth about half as much each.
+    </p>
+    <p>
+      One honest limit. Room 2 is our only second device <em>and</em> our only near-static footage,
+      so "fitting on the target device is bad" and "this footage is static" cannot be fully
+      separated here. We read it as staticness because that is the part we measured directly, and
+      because the curve that failed was that lens's own.
+    </p>
+
+    <h3>4.6 &nbsp;Three things that did not work</h3>
     <p>Each failed against a bar we had written down first. Each rules something out.</p>
     <ul class="plain">
       <li><strong>Wider teacher coverage.</strong> We pushed rim coverage from 70% to 99% using
@@ -591,7 +631,7 @@ ul.plain li strong{color:var(--ink)}
         numbers, and it failed that on all six. A recalibration, not a solution.</li>
     </ul>
 
-    <h3>4.6 &nbsp;More data from the same room buys nothing</h3>
+    <h3>4.7 &nbsp;More data from the same room buys nothing</h3>
     <p>
       The obvious objection is that our training sets are small. We tested it: computation held
       fixed, only the number of distinct frames changing.
@@ -636,7 +676,8 @@ ul.plain li strong{color:var(--ink)}
         trained in.</li>
       <li><strong>Expect almost none of it to transfer.</strong> What crosses a room is a small
         angle-dependent recalibration — six numbers — and that beats labelled training in a new
-        room. About 30 frames from one recording is enough to fit it.</li>
+        room. About 30 frames fit it, but they must have <strong>motion in them</strong>: footage
+        from the right camera does not make up for a camera that stayed still.</li>
       <li><strong>Do not fix generalisation with more footage from the same room.</strong> 48× more
         bought nothing and made another region worse.</li>
     </ul>
@@ -657,9 +698,10 @@ ul.plain li strong{color:var(--ink)}
     <h3>What we would do next</h3>
     <ul class="plain">
       <li><strong>Make room 2 a real test set</strong> instead of 120 frames.</li>
-      <li><strong>Fit the calibration on an unseen lens, from the teacher alone.</strong> Every fit
-        so far was checked against ground truth afterwards. Doing it without any decides whether
-        this is deployable.</li>
+      <li><strong>Fit on moving footage from a third device.</strong> The Apartment curve beat
+        room 2's own footage on room 2. That hints the curve may be largely device-independent — a
+        one-off fit on any well-moving footage, not a per-camera procedure. It would also separate
+        "static" from "different device", which room 2 alone cannot.</li>
       <li><strong>Combine the two label-free signals</strong> — the rectified teacher and the
         motion-triangulated anchors. They estimate the same thing, and each needs something the
         other does not.</li>

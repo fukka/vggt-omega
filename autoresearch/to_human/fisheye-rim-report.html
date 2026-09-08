@@ -235,10 +235,11 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       <strong>H9</strong>：两个对照 6/6、无深度真值，但预注册主判据 0/6 ——<em>一个有效的边缘重标定，不是径向畸变的解</em>（§06）。
     </p></div>
 
-    <div class="row"><span class="who">⑦ 那条曲线只要 30 帧</span><p>
-      径向标定的代价是 <strong>约 30 帧、一秒视频</strong>，可以全部来自同一段普通录像。
-      预注册赌的是"要视角分散"——<strong>输了</strong>：五个匹配帧数里 single 赢三个，
-      连带否掉了停机期间那个预测有显著差距的模拟（§03d）。
+    <div class="row"><span class="who">⑦ 那条曲线只要 30 帧 —— 但帧里得有运动</span><p>
+      径向标定的代价是 <strong>约 30 帧、一秒视频</strong>（§03d）。
+      但 30 <strong>不是帧数单独的性质</strong>：在近静止素材上，同样 30 帧的拟合稳定性只有一半（0.127 对 0.060），
+      于是<strong>用错设备但有运动的素材，打赢了用对设备但静止的素材约 10 倍</strong>（§03e）。
+      两节的主判据<strong>都被自己的预注册证伪</strong>；§03e 那条还改掉了本页上一版写下的一句话。
     </p></div>
 
     <div class="row"><span class="who">⑧ 瓶颈是场景数，不是数据量</span><p>
@@ -1892,7 +1893,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <div class="note">
       <span class="eyebrow">这一节的结论</span>
       <p>
-        <strong>约 30 帧就够，而且可以全部来自同一段普通录像。</strong>
+        <strong>约 30 帧就够 —— 前提是录的时候人在走动。</strong>
       </p>
       <p>
         决定精度的只是<strong>帧数</strong>，不是视角分散程度，并且到 30 帧左右就饱和了。
@@ -1915,8 +1916,97 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       这条推论已经写进 H19 的预注册判据里去测了。
     </p>
     <p>
-      实际意义是这一节里最有用的东西：径向标定的代价是<strong>约 30 帧、大约一秒视频</strong>，来自一段普通录像。
-      这和"每台设备都要采集多样化素材"是完全不同的部署故事。
+      实际意义是这一节里最有用的东西：径向标定的代价是<strong>约 30 帧、大约一秒视频</strong>。
+      但"30 帧"里的那个 30 <strong>不是帧数单独的性质</strong> —— §03e 把这一点测出来了，
+      而且它推翻了本页上一版在这里写下的"可以全部来自同一段普通录像"。
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="section-head"><span class="eyebrow">03e</span><h2>实验 B⁗ · H19：拟合集里有没有运动，比镜头对不对更重要</h2>
+    <span class="chip kill"><span class="dot"></span>主判据被证伪 · 但机制判据通过</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      §03c / §03d 那条曲线一直是在<strong>四条公寓序列</strong>上拟合、再原样搬到 LiteOffice 的 ——
+      另一个房间，<strong>也是另一台设备</strong>。可曲线是<strong>镜头</strong>的性质，
+      而部署时你手上有的是<strong>手里那台相机</strong>拍的素材，不是 M1292 的。
+    </p>
+    <p>
+      先澄清一件上一版英文报告说糊了的事：<strong>这个拟合本来就不用标签</strong> ——
+      <code>radial_probe.py</code> 是拿缓存的 omega110 教师深度对冻结预测做回归，真值只在评分时进场。
+      所以"能不能不用标签拟合"不是未解问题。<strong>真正没测过的是：在它将要运行的那台设备上拟合。</strong>
+    </p>
+    <p>
+      omega110 教师缓存里本来就有 DinoToy 和 BlackCeramicBowl，所以这件事只花了一次 GPU 前向，没有训练。
+    </p>
+  </div>
+
+  <div class="scroll" style="margin-top:18px">
+    <table>
+      <caption><strong>这几行的评测帧完全相同</strong>，唯一变的是曲线在哪批素材上拟合的。
+        近边缘增益，全程无深度真值进入任何拟合。</caption>
+      <thead><tr><th>拟合于</th><th>设备</th><th>素材</th><th>→ DinoToy</th><th>→ Bowl</th></tr></thead>
+      <tbody>
+        <tr class="flip"><td class="mono">公寓 · 240 帧</td><td><b>错的</b></td><td>走动</td><td class="num good"><b>−26.0%</b></td><td class="num good"><b>−8.9%</b></td></tr>
+        <tr><td class="mono">Bowl · 60 帧</td><td>对的</td><td>近静止</td><td class="num bad">−2.6%</td><td class="num">—</td></tr>
+        <tr><td class="mono">DinoToy · 60 帧</td><td>对的</td><td>近静止</td><td class="num">—</td><td class="num bad">−3.8%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:18px">
+    <h3>逐条判据</h3>
+  </div>
+  <div class="crit">
+    <div class="row"><span class="who">B2 ✗ 未通过 —— 预注册的证伪条件</span><p>
+      "同设备跨序列的曲线，在两条 LiteOffice 序列上都赢公寓曲线"。
+      实际在<strong>两条序列、两种拟合区间配置下全部输</strong>：DinoToy 差约 <strong>10 倍</strong>，Bowl 差约 <strong>2.3 倍</strong>。
+    </p></div>
+    <div class="row"><span class="who">B3 ✓ 通过 —— 而且它给出了机制</span><p>
+      30 帧拟合的平均两两 <span class="mono">|da|</span>：走动的公寓单序列 <strong>0.060</strong>（§03d），
+      Bowl <strong>0.100–0.111</strong>，DinoToy <strong>0.127–0.132</strong>。
+      <strong>近静止素材每帧的信息量只有一半。</strong>
+      这正是 §03d 用来解释<em>它自己为什么被推翻</em>的那个说法所作的预测 —— 它本来不必活下来，但它活下来了。
+    </p></div>
+    <div class="row"><span class="who">B1 ○ 不成立，两个方向都别引</span><p>
+      radial 对 2 参数 <code>global</code> 的优势在不匹配区间下是 3.0 / 2.9 个点（判据线 2 个点），
+      但在匹配区间下 <code>bowl</code>→DinoToy <strong>反号</strong>，radial 反而差 3.5 个点。
+      一个随拟合区间选择翻转的边际量不是结果。
+    </p></div>
+  </div>
+
+  <div class="col">
+    <h3 style="margin-top:22px">再想一层</h3>
+    <div class="note">
+      <span class="eyebrow">这一节的结论</span>
+      <p>
+        <strong>用错设备但有运动的素材，打赢了用对设备但静止的素材，差约 10 倍。</strong>
+        拟合需要的不是<em>你那台</em>相机，而是<strong>相机动过</strong>的帧。
+      </p>
+    </div>
+    <div class="note warn">
+      <span class="eyebrow">这一节改掉了本页已经发布过的一句话</span>
+      <p>
+        §03d 原本写的是"约 30 帧，而且可以全部来自同一段普通录像"。<strong>这句话缺了限定。</strong>
+        正确的说法是<strong>"约 30 帧、而且帧里要有运动"</strong>，并且<strong>设备对不对不能替代这一点</strong>。
+        更一般的教训是：<strong>"N 帧就够"从来不是 N 单独的性质</strong>，任何"要多少数据"的答案都必须同时说明数据里有什么。
+      </p>
+    </div>
+    <div class="note warn">
+      <span class="eyebrow">这个实验分不开的混淆</span>
+      <p>
+        LiteOffice 既是<strong>唯一</strong>的第二台设备，也是<strong>唯一</strong>的近静止素材。
+        "在目标设备上拟合不好"和"这批素材是静止的"在这里<strong>分不开</strong>。
+        之所以采信"静止"这一读法，是因为 B3 直接测的就是静止性，而且失败的那条曲线正是那枚镜头<em>自己的</em>。
+      </p>
+    </div>
+    <p>
+      它打开的方向比它原本要测的更有意思：<strong>公寓曲线搬到另一枚镜头上，比那枚镜头自己的静止素材还好。</strong>
+      这指向曲线可能<strong>基本与设备无关</strong> —— 那样的话"标定"就是<strong>在任何一段动得好的素材上拟合一次</strong>，
+      而不是逐设备流程。要验证它需要<strong>第三台设备的走动素材</strong>，那同时也能拆开上面那个混淆。
     </p>
   </div>
 </section>

@@ -1695,3 +1695,68 @@ different deployment story from "collect varied footage per device".
 **Still open, and now the blocking question:** every fit here was scored against
 ground truth afterwards. Whether the curve can be fitted from the teacher alone
 on an unseen device is what decides deployability.
+
+## H19 — native calibration loses to a foreign curve. What the fit needs is motion.
+
+Ran on GPU0, both configs (`h19-native-calib/results/native_{unmatched,matched}.json`).
+Full reading in `h19-native-calib/analysis.md`.
+
+The deployment question was: fit the radial curve on the device it will run on,
+teacher-supervised, no ground truth anywhere. The answer is that this is worse
+than using a curve fitted on a *different* device — by about 10x.
+
+| fitted on | device | footage | → DinoToy | → Bowl |
+|---|---|---|---|---|
+| `apartment`, 240 fr | wrong | walking | **-26.0%** | **-8.9%** |
+| `bowl`, 60 fr | right | near-static | -2.6% | — |
+| `dino`, 60 fr | right | near-static | — | -3.8% |
+
+**The evaluation frames are identical across these rows.** The only thing that
+differs is the fitting set. So this is a direct comparison with no confound in
+the scoring: wrong-device-with-motion beats right-device-without.
+
+**B2 failed**, which was the pre-registered falsification condition, on both
+sequences and in both configs.
+
+**B3 passed**, and it supplies the mechanism. A 30-frame fit's mean pairwise
+|da|: 0.060 from one walking Apartment sequence (H18.5), against 0.100-0.111 for
+Bowl and 0.127-0.132 for DinoToy. Near-static footage is **half as informative
+per frame**. H18.5 explained its own refutation by pointing at exactly this and
+predicted the spread advantage would reappear on static footage. It did, on a
+test it did not have to survive.
+
+**B1 is not established.** Radial beats its `global` control on both
+cross-sequence cells unmatched (3.0 and 2.9 points against a 2-point bar), but
+`bowl`->DinoToy inverts under range matching and radial goes 3.5 points *worse*.
+A margin that flips with a fitting-range choice is not a result. Do not quote it.
+
+### This corrects something already published
+
+Both reports said the calibration costs "about 30 frames, and they can all come
+from a single recording". Wrong as stated. It needs **30 frames with motion in
+them**, and having the right device does not substitute for that. Both reports
+amended; the English one carried the claim in its recommendations, which is the
+worst place to be wrong.
+
+### Lesson for the constraints list
+
+"N frames is enough" is never a property of N alone. H18.5 measured 30 on
+walking footage and the number does not survive a change in what the frames
+contain. Any future "how much data" answer here has to name the content of the
+data, not just its size.
+
+### The confound, stated plainly
+
+LiteOffice is the only second device available AND the only near-static footage
+available. "Target-device fitting is bad" and "this footage is static" cannot be
+separated by this experiment. B3 measuring staticness directly, and the failure
+being that lens's *own* curve, is why the staticness reading is preferred.
+Moving footage from a third device would settle it.
+
+### The reading it opens
+
+`apartment` transfers to a different lens better than that lens's own static
+footage does. That points at the curve being substantially **device-independent**
+— closer to a one-off fit on any well-moving footage than to a per-device
+calibration. That is a much better deployment story than the one H19 set out to
+test, and it is now the thing worth testing.

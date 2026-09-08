@@ -1202,3 +1202,40 @@ replaced a "what we would do next" bullet that the run had just answered.
 
 Next on the box: the affine re-score to settle the -12.9/-7.3 puzzle, the
 RolledView test in test_roll.py, and pushing the h18 artefacts to `results`.
+
+## 2026-09-08 (later) — H19: the seductive idea lost, the boring one won
+
+Wrote and locked H19's protocol, then ran it: fit the radial curve on the target
+device's own footage, no ground truth, and see if it beats the Apartment-fitted
+curve. It does not. It loses by ~10x on DinoToy and ~2.3x on Bowl, in both the
+matched and unmatched fitting-range configurations. B2 was the pre-registered
+falsification condition and it triggered on both sequences.
+
+B3 passed and explains it: near-static footage gives a fit half as stable per
+frame (|da| 0.127 vs 0.060 at 30 frames). That was H18.5's own follow-up
+prediction about why *it* had been refuted, and it survived a test it did not
+have to.
+
+Two process notes worth keeping.
+
+First, this experiment cost one GPU pass and no training, because the omega110
+teacher cache already covered both LiteOffice sequences. Checking what was
+already on disk before designing the run turned a day of work into twenty
+minutes.
+
+Second, and less comfortable: H19 corrects a recommendation I had already
+published in both reports — "about 30 frames, and they can all come from a
+single recording". The missing qualifier is "with motion in them". It was in the
+*recommendations* section of the English report, which is the worst place to
+carry an unqualified claim. Both reports are amended. The general lesson is in
+findings.md: "N frames is enough" is never a property of N alone.
+
+The interesting reading is the one H19 did not set out to test. The Apartment
+curve transfers to a different lens better than that lens's own static footage
+does, which points at the curve being substantially device-independent. If that
+holds, calibration is a one-off fit on any well-moving footage rather than a
+per-device procedure. Testing it needs moving footage from a third device, which
+also breaks the static/device confound H19 cannot break on its own.
+
+B1 (is the native fit radial?) is not established — the margin flips sign with
+the fitting-range choice. Recorded as not-a-result rather than quoted.

@@ -806,3 +806,48 @@ reports:
       standalone motivation/data/method/results/conclusion for a reader who has
       not followed the project. NOT a translation — do not try to keep the two
       in sync section by section.
+
+# ------------------------------------------------- H19 resolved 2026-09-08
+h19_outcome:
+  status: B2 REFUTED (pre-registered falsification), B3 CONFIRMED, B1 not established
+  artifacts:
+    - autoresearch/experiments/h19-native-calib/results/native_unmatched.json
+    - autoresearch/experiments/h19-native-calib/results/native_matched.json
+  analysis: autoresearch/experiments/h19-native-calib/analysis.md
+  headline: >
+    Fitting the radial curve on the target device's own near-static footage is
+    ~10x worse on DinoToy (-2.6% vs -26.0%) and ~2.3x worse on Bowl (-3.8% vs
+    -8.9%) than the Apartment curve fitted on a DIFFERENT device with walking
+    footage. Evaluation frames identical across the comparison, so the fitting
+    set is the only variable. What the fit needs is MOTION, not a lens match.
+  b3_mechanism: >
+    30-frame mean pairwise |da|: 0.060 one walking Apartment sequence (H18.5),
+    0.100-0.111 Bowl, 0.127-0.132 DinoToy. Near-static footage is half as
+    informative per frame. This was H18.5's own follow-up prediction.
+  b1_do_not_quote: >
+    Radial beats the 2-param global control on both cross-sequence cells
+    unmatched (3.0 / 2.9 points vs a 2-point bar) but inverts under range
+    matching (bowl->DinoToy radial 3.5 points WORSE). Flips with a fitting-range
+    choice, so it is not a result in either direction.
+  confound_stated: >
+    LiteOffice is the only second device AND the only near-static footage.
+    "Target-device fitting is bad" and "this footage is static" are not
+    separable here. B3 measures staticness directly and the failing curve is
+    that lens's own, which is why staticness is the preferred reading.
+  corrected_a_published_claim: >
+    Both reports had said the calibration costs "about 30 frames, and they can
+    all come from a single recording". Needs "with motion in them". The English
+    report carried it in its RECOMMENDATIONS. Both amended 2026-09-08.
+
+h20_candidate:
+  question: >
+    Is the radial curve substantially device-INDEPENDENT? The Apartment curve
+    transfers to a different lens better than that lens's own static footage
+    does. If so, calibration is a one-off fit on any well-moving footage rather
+    than a per-device procedure — a much better deployment story than H19 set
+    out to test.
+  what_it_needs: >
+    Moving footage from a third device. That also breaks the static/device
+    confound H19 cannot break alone. Check what is already extracted before
+    planning any capture: H19 cost one GPU pass only because the omega110
+    teacher cache already covered both LiteOffice sequences.
