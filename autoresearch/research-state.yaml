@@ -2107,3 +2107,28 @@ rule_origin_paid_three_times:
     - "H41: H32's near-zero dip — the device zero sits a median 4 deg off level."
     - "H41: H32's 'coincidence' (wearer's median tilt at the curve's cheapest angle) is an identity about coordinates."
     - "H43: the +-30 asymmetry's DIRECTION is what that same offset manufactures."
+
+# ------------------------------------------------- line status 2026-09-08
+roll_orientation_line:
+  status: CLOSED
+  what_closed_it: >
+    All four parts of the opening human question answered (H17.1 distribution,
+    H17.2 backbones, H35 expected cost, H38/H39 use the IMU); every in-room
+    number on 13 recordings (H25-H31); the roll curve measured for four
+    backbones with an exact gravity-aligned zero (H41, H42); the last disputed
+    claim retired (H43b).
+  still_open_IN_this_line: >
+    The RESIDUAL asymmetry about the true zero. Not zero, sign not consistent:
+    da3:large +7.8%, vggt -7.0%, da3:small +4.7%, vggt_omega -0.9%. NEW
+    ARGUMENT, free: four models seeing IDENTICAL PIXELS lean different ways, so
+    it CANNOT BE PURELY GEOMETRIC — a principal-point offset or a rendering
+    handedness would push all four the same way. That narrows it to something
+    involving the models and no further. NO MECHANISM OFFERED. It is ~4x
+    smaller than what was published and nothing in either report leans on it.
+  the_real_bottleneck_is_elsewhere: >
+    Cross-room evidence is still 120 frames over two near-static recordings.
+    Fixing it needs the ADT download decision that has been with the user for
+    many ticks (see adt_unused_sequences) and has NOT been acted on.
+  reports_current:
+    chinese: "43 sections, artifact ebba1289 — through H43b."
+    english: "artifact c6461af3 — caught up with H37-H43 on 2026-09-08: capacity claim corrected, asymmetry retired in place, the gravity-in-the-warp recommendation added with a figure, and the projection-vs-border open question struck through as closed."
