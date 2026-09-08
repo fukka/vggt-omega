@@ -70,7 +70,9 @@ def main(argv=None):
     p.add_argument("--angles", default="-40,-30,-20,-10,0,10,20,30,40")
     p.add_argument("--size", type=int, default=504)
     p.add_argument("--max-frames", type=int, default=20)
-    p.add_argument("--variant", default="small")
+    p.add_argument("--models", default="da3:small",
+                   help="comma list, e.g. da3:small,da3:large,vggt,vggt_omega")
+    p.add_argument("--omega-ckpt", default="checkpoints/VGGT-Omega-1B-512/model.pt")
     p.add_argument("--view-fov", type=float, default=89.0)
     p.add_argument("--view-size", type=int, default=630)
     p.add_argument("--common-theta-deg", type=float, default=44.0)
@@ -94,17 +96,7 @@ def main(argv=None):
     gts = {f: s.gt_range(f, cos_t).numpy() for f in s.frames}
     angles = [float(x) for x in a.angles.split(",")]
 
-    vs = a.view_size
-    c = (vs - 1) / 2.0
-    yy, xx = torch.meshgrid(torch.arange(vs, dtype=torch.float32),
-                            torch.arange(vs, dtype=torch.float32), indexing="ij")
-    disc = (((xx - c) ** 2 + (yy - c) ** 2) <= (vs / 2.0 - 1.0) ** 2).to(a.device)
-    print(f"[bnd] view {vs}x{vs} @ {a.view_fov} deg; inscribed disc keeps "
-          f"{float(disc.float().mean()):.3f} of the frame "
-          f"(the theta <= {a.view_fov / 2:.1f} deg cap)")
-
     from raytun3r.backbones import build_backbone
-    bb = build_backbone("da3", weights="pretrained", device=a.device, variant=a.variant)
 
     def zones(preds, mask):
         s_ = np.zeros((THETA_BINS, NB)); n_ = np.zeros((THETA_BINS, NB))
@@ -130,60 +122,76 @@ def main(argv=None):
         out["rim_over_center"] = out["near_rim"] / max(out["center"], 1e-9)
         return out
 
-    results = {"pinhole": {}, "pinhole_masked": {}}
-    for deg in angles:
-        rig = RT.Rig(cam, [RC.RolledView(fov_x_deg=a.view_fov, width=vs, height=vs,
-                                         roll_deg=deg)])
-        v = rig.views[0]
-        bb.install(None, v.pin, (vs, vs), patch_undistort=False, border_token=False,
-                   dpt_grid=False, depth_convention="z")
-        cov = rig.covered.numpy()
-        for arm, masked in (("pinhole", False), ("pinhole_masked", True)):
-            preds = {}
-            for f in s.frames:
-                def fz(warped, _view, _m=masked):
-                    return U.forward_z(bb, warped * disc if _m else warped)
-                with torch.no_grad():
-                    d, _ = rig.teach(fz, s.src.image(f).to(a.device), align=False)
-                preds[f] = np.where(cov, d.float().cpu().numpy(), 0.0)
-            results[arm][str(deg)] = zones(preds, cone & cov & common)
-        r0, r1 = results["pinhole"][str(deg)], results["pinhole_masked"][str(deg)]
-        print(f"  {deg:>5.0f}deg   pinhole all {r0['all']:.4f} rim {r0['near_rim']:.4f}"
-              f"   masked all {r1['all']:.4f} rim {r1['near_rim']:.4f}")
+    all_models = {}
+    for spec in [x.strip() for x in a.models.split(",") if x.strip()]:
+        name, _, variant = spec.partition(":")
+        kw = {"variant": variant} if variant else {}
+        w8 = a.omega_ckpt if name == "vggt_omega" else "pretrained"
+        try:
+            bb = build_backbone(name, weights=w8, device=a.device, **kw)
+        except Exception as exc:
+            print(f"[bnd] {spec:14s} unavailable: {exc.__class__.__name__}: {exc}")
+            continue
+        # Same FOV for every backbone; the pixel count moves to stay patch-aligned,
+        # so the inscribed disc is the same ANGULAR cap either way.
+        ps = bb.patch_size
+        vs = int(round(a.view_size / ps)) * ps
+        c = (vs - 1) / 2.0
+        yy, xx = torch.meshgrid(torch.arange(vs, dtype=torch.float32),
+                                torch.arange(vs, dtype=torch.float32), indexing="ij")
+        disc = (((xx - c) ** 2 + (yy - c) ** 2) <= (vs / 2.0 - 1.0) ** 2).to(a.device)
+        print(f"[bnd] {spec}: patch {ps}, view {vs}x{vs} @ {a.view_fov} deg; "
+              f"inscribed disc keeps {float(disc.float().mean()):.3f} of the frame "
+              f"(the theta <= {a.view_fov / 2:.1f} deg cap)")
+        results = {"pinhole": {}, "pinhole_masked": {}}
+        for deg in angles:
+            rig = RT.Rig(cam, [RC.RolledView(fov_x_deg=a.view_fov, width=vs, height=vs,
+                                             roll_deg=deg)], patch=ps)
+            v = rig.views[0]
+            bb.install(None, v.pin, (vs, vs), patch_undistort=False, border_token=False,
+                       dpt_grid=False, depth_convention="z")
+            cov = rig.covered.numpy()
+            for arm, masked in (("pinhole", False), ("pinhole_masked", True)):
+                preds = {}
+                for f in s.frames:
+                    def fz(warped, _view, _m=masked, _d=disc):
+                        return U.forward_z(bb, warped * _d if _m else warped)
+                    with torch.no_grad():
+                        d, _ = rig.teach(fz, s.src.image(f).to(a.device), align=False)
+                    preds[f] = np.where(cov, d.float().cpu().numpy(), 0.0)
+                results[arm][str(deg)] = zones(preds, cone & cov & common)
+            r0, r1 = results["pinhole"][str(deg)], results["pinhole_masked"][str(deg)]
+            print(f"  {deg:>5.0f}deg   pinhole all {r0['all']:.4f} rim {r0['near_rim']:.4f}"
+                  f"   masked all {r1['all']:.4f} rim {r1['near_rim']:.4f}")
+        all_models[spec] = results
+        del bb
+        torch.cuda.empty_cache()
 
-    print(f"\n{'arm':<16s}{'0deg all':>10s}" + "".join(f"{'+/-' + str(int(d)):>9s}"
-          for d in (10, 20, 30, 40)))
-    summary = {}
-    for arm, A in results.items():
-        base = A["0.0"]["all"]
-        row, rises = [], {}
-        for d in (10, 20, 30, 40):
-            vals = [A[k]["all"] for k in (f"{d}.0", f"-{d}.0") if k in A]
-            r = 100 * (float(np.mean(vals)) / base - 1)
-            rises[d] = r
-            row.append(f"{r:>8.0f}%")
-        summary[arm] = {"base_all": base, "rise_pct": rises,
-                        "base_rim": A["0.0"]["near_rim"]}
-        print(f"{arm:<16s}{base:>10.4f}" + "".join(row))
-
-    m0 = summary["pinhole"]["rise_pct"][30]
-    m1 = summary["pinhole_masked"]["rise_pct"][30]
-    c_all = 100 * (summary["pinhole_masked"]["base_all"] / summary["pinhole"]["base_all"] - 1)
-    c_rim = 100 * (summary["pinhole_masked"]["base_rim"] / summary["pinhole"]["base_rim"] - 1)
-    print(f"\n[bnd] 0 deg cost of the mask alone: all {c_all:+.1f}%, near_rim {c_rim:+.1f}% "
-          f"(fisheye_disc paid +25% / +38%)")
-    verdict = ("the BOUNDARY explains the gap" if m1 >= 100 else
-               "the PROJECTION explains the gap" if m1 <= 70 else
-               "BOTH contribute, neither dominates")
-    print(f"[bnd] 30 deg rise: pinhole {m0:.0f}%, pinhole_masked {m1:.0f}%, "
-          f"fisheye_disc +146% (h16) -> {verdict}")
+    print(f"\n{'backbone':<14s}{'no border':>11s}{'+border':>10s}{'cost all':>10s}"
+          f"{'cost rim':>10s}{'roll@30 no':>12s}{'roll@30 +b':>12s}")
+    verdicts = {}
+    for spec, R in all_models.items():
+        b0, b1 = R["pinhole"]["0.0"], R["pinhole_masked"]["0.0"]
+        c_all = 100 * (b1["all"] / b0["all"] - 1)
+        c_rim = 100 * (b1["near_rim"] / b0["near_rim"] - 1)
+        def rise(arm):
+            A = R[arm]
+            v = [A[k]["all"] for k in ("30.0", "-30.0") if k in A]
+            return 100 * (float(np.mean(v)) / A["0.0"]["all"] - 1) if v else float("nan")
+        verdicts[spec] = {"border_cost_all_pct": c_all, "border_cost_rim_pct": c_rim,
+                          "roll30_no_border_pct": rise("pinhole"),
+                          "roll30_with_border_pct": rise("pinhole_masked"),
+                          "base_all": b0["all"], "masked_all": b1["all"]}
+        print(f"{spec:<14s}{b0['all']:>11.4f}{b1['all']:>10.4f}{c_all:>9.1f}%{c_rim:>9.1f}%"
+              f"{rise('pinhole'):>11.1f}%{rise('pinhole_masked'):>11.1f}%")
+    print("\n[bnd] locked prediction: both VGGT variants pay under +40% all-image "
+          "for the adjacent border (DA3-Small pays +106%).")
 
     if a.out:
         Path(a.out).parent.mkdir(parents=True, exist_ok=True)
         Path(a.out).write_text(json.dumps(
-            {"seq": s.name, "frames": len(s.frames), "arms": results,
-             "summary": summary, "mask_cost_0deg": {"all_pct": c_all, "rim_pct": c_rim},
-             "verdict": verdict, "config": vars(a)}, indent=1))
+            {"seq": s.name, "frames": len(s.frames), "models": all_models,
+             "summary": verdicts, "config": vars(a)}, indent=1))
 
 
 if __name__ == "__main__":

@@ -517,6 +517,28 @@ h17_roll_prior:
       artefacts:
         - results/autoresearch-h17-roll/roll_boundary_seq136.json
         - results/autoresearch-h17-roll/border_dose_seq136.json
+    h17_6_border_across_backbones:
+      status: done
+      kind: CONFIRMATORY — locked prediction FALSIFIED
+      result: >
+        Cost of one hard border adjacent to the scored zone, all-image AbsRel:
+        vggt_omega +29%, da3:small +106%, vggt +107%, da3:large +636%. The
+        locked prediction (both VGGT variants under +40%) fails on vggt. Border
+        robustness is NOT the pretraining-family property that roll robustness
+        is — the two are different axes, and whatever makes VGGT-Omega tolerant
+        is not what it shares with VGGT.
+      biggest_finding: >
+        DA3-Large is the most accurate DA3 on a clean frame (0.0690 vs 0.1545)
+        and becomes the WORST of all four with a border (0.5077) — a 7.4x
+        degradation from a change that touches no scored pixel. Clean-benchmark
+        accuracy does not predict framing robustness.
+      decision_it_feeds: >
+        The protocol pre-committed: if both VGGT variants came under +40%, run a
+        110 deg teacher for H14. Only VGGT-Omega qualified, and it is also the
+        most accurate and roll-robust backbone here. NEXT H14 ARM: a 110 deg
+        VGGT-Omega teacher — 100% cone coverage, still label-free, dissolving
+        H14's accuracy-vs-coverage tension instead of trading along it.
+      artefacts: [results/autoresearch-h17-roll/border_backbones_seq136.json]
     h17_4_use_the_gravity:
       status: deprioritised, not run
       why: >
@@ -527,5 +549,6 @@ h17_roll_prior:
         protocol.md for the day a wider-pose egocentric dataset with dense depth
         exists — that dataset, not a method, is this line's bottleneck.
   next:
-    - "The fourth roll arm that would actually separate projection from boundary: a virtual fisheye camera whose cone sits strictly inside its frame, rolled about its optical axis. Within-arm comparisons across angles are then clean."
+    - "PRIMARY: a 110 deg VGGT-Omega teacher for H14 (see h17_6). It is the one backbone measured to tolerate a border adjacent to the zone of interest, and it is also the most accurate and the most roll-robust. This is the concrete pay-off of the whole h17 block."
+    - "Separating projection from boundary is still open; H17.5's inscribed-disc mask was an order of magnitude more severe than fisheye_disc, so it did not decompose them. Any future attempt must severity-match the two masks."
     - "Find a head-mounted dataset with a wider pose distribution AND dense depth. Without one, H17.4 cannot be worth running."

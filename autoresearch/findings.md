@@ -1076,3 +1076,64 @@ curve.
 Caveats: 20 frames, one seed, one sequence, DA3-Small only. H17.2 showed roll
 sensitivity is strongly backbone-dependent, so border sensitivity probably is
 too and none of this is established for VGGT.
+
+## H17.6 — border sensitivity is NOT a family property. Prediction falsified, 2026-09-08
+
+`code/roll_boundary.py --models da3:small,da3:large,vggt,vggt_omega`, seq136,
+20 frames. Mask the 89 deg rectified view to its inscribed disc and score on
+theta <= 44 deg, i.e. **right against the border**.
+
+| backbone | no border | + border | **cost all** | cost rim | roll@30 no border | roll@30 with border |
+|---|---|---|---|---|---|---|
+| da3:small | 0.1545 | 0.3178 | **+106%** | +141% | +46% | +84% |
+| da3:large | 0.0690 | 0.5077 | **+636%** | +814% | +52% | +24% |
+| vggt | 0.0828 | 0.1710 | **+107%** | +127% | +11% | −29% |
+| vggt_omega | 0.0507 | 0.0655 | **+29%** | +53% | +11% | +10% |
+
+**The locked prediction — both VGGT variants under +40% — is FALSIFIED.**
+`vggt` pays +107%, a dead heat with DA3-Small. Only `vggt_omega` qualifies.
+
+**Roll robustness and border robustness are different axes.** H17.2 split the
+four cleanly by pretraining (single-image 46-52%, multi-view 11%). Border
+sensitivity does not split that way at all:
+
+    vggt_omega (+29%)  <<  da3:small (+106%) ~ vggt (+107%)  <<  da3:large (+636%)
+
+So "multi-view pretraining buys robustness" is true for roll and **not** true
+for borders. Whatever makes VGGT-Omega border-tolerant is not the thing it
+shares with VGGT.
+
+### The finding with the widest reach: DA3-Large's accuracy is brittle
+
+At 0 deg on a clean frame DA3-Large is the best of the DA3 pair by 2.2x
+(0.0690 vs 0.1545). Put one hard border on it and it becomes **the worst of all
+four models** (0.5077, against DA3-Small's 0.3178 and VGGT-Omega's 0.0655) —
+a 7.4x degradation from a change that touches no scored pixel. Anyone choosing
+a backbone on clean-benchmark accuracy would pick DA3-Large and then lose an
+order of magnitude to any real framing artefact: a letterbox, a crop pad, a
+lens shade, a masked-out region.
+
+### The door this opens for H14
+
+The protocol pre-committed the decision: if both VGGT variants came in under
++40%, run a 110 deg teacher. Only VGGT-Omega did — so the door opens for it
+alone, and it happens to be the strongest candidate anyway:
+
+* border-tolerant (+29% where DA3-Small pays +106%);
+* the most accurate backbone here at 0 deg (0.0507);
+* roll-robust (+11% at 30 deg, H17.2).
+
+**Next H14 arm: a 110 deg VGGT-Omega teacher.** 100% cone coverage, so H14's
+accuracy-vs-coverage tension is dissolved rather than traded along, and it is
+still label-free. Tested against `rect` (95 deg DA3) and `roundtrip` on the two
+held-out sequences with decoration_seq132 primary.
+
+### One anomaly, flagged not explained
+
+`vggt` with a border gets *better* when rolled: masked 0 deg 0.1710 vs masked
++/-30 deg 0.1202/0.1238, i.e. −29%. Every other cell in the table has roll
+costing something. Either the masked-0 deg case is anomalous for VGGT
+specifically, or this is 20-frame noise. Not interpreted.
+
+Caveats: one sequence, 20 frames, one seed. The DA3-Large effect (7.4x) is far
+outside any plausible noise; the VGGT roll-with-border sign is not.
