@@ -808,3 +808,96 @@ Plan (in order):
    LiteOffice as the primary bars.
 Frame counts at 240×20 epochs took 3 min; 11k×5 epochs is ~1 h, 50k×5 is ~4 h
 on one RTX 6000 Ada — all feasible on lambda_63.
+
+## H17.1 — what a real head actually does, 2026-09-08
+
+Read from Aria's MPS closed-loop trajectory (gravity vector + device pose, 30 Hz),
+not estimated: `h17-roll-prior/code/roll_distribution.py`, 60,105 frames over 19
+Apartment + 2 LiteOffice sequences.
+
+| | median &#124;roll&#124; | p90 | p99 | max | >20° | >30° | >40° |
+|---|---|---|---|---|---|---|---|
+| pooled | **3.7°** | 10.2° | 21.8° | 34.5° | 1.5% | 0.1% | **0%** |
+
+Roll rate: median 5.4 °/s, p99 40.7 °/s (1.4 °/frame at 30 fps).
+
+Two things fall out.
+
+1. **The model's flat zone and the data's distribution coincide.** h16's clean
+   (pinhole) curve is flat to ±20°; the data's p99 is 21.8°. 98.5% of real
+   frames sit inside the tolerance. Measured independently, they match. On ADT
+   the horizontal prior is not a bug — it is a prior matched to its deployment
+   distribution. Per-sequence spread is real though (seq144/145: 26–30% of
+   frames beyond 10°; decoration_seq132: 0.8%), so this is activity-dependent
+   and does not transfer to a wearer lying down or working overhead.
+2. **UPRIGHT_K=3 confirmed from geometry.** Of the four quarter-turn offsets
+   only 270° puts the distribution on zero (median 3.7° vs 87–176° for the
+   others). Independent of any loss.
+
+Literature: [arXiv 2608.00678](literature/2608.00678-breaking-horizontal-prior.md)
+reports the same "horizontal prior" on Marigold/GenPercept/DAv2/DistillAD, fixes
+it with a training-time regulariser, uses **no** gravity/IMU input, and its best
+*algorithmic* roll estimator is off by 25.9° — which is the argument for using
+the IMU an egocentric device already has. No fisheye, no egocentric data, and no
+measurement of the actual roll distribution anywhere in that paper.
+
+## CORRECTION to the h16 roll write-up, 2026-09-08
+
+The report claimed "two thirds of the fall-off is the black wedge". **That is
+not supported and has been removed.** Relative rise of all-image AbsRel from
+each arm's own 0°, at 30°:
+
+| arm | 0° AbsRel | +30° | rise |
+|---|---|---|---|
+| `pinhole` (rectified, no black at any angle) | 0.1545 | 0.2292 | **+48%** |
+| `fisheye_frame` (rotate the picture) | 0.1623 | 0.2949 | **+82%** |
+| `fisheye_disc` (black region held FIXED) | 0.2037 | 0.5018 | **+146%** |
+
+The arm that pins the black region down is the *steepest*, so steepness is not
+"the wedge moves". `pinhole` is gentler because it feeds the model a rectified,
+full-frame image — its native domain — and that change is confounded with the
+absence of black. **Projection and boundary are not separated by these three
+arms.**
+
+Why the intended decomposition cannot work as designed: the imaged disc does not
+fit inside the square frame (1.7% of the cone falls outside the inscribed
+circle), so *any* roll performed in the fisheye frame disturbs the boundary, and
+the model is hypersensitive to exactly that. To separate them, a fourth arm is
+needed: a virtual fisheye camera whose cone is strictly inside its frame, rolled
+about its optical axis. Its 0° point carries its own black annulus, but
+comparisons *within* the arm across angles are clean.
+
+What survives, and is clean:
+- **Not roll-equivariant**: +48% all-image at 30° on a rectified full-frame
+  input. Model property, nothing to do with fisheye.
+- **`resample0`**: one bilinear pass is free (0.1955 vs 0.1954).
+- **A hard black edge costs as much as a 20° roll**: masking 1.7% of the cone at
+  0°, content otherwise untouched, costs +25% all-image and +38% near_rim. Same
+  mechanism as H14's 110° teacher inverting at 22.5% black frame. Standing rule:
+  **no hard black borders into the model** — no crops, masks, or zero padding.
+- rim/ctr stays 2.2–2.6 to 30° on the rectified input and rises only at 40°;
+  it does rise (2.47→3.24) on the fisheye input. "The rim penalty doubles under
+  roll" is true of the deployed fisheye input, not of the model per se.
+
+## Data ladder at CONSTANT gradient steps, 2026-09-08 (partial)
+
+The earlier 60/240/600 ladder ran all three at 20 epochs, so data and compute
+moved together (4.8k → 19.2k → 48k steps). Re-run with steps pinned near 48k:
+
+| frames/seq × epochs | steps | distinct | 136 rim | 136 ctr | **132 rim** | **132 ctr** |
+|---|---|---|---|---|---|---|
+| 60 × 20 | 4.8k | 240 | −58.3% | −38.2% | **−27.3%** | +27.8% |
+| 60 × 200 | 48k | 240 | −67.1% | −54.3% | −21.7% | +58.0% |
+| 600 × 20 | 48k | 2,400 | −69.3% | −45.4% | −18.9% | +100.7% |
+| 1200 × 10 | 48k | 4,800 | running | | | |
+| 2880 × 4 | 46k | 11,418 | running | | | |
+
+**At equal compute, 10x the distinct frames buys ~nothing** (seq136 −67.1 →
+−69.3) and is *worse* on the rearranged room (−21.7 → −18.9), with near-centre
+damage going +58% → +101%. Most of the apparent gain in the old ladder was the
+10x in gradient steps, not the 10x in data. The best result on the honest
+held-out sequence is still the smallest, shortest run (60 × 20, −27.3%).
+
+One seed, no error bars; the dec_seq132 rim numbers all sit in a −17…−27% band,
+while the near_centre trend is monotone in *steps*. Read the direction, not the
+gaps.
