@@ -1760,3 +1760,37 @@ The roll line can close on that: 0.3-0.5% for a multi-view model, 1.8% for a
 single-image one, both cheap, tail only worth chasing on the latter. It is
 measured now rather than inferred by putting three separate numbers side by side,
 which is how this line stated it for most of its life.
+
+## 2026-09-08 (late) — H36 void, and the honest gap it exposes
+
+I went after the largest unblocked scientific gap: nothing in this line has ever
+been tested outside Aria. SynWoodScape was sitting extracted at 102 GB and the
+repo already had a loader and camera for it.
+
+Three runs, three failures of the same sanity bar. AbsRel 2.64 with the z
+convention, 5.99 with range, 3.15 with range inside a truncated 80-degree cone.
+The bar was 0.6.
+
+The finding worth keeping came out of the diagnosis rather than the experiment:
+the depth-convention machinery assumes a sub-90-degree cone. Converting planar z
+to range divides by cos(theta), which crosses zero at 90, and on a 190-degree
+lens the prediction reaches 1.5e6. Aria's 54.83-degree cone meant twenty
+experiments never hit it. That is a real trap for anyone reusing this code.
+
+What I want on the record is the number I did not quote. Runs 2 and 3 give
+rim/centre ratios of 4.28 and 7.17 against Aria's 2.2. Written up without the
+sanity bar that reads "the rim penalty is two to three times worse in automotive
+fisheye than indoors" — striking and completely unsupported. That is the third
+time today a broken measurement produced an attractive number, after H34's
+mirrored flip and H36's own million-metre predictions. Each time a routine
+untransformed-baseline check is the only thing that stopped it.
+
+Capping the cone did not rescue it: the centre zone, where the geometry is easy
+and the conversion unambiguous, still reads 0.875. An 87% error in the easy part
+of the frame is not a rim problem, and three runs could not tell me whether DA3
+is genuinely out of domain or some plumbing still differs. I stopped rather than
+spend a fourth.
+
+So the gap stands and both reports now say it: this line has never been
+validated outside Aria, and "verified across thirteen recordings and four
+backbones" reads like external validation while being nothing of the kind.

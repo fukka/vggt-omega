@@ -2724,3 +2724,45 @@ attribute it, mirror test void) and the rim-density mechanism (two explanations
 refuted, no third offered).
 
 **Not worth more runs:** in-room verification. It is done.
+
+## H36 — VOID. The external-domain question is still open, and I tried.
+
+`h36-external-domain/`. Three runs, three B3 failures (bar: whole-image AbsRel
+< 0.6):
+
+| run | convention | cone | AbsRel | rim/centre |
+|---|---|---|---|---|
+| 1 | `z` | full ~190 deg | **2.640** | 1.23 |
+| 2 | `range` | full ~190 deg | **5.993** | 4.28 |
+| 3 | `range` | capped 80 deg | **3.150** | 7.17 |
+
+**The numbers I am not quoting:** runs 2 and 3 give rim/centre of 4.28 and 7.17,
+far above Aria's 2.2. Written carelessly that is "the rim penalty is 2-3x worse
+in automotive fisheye" — striking, quotable, and built on a measurement B3 says
+is broken. **Third time this session a broken measurement produced an attractive
+number** (H34's mirrored "flip", H36's 1.5e6 predictions, this). The sanity bar
+is the only thing between the artefact and the report each time.
+
+### What it did establish, solidly
+
+**The depth-convention machinery assumes a sub-90-degree cone.** `range` divides
+planar z by cos(theta), cos crosses zero at 90, and the prediction reaches
+1.5e6. `z` compares planar z against range ground truth instead. Neither is
+correct past 90 degrees, and Aria's 54.83-degree cone meant twenty experiments
+never surfaced it. Reusing this evaluation code on a wide automotive fisheye
+hits it in the first run.
+
+### Why the truncated run did not rescue it
+
+Capping at 80 degrees removes the explosion (5.99 -> 3.15) but the CENTRE zone,
+where distortion is mild and the conversion unambiguous, still reads **0.875**.
+An 87% error in the easy part of the frame is not a rim problem. Either DA3 is
+genuinely far out of domain here, or a residual plumbing difference remains.
+Three runs could not separate those and I stopped rather than spend a fourth.
+
+### The gap, stated plainly
+
+**Nothing in this line has been validated outside Aria.** H25-H35 re-measured
+extensively but all within one camera family, one apartment, one small office.
+"Verified across thirteen recordings and four backbones" reads like external
+validation and is not. Both reports now say so.
