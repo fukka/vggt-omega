@@ -28,6 +28,16 @@ Across projections the pixel grids differ (the rectified grid oversamples the
 periphery ~10x), so absolute numbers are not comparable between the fisheye and
 perspective rows. The within-row contrast, and the interaction between rows, are.
 
+Camera pose and FoV
+-------------------
+Depth is the downstream readout; the camera head is the thing the hypothesis is
+about. In the multi-frame mode every window is scored on its relative poses
+(RRA/RTA/AUC@30 as in the VGGT paper, plus a Sim(3) ATE in metres) against the
+renderer's own camera trajectory, so a black region that corrupts the camera
+estimate shows up here before it shows up in depth. The inferred FoV is graded
+against the true pinhole FoV for the perspective arms only -- a fisheye image
+has no pinhole FoV to be right about.
+
 Single vs multi-frame
 ---------------------
 `--seq-len 1` feeds one frame; `--seq-len 8` feeds a window. VGGT resolves
@@ -94,6 +104,104 @@ def grading_mask_of(setting: str) -> str:
     arm would score better for covering more, and the experiment would measure
     coverage instead of what is in the hole."""
     return f"mask_{parse_setting(setting)[0]}_valid"
+
+
+# The images in a frame dir are in the rot90(k=3) upright frame; meta.json's
+# ``T_WC`` is the RAW Aria RGB camera (OpenCV axes, sensor orientation). A unit
+# ray (dx, dy, dz) in the rotated camera's axes is (dy, -dx, dz) in the raw
+# camera's, i.e. raw = A_ROT @ rotated.
+A_ROT = np.array([[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
+
+POSE_KEYS = ("rot_err_deg", "trans_err_deg", "rra5", "rra15", "rra30",
+             "rta5", "rta15", "rta30", "auc30", "ate_m", "sim3_scale")
+
+
+def gt_camera(frame_dir: str) -> Tuple[np.ndarray, float]:
+    """Ground-truth camera of a rendered frame: (3x4 cam-from-world, pinhole hFoV).
+
+    The camera that made the image is the raw one conjugated by A_ROT, so its
+    pose is ``T_WC @ diag(A_ROT, 1)`` and its cam-from-world the inverse of that.
+    This was checked on data rather than read off a docstring: unprojecting
+    frame_0840's persp depth with this pose and reprojecting into frame_0830
+    lands with 0.12% median relative depth error and 98% of pixels within 3%;
+    the identity gives 4.5%, A_ROT^T 7.5%, an axis flip 3.9-5.0%.
+
+    The FoV is the pinhole arm's true horizontal field of view from
+    ``Knew_pinhole``; it is meaningless for the fisheye arms, whose image is not
+    a pinhole projection, and callers must not grade those against it.
+    """
+    m = json.load(open(os.path.join(frame_dir, "meta.json")))
+    T = np.asarray(m["T_WC"], dtype=np.float64)
+    A4 = np.eye(4)
+    A4[:3, :3] = A_ROT
+    E = np.linalg.inv(T @ A4)[:3]
+    _fx, fy, _cx, _cy = m["Knew_pinhole"]
+    fov_h = float(np.degrees(2.0 * np.arctan((m["output_size"] / 2.0) / fy)))
+    return E, fov_h
+
+
+def _rot_angle_deg(R: np.ndarray) -> float:
+    return float(np.degrees(np.arccos(np.clip((np.trace(R) - 1.0) / 2.0, -1.0, 1.0))))
+
+
+def _vec_angle_deg(a: np.ndarray, b: np.ndarray) -> float:
+    na, nb = np.linalg.norm(a), np.linalg.norm(b)
+    if na < 1e-9 or nb < 1e-9:
+        # A zero relative translation has no direction. Both zero: agree; one
+        # zero: the worst a direction error can be.
+        return 0.0 if (na < 1e-9 and nb < 1e-9) else 90.0
+    return float(np.degrees(np.arccos(np.clip(float(a @ b) / (na * nb), -1.0, 1.0))))
+
+
+def window_pose_metrics(pred_E: np.ndarray, gt_E: np.ndarray) -> dict:
+    """Relative-pose accuracy of one window, VGGT-style, plus a Sim(3) ATE.
+
+    ``pred_E`` and ``gt_E`` are (S, 3, 4) cam-from-world. Every pair i<j is
+    compared through its relative pose E_i E_j^-1, so neither the global frame
+    (VGGT anchors camera 0 at the identity) nor the global scale (VGGT's
+    translation is up to scale) can enter: RRA is the angle of
+    R_ij^pred (R_ij^gt)^T, RTA the angle between the two relative translation
+    directions. AUC@30 is the mean accuracy of max(RRA, RTA) over the thresholds
+    1..30 deg, the quantity the VGGT paper reports. ATE is the RMSE of the camera
+    centres after a Sim(3) alignment to the GT centres, in metres, so it does
+    carry the metric scale of the GT trajectory.
+    """
+    from .metrics import _umeyama_sim3
+    S = pred_E.shape[0]
+
+    def to4(E):
+        out = np.tile(np.eye(4), (E.shape[0], 1, 1))
+        out[:, :3, :] = E
+        return out
+    P4, G4 = to4(np.asarray(pred_E, np.float64)), to4(np.asarray(gt_E, np.float64))
+    rra, rta = [], []
+    for i in range(S):
+        for j in range(i + 1, S):
+            rp = P4[i] @ np.linalg.inv(P4[j])
+            rg = G4[i] @ np.linalg.inv(G4[j])
+            rra.append(_rot_angle_deg(rp[:3, :3] @ rg[:3, :3].T))
+            rta.append(_vec_angle_deg(rp[:3, 3], rg[:3, 3]))
+    rra, rta = np.asarray(rra), np.asarray(rta)
+    worst = np.maximum(rra, rta)
+    out = {"rot_err_deg": float(rra.mean()), "trans_err_deg": float(rta.mean())}
+    for th in (5, 15, 30):
+        out[f"rra{th}"] = float((rra < th).mean())
+        out[f"rta{th}"] = float((rta < th).mean())
+    out["auc30"] = float(np.mean([(worst < th).mean() for th in range(1, 31)]))
+    cp = -np.einsum("nji,nj->ni", P4[:, :3, :3], P4[:, :3, 3])
+    cg = -np.einsum("nji,nj->ni", G4[:, :3, :3], G4[:, :3, 3])
+    if float(np.var(cp, axis=0).sum()) < 1e-12:
+        # Every predicted centre coincides: no Sim(3) can spread them out. Score
+        # it as the GT trajectory's own spread, which is what "no motion
+        # recovered" costs, rather than letting a degenerate fit hide it.
+        out["ate_m"] = float(np.sqrt(np.mean(np.sum((cg - cg.mean(0)) ** 2, axis=1))))
+        out["sim3_scale"] = float("nan")
+    else:
+        sc, _R, _t, aligned = _umeyama_sim3(cp, cg)
+        out["ate_m"] = float(np.sqrt(np.mean(np.sum((aligned - cg) ** 2, axis=1))))
+        out["sim3_scale"] = float(sc)
+    out["n_pairs"] = int(len(rra))
+    return out
 
 
 def find_frames(root: str, sequences: Optional[List[str]] = None) -> List[str]:
@@ -191,8 +299,11 @@ class RenderedWindowDataset(Dataset):
 def evaluate(model, root: str, setting: str, seq_len: int, device: torch.device,
              sequences: Optional[List[str]] = None, manifest: Optional[str] = None,
              align: str = "scale_shift", qual_dir: Optional[str] = None) -> dict:
+    from vggt_omega.utils.rotation import quat_to_mat
     ds = RenderedWindowDataset(root, setting, seq_len, sequences, manifest)
+    proj, _arm = parse_setting(setting)
     per_frame, fovs = [], []
+    windows: "OrderedDict[str, dict]" = OrderedDict()
     for wi in range(len(ds)):
         s = ds[wi]
         preds = model(s["images"].unsqueeze(0).to(device))
@@ -201,8 +312,26 @@ def evaluate(model, root: str, setting: str, seq_len: int, device: torch.device,
             dp = dp.squeeze(-1)
         dp = dp[0].float().cpu().numpy()
         pe = preds.get("pose_enc")
+        pred_E, fov_deg = None, None
         if pe is not None:
-            fovs.append(np.degrees(pe[0, :, 7:9].float().cpu().numpy()))
+            pe = pe[0].float().cpu()
+            fov_deg = np.degrees(pe[:, 7:9].numpy())
+            fovs.append(fov_deg)
+            R = quat_to_mat(pe[:, 3:7]).numpy()
+            pred_E = np.concatenate([R, pe[:, :3].numpy()[:, :, None]], -1)
+        gt_cams = [gt_camera(d) for d in s["dirs"]]
+        gt_E = np.stack([c[0] for c in gt_cams])
+        # The pinhole FoV is only a ground truth for the pinhole arms.
+        gt_fov = gt_cams[0][1] if proj == "persp" else float("nan")
+        wkey = s["dirs"][0]
+        wrec = {"dirs": list(s["dirs"]), "gt_E": gt_E.tolist(),
+                "group": ds.group_of.get(wkey, wkey), "gt_fov_h_deg": gt_fov}
+        if pred_E is not None:
+            wrec["pred_E"] = pred_E.tolist()
+            wrec["fov_deg"] = fov_deg.tolist()
+            if seq_len > 1:
+                wrec.update(window_pose_metrics(pred_E, gt_E))
+        windows[wkey] = wrec
         for fi in range(dp.shape[0]):
             gt = s["depths"][fi].numpy()
             m = s["valid_masks"][fi].numpy()
@@ -214,10 +343,19 @@ def evaluate(model, root: str, setting: str, seq_len: int, device: torch.device,
             # they see the same scene, so an unpaired test throws away the variance
             # that the pairing removes and badly understates significance.
             met["_dir"] = s["dirs"][fi]
+            if fov_deg is not None:
+                met["_fov"] = [float(fov_deg[fi, 0]), float(fov_deg[fi, 1])]
             per_frame.append(met)
-            if qual_dir and wi == 0 and fi == 0:
-                _save_qual(qual_dir, setting, seq_len, s["images"][fi].numpy(),
-                           pa, gt, m)
+            if qual_dir and fi == 0:
+                if wi == 0:
+                    _save_qual(qual_dir, setting, seq_len, s["images"][fi].numpy(),
+                               pa, gt, m)
+                # Raw panels for every window of the four main arms (the fill
+                # arms only for window 0): the figures are composed offline, and
+                # one window is an anecdote.
+                if setting in SETTINGS or wi == 0:
+                    _save_qual_raw(qual_dir, setting, seq_len, wi,
+                                   s["images"][fi].numpy(), pa, gt, m, s["dirs"][fi])
     if not per_frame:
         return {}
     out = {k: float(np.mean([f[k] for f in per_frame]))
@@ -226,13 +364,42 @@ def evaluate(model, root: str, setting: str, seq_len: int, device: torch.device,
     out["n_frames"] = len(per_frame)
     out["n_windows"] = len(ds)
     out["_per_frame"] = {f["_dir"]: float(f["AbsRel"]) for f in per_frame}
+    out["_per_frame_metrics"] = {
+        f["_dir"]: {k: float(v) for k, v in f.items()
+                    if not k.startswith("_") and isinstance(v, (int, float))}
+        for f in per_frame}
     out["_group_of"] = {f["_dir"]: ds.group_of.get(f["_dir"], f["_dir"]) for f in per_frame}
     out["n_groups"] = len(set(out["_group_of"].values()))
+    out["_windows"] = windows
     if fovs:
         f = np.concatenate(fovs, 0)
         out["fov_h_deg"] = float(f[:, 0].mean())
         out["fov_h_std"] = float(f[:, 0].std())
+        out["fov_w_deg"] = float(f[:, 1].mean())
+        out["_per_frame_fov"] = {f["_dir"]: f["_fov"] for f in per_frame if "_fov" in f}
+        out["gt_fov_h_deg"] = float(windows[next(iter(windows))]["gt_fov_h_deg"])
+        if np.isfinite(out["gt_fov_h_deg"]):
+            out["fov_h_abs_err_deg"] = float(np.mean(
+                [abs(v[0] - out["gt_fov_h_deg"]) for v in out["_per_frame_fov"].values()]))
+    if seq_len > 1 and all("auc30" in w for w in windows.values()):
+        for k in POSE_KEYS:
+            out[k] = float(np.nanmean([w[k] for w in windows.values()]))
+        out["_per_window"] = {wk: {k: w[k] for k in POSE_KEYS} for wk, w in windows.items()}
+        out["_window_group"] = {wk: w["group"] for wk, w in windows.items()}
     return out
+
+
+def _save_qual_raw(qual_dir: str, setting: str, seq_len: int, wi: int,
+                   img_chw: np.ndarray, pred: np.ndarray, gt: np.ndarray,
+                   mask: np.ndarray, frame_dir: str) -> None:
+    """Everything a panel needs, uncomposed, so figures can be laid out offline."""
+    d = os.path.join(qual_dir, "raw")
+    os.makedirs(d, exist_ok=True)
+    np.savez_compressed(
+        os.path.join(d, f"{setting}_s{seq_len}_w{wi:02d}.npz"),
+        rgb=(np.clip(img_chw.transpose(1, 2, 0), 0, 1) * 255).round().astype(np.uint8),
+        pred=pred.astype(np.float16), gt=gt.astype(np.float16), mask=mask,
+        frame_dir=np.array(frame_dir), setting=np.array(setting), seq_len=seq_len)
 
 
 def _save_qual(qual_dir: str, setting: str, seq_len: int, img_chw: np.ndarray,
@@ -400,6 +567,72 @@ def report(results: Dict[str, Dict[str, dict]], out_dir: str) -> str:
                               f"(one window only)",
                               "      negative => true content helps MORE in the "
                               "perspective domain"]
+    # Camera pose. The depth question has a scoring rule that keeps the arms
+    # honest (same graded pixels); pose needs none, because every quantity is a
+    # RELATIVE pose within a window and VGGT's frame and scale conventions cancel.
+    for mode, res in results.items():
+        pose_settings = [st for st in seen_s if "auc30" in (res.get(st) or {})]
+        if not pose_settings:
+            continue
+        lines += ["", f"[{mode}] camera pose, per window (relative poses over all "
+                      f"i<j pairs; RRA/RTA = fraction of pairs under the threshold; "
+                      f"ATE after Sim(3) on the centres, metres):",
+                  f"    {'setting':<22}{'win':>4}{'rotErr':>8}{'trErr':>8}{'RRA@15':>8}"
+                  f"{'RTA@15':>8}{'AUC@30':>8}{'ATE(m)':>8}{'scale':>7}{'fov_h':>7}"]
+        for st in pose_settings:
+            r = res[st]
+            lines.append(f"    {st:<22}{r.get('n_windows',0):>4}"
+                         f"{r['rot_err_deg']:>8.2f}{r['trans_err_deg']:>8.2f}"
+                         f"{r['rra15']:>8.3f}{r['rta15']:>8.3f}{r['auc30']:>8.3f}"
+                         f"{r['ate_m']:>8.3f}{r['sim3_scale']:>7.2f}"
+                         f"{r.get('fov_h_deg', float('nan')):>7.1f}")
+        lines.append(f"    true content vs black, paired per WINDOW (full - masked; "
+                     f"for AUC/RRA/RTA positive = true content helps, for errors "
+                     f"negative = it helps):")
+        for key in ("auc30", "rot_err_deg", "trans_err_deg", "ate_m"):
+            row = f"    {key:<14}"
+            eff = {}
+            for proj in PROJECTIONS:
+                a_ = ((res.get(f"{proj}_full") or {}).get("_per_window") or {})
+                b_ = ((res.get(f"{proj}_masked") or {}).get("_per_window") or {})
+                wg = ((res.get(f"{proj}_full") or {}).get("_window_group") or {})
+                av = {k: v[key] for k, v in a_.items()}
+                bv = {k: v[key] for k, v in b_.items()}
+                cb = cluster_bootstrap(av, bv, wg)
+                if cb is None:
+                    row += f"  {proj}: (no paired windows)"
+                    continue
+                eff[proj] = {k: av[k] - bv[k] for k in set(av) & set(bv)}
+                star = "*" if cb["excludes_zero"] else " "
+                row += (f"  {proj}: {cb['mean']:+.3f} [{cb['ci_lo']:+.3f},"
+                        f"{cb['ci_hi']:+.3f}]{star}")
+            if len(eff) == 2:
+                common = sorted(set(eff["persp"]) & set(eff["fisheye"]))
+                dd = {k: eff["persp"][k] - eff["fisheye"][k] for k in common}
+                wg = ((res.get("persp_full") or {}).get("_window_group") or {})
+                cb = cluster_bootstrap(dd, {k: 0.0 for k in dd}, wg)
+                if cb:
+                    star = "*" if cb["excludes_zero"] else " "
+                    row += (f"  interaction: {cb['mean']:+.3f} [{cb['ci_lo']:+.3f},"
+                            f"{cb['ci_hi']:+.3f}]{star}")
+            lines.append(row)
+        lines.append("    (* = window-clustered 95% CI excludes zero)")
+    # Inferred FoV. Only the pinhole arms have a ground truth to grade against;
+    # the fisheye arms' number is reported because it is what the camera head
+    # believes, not because anything true corresponds to it.
+    for mode, res in results.items():
+        fov_settings = [st for st in seen_s if "fov_h_deg" in (res.get(st) or {})]
+        if not fov_settings:
+            continue
+        lines += ["", f"[{mode}] inferred horizontal FoV (deg):",
+                  f"    {'setting':<22}{'mean':>8}{'std':>7}{'GT':>8}{'|err|':>8}"]
+        for st in fov_settings:
+            r = res[st]
+            gt = r.get("gt_fov_h_deg", float("nan"))
+            err = r.get("fov_h_abs_err_deg", float("nan"))
+            lines.append(f"    {st:<22}{r['fov_h_deg']:>8.1f}{r['fov_h_std']:>7.1f}"
+                         f"{gt:>8.1f}{err:>8.1f}")
+
     # The fill ladder, if any fill arms were run. The decision-relevant number is
     # not "does true content help" -- that is already answered -- but how much of
     # that gain a fill which INVENTS NOTHING already captures. If a flat mean or a
