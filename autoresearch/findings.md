@@ -683,3 +683,55 @@ bar stays **0/6**: the affine gap shrinks 6.1–25.5% under `raycal_shrunk`
 (seq135 *grows* 4.3%), and at best 32.6% under `raycal_inv` on
 decoration_seq132 — never halved. Correct summary: **an effective rim
 recalibration, not a solution to the radial distortion.**
+
+## Report re-check and the two follow-ups it produced, 2026-09-07
+
+Re-verified that every number in `to_human/fisheye-rim-report.html` comes from
+upright input: all training caches (`/netapp/datasets/f.zhang2/h14_teacher_cache_upright`,
+git cfb8b09 / 8ff39d7 / f9e7cd4), checkpoints and eval JSONs under
+`results/autoresearch-{h14,h15}-upright`, `h9-upright-v2`, `h16-orientation`,
+`followups` were produced after 9d53963 (the second upright fix), and every
+train/eval script forwards through `common/upright.py`. Nothing needed
+re-running.
+
+The report was reorganised so each experiment (A roll, B H14, C H14.2, D H15,
+E H9, F generalisation) has idea / input-and-label examples / controls /
+results / bar / "one layer deeper". New example figures on the same seq136
+frame (`frame_001918`, index 1410; generator at `to_human/assets/report_figs.py`):
+
+- **Roll** on that frame: near_rim 0.440 / 0.402 / 0.405 / 1.034 / 1.757 at
+  0/10/20/30/40°; center 0.161 / 0.232 / 0.238 / 0.399 / 0.322. The error maps
+  show what blows up past 30°: the near table top, hand and floor — near,
+  upward-facing planes — while far walls barely move. Reading: the rolled
+  frame breaks the model's gravity prior, and near ground planes are where
+  that prior is load-bearing; the "rim penalty" at 30°+ is mostly that.
+- **H14** on that frame, on the teacher's covered pixels: teacher near_rim
+  0.273 vs raw 0.441 (a friendly frame; the 60-frame mean is −14.7%),
+  near_rim coverage 75.5%.
+- **H9** on that frame: 3,000 pixels matched in both partners → 1,775 anchors
+  kept, 544 rejected by the agreement gate (textureless wall, floor, hand/tray
+  edges; the palm never enters the candidate set — matcher weight is 0).
+  **Anchor range error vs GT: median 4.1%**, against the model's 44% at the
+  near rim on the same frame. The anchors are an order of magnitude better
+  than the 32-coefficient curve they are spent on.
+
+Two experiments designed from this, not run:
+
+1. **Roll augmentation** (cheapest; reuses H14's trainer). Same random roll
+   (±40°, about the principal point) applied to input and label. Control: the
+   `gt` arm as is. Evaluate both at 0/20/30/40°. Bar: (i) the augmented arm's
+   near_rim rise at 30° vs 0° at most half of the current +121%; (ii) its 0°
+   near_rim no worse than the control by >2% — the gravity prior is useful at
+   0° and augmentation may erase it; (iii) both held-out sequences. If (i)
+   passes and (ii) fails, the finding is "equivariance vs gravity prior is a
+   trade-off, pick by deployment pose distribution".
+2. **Anchor distillation**: H9's metric anchors as sparse labels for H14's
+   student. H14's bottleneck is a thin, holed teacher (−11…−15%); H9 has a 4%
+   teacher that is sparse. Bars P1–P3 from H14, primary sequence
+   decoration_seq132, plus: the student must also improve on the outermost
+   ring where no anchors exist, otherwise it memorised the anchors. Known
+   limit: anchors need motion (LiteOffice's static wearer starves them).
+
+Also recorded: dec_seq132 is the only sequence that separates "learned the
+lens" from "memorised the room"; every future bar should make it the primary
+sequence and treat seq136 as a sanity check.
