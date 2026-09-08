@@ -1149,3 +1149,30 @@ h27_candidate:
     real labels buy" headline can be restated or withdrawn. Last in-room figure
     still resting on seq136 alone.
   cost: eval only, same machinery as H26; needs the gt-trained checkpoint located.
+
+# ------------------------------------------------- H27 resolved 2026-09-08
+h27_outcome:
+  status: B1 fails (expected), B2 and B3 PASS — correction arc closed
+  artifact: autoresearch/experiments/h27-gt-arm/results/ (45 eval JSONs)
+  analysis: autoresearch/experiments/h27-gt-arm/analysis.md
+  every_in_room_number_now_corrected:
+    gt_trained: "-57.9% (seq136) -> -40.99% +- 5.42 over 13 (3.12 sd, x1.41)"
+    adapter_omega110: "-51.5% -> -38.59% +- 4.86 (2.60 sd, x1.33)"
+    control_omega_rt_3seeds: "-47.6% -> -35.14% +- 5.86 (x1.35)"
+    curve_16_numbers: "-16.6% -> -7.02% +- 1.67 (5.74 sd, x2.36)"
+  ratios_all_improved:
+    label_free_fraction: "88.9% -> 94.2%"
+    adapter_over_curve: "3.10x -> 5.50x"
+    adapter_minus_control: "-3.9 -> -3.44 pts, 13/13 with a full 3-seed control"
+  the_pattern_that_explains_it: >
+    The three LEARNED arms were inflated by 1.33, 1.35, 1.41; the 16-number
+    curve by 2.36. seq136 flattered the WEAKEST method most, which is why every
+    ratio improved when the absolute numbers came down.
+  practical_consequence: >
+    sd/|mean| is 0.238 for the curve against 0.126 for the adapter. A
+    16-parameter fit on rim-dominated statistics is far more sequence-sensitive
+    than a trained adapter, so claims about the curve need more recordings than
+    claims about the adapter.
+  what_is_still_open:
+    - "The rearranged-room ratio (82%) rests on dec_seq132 alone. Much less worrying — H25 showed it is the representative recording (+0.31 sd) — but it is one recording and should be described as one."
+    - "THE LARGEST OPEN EXPOSURE: the cross-room numbers were never measured on seq136, so this arc does not reach them. Still 120 frames over two near-static recordings. No amount of Apartment footage fixes it."

@@ -2208,3 +2208,59 @@ three claims resting on them survive or strengthen: the adapter beats the curve
 by more than published, the rectified teacher beats its control 13/13 instead of
 1/1, and the effect is consistently signed everywhere tried. The correction cost
 two numbers and bought a much firmer floor.
+
+## H27 — the correction arc closes: every number down, every ratio up
+
+`h27-gt-arm/results/`, 45 evaluations. Reading in that experiment's
+`analysis.md`.
+
+**B1 fails at -3.12 sd**: the GT arm's -57.9% is inflated too. That is **all
+four** arms — nothing measured on seq136 was representative.
+
+**B2 passes in the favourable direction**: the label-free fraction is **94.2%**
+over thirteen recordings against the published 88.9%. The headline sentence was
+**understated**, not wrong.
+
+**B3 passes 13/13 with the full three-seed control**: gap -3.44 points against
+H26's single-seed -3.66. H18's central comparison is not a one-seed accident.
+
+### Every in-room number, corrected
+
+| arm | published (seq136) | thirteen recordings | sd out | inflation |
+|---|---|---|---|---|
+| trained on real labels | -57.9% | **-40.99% +- 5.42** | 3.12 | x1.41 |
+| adapter omega110 | -51.5% | **-38.59% +- 4.86** | 2.60 | x1.33 |
+| control omega_rt (3 seeds) | -47.6% | **-35.14% +- 5.86** | — | x1.35 |
+| 16-number curve | -16.6% | **-7.02% +- 1.67** | 5.74 | x2.36 |
+
+| ratio | published | thirteen recordings |
+|---|---|---|
+| label-free / label-trained | 88.9% | **94.2%** |
+| adapter / curve | 3.10x | **5.50x** |
+| adapter - control | -3.9 pts | -3.44 pts, **13/13** |
+
+### The pattern in the inflation column, which is a finding in itself
+
+The three **learned** arms were inflated by nearly the same factor (1.33, 1.35,
+1.41); the **16-number curve** by **2.36**, almost twice as much. That is why
+every ratio improved instead of degrading — seq136 flattered the weakest method
+most.
+
+It also says something usable: **a 16-parameter fit on rim-dominated statistics
+is far more sensitive to which recording you score on than a trained adapter
+is.** sd/|mean| = 0.238 for the curve against 0.126 for the adapter. Any future
+claim about the curve needs more recordings than a claim about the adapter does.
+
+### What this arc did and did not close
+
+**Closed.** Every in-room figure is now a mean over thirteen recordings with an
+sd, in both reports. All three conclusions that rested on seq136 survived; two
+improved.
+
+**Not closed.** The rearranged-room ratio (82%) still rests on dec_seq132 alone
+— much less worrying, since H25 showed it is the representative recording
+(+0.31 sd), but it is one recording and should be described as one.
+
+**Untouched.** The cross-room numbers were never measured on seq136, so this arc
+does not reach them. They remain 120 frames over two near-static recordings and
+are now, unambiguously, **the largest open exposure in this line.**

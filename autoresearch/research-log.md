@@ -1479,3 +1479,33 @@ divides by a GT-trained arm that has not been re-measured.
 
 Net: two headline numbers corrected downward, and every conclusion that rested
 on them survived or got stronger.
+
+## 2026-09-08 (end of day) — H27 closes the correction arc
+
+The GT-trained arm was the last in-room figure resting on seq136. It is inflated
+too, at -3.12 sd, so all four arms measured on that recording were
+unrepresentative.
+
+But B2 passed in the favourable direction: the label-free fraction is 94.2% over
+thirteen recordings against the published 88.9%. The most-quoted sentence in the
+line was understated rather than wrong. And B3 passed 13/13 with the full
+three-seed control, so H18's central comparison does not depend on which control
+seed was picked.
+
+The thing I did not expect is in the inflation column. The three learned arms
+were inflated by 1.33, 1.35 and 1.41; the 16-number curve by 2.36. seq136
+flattered the weakest method most, which is exactly why every ratio improved
+rather than degrading when the numbers were corrected downward. It also gives a
+practical rule: the curve's sd/|mean| is 0.238 against the adapter's 0.126, so
+claims about the curve need more recordings than claims about the adapter.
+
+Three ticks ago this line had one designated held-out recording and did not know
+it was an outlier. It now has thirteen, every in-room number is a mean with an
+sd, and the conclusions came out stronger than they went in. That is the whole
+value of having run H25 at all, and it only happened because thirteen sequences
+had been sitting extracted and unused since the outage.
+
+What is left, and I want it stated rather than quietly carried: the cross-room
+numbers were never on seq136 so this arc does not touch them, and they are still
+120 frames over two near-static recordings. That is now unambiguously the
+largest open exposure in the line, and no amount of Apartment footage fixes it.
