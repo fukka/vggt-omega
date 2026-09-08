@@ -1079,3 +1079,34 @@ past me:
 
 Verified by rebuilding through it: 16 sections, section 00 at 7 rows / 1,213
 characters, 2.45 MB.
+
+## 2026-09-08 — eleventh/twelfth tick down; re-read H18.3 and found my own reasoning unchecked
+
+I said last tick that there was no honest work left. That was premature. Going
+back over H18.3 I found that the worry I raised there — that a log-log slope is
+confounded with the depth range it is fitted over — was **never actually
+checked**. I ran the range-matched refit on the strength of it and drew a
+conclusion, but never asked whether the confound was operative. It is not.
+
+Restricting the fitting pixels to 0.5–4.5 m moves the Apartment `a` by at most
+**0.0057** (4.4% of its own spread) and the LiteOffice one by up to **0.5653**
+(84.8%). The Apartment mass was already inside that range, so the two fitting
+sets do not differ in effective span at all. The H18.3 conclusion survives; the
+reason I gave for it does not.
+
+What actually differs: LiteOffice's fit leans on pixels where the frozen model
+predicts **outside the scene's own 0.41–4.66 m range** — on its own gross
+errors. Range restriction removes exactly that mass.
+
+Recorded a puzzle instead of explaining it away. Removing that mass makes
+LiteOffice's **inner**-bin coefficients look more Apartment-like while making its
+transfer **worse**, and the **outer** bins that near_rim actually scores barely
+move. So the difference arrives through the evaluation's per-frame scale+shift
+alignment — a channel this project has measured before (82% of one sequence's
+rim penalty was affine placement). Settling it costs one re-score under
+`scale_only` and a frozen affine, and is now queued for the box.
+
+Section 03c of the report carried the wrong reason for two ticks and now carries
+the measured one plus the puzzle. The lesson is narrow and worth keeping: **a
+caveat I raise is a claim like any other, and running an experiment because of
+it is not the same as checking it.**
