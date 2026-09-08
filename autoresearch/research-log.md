@@ -991,3 +991,34 @@ passing:
 The RolledView rotation test (optical axis must not move — that is what makes it
 a roll and not a tilt, and it is why the clean arm stays inside the cone) needs
 the full env and skips cleanly here.
+
+## 2026-09-08 — seventh tick with the box down; found real work that did not need it
+
+lambda_63 still unreachable (>1.5 h). Rather than hold again, went looking for
+research — not chores — that the outage does not block, and there was some.
+
+**H18.6.** The three fitted curves are already committed as JSON, and the figure
+drawn two ticks ago makes it obvious that the two Apartment ones are smooth and
+the LiteOffice one is not. That is testable without a GPU: fit a quadratic in
+theta/theta_max through the eight per-bin coefficients and see how much it
+captures. Apartment 0.936–0.993; LiteOffice 0.071–0.590. The contrast is large
+and holds across four independent fits.
+
+Two things come out of it, and one of them is more useful than I expected.
+
+* **The 16 numbers are really 6.** Three coefficients for the exponent and three
+  for the offset reproduce the working fits to within 3–14% of their own spread.
+  A calibration procedure ships six numbers and a smooth form that does not step
+  at bin edges.
+* **Smoothness is a fit-quality check that needs no held-out data.** This is the
+  useful one. H18.3 could only tell a bad fit from a good one by evaluating
+  transfer on another room — which a deployment does not have. "Is a quadratic
+  enough?" separates them using nothing but the fit itself.
+
+Recorded the caveat honestly: eight points, three parameters, so absolute R^2 is
+optimistic and only the contrast carries weight. And locked the prediction it
+generates rather than assuming it — if the LiteOffice jaggedness is estimation
+noise, constraining that fit to the quadratic form should improve its transfer;
+if it does not, the jaggedness is real structure and the fit-quality reading has
+to be withdrawn. That runs in the same pass as H18.5 for two extra least-squares
+fits.

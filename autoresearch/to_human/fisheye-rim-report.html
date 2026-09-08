@@ -1696,6 +1696,43 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       和 DA3-Small 的<strong>形状相关 0.763</strong>，但整体低约 0.30。它在自己的基线上照样有效（−15.8% / −12.8% / −18.9% / −5.0%）。
       <strong>曲线的形状大体共享，水平不共享。</strong>
     </p>
+    <h3 style="margin-top:22px">补记：那 16 个数其实是 6 个 —— 而"平不平滑"是一个免费的质量检查</h3>
+    <p style="margin-bottom:14px">
+      上面那张图里，公寓拟合的两条曲线明显是<strong>平滑</strong>的，LiteOffice 那条明显不是。把这句话量化：
+      用 θ/θ<sub>max</sub> 的<strong>二次式</strong>去拟合已经算出来的 8 个分档系数，看它能捕获多少。
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>纯描述性分析，不需要 GPU、不需要新数据 —— 只是回过头看已有的系数。</caption>
+      <thead><tr><th>拟合</th><th>a 的 R²（二次式）</th><th>b 的 R²（二次式）</th><th>二次式漏掉的部分 ÷ 该曲线自身跨度</th></tr></thead>
+      <tbody>
+        <tr class="flip"><td class="mono">公寓 · DA3-Small</td><td class="num good">0.936</td><td class="num good">0.993</td><td class="num">a 13.9%　b 3.3%</td></tr>
+        <tr class="flip"><td class="mono">公寓 · DA3-Large</td><td class="num good">0.989</td><td class="num good">0.979</td><td class="num">a 5.9%　b 7.1%</td></tr>
+        <tr><td class="mono">LiteOffice · 原始</td><td class="num bad">0.301</td><td class="num bad">0.329</td><td class="num bad">a 38.3%　b 33.1%</td></tr>
+        <tr><td class="mono">LiteOffice · 范围匹配</td><td class="num bad">0.590</td><td class="num bad">0.071</td><td class="num bad">a 33.0%　b 43.7%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col" style="margin-top:16px">
+    <p>
+      <strong>① 能用的那两条曲线是平滑的，所以 16 个数其实是 6 个。</strong>
+      <span class="mono">a</span> 和 <span class="mono">b</span> 各用一个二次式，就能捕获公寓拟合 94–99% 的变化。
+      标定要发布的于是是<strong>指数的三个系数 + 偏移的三个系数</strong>，而不是 16 个分档值；
+      而且平滑形式在分档边界上是连续外推，不是跳变。
+    </p>
+    <p>
+      <strong>② "平不平滑"是一个不花钱、且不需要任何留出数据的拟合质量检查。</strong>
+      LiteOffice 那两条 —— §03c 上文已证明它们迁移得差 —— 在数量上确实不平滑：二次式漏掉了它们三分之一到一半的变化。
+      所以<strong>"一个二次式够不够"能在标定当场就把坏标定标出来</strong>，不必等到有留出房间可比。
+      <strong>而部署时恰恰没有留出房间可比。</strong>
+    </p>
+    <p style="color:var(--ink-faint)">
+      注意，这个 caveat 不小：<strong>8 个点、3 个参数</strong>，所以 R² 的绝对值是偏乐观的。
+      这里的信号是<strong>对比</strong>（0.94–0.99 对 0.07–0.59，四次独立拟合上一致），不是任何单个数字。
+      由此产生的预测已锁定待跑：<strong>如果 LiteOffice 那条曲线的锯齿是噪声，那么把它约束成二次式应该改善它的迁移</strong>；
+      如果不改善，说明锯齿是真实结构，上面第②条要撤回。
+    </p>
     <div class="note warn">
       <span class="eyebrow">更正：本节先前写的"可以发布 16 个数的镜头标定"不成立，已撤回</span>
       <p>
