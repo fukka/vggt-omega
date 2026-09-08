@@ -10,10 +10,11 @@ import json
 import os
 
 import numpy as np
+import pytest
 import torch
 
-from finetune.eval.exp_rendered import (RenderedWindowDataset, grading_mask_of,
-                                        parse_setting)
+from finetune.eval.exp_rendered import (RenderedWindowDataset, gt_camera,
+                                        grading_mask_of, parse_setting)
 
 
 def _frame(tmp_path, S=32):
@@ -31,7 +32,10 @@ def _frame(tmp_path, S=32):
         np.save(d / f"mask_{proj}_valid.npy", disc); np.save(d / f"mask_{proj}_in_crop.npy", crop)
     np.save(d / "persp_crop_rgb.npy", rgb); np.save(d / "persp_crop_depth.npy", dep)
     np.save(d / "mask_persp_crop_valid.npy", np.ones((S, S), bool))
-    json.dump({}, open(d / "meta.json", "w"))
+    json.dump({"T_WC": np.eye(4).tolist(), "output_size": S,
+               "Knew_pinhole": [0.262 * S, 0.262 * S, S / 2, S / 2],
+               "crop": {"Knew_crop": [0.371 * S, 0.371 * S, S / 2, S / 2]}},
+              open(d / "meta.json", "w"))
     return disc, crop
 
 
@@ -59,3 +63,14 @@ def test_crop_arm_is_graded_on_its_whole_frame_in_both_regions(tmp_path):
     for region in ("own", "crop"):
         s = RenderedWindowDataset(str(tmp_path), "persp_crop", 1, region=region)[0]
         assert s["valid_masks"][0].all()
+
+
+def test_gt_fov_is_the_arms_own(tmp_path):
+    """The crop must be graded against ITS focal, not the circumscribed one."""
+    _frame(tmp_path)
+    d = str(tmp_path / "seqA" / "frame_0000")
+    _, fov_full = gt_camera(d, "full")
+    _, fov_crop = gt_camera(d, "crop")
+    assert fov_full == pytest.approx(2 * np.degrees(np.arctan(0.5 / 0.262)))
+    assert fov_crop == pytest.approx(2 * np.degrees(np.arctan(0.5 / 0.371)))
+    assert fov_crop < fov_full

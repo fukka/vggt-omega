@@ -128,8 +128,13 @@ POSE_KEYS = ("rot_err_deg", "trans_err_deg", "rra5", "rra15", "rra30",
              "rta5", "rta15", "rta30", "auc30", "ate_m", "sim3_scale")
 
 
-def gt_camera(frame_dir: str) -> Tuple[np.ndarray, float]:
+def gt_camera(frame_dir: str, arm: str = "full") -> Tuple[np.ndarray, float]:
     """Ground-truth camera of a rendered frame: (3x4 cam-from-world, pinhole hFoV).
+
+    The pose is the same for every arm (same ERP, same camera). The pinhole FoV
+    is the arm's own: ``Knew_pinhole`` for the circumscribed arms, and the
+    inscribed ``crop.Knew_crop`` for the crop arm -- grading the crop against
+    the circumscribed 124.7 deg would score its correct 106.9 deg as an error.
 
     The camera that made the image is the raw one conjugated by A_ROT, so its
     pose is ``T_WC @ diag(A_ROT, 1)`` and its cam-from-world the inverse of that.
@@ -147,7 +152,7 @@ def gt_camera(frame_dir: str) -> Tuple[np.ndarray, float]:
     A4 = np.eye(4)
     A4[:3, :3] = A_ROT
     E = np.linalg.inv(T @ A4)[:3]
-    _fx, fy, _cx, _cy = m["Knew_pinhole"]
+    _fx, fy, _cx, _cy = m["crop"]["Knew_crop"] if arm == "crop" else m["Knew_pinhole"]
     fov_h = float(np.degrees(2.0 * np.arctan((m["output_size"] / 2.0) / fy)))
     return E, fov_h
 
@@ -324,7 +329,7 @@ def evaluate(model, root: str, setting: str, seq_len: int, device: torch.device,
              region: str = "own") -> dict:
     from vggt_omega.utils.rotation import quat_to_mat
     ds = RenderedWindowDataset(root, setting, seq_len, sequences, manifest, region)
-    proj, _arm = parse_setting(setting)
+    proj, arm = parse_setting(setting)
     per_frame, fovs = [], []
     windows: "OrderedDict[str, dict]" = OrderedDict()
     for wi in range(len(ds)):
@@ -342,7 +347,7 @@ def evaluate(model, root: str, setting: str, seq_len: int, device: torch.device,
             fovs.append(fov_deg)
             R = quat_to_mat(pe[:, 3:7]).numpy()
             pred_E = np.concatenate([R, pe[:, :3].numpy()[:, :, None]], -1)
-        gt_cams = [gt_camera(d) for d in s["dirs"]]
+        gt_cams = [gt_camera(d, arm) for d in s["dirs"]]
         gt_E = np.stack([c[0] for c in gt_cams])
         # The pinhole FoV is only a ground truth for the pinhole arms.
         gt_fov = gt_cams[0][1] if proj == "persp" else float("nan")
