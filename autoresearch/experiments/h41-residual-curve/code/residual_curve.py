@@ -59,6 +59,11 @@ def main(argv=None):
     p.add_argument("--size", type=int, default=504)
     p.add_argument("--max-frames", type=int, default=20)
     p.add_argument("--models", default="da3:small")
+    p.add_argument("--omega-ckpt",
+                   default="checkpoints/VGGT-Omega-1B-512/model.pt",
+                   help="vggt_omega does not load from 'pretrained'; it needs "
+                        "this checkpoint. H42 hit that the first time this "
+                        "script was run with a model list it had never seen.")
     p.add_argument("--view-fov", type=float, default=89.0)
     p.add_argument("--view-size", type=int, default=630)
     p.add_argument("--common-theta-deg", type=float, default=44.0)
@@ -97,7 +102,8 @@ def main(argv=None):
     for spec in [x.strip() for x in a.models.split(",") if x.strip()]:
         name, _, variant = spec.partition(":")
         kw = {"variant": variant} if variant else {}
-        bb = build_backbone(name, weights="pretrained", device=a.device, **kw)
+        w8 = a.omega_ckpt if name == "vggt_omega" else "pretrained"
+        bb = build_backbone(name, weights=w8, device=a.device, **kw)
         ps = bb.patch_size
         vs = int(round(a.view_size / ps)) * ps
         rig0 = RT.Rig(cam, [RC.RolledView(fov_x_deg=a.view_fov, width=vs,
