@@ -40,15 +40,15 @@ def main(argv=None):
                     ha="left" if v >= 0 else "right", va="center",
                     color=TEAL if yy > y else RED, fontsize=10,
                     fontweight="bold")
-        ax.text(-13.5, y, LABEL[m], ha="right", va="center", color=INK,
+        ax.text(-13.8, y, LABEL[m], ha="right", va="center", color=INK,
                 fontsize=11, fontweight="bold")
 
     ax.axvline(0, color="#C9CDD0", lw=1.2, zorder=1)
-    ax.set_xlim(-13, 16)
+    ax.set_xlim(-13, 27)
     ax.set_ylim(-0.75, 3.95)
     ax.set_yticks([])
-    ax.set_xticks([-10, -5, 0, 5, 10, 15])
-    ax.set_xticklabels(["−10%", "−5%", "0", "+5%", "+10%", "+15%"])
+    ax.set_xticks([-10, -5, 0, 5, 10, 15, 20, 25])
+    ax.set_xticklabels(["−10%", "−5%", "0", "+5%", "+10%", "+15%", "+20%", "+25%"])
     ax.tick_params(colors=GREY, labelsize=9.5)
     for s in ("top", "right", "left"):
         ax.spines[s].set_visible(False)

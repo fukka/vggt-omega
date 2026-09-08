@@ -1,0 +1,53 @@
+{
+  "recordings": [
+    "seq136",
+    "seq137",
+    "seq138",
+    "seq140",
+    "seq141",
+    "seq142",
+    "seq143",
+    "seq144",
+    "seq145",
+    "seq146",
+    "seq147",
+    "seq148",
+    "seq149"
+  ],
+  "per_model": {
+    "da3:small": {
+      "d_grav": 4.699133721963852,
+      "d_dev": 22.360989040542528,
+      "inflated_on": 7,
+      "dev_positive_on": 7,
+      "n": 13
+    },
+    "da3:large": {
+      "d_grav": 7.7686085504686195,
+      "d_dev": 16.921681581125327,
+      "inflated_on": 8,
+      "dev_positive_on": 8,
+      "n": 13
+    },
+    "vggt": {
+      "d_grav": -6.990909623622471,
+      "d_dev": 10.754343786534834,
+      "inflated_on": 10,
+      "dev_positive_on": 12,
+      "n": 13
+    },
+    "vggt_omega": {
+      "d_grav": -0.8675169070687335,
+      "d_dev": 3.111494090241453,
+      "inflated_on": 9,
+      "dev_positive_on": 10,
+      "n": 13
+    }
+  },
+  "spearman": -0.4671050999397078,
+  "bars": {
+    "b1": true,
+    "b2": true,
+    "b3": true
+  }
+}

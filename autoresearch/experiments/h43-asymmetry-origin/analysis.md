@@ -81,3 +81,69 @@ Recorded plainly: **B1 and B3 were evaluated on extrapolated values. B2 was
 not** — `vggt`'s Δ_grav is measured, and its Δ_dev is positive under both
 extrapolations and on 10 and 12 of 13 recordings, which is why it is the one
 result quoted here.
+
+---
+
+# H43b — the same bars with nothing extrapolated. All three pass.
+
+The wide-angle run finished (deltas 0, ±26, ±30 for all four backbones; the
+first pass covered three and `da3:small` was added after the span check caught
+it). **The grid now spans −30° to +30° for every backbone, so every
+device-origin evaluation at ±22° is an interpolation and nothing is guessed.**
+
+| backbone | Δ about the true zero | Δ about the device zero | inflated | dev > 0 |
+|---|---|---|---|---|
+| `da3:small` | +4.70% | **+22.36%** | 7/13 | 7/13 |
+| `da3:large` | +7.77% | **+16.92%** | 8/13 | 8/13 |
+| `vggt` | **−6.99%** | **+10.75%** | 10/13 | **12/13** |
+| `vggt_omega` | −0.87% | +3.11% | 9/13 | 10/13 |
+
+| bar | with extrapolation (H43) | measured (H43b) |
+|---|---|---|
+| B1 — offset inflates | 31–32/52, marginal | **34/52, PASS** |
+| B2 — `vggt` sign flips | PASS | **PASS, 12/13** |
+| B3 — inflation tracks the offset | −0.345 / −0.441, **FAIL** | **−0.467, PASS** |
+
+**H43's hedge was extrapolation error, not the data.** Its analysis said so at
+the time — *"B1 and B3 were evaluated on extrapolated values; B2 was not"* — and
+named this run as the fix. With the guess removed, the mechanism passes every
+bar it was given.
+
+## What it now says
+
+**The device-aligned origin manufactures the published asymmetry.** DA3-Small's
+device-origin asymmetry at ±22° is **+22.4 points** against **+4.7 points**
+about the true zero: roughly **four fifths of it is the origin**. For
+comparison, H32 measured +32.1 points at ±30° against a device origin — same
+direction, larger angle, same order of magnitude.
+
+**Every published asymmetry number in this line is retired as a statement about
+a model.** H32's "+30° costs 2.3× what −30° costs" and H33's per-backbone
+differences are device-origin measurements on footage with a −3.1° median tilt,
+and that is what a device origin does to a convex curve.
+
+## What survives, and what stays unexplained
+
+Δ about the true zero is **not zero**, and it does not have one sign:
+
+* `da3:large` **+7.77%** — the largest of the four, on a backbone H33 called
+  "at chance".
+* `vggt` **−6.99%** — the only backbone dearer on the *negative* side.
+* `da3:small` +4.70%, `vggt_omega` −0.87%.
+
+So there is a real residual asymmetry, it differs in sign across backbones, and
+**nothing here explains it.** H32 found the asymmetry, H33 could not attribute
+it, H34 was void trying, H42 added a point that did not line up, and H43/H43b
+explain the *published* version away without explaining the *residual* one.
+**That is where it is left, and no mechanism is offered.**
+
+## Limits
+
+* ±22° for the comparison; the grid reaches ±30° but the device-origin arms need
+  μ ∓ 22 and μ reaches −7.8°, so ±22° is the largest angle that stays inside
+  the measured grid for every recording.
+* μ is the signed median over 15–20 frames per recording, not over all 2,880.
+* This is still a prediction from a curve measured on the same footage. The
+  fully independent test would re-run H32's own ±30° sweep against a
+  gravity-aligned origin; it is not needed for the conclusion above, which only
+  requires the two origins to differ, and they do — by a sign, on `vggt`.
