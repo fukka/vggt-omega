@@ -993,3 +993,86 @@ Caveats: one sequence, 20 frames, one seed; rim/ctr under this protocol is not
 comparable to the section-01 table (different mask and projection). VGGT and
 VGGT-Omega are run single-frame here, so their multi-frame machinery is idle —
 the robustness is coming from the pretrained representation, not from fusion.
+
+## H17.5 + dose curve — the border rule was the wrong shape, 2026-09-08
+
+### H17.5: locked bar says "both contribute", but the design had a flaw
+
+`code/roll_boundary.py`. Masking the 89 deg rectified view to its inscribed
+disc and rolling as before:
+
+| arm | 0° all | ±20° | ±30° | ±40° |
+|---|---|---|---|---|
+| `pinhole` | 0.1545 | +13% | **+46%** | +131% |
+| `pinhole_masked` | 0.3178 | +33% | **+84%** | +97% |
+
++84% is between the locked thresholds (>=100 boundary, <=70 projection), so the
+recorded verdict is **both contribute, neither dominates**.
+
+**But the protocol's premise was wrong and this must be said.** It claimed the
+inscribed-disc mask was "a near-exact analogue" of `fisheye_disc`. It is not:
+the disc removes **21.9% of the rectified frame**, while `fisheye_disc` removes
+**1.7% of the cone** (the fisheye frame's corners were already dark). Those
+differ by an order of magnitude in severity, so the 30 deg comparison is not
+the clean decomposition it was designed to be. What is clean is the 0 deg
+number: masking 21.9% of a full rectified frame costs **+106% all-image /
++141% near_rim** — the largest boundary measurement in the project, and in the
+model's own native domain.
+
+### The dose curve: there isn't one
+
+`code/border_dose.py`, same view, black border of width w, scored on
+theta <= 30 deg (an 89 deg view's half-edge ray is 44.5 deg, so at h16's 44 deg
+cap only 5 px of frame sit outside the scored region and no meaningful border
+fits — the script refuses doses that would eat scored content).
+
+| border | % of frame black | 0° all AbsRel | cost vs no border |
+|---|---|---|---|
+| 0 px | 0.0% | 0.1261 | — |
+| 5 px | 3.1% | 0.1538 | +22.0% |
+| 12 px | 7.5% | 0.1427 | +13.2% |
+| 25 px | 15.2% | 0.1476 | +17.1% |
+| 45 px | 26.5% | 0.1472 | +16.8% |
+| 70 px | 39.5% | 0.1344 | **+6.6%** |
+| 100 px | 53.4% | 0.1667 | +32.2% |
+
+**There is no dose-response.** 3.1% black costs more than 39.5% black. The seven
+non-zero doses scatter non-monotonically over +6.6…+32.2%, which is the noise
+scale at 20 frames. The only supported statement is the *step*: **border present
+vs absent, ~+18%.**
+
+### So the standing rule had the wrong shape — corrected
+
+The rule was written as if damage scaled with how much of the frame is black,
+which is how H14's "22.5% black -> the teacher inverts" was read. The dose curve
+says area is not the variable. **Distance is.** Compare like for like:
+
+| where the score is taken | border | cost |
+|---|---|---|
+| theta <= 30 deg (14 deg inside the border) | 26.5% black | +17% |
+| theta <= 44 deg (right against the border) | 21.9% black | +106% |
+
+Same model, same projection, comparable black fraction, 6x different damage.
+Within the dose experiment the same gradient is visible at every dose (`outer`
+20–30 deg is consistently worse than `center` <= 11 deg). Corrected rule:
+
+> **A hard border wrecks the region adjacent to it and costs the rest of the
+> image a roughly constant ~18%. What matters is whether your zone of interest
+> is near the border, not how much of the frame the border occupies.**
+
+This is a better explanation of H14's 110 deg teacher than the one recorded:
+its black corners sat directly against `near_rim`, the very zone it was supposed
+to improve. It also means the 95 deg teacher's 98.7% fill was not "nearly
+harmless because only 1.3% is black" — it was nearly harmless because that 1.3%
+sits at the corners, away from most of the rim band.
+
+### Roll interacts with the border
+
+30 deg costs +47.6% on top of 0 deg with no border, and +64…+138% with one.
+Borders make the model roughly 1.4–2.9x more roll-fragile — direction consistent
+across all six doses, magnitude noisy and non-monotone like the rest of the
+curve.
+
+Caveats: 20 frames, one seed, one sequence, DA3-Small only. H17.2 showed roll
+sensitivity is strongly backbone-dependent, so border sensitivity probably is
+too and none of this is established for VGGT.
