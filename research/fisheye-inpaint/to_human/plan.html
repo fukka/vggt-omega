@@ -561,6 +561,13 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
   <h2>理想情况下补全确实有用 —— 但便宜的填充已经吃掉了 88%</h2>
 
   <div class="corr">
+    <h4>这一节的结论后来被证实并加强了</h4>
+    <p>本节是<strong>真实素材</strong>上的测量,「便宜填充吃掉 88%」当时是个<em>下界</em>:
+    没有真值上界可比。渲染 oracle 建好之后,同样的问题在有真值天花板的条件下重测,
+    答案是 <strong>77–126%</strong> —— 见<a href="#decision">决策节</a>。本节数字不变。</p>
+  </div>
+
+  <div class="corr">
     <h4>为什么要重做</h4>
     <p>上面的 2×2 用 <code>replicate</code> 填充,那是径向拖影 —— 不自然的内容。它回答的是「<em>任何</em>非黑填充有没有用」,不是你要问的「<strong>理想的、真值的</strong>填充有没有用」。而且不自然的内容本身就可能误导模型。所以 ③④ 至多是个下界。</p>
   </div>
@@ -876,9 +883,35 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
     <h4>预注册假设被证伪,而且是在<em>真值填充</em>下</h4>
     <p>假设是:补全的价值来自<strong>把图像拉回 VGGT 的透视训练域</strong>,因此增益应当集中在
     ④(矫正 + 填充)。真值填充下依然<strong>没有证据</strong> —— 投影 × 补全的交互项在两种模式下都跨零。</p>
-    <p>站得住的是更简单也更强的一句:<strong>无效区里放真值内容稳健有用,两种投影、两种模式,
-    一致约 0.06–0.11 AbsRel。</strong>效应是「<em>别给模型喂大片纯黑</em>」,与投影方式无关 ——
+    <p>站得住的是更简单也更强的一句:<strong>无效区里放真值内容稳健有用,两种投影、两种模式。</strong>
+    效应是「<em>别给模型喂大片纯黑</em>」,与投影方式无关 ——
     这与真实素材那一轮 <code>replicate</code> 填充给出的方向一致。</p>
+    <p style="color:var(--bad)"><strong>但下表的效应量不要引用。</strong>该引用的是
+    <strong>0.010–0.018 AbsRel</strong>,不是下表的 0.06–0.11 —— 原因见紧接着的更正框。</p>
+  </div>
+
+  <div class="corr">
+    <h4>效应的<em>大小</em>是渲染的属性,不是 VGGT 的</h4>
+    <p>下表来自<strong>历史光照</strong>的渲染 —— 那一版的灯装在 2.35 m,低于它该照亮的家具,
+    而这套公寓<a href="#lighting">根本没有天花板</a>。整套 96 帧用<strong>拟合光照</strong>重渲后
+    逐帧配对、按窗口聚类做差,<strong>四条 CI 全部排除零</strong>:</p>
+    <div class="scroll"><table>
+      <thead><tr><th>模式</th><th>对比</th><th class="n">历史光照</th><th class="n">拟合光照</th><th class="n">差值</th><th class="n">CI(按窗口)</th></tr></thead>
+      <tbody>
+        <tr><td>单帧</td><td>鱼眼</td><td class="n">−0.0763</td><td class="n">−0.0152</td><td class="n"><strong>+0.0611</strong></td><td class="n">[+0.0193, +0.1075]</td></tr>
+        <tr><td>单帧</td><td>透视</td><td class="n">−0.0613</td><td class="n">−0.0174</td><td class="n"><strong>+0.0439</strong></td><td class="n">[+0.0186, +0.0716]</td></tr>
+        <tr><td>8 帧</td><td>鱼眼</td><td class="n">−0.1096</td><td class="n">−0.0176</td><td class="n"><strong>+0.0920</strong></td><td class="n">[+0.0156, +0.1867]</td></tr>
+        <tr><td>8 帧</td><td>透视</td><td class="n">−0.0598</td><td class="n">−0.0102</td><td class="n"><strong>+0.0495</strong></td><td class="n">[+0.0089, +0.1061]</td></tr>
+      </tbody></table></div>
+    <p>正号 = 效应在拟合光照下<strong>变小</strong>,4–6 倍。机制是直白的:同一批帧上
+    VGGT 本身也变好了(<code>fisheye_masked</code> 单帧 0.1767 → <strong>0.0861</strong>)——
+    渲染越偏离训练分布,模型余量越少,黑区的代价就越大。修好渲染,大部分代价就消失了。</p>
+    <p><strong>没有变的是结论。</strong>真值内容在两种光照下都是四格全显著;
+    投影 × 补全的交互项在两种光照下都跨零(拟合光照:单帧 −0.0022 [−0.0144, +0.0129],
+    8 帧 +0.0074 [−0.0114, +0.0333])。预注册假设的证伪<em>不依赖</em>渲染光度 ——
+    依赖它的只有数字。</p>
+    <p class="src">几何是对照过的:两次渲染的深度一致到 float32 精度(中位相对误差 9.4e−08,
+    差异 &gt;1% 的像素占 0.0001%),有效像素率相同,而 RGB 平均差 30/255。只有光照变了。</p>
   </div>
 
   <div class="col"><p>ADT 渲染 oracle,<strong>4 个序列、12 个 8 帧窗口、96 帧</strong>。
@@ -887,7 +920,7 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
   所以 full 不会因为「面积更大」白拿分。</p></div>
 
   <div class="scroll"><table>
-    <thead><tr><th>设置</th><th>模式</th><th class="n">AbsRel ↓</th><th class="n">RMSE ↓</th><th class="n">δ₁ ↑</th><th class="n">推断 FoV</th></tr></thead>
+    <thead><tr><th>设置(历史光照)</th><th>模式</th><th class="n">AbsRel ↓</th><th class="n">RMSE ↓</th><th class="n">δ₁ ↑</th><th class="n">推断 FoV</th></tr></thead>
     <tbody>
       <tr><td>① fisheye_full</td><td>单帧</td><td class="n">0.1004</td><td class="n">0.312</td><td class="n">90.77%</td><td class="n">83.7°</td></tr>
       <tr class="hl"><td>② fisheye_masked</td><td>单帧</td><td class="n"><strong>0.1767</strong></td><td class="n">0.484</td><td class="n"><strong>78.51%</strong></td><td class="n">86.0°</td></tr>
@@ -960,6 +993,92 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
     整套 96 帧正在用拟合光照重渲,两次评估会逐帧配对、按窗口聚类做差 ——
     差值的 CI 跨零就说明结论对渲染光度稳健。</p>
   </div>
+</section>
+
+<section id="decision">
+  <p class="eyebrow">决策 · 填充阶梯 · n=96 / 12 窗口 · 2026-09-05</p>
+  <h2>生成式补全可争的空间是 <span class="m">0–0.004 AbsRel</span></h2>
+
+  <div class="verdict" style="margin-top:0">
+    <h4>不值得做</h4>
+    <p>真值内容值 <strong>0.010–0.018 AbsRel</strong>。而 <code>replicate</code> ——
+    最近邻拖影,<strong>一个像素都不发明</strong> —— 已经吃掉其中 <strong>77–126%</strong>。
+    留给 diffusion 的是 <strong>0 到 0.004</strong>。</p>
+    <p>8 帧透视那一格里,拖影甚至<strong>超过了真值内容</strong>:真实的角落内容复杂,
+    拖影简单,模型更喜欢后者。</p>
+  </div>
+
+  <div class="scroll"><table>
+    <thead><tr><th>格子(拟合光照)</th><th class="n">真值上界</th><th class="n">replicate</th>
+    <th class="n">留给生成模型</th><th class="n">replicate 占比</th></tr></thead>
+    <tbody>
+      <tr><td>单帧 · 鱼眼</td><td class="n">0.0152</td><td class="n">0.0126</td><td class="n"><strong>0.0026</strong></td><td class="n">82.9%</td></tr>
+      <tr><td>单帧 · 透视</td><td class="n">0.0174</td><td class="n">0.0135</td><td class="n"><strong>0.0039</strong></td><td class="n">77.3%</td></tr>
+      <tr><td>8 帧 · 鱼眼</td><td class="n">0.0176</td><td class="n">0.0169</td><td class="n"><strong>0.0007</strong></td><td class="n">96.1%</td></tr>
+      <tr class="hl"><td>8 帧 · 透视</td><td class="n">0.0102</td><td class="n">0.0129</td><td class="n"><strong>−0.0027</strong></td><td class="n"><strong>125.6%</strong></td></tr>
+    </tbody></table></div>
+
+  <h3>完整阶梯(单帧 · 透视)</h3>
+  <div class="col"><p>共用<strong>同一批像素、同一套评分掩膜</strong>,只在洞里放什么不同。
+  填进去的像素<strong>永远不参与打分</strong> —— 阶梯改变的只是编码器看到什么。</p></div>
+  <div class="scroll"><table>
+    <thead><tr><th>填充</th><th class="n">AbsRel ↓</th><th class="n">相对黑色的增益</th>
+    <th class="n">占真值增益</th><th class="n">CI(按窗口)</th></tr></thead>
+    <tbody>
+      <tr><td>black 黑色</td><td class="n">0.0768</td><td class="n">+0.0000</td><td class="n">0.0%</td><td class="n">—</td></tr>
+      <tr><td>telea 修补</td><td class="n">0.0683</td><td class="n">+0.0085</td><td class="n">48.7%</td><td class="n">[+0.0029, +0.0139]</td></tr>
+      <tr><td>chanmean 逐通道均值</td><td class="n">0.0662</td><td class="n">+0.0106</td><td class="n">60.8%</td><td class="n">[+0.0071, +0.0151]</td></tr>
+      <tr><td>ns 修补</td><td class="n">0.0658</td><td class="n">+0.0110</td><td class="n">63.1%</td><td class="n">[+0.0070, +0.0150]</td></tr>
+      <tr><td>mean 全图均值</td><td class="n">0.0650</td><td class="n">+0.0118</td><td class="n">67.9%</td><td class="n">[+0.0084, +0.0164]</td></tr>
+      <tr class="hl"><td><strong>replicate 拖影</strong></td><td class="n"><strong>0.0633</strong></td><td class="n">+0.0135</td><td class="n"><strong>77.3%</strong></td><td class="n">[+0.0080, +0.0191]</td></tr>
+      <tr class="hl"><td>ORACLE 真值</td><td class="n">0.0594</td><td class="n">+0.0174</td><td class="n">100.0%</td><td class="n">[+0.0087, +0.0238]</td></tr>
+    </tbody></table></div>
+
+  <h3>一、比值没能挺过光照变化 —— 所以两份都跑了</h3>
+  <div class="corr">
+    <h4>只跑历史光照那份会得出相反的建议</h4>
+    <div class="scroll"><table>
+      <thead><tr><th>格子</th><th class="n">replicate 占比 · 历史光照</th><th class="n">replicate 占比 · 拟合光照</th></tr></thead>
+      <tbody>
+        <tr><td>单帧 · 鱼眼</td><td class="n">23.9%</td><td class="n"><strong>82.9%</strong></td></tr>
+        <tr><td>单帧 · 透视</td><td class="n">37.8%</td><td class="n"><strong>77.3%</strong></td></tr>
+        <tr><td>8 帧 · 鱼眼</td><td class="n">38.0%</td><td class="n"><strong>96.1%</strong></td></tr>
+        <tr><td>8 帧 · 透视</td><td class="n">84.7%</td><td class="n"><strong>125.6%</strong></td></tr>
+      </tbody></table></div>
+    <p>在坏光照的渲染上,结论会是「便宜填充只拿 24–85%,<em>还有空间</em>」。实际没有。</p>
+    <p>百分比是个比值,本来有理由指望分子分母同步缩放而抵消。但分母刚被证明会动 4–6 倍,
+    <strong>比值是否还成立就成了一个问题,而不是一个可以假设的前提</strong> ——
+    所以两份渲染上各跑了一遍,而不是只跑手边那份。</p>
+  </div>
+
+  <h3>二、均值填充<em>有域依赖性</em> —— 而且方向相反</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>填充</th><th class="n">单帧 · 鱼眼</th><th class="n">单帧 · 透视</th></tr></thead>
+    <tbody>
+      <tr><td>mean 全图均值</td><td class="n" style="color:var(--bad)"><strong>−225.1%</strong></td><td class="n" style="color:var(--good)">+67.9%</td></tr>
+      <tr><td>chanmean 逐通道均值</td><td class="n" style="color:var(--bad)"><strong>−228.4%</strong></td><td class="n" style="color:var(--good)">+60.8%</td></tr>
+    </tbody></table></div>
+  <div class="col">
+    <p>在<strong>矫正后的透视图</strong>上,一片平灰比黑色好;在<strong>原始鱼眼</strong>上,
+    它不仅不好,而且<strong>比黑色差得多</strong>。历史光照那份给出同样的符号
+    (鱼眼 −63.6% / −58.2%,透视 +6.5% / +10.7%),所以不是噪声。</p>
+    <p>这直接关系到<a href="#close">那条一直没找到出处的记忆</a> ——「均值填充优于黑色」。
+    它在一个域里成立、在另一个域里反向,<strong>不能跨域照搬</strong>。
+    这仍然不能替代找到原文:我们测的是 VGGT-Omega 的深度,不是那篇(不知是哪篇)测的东西。</p>
+  </div>
+
+  <h3>三、为什么这一节能下结论,而不是又一个「还需要更多实验」</h3>
+  <ul class="plain">
+    <li><strong>上界是真的上界。</strong>oracle 是渲染出来的真值内容,不是另一种填充。
+    没有任何补全方法能超过它 —— 除非像 8 帧透视那格一样,发现真值本身就不是最优输入。</li>
+    <li><strong>下界是「什么都不发明」。</strong><code>replicate</code> 的每个填充像素都是某个真实像素的拷贝
+    (已验证:invented = 0.000)。它和 oracle 之间的距离,就是「发明内容」这件事的全部价值。</li>
+    <li><strong>两者在同一批帧、同一套掩膜上测。</strong>真实素材那一轮给过 88.7%,
+    但那是<em>没有真值上界</em>的估计 —— 那些像素的真值根本不存在。这里存在。</li>
+  </ul>
+  <p class="src">数据:<code>research/fisheye-inpaint/data/fill_ladder/</code>(两份渲染的完整报告)。
+  <code>mirror</code> 不在阶梯里:它关于有效区外接框做反射,够不到被有效像素包围的洞
+  —— 实测只改变 0.0% / 3.4% 的洞而<em>成功返回</em>,现已改为报错。</p>
 </section>
 
 <hr class="rule">
@@ -1310,52 +1429,59 @@ footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
 
 <section id="close">
   <p class="eyebrow">下一步 · 更新于 2026-09-05</p>
-  <h2>已经做完的,和现在该做的</h2>
+  <h2>问题已经有答案了</h2>
 
+  <div class="verdict" style="margin-top:0">
+    <h4>三层,每一层都独立地把这个想法往下压</h4>
+    <ol class="plain" style="margin:0">
+      <li><strong>效应小。</strong>真值内容值 0.010–0.018 AbsRel —— 不是 0.06–0.11,
+      后者是<a href="#mode">渲染器光照缺陷</a>放大出来的。</li>
+      <li><strong>机制不成立。</strong>投影 × 补全的交互项在两种模式、两种光照、
+      三次不同规模的运行里全部跨零。补全在原始鱼眼上帮得和矫正图上一样多,
+      所以它<em>不是</em>「让图像回到透视训练域」,而是「别喂大片纯黑」。</li>
+      <li><strong>空间已被廉价方法占满。</strong>不发明任何内容的拖影拿走
+      <a href="#decision">77–126%</a>,剩 0–0.004。</li>
+    </ol>
+  </div>
+
+  <h3>原始待办,逐条结算</h3>
   <div class="scroll"><table>
     <thead><tr><th>原计划</th><th>状态</th></tr></thead>
     <tbody>
-      <tr><td>先跑 T1 的 2×2(真实素材,replicate 填充)</td><td>✅ 已做。补全大幅有效,但交互项<strong>符号相反</strong> —— 原始鱼眼受益更多</td></tr>
-      <tr><td>把推断 FoV 接进评估表</td><td>✅ 已做。<code>pose_enc[7:9]</code> 在每张表里。关键观察:填掉 32.3% 的黑区只让推断 FoV 动了 0.7°(真值差 15°),而 AbsRel 降了 44% —— <strong>补全的增益不是相机中介的</strong></td></tr>
-      <tr><td>T2 oracle,只在 T1 出现正向信号后再做</td><td>✅ 已做,而且做到了更强的版本:不是从 ERP 采样,而是用 Blender <strong>渲染</strong>真值,96 帧 / 12 窗口 / 4 序列</td></tr>
-      <tr><td>核实「均值填充优于黑色」那篇记忆</td><td>❌ 五路检索未找到。<strong>确认前不要引用</strong></td></tr>
+      <tr><td>先跑 T1 的 2×2(真实素材,replicate 填充)</td><td>✅ 补全大幅有效,但交互项<strong>符号相反</strong></td></tr>
+      <tr><td>把推断 FoV 接进评估表</td><td>✅ 关键观察:填掉 32.3% 黑区只让 FoV 动 0.7°(仍差 15°),AbsRel 却降 44% —— <strong>增益不是相机中介的</strong></td></tr>
+      <tr><td>T2 oracle,只在 T1 有正向信号后再做</td><td>✅ 做成了更强的版本:Blender <strong>渲染</strong>真值,96 帧 / 12 窗口 / 4 序列</td></tr>
+      <tr><td>填充阶梯,只在 ④ 显著优于 ② 时做</td><td>✅ 两份渲染各一遍 —— 这就是<a href="#decision">决策数字</a></td></tr>
+      <tr class="hl"><td>核实「均值填充优于黑色」那篇记忆</td><td>❌ <strong>仍未找到出处。</strong>五路检索无结果</td></tr>
     </tbody></table></div>
 
+  <div class="corr">
+    <h4>那条记忆:我们自己的数据给了部分答案,但不是出处</h4>
+    <p>实测<a href="#decision">均值填充有域依赖性</a> —— 在矫正图上比黑色好(+68%),
+    在原始鱼眼上比黑色差得多(−225%)。这解释了这类说法为什么会同时「有人记得」和「找不到」:
+    它<strong>在一个域里是对的</strong>。</p>
+    <p>但这<em>不能</em>当成找到了出处。我们测的是 VGGT-Omega 在 ADT 上的深度;
+    那篇(如果存在)测的是别的模型、别的任务、别的数据。<strong>确认前仍然不要引用。</strong>
+    最可能藏在 WoodScape / OmniDet / SVDistNet 的实现细节或补充材料里,建议直接读源码。</p>
+  </div>
+
+  <h3>仍然开放的:E3 对照表</h3>
   <div class="col">
-    <p>2×2 已经给出定论,所以下一步不再是「补全有没有用」,而是<strong>那个决策数字</strong>:</p>
+    <p>把「训练无关的输入修复」与「训练一个条件化模块」(Fisheye3R calibration tokens、
+    RayTun3R 位置编码)放到同一张表上,仍然是有价值的工作 —— 但它的第一行现在已经知道会写什么:</p>
+    <p><strong>输入侧修复能拿到的全部是 0.010–0.018 AbsRel,而且其中 77–126% 用一行
+    <code>cv2.distanceTransform</code> 就能拿到。</strong>所以那张表要问的不再是
+    「④ 能不能接近 ⑤/⑥」,而是「⑤/⑥ 的训练成本换来的增量,是否比 0.004 大得多」。</p>
+    <p>如果是 —— 论文是「条件化确实必要,输入修复是廉价基线」。
+    如果不是 —— 论文是一个更有意思的负结果:<strong>这两条路争的是同一块很小的地。</strong></p>
   </div>
 
-  <div class="phase">
-    <div class="phead"><span class="pid">现在</span><span class="ptitle">填充阶梯 —— 便宜的填充能吃掉真值收益的多少</span><span class="pcost">GPU 约 15 分钟</span></div>
-    <dl class="prow">
-      <dt>为什么这才是决策点</dt><dd>「真值内容有用」已经量出来了(0.06–0.11 AbsRel)。但生成式补全<strong>只能拿到剩下的那部分</strong> ——
-      一个什么都不发明的填充吃掉多少,就是整个想法的预算上限。</dd>
-      <dt>阶梯</dt><dd><code>black → mean → chanmean → replicate → telea → ns → ORACLE</code>,
-      共用<strong>同一批像素、同一套评分掩膜</strong>,只在洞里放什么不同。每一档报告增益、
-      占真值增益的<strong>百分比</strong>、以及按窗口聚类的 CI。</dd>
-      <dt>已有的下界</dt><dd>真实素材那一轮:replicate 88.1%、mean 88.7%。但那是<em>没有真值上界</em>的估计 ——
-      那些像素的真值根本不存在。渲染集上存在,所以阶梯和它的天花板是在<strong>同一批帧</strong>上量的。</dd>
-      <dt>被排除的一档</dt><dd><code>mirror</code>。它关于有效区外接框做反射,够不到被有效像素<strong>包围</strong>的洞
-      —— 实测只改变了 0.0%/3.4% 的洞而<em>成功返回</em>。已改为报错:一个静默不填的臂,得分与黑色完全相同,
-      会读成「镜像填充没帮助」。</dd>
-    </dl>
-  </div>
-
-  <div class="phase">
-    <div class="phead"><span class="pid">同时</span><span class="ptitle">光照稳健性 —— 结论依不依赖渲染光度</span><span class="pcost">重渲约 3 h,已在跑</span></div>
-    <dl class="prow">
-      <dt>为什么要做</dt><dd>2×2 是<strong>帧内</strong>对比,光照错误不可能凭空制造那个效应,但可以改变它的<em>大小</em>。
-      整套 96 帧正在用<a href="#lighting">拟合光照</a>重渲,两次评估逐帧配对、按窗口聚类做差。</dd>
-      <dt>判据</dt><dd>差值的 CI 跨零 → 结论对渲染光度稳健。不跨零 → 效应量是「场景怎么打光」的属性,
-      必须在把它当成 VGGT 的属性之前说清楚。</dd>
-    </dl>
-  </div>
-
-  <div class="col">
-    <p>再之后才是 <a href="#followup">E3</a>:把「训练无关的输入修复」与「训练一个条件化模块」
-    (Fisheye3R calibration tokens / RayTun3R 位置编码)放到同一张表上。
-    但那张表的第一行现在已经知道会写什么 —— <strong>补全的收益与投影方式无关</strong>,
-    所以「让图像回到透视训练域」这个卖点讲不通,能讲的是更朴素的「别喂大片纯黑」。</p>
+  <div class="note">
+    <p><strong>可发表的形态没有变,变的是哪一句是卖点。</strong>
+    原本设想的卖点是「训练无关的输入空间修复能顶上条件化模块」。
+    实测下来,更强也更诚实的一句是:<em>这个问题比看上去小,而且已经被最朴素的方法解决了</em> ——
+    附带一个干净的、目前文献里没有的负结果:补全的收益与投影方式无关,
+    且几乎全部来自「不是黑色」而非「是正确的内容」。</p>
   </div>
 </section>
 
