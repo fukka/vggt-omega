@@ -2022,3 +2022,55 @@ phase_note_2026_09_08:
     Four experiments in a row (H39/H40 label corrections, H41, H42) have had a
     previously published number moving as their main output. The line is in the
     phase where RE-MEASURING is worth more than measuring.
+
+# ------------------------------------------------- H43 resolved 2026-09-08
+h43_asymmetry_origin:
+  status: "B2 PASSES decisively; B1 marginal; B3 FAILS as locked — CPU only, no new data"
+  artifact: autoresearch/experiments/h43-asymmetry-origin/results/summary.json
+  analysis: autoresearch/experiments/h43-asymmetry-origin/analysis.md
+  the_arithmetic: >
+    A device-origin sweep at +-a measures g(psi - a) - g(psi + a). With a
+    NEGATIVE signed median psi that is positive EVEN FOR A PERFECTLY SYMMETRIC
+    g, because the "+a" arm is sampled further out on a convex curve. Signed
+    median across these 13 recordings is -3.10 deg (H17.1: -2.70 over all).
+  delta_true_zero_vs_device_zero:
+    da3_small:  "+4.70%  ->  +12.5% / +13.5%"
+    da3_large:  "+7.77%  ->   +8.7% / +19.4%"
+    vggt:       "-6.99%  ->   +9.3% /  +8.7%   <- SIGN FLIP"
+    vggt_omega: "-0.87%  ->   +2.9% /  +6.4%"
+  B2_DISSOLVES_H42s_CONTRADICTION: >
+    H42 found vggt INVERTING against a gravity origin where H33 had it 8/8 the
+    other way against a device origin. Same curve gives -6.99% about the true
+    zero and +9.29% about the device zero, positive on 10/13 (12/13 quadratic).
+    ONE CURVE, TWO ORIGINS, OPPOSITE SIGNS. The zero changed, not the model.
+  b1_b3_the_mechanism_does_not_carry_it_all: >
+    B1 passes at 31/52 and 32/52 — a 60% majority against a BADLY CHOSEN bar
+    (two recordings have non-negative median tilt, where the offset must
+    DEFLATE). B3, the bar that actually tested the mechanism, FAILS: Spearman
+    -0.345 / -0.441 against a locked <= -0.4 under both extrapolations.
+    Honest reading: the origin FLIPS THE SIGN but does not cleanly account for
+    the asymmetry, and this cannot say how much of each.
+  WHAT_CHANGES_REGARDLESS: >
+    NO ASYMMETRY NUMBER IN THIS LINE SURVIVES AS A STATEMENT ABOUT A MODEL.
+    H32's "+30 costs 2.3x what -30 costs" is a device-origin measurement on
+    footage with a -2.7 deg median tilt and its DIRECTION IS EXACTLY WHAT THE
+    OFFSET MANUFACTURES. H33's per-backbone differences inherit it, including
+    "da3:large is at chance" — doubly odd, since da3:large has the LARGEST
+    true-zero asymmetry of the four (+7.77%).
+  defensible_now: "the true-zero column above, at +-22 deg, on one lens."
+  rests_on_extrapolation: >
+    +-22 was the grid edge, so every device-origin number needed g beyond it,
+    computed twice (linear and quadratic). B1 AND B3 WERE EVALUATED ON
+    EXTRAPOLATED VALUES; B2 WAS NOT — vggt's true-zero Delta is measured and its
+    device-origin Delta is positive under both extrapolations and on 10 and 12
+    of 13. That is why B2 is the one quoted.
+  followup_in_flight: >
+    Wide-angle run (deltas 0, +-26, +-30, four backbones, 13 recordings) to
+    remove the extrapolation and make the comparison angle-matched with H32.
+
+rule_origin_paid_three_times:
+  rule: "When a curve looks odd near its origin, suspect the origin."
+  instances:
+    - "H41: H32's near-zero dip — the device zero sits a median 4 deg off level."
+    - "H41: H32's 'coincidence' (wearer's median tilt at the curve's cheapest angle) is an identity about coordinates."
+    - "H43: the +-30 asymmetry's DIRECTION is what that same offset manufactures."
