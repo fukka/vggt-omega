@@ -1479,3 +1479,20 @@ lesson_transform_tests_need_a_baseline_bar:
   why: >
     H34's B3 was a routine sanity check and is the only reason a 4x-broken input
     did not produce a clean-looking published finding.
+
+operational_blocking_waiters_get_oom_killed:
+  symptom: >
+    The one-blocking-waiter pattern (ssh + a poll loop in a background Bash) was
+    killed three times on 2026-09-08 with "system is running low on memory".
+    The REMOTE job was unaffected each time; only the local waiter died.
+  what_it_costs: >
+    Nothing scientific — the tmux job keeps running and the next tick picks it
+    up — but each kill costs a turn to notice and re-arm.
+  mitigation_that_worked: >
+    Lengthen the poll interval. 15s was killed twice, 30s once, 60s and 90s
+    survived. Use `sleep 60` or more and cap the iteration count so the waiter
+    exits on its own rather than spinning.
+  do_not: >
+    Do not switch to polling from the model instead — that is the thing the
+    token rules forbid. One long-interval blocking waiter is still the right
+    pattern; it just needs a slower loop.
