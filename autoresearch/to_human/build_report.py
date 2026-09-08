@@ -111,7 +111,10 @@ def build(frag: Path, figs: Path, out: Path) -> None:
                  f"unclosed {b.stack[:3]}")
 
     out.write_text(html)
-    secs = re.findall(r'<span class="eyebrow">(\d+\w?)</span>', stripped)
+    # `\w?` only ever matched ONE trailing letter, so section 03aa was silently
+    # dropped from the count and the id list — the check that exists to notice a
+    # missing section quietly stopped seeing one.
+    secs = re.findall(r'<span class="eyebrow">(\d+[a-z]*)</span>', stripped)
     print(f"[build] wrote {out} — {len(html)/1e6:.2f} MB, {len(secs)} sections: "
           f"{' '.join(secs)}")
 
