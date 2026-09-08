@@ -3088,6 +3088,86 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 <section>
+  <div class="section-head"><span class="eyebrow">03p</span><h2>实验 B¹⁵ · H30：建议 13/13 成立，我自己的观察被当作预测检验了</h2>
+    <span class="chip done"><span class="dot"></span>B1/B3 全票 · 预注册预测 +1.29 sd 落在正确一侧</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      §03h 那条建议——<strong>拟合前先把素材重采样到压缩边缘的几何，再把曲线用回真实图像</strong>——
+      在真实 Aria 镜头上"值 5–6 个点"。而 H21–H24 的每一个数字<strong>都是评测在 seq136 上的</strong>。
+    </p>
+    <p>
+      同时 §03o 结尾我写了一句<strong>说出来的、不是测出来的</strong>话：
+      <strong>seq136 对"干预"的反应异常强烈。</strong>
+      §4.6 的全部结果都是评测在 seq136 上的干预 —— 如果那个观察成立，<strong>5.8 点的优势应当偏高</strong>。
+      <strong>跑之前把预测写下来，是它唯一有价值的方式。</strong>
+    </p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <caption>真实 Aria 镜头上，近边缘误差变化。曲线仍在原来四条训练序列上拟合，<strong>什么都没有重拟合</strong>，只换了评测集。</caption>
+      <thead><tr><th>用哪条曲线</th><th>13 条录像</th><th>seq136（已发布）</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">镜头自己的曲线</td><td class="num">−14.9% ± 3.2</td><td class="num">−21.1%</td></tr>
+        <tr><td class="mono">最好的压缩几何曲线</td><td class="num good">−18.9% ± 4.4</td><td class="num">−26.8%</td></tr>
+        <tr class="flip"><td class="mono"><b>优势</b></td><td class="num good"><b>+4.03 ± 1.33 点</b></td><td class="num">+5.75 点</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:18px">
+    <h3>逐条判据</h3>
+  </div>
+  <div class="crit">
+    <div class="row"><span class="who">B1 ✓ 通过 13/13</span><p>
+      外来的压缩几何曲线在<strong>每一条录像上</strong>都赢过镜头自己的曲线。
+      建议站得住，值 <strong>约 4 个点而不是 5–6 个</strong>，而且<strong>没有任何一条录像上是负的</strong> ——
+      这才是它值得被推荐的原因。
+    </p></div>
+    <div class="row"><span class="who">B3 ✓ 通过</span><p>
+      行均值保持 orthographic −26.5% ≤ equisolid −25.2% ≤ aria_kb4 −18.4%。
+    </p></div>
+    <div class="row"><span class="who">B2 ○ 预测落在正确一侧 —— 但单看这一次是弱证据</span><p>
+      seq136 是 <strong>+1.29 sd</strong>，预注册的线是 1 sd。<strong>方向对了。</strong>
+      但 P(z&gt;1) ≈ 16%，<strong>单看这一次 p ≈ 0.16，什么也证明不了</strong>。
+    </p></div>
+  </div>
+
+  <div class="col">
+    <h3 style="margin-top:22px">再想一层</h3>
+    <div class="note">
+      <span class="eyebrow">那个观察真正倚赖的，是全局模式而不是这一次</span>
+      <p>
+        <strong>seq136 上的六次干预全部为正</strong>：+5.74（§03k 曲线）、+2.60（§03l adapter）、
+        +3.12（§03m GT 臂）、+3.32 与 +5.96（§03o 黑边）、+1.29（本节）。
+        <strong>单是符号检验就 p ≈ 0.016</strong>，还没算其中两个超过 5 sd。
+      </p>
+      <p>
+        而<strong>三次未受扰动的测量全在零附近</strong>：−0.11、+0.07、+0.52（§03n）。
+        <strong>这个分裂才是证据</strong>；本节贡献的是一个<strong>预注册的、落在正确一侧的点</strong> ——
+        那是单次运行所能做到的极限。
+      </p>
+      <p>
+        <strong>它仍然是观察，不是机制</strong>：说的是那条录像<strong>做了什么</strong>，不是<strong>为什么</strong>。
+      </p>
+    </div>
+    <div class="note warn">
+      <span class="eyebrow">一条常设指令</span>
+      <p>
+        <strong>任何只测在 seq136 上的干预，都应假定是虚高的。</strong>
+        本页所有已发布的房间内数字都已重测，所以这条是给<strong>将来</strong>用的。
+      </p>
+      <p>
+        反过来那半边（<strong>描述性</strong>数字在 seq136 上有代表性）每次检查都成立，
+        但<strong>只有三个数据点，不值得倚重</strong>。
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
   <div class="section-head"><span class="eyebrow">04</span><h2>实验 C · H14.2：虚拟视角不必是方的</h2>
     <span class="chip kill"><span class="dot"></span>预测被否定</span></div>
 
