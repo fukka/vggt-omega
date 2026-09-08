@@ -606,3 +606,46 @@ h18_omega_teacher:
     - "Test the mechanism hypothesis directly: is the rectified target transferable because it is a low-dimensional radial relation? Fit a purely radial correction to the omega110 targets and see how much of the cross-room gain a radial-only student reproduces."
     - "Scale the cross-room test. It is now carrying the whole mechanistic claim and it is 120 frames over two near-static sequences."
     - "Does the student saturate in-room? It recovers 82-89% of the label ceiling from a 4.4x stronger teacher; a larger student or LoRA rank would say whether the residual is student capacity."
+
+# ---------------------------------------------------------------- H18.2
+h18_2_radial_probe:
+  question: >
+    H18's cross-room result inverted its in-room one: the un-rectified control
+    carries most of the in-room gain and none of the cross-room one. Why does
+    the rectified target transfer?
+  status: "locked prediction PASSED, emphatically"
+  method: >
+    Replace the 122.9k LoRA with something that can ONLY express a radial
+    relation - one log-log curve per theta bin, 16 parameters - fit on the four
+    training sequences only, applied unchanged everywhere. Supervision is the
+    same omega110 teacher targets the LoRA saw. `global` (same form, theta
+    dependence removed, 2 parameters) is the control.
+  result: >
+    near_rim vs frozen. radial: seq136 -16.6%, dec_seq132 -6.5%, DinoToy
+    -26.0%, BlackCeramicBowl -8.9%. omega110 LoRA: -51.5 / -22.4 / -20.0 /
+    -9.0. global: +8.7 / +6.5 / +2.7 / -1.6 (worse than nothing on 3 of 4).
+    So IN-ROOM the LoRA is 3x better; ACROSS ROOMS the 16-parameter curve
+    matches or beats it. Prediction was ">= half the cross-room gain and beat
+    global on both LiteOffice sequences": it reproduced 130% and 99% and beat
+    global everywhere.
+  the_finding: >
+    Sixteen numbers carry everything that crosses a room; the other 122,884
+    parameters buy a large in-room gain that transfers not at all. The
+    transferable content of the rectified teacher is a per-theta recalibration
+    of the frozen model's depth - a property of the LENS, which is why it
+    carries to another room and another device. The LoRA's extra capacity fits
+    the ROOM.
+  convergent_validity: >
+    H9 fit the SAME functional form from parallax anchors and got -15.4% on
+    seq136 where this gets -16.6%. Two unrelated label-free supervision sources
+    converge on the same 16-parameter object and magnitude, and this one does
+    not need H9's per-sequence test-time adaptation.
+  practical: >
+    Ship a 16-number radial calibration instead of a LoRA: it transfers better.
+    The LoRA is the right choice only when the deployment room is the training
+    room. Neither needs a depth label.
+  artefacts: [autoresearch/experiments/h14-rect-distill/results/omega/radial_probe.json]
+  next:
+    - "Does the radial curve fitted on Apartment beat one fitted on LiteOffice itself? If a curve fitted anywhere works everywhere, it is a lens constant and can be published as one."
+    - "Fit it per backbone. If DA3-Large and VGGT need different curves, the 16 numbers are a (lens x backbone) constant, not a lens constant."
+    - "Scale the cross-room evidence: 120 frames over two near-static sequences now carries two separate claims."

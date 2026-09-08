@@ -245,6 +245,14 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       <strong>跨房间</strong>那条不换投影的臂<strong>迁移为零</strong>（+0.8% / −0.1%），<strong>矫正投影是全部</strong>。
       所以真正可迁移的是 H14 原来那个机制。（§03b）
     </p></div>
+    <div class="row"><span class="who">B″ · 跨房间的全部内容＝16 个数（新）</span><p>
+      把学生换成一个<strong>只能表达径向关系</strong>的东西（每个 θ 档一条直线，共 <strong>16 个参数</strong>），
+      只在训练序列上拟合、原样搬走：跨房间 <strong>−26.0% / −8.9%</strong>，
+      <strong>追平甚至反超那个 122,900 参数的 LoRA</strong>（−20.0% / −9.0%），而房间内只有它的三分之一。
+      去掉 θ 依赖的 2 参数对照在 4 个序列里 3 个比不做还差。
+      <strong>可迁移的是镜头的径向重标定；LoRA 多出来的容量拟合的是房间。</strong>
+      而且它和 §06 用视差锚点拟合的<strong>同一个函数形式撞上了同一个量级</strong>（−16.6% 对 −15.4%）。（§03c）
+    </p></div>
     <div class="row"><span class="who">C · H14.2 环形视角 ✗</span><p>
       拆掉"虚拟视角必须是方的"这条隐藏约束，教师对边缘环带的覆盖从 <strong>70% 提到 99.3%</strong> ——
       几何上做到了，但教师在边缘反而变差（<strong>+9.5%</strong>），学生跟着更差。<strong>学生跟的是教师的"准"，不是"广"。</strong>（§04）
@@ -1516,6 +1524,102 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       边界：前两条臂 3 个种子，其余单种子；学生全程是 DA3-Small；教师<strong>单帧</strong>运行，VGGT-Ω 的多帧机制没有参与；
       <code>omega_rt</code> 把鱼眼帧 504 → 512 → 504 缩放了一次（patch-16 的教师吃不了 504 px，而<strong>补边不是选项</strong> —— §02e），
       1.6% 的缩放，参照 <code>resample0</code> 测得的"一次双线性重采样是免费的"。
+    </p>
+  </div>
+</section>
+
+
+<!-- ============================================================ 03c H18.2 -->
+<section>
+  <div class="section-head"><span class="eyebrow">03c</span><h2>实验 B″ · 跨得过房间的，只有 16 个数</h2>
+    <span class="chip done"><span class="dot"></span>预注册判据大幅通过</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      §03b 留下一个没解释的现象：<strong>不换投影的那条臂在房间内扛起大部分增益，跨房间却迁移为零</strong>。
+      两种目标都是图像的确定函数，所以"确定性"不是区别所在。
+      记下的假设是：<strong>矫正那条路教的是一个系统性的径向关系</strong> —— 一条只依赖入射角的修正曲线。
+      那是<strong>镜头</strong>的性质，不是房间的，所以它带得走；而鱼眼那条路教的是"在这些图上像 VGGT-Ω 一样"，
+      维度高到学生可以逐房间去拟合。
+    </p>
+    <p>
+      检验办法：<strong>把学生换成一个只能表达径向关系的东西</strong>，看跨房间的增益还剩多少。
+      在四个训练序列上（<strong>仅此</strong>）拟合，然后<strong>原样</strong>应用到留出序列和 LiteOffice。
+    </p>
+  </div>
+  <div class="stack">
+    <div class="row"><span class="who">radial · 16 参数</span><p>每个 θ 档一条 log-log 直线（8 档 × 2），监督信号就是 <code>omega110</code> 学生看到的同一批教师目标，同样的尺度对齐。</p></div>
+    <div class="row"><span class="who">global · 2 参数</span><p><strong>决定读法的对照。</strong>同样的函数形式，<strong>去掉 θ 依赖</strong>。如果它和 radial 打平，那这件事就只是一次整体缩放，不是径向结构。</p></div>
+    <div class="row"><span class="who">omega110 · 122,900 参数</span><p>§03b 那个 LoRA 学生，作参照。</p></div>
+  </div>
+
+  <div class="scroll" style="margin-top:18px">
+    <table>
+      <caption>近边缘 AbsRel。前两行是同一间公寓，后两行是 LiteOffice（另一个房间、另一台设备）。<strong>没有任何一处用到深度标签。</strong></caption>
+      <thead><tr><th>序列</th><th>冻结</th><th>global（2 参数）</th><th>radial（16 参数）</th><th>omega110 LoRA（122,900）</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">seq136（同房间留出）</td><td class="num">0.4269</td><td class="num bad">+8.7%</td><td class="num">−16.6%</td><td class="num good">−51.5%</td></tr>
+        <tr><td class="mono">dec_seq132（重新布置）</td><td class="num">0.2320</td><td class="num bad">+6.5%</td><td class="num">−6.5%</td><td class="num good">−22.4%</td></tr>
+        <tr class="flip"><td class="mono"><b>DinoToy（跨房间）</b></td><td class="num">0.1920</td><td class="num bad">+2.7%</td><td class="num good"><b>−26.0%</b></td><td class="num">−20.0%</td></tr>
+        <tr class="flip"><td class="mono"><b>BlackCeramicBowl（跨房间）</b></td><td class="num">0.4971</td><td class="num">−1.6%</td><td class="num good"><b>−8.9%</b></td><td class="num">−9.0%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:18px">
+    <h3>逐条判据</h3>
+  </div>
+  <div class="crit">
+    <div class="row"><span class="who">主判据 ✓ 大幅通过</span><p>
+      预注册写的是"radial 至少复现 <code>omega110</code> 跨房间增益的一半，且在两个 LiteOffice 序列上都赢 global"。
+      实际复现了 <strong>130% 和 99%</strong>，并且在<strong>四个序列上全部</strong>赢 global。
+    </p></div>
+    <div class="row"><span class="who">证伪条件 ✓ 未触发</span><p>
+      <code>global</code>（同样的形式、去掉 θ 依赖）在四个序列里有<strong>三个比什么都不做还差</strong>（+8.7%、+6.5%、+2.7%）。
+      所以可迁移的是<strong>径向结构</strong>，不是一次整体缩放。
+    </p></div>
+  </div>
+
+  <div class="col">
+    <h3 style="margin-top:22px">再想一层</h3>
+    <div class="note">
+      <span class="eyebrow">这一节的结论</span>
+      <p>
+        <strong>跨得过房间的，只有 16 个数。剩下那 122,884 个参数买到的是一个很大的、完全不迁移的房间内增益。</strong>
+      </p>
+      <p>
+        房间内 LoRA 比径向曲线好 <strong>3.1 倍 / 3.4 倍</strong>；跨房间径向曲线<strong>追平甚至反超</strong>
+        （−26.0% 对 −20.0%、−8.9% 对 −9.0%）。§03b 那个跨房间反转指向的机制，现在是<strong>测出来的</strong>而不是猜的：
+        矫正教师里可迁移的部分，是对冻结模型深度做一次<strong>逐入射角的重标定</strong> —— 那是<strong>镜头</strong>的性质，
+        所以它能带到另一个房间、另一台设备；LoRA 多出来的容量拟合的是<strong>房间</strong>。
+      </p>
+    </div>
+    <p>
+      拟合出来的曲线是 <span class="mono">log(目标) = a(θ)·log(预测) + b(θ)</span>，
+      <span class="mono">a</span> 从中心到边缘走 1.337 → 1.468 → 1.341，<span class="mono">b</span> 单调地从 +0.012 降到 −0.252。
+      一个指数约 1.4 的幂律，加上一个随边缘增大的偏移。
+    </p>
+    <div class="note warn">
+      <span class="eyebrow">和 §06（H9）撞在了同一个东西上 —— 两条毫无关系的无标签路径</span>
+      <p>
+        H9 用<strong>视差锚点</strong>拟合<em>同样的函数形式</em>，在 seq136 上得到 0.4269 → 0.3613（−15.4%）。
+        本节用<strong>矫正教师</strong>拟合，得到 0.4269 → <strong>0.3560（−16.6%）</strong>。
+      </p>
+      <p>
+        <strong>两个毫无共同之处的监督来源</strong> —— 相机运动三角化出的米制锚点，和一个更强模型在换投影下的预测 ——
+        <strong>收敛到同一个 16 参数的对象、同一个量级</strong>。而且 H9 还需要逐序列的测试时自适应，
+        这条曲线只拟合一次，原样搬到另一个房间就用。
+      </p>
+    </div>
+    <p>
+      <strong>实用上的意思</strong>：可以<strong>发布 16 个数的径向标定</strong>而不是一个 LoRA，而且它<strong>迁移得更好</strong>。
+      LoRA 只在"部署房间就是训练房间"时才是更好的选择。<strong>两者都不需要深度标签。</strong>
+    </p>
+    <p style="color:var(--ink-faint)">
+      边界：一次拟合、无种子（这是 240 帧上的最小二乘，相关的不确定性是抽帧而不是种子）。
+      跨房间仍然只有 120 帧、两个近乎静止的序列，而它现在同时扛着两条主张。
+      radial 在 DinoToy 上反超 omega110，提示 LoRA 的逐房间拟合会<em>损害</em>迁移 —— 说得通，但没验证。
     </p>
   </div>
 </section>

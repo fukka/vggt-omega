@@ -832,3 +832,35 @@ relation, which is low-dimensional enough that a 122.9k-parameter LoRA can only
 represent it globally; the fisheye path teaches "be like VGGT-Omega on these
 images", which is high-dimensional enough to be fitted per room. The next
 experiment in the state file tests exactly that.
+
+## 2026-09-08 — H18.2: the mechanism, measured
+
+Followed the state's own next step: test the recorded hypothesis that the
+rectified target transfers because it is a low-dimensional radial relation.
+Protocol locked first (2a0751e), including the falsification conditions.
+
+Replace the student with a 16-parameter per-theta-bin log-log curve, fit on the
+four training sequences only, apply unchanged. near_rim vs frozen: seq136
+-16.6%, dec_seq132 -6.5%, DinoToy -26.0%, BlackCeramicBowl -8.9%, against the
+LoRA's -51.5 / -22.4 / -20.0 / -9.0. **In-room the LoRA is 3x better; across
+rooms 16 numbers match or beat 122,900.** The `global` control (theta dependence
+removed) is worse than doing nothing on 3 of 4 sequences, so it is radial
+structure and not a rescale — the falsification condition did not fire.
+
+This is the mechanism the cross-room inversion was pointing at, now measured.
+The rectified teacher's transferable content is a per-theta recalibration of the
+frozen model's depth: a property of the lens, not the room.
+
+The result that pleases me most is unplanned. H9 fit the **same functional form**
+from parallax anchors and got -15.4% on seq136 where this gets -16.6%. Two
+label-free supervision sources with nothing in common — triangulated metric
+anchors from camera motion, and a stronger model's predictions under a change of
+projection — land on the same 16-parameter object at the same magnitude. H9
+needed per-sequence test-time adaptation; this curve is fit once and moved to
+another room unchanged. Two independent lines of this project turn out to have
+been estimating the same thing.
+
+Next steps recorded: fit the curve on LiteOffice and compare (is it a lens
+constant?), fit it per backbone (or is it a lens x backbone constant?), and
+scale the cross-room evidence, which is now carrying two separate claims on 120
+frames.
