@@ -949,3 +949,47 @@ null is what made that visible, and it is now printed by default.
   can be helped by anything gravity-related.
 - The bottleneck for this line is **a head-mounted dataset with a wider pose
   distribution and dense depth**, not a method. We do not have one.
+
+## H17.2 — the horizontal prior is a PRETRAINING-DATA property, 2026-09-08
+
+CONFIRMATORY, against the bar locked in `h17-roll-prior/protocol.md`.
+`code/roll_backbones.py`, seq136, 20 frames, clean arm only (89 deg co-axial
+view, virtual camera rolled, fill 1.000 at every angle), every backbone scored
+on the same theta <= 44 deg disc, view size rounded to each backbone's own patch
+size (VGGT-Omega is patch 16 -> 624; the rest patch 14 -> 630).
+
+Rise in all-image AbsRel relative to **each backbone's own 0 deg**:
+
+| backbone | pretraining | 0° AbsRel | ±10° | ±20° | **±30°** | ±40° |
+|---|---|---|---|---|---|---|
+| da3:small | single image | 0.1545 | +2% | +13% | **+46%** | +131% |
+| da3:large | single image | 0.0690 | −4% | +10% | **+52%** | +114% |
+| vggt | multi-view geometry | 0.0828 | +2% | +7% | **+11%** | +23% |
+| vggt_omega | multi-view geometry | 0.0507 | +1% | +3% | **+11%** | **+11%** |
+
+**Locked prediction: both VGGT variants rise less than DA3-Small at 30 deg, and
+under +30%. Result: +11% and +11%. PASSES.** Neither falsification condition
+fired (no VGGT variant rose more than DA3-Small; the four are not within 5 pp).
+
+Three readings:
+
+1. **It is the pretraining task, not the depth task.** Backbones trained on
+   multi-view geometry — which see cameras at arbitrary orientations by
+   construction — are 4-5x less roll-sensitive at 30 deg and 5-10x at 40 deg
+   than single-image depth models. This extends arXiv 2608.00678, whose four
+   models (Marigold, GenPercept, DAv2, DistillAD) are all single-image; they
+   attribute the prior to the orientation long tail in photo collections but
+   never test a backbone whose pretraining lacks that tail.
+2. **Capacity does not fix it.** DA3-Large is 2.2x more accurate than DA3-Small
+   at 0 deg and *more* roll-sensitive at 30 deg (+52% vs +46%). Scaling the
+   single-image recipe does not buy roll robustness.
+3. **The cheapest fix for roll robustness is the backbone, not the method.**
+   Cheaper than augmentation, cheaper than IMU conditioning, and it comes with
+   better absolute accuracy. It also deflates H17.4 for the VGGT family: at
+   +11% at 30 deg with ADT's p99 at 21.8 deg, there is essentially nothing left
+   for a gravity input to recover.
+
+Caveats: one sequence, 20 frames, one seed; rim/ctr under this protocol is not
+comparable to the section-01 table (different mask and projection). VGGT and
+VGGT-Omega are run single-frame here, so their multi-frame machinery is idle —
+the robustness is coming from the pretrained representation, not from fusion.
