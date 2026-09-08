@@ -62,8 +62,8 @@ STRINGS = {
    "traj_gt": "真值", "along": "沿路径 (m)", "across": "横向 (m)",
    "traj_win": "窗口 {i:02d} · {seq} · 起始 {fr}",
    "traj_title": "8 帧窗口相机轨迹 · 预测经 Sim(3) 对齐到真值后画在该窗口的主轴坐标系里(米)· ★ = 第一帧 · 注意横纵尺度不同",
-   "fov_title": "相机头推断的水平 FoV · {lab}", "fov_y": "FoV_h (deg)",
-   "fov_gt24": "②④ 真值 {gt:.1f}°", "fov_gt5": "⑤ 真值 {gt:.1f}°",
+   "fov_title": "相机头推断的视场角 · {lab}", "fov_y": "视场角 (deg)",
+   "fov_true": "真值", "fov_pred": "模型读数", "fov_err": "差 {e:.1f}°",
    "eff_x": ["鱼眼\n③−①", "透视\n④−②", "交互项\n(④−②)−(③−①)"],
    "eff_titles": ["Δ AbsRel · 单帧(真值 − 黑;负 = 真值更好)", "Δ AbsRel · 8 帧",
                   "Δ AUC@30 · 8 帧(正 = 真值更好)", "Δ ATE (m) · 8 帧(负 = 真值更好)"],
@@ -89,8 +89,8 @@ STRINGS = {
    "traj_gt": "ground truth", "along": "along path (m)", "across": "across path (m)",
    "traj_win": "Window {i:02d} · {seq} · from {fr}",
    "traj_title": "Camera path of each 8-frame window, predictions Sim(3)-aligned to truth and drawn in that window's own axes (metres). Star = first frame. Note the axes are not equally scaled.",
-   "fov_title": "Field of view the camera head infers · {lab}", "fov_y": "horizontal FoV (deg)",
-   "fov_gt24": "true FoV of 2 and 4: {gt:.1f}°", "fov_gt5": "true FoV of 5: {gt:.1f}°",
+   "fov_title": "Field of view the model infers · {lab}", "fov_y": "field of view (deg)",
+   "fov_true": "true", "fov_pred": "model", "fov_err": "off by {e:.1f}°",
    "eff_x": ["fisheye\n3 − 1", "rectified\n4 − 2", "interaction\n(4−2) − (3−1)"],
    "eff_titles": ["AbsRel change, 1 frame\n(true content minus black; lower is better)",
                   "AbsRel change, 8 frames",
@@ -393,23 +393,44 @@ def fig_trajectories(res8, out_png, max_windows=12):
 
 
 def fig_fov(res1, res8, out_png):
-    fig, axes = plt.subplots(1, 2, figsize=(14.5, 4.4), sharey=True)
+    """Each pinhole input against ITS OWN true field of view.
+
+    Only the three pinhole arms appear. A fisheye frame has no pinhole field of
+    view to be right about, so putting it on the same axis invites the reader to
+    compare it against a truth line that is not its own. Inputs 2 and 4 happen
+    to share a truth (124.7 deg); input 5's is different (106.8 deg), and that
+    is the whole point -- so each input carries its own truth marker beside it
+    rather than the figure carrying one line for everybody.
+
+    The model emits two numbers (VGGT calls them fov_h and fov_w); the frames
+    are square with fx == fy, so both truths coincide and the two predictions
+    agree within a degree. The vertical one is plotted.
+    """
+    arms = [a for a in ("persp_masked", "persp_full", "persp_crop") if a in res1]
+    fig, axes = plt.subplots(1, 2, figsize=(12.5, 4.6), sharey=True)
     rng = np.random.default_rng(0)
     for ax, (res, lab) in zip(axes, [(res1, L["single"]), (res8, L["multi"])]):
-        for i, st in enumerate(CELLS):
+        for k_, st in enumerate(arms):
+            i = k_ * 1.5
             r = res[st]
             f = np.array([v[0] for v in r["_per_frame_fov"].values()])
-            ax.scatter(i + rng.uniform(-.18, .18, len(f)), f, s=12, color=COLORS[st], alpha=.6)
-            ax.plot([i - .3, i + .3], [f.mean()] * 2, color="k", lw=2)
-            ax.text(i, f.max() + 1.2, f"{f.mean():.1f}°±{f.std():.1f}", ha="center", fontsize=9)
-        gt = res["persp_full"]["gt_fov_h_deg"]
-        ax.axhline(gt, color="#a86a15", ls="--", lw=1.2)
-        ax.text(len(CELLS) - .55, gt + .6, L["fov_gt24"].format(gt=gt), ha="right", fontsize=9, color="#a86a15")
-        gtc = res["persp_crop"]["gt_fov_h_deg"]
-        ax.axhline(gtc, color=COLORS["persp_crop"], ls=":", lw=1.2)
-        ax.text(-0.45, gtc + .6, L["fov_gt5"].format(gt=gtc), ha="left", fontsize=9, color=COLORS["persp_crop"])
-        ax.set_xticks(range(len(CELLS))); ax.set_xticklabels([f"{CELLS[s][0]} {CELLS[s][1]}" for s in CELLS], fontsize=8.5)
-        ax.set_title(L["fov_title"].format(lab=lab), fontsize=11, loc="left"); ax.grid(axis="y", alpha=.3)
+            gt = r["gt_fov_h_deg"]
+            ax.scatter(i + 0.12 + rng.uniform(-.1, .1, len(f)), f, s=13, color=COLORS[st], alpha=.55)
+            ax.plot([i + .02, i + .22], [f.mean()] * 2, color=COLORS[st], lw=2.6, zorder=5)
+            ax.text(i + .26, f.mean(), f'{L["fov_pred"]} {f.mean():.1f}°', fontsize=9,
+                    color=COLORS[st], va="center", fontweight="bold")
+            ax.plot([i - .30, i - .04], [gt] * 2, color="#1d1a24", lw=3, zorder=6)
+            ax.text(i - .33, gt, f'{L["fov_true"]} {gt:.1f}°', fontsize=9, color="#1d1a24",
+                    ha="right", va="center")
+            ax.annotate("", xy=(i + .12, gt), xytext=(i + .12, f.mean()),
+                        arrowprops=dict(arrowstyle="<->", color=COLORS[st], lw=1.1, alpha=.75))
+            ax.text(i + .17, (gt + f.mean()) / 2, L["fov_err"].format(e=abs(gt - f.mean())),
+                    fontsize=8.5, color=COLORS[st], va="center")
+        ax.set_xticks([k_ * 1.5 for k_ in range(len(arms))])
+        ax.set_xticklabels([f"{LABEL[s_][0]} {LABEL[s_][1]}" for s_ in arms], fontsize=9.5)
+        ax.set_xlim(-.9, (len(arms) - 1) * 1.5 + .95)
+        ax.set_title(L["fov_title"].format(lab=lab), fontsize=11, loc="left")
+        ax.grid(axis="y", alpha=.3)
     axes[0].set_ylabel(L["fov_y"])
     fig.tight_layout()
     fig.savefig(out_png, dpi=80, bbox_inches="tight", facecolor="white")

@@ -260,6 +260,34 @@ def main():
            else 'a control, not one of the four cells')
         + '</span></p></div>' for k in ALL)
 
+    def cmp_row(label, va, vb, cb, vfmt="{:.4f}", dfmt="{:+.4f}", neg="", pos=""):
+        """label | value of A | value of B | B minus A with its interval | verdict.
+
+        Showing both raw values next to the difference means a reader never has
+        to decode a sign convention from a legend.
+        """
+        verdict = ('<span class="tag t-no">no real difference</span>' if not cb["excludes_zero"]
+                   else f'<span class="tag t-yes">{neg if cb["mean"] < 0 else pos}</span>')
+
+        def d(x):
+            # A value that rounds to zero must not print as "-0.0".
+            t = dfmt.format(x)
+            return dfmt.format(0.0).replace("+", "") if float(t.split()[0].rstrip("°%")) == 0 else t
+        return (f'<tr><td>{label}</td><td class="n">{vfmt.format(va)}</td><td class="n">{vfmt.format(vb)}</td>'
+                f'<td class="n">{d(cb["mean"])} '
+                f'<span class="ci">[{d(cb["ci_lo"])}, {d(cb["ci_hi"])}]</span></td>'
+                f'<td>{verdict}</td></tr>')
+
+    def cm100(cb):
+        """Metres to centimetres, interval and all."""
+        return {k: (v * 100 if k in ("mean", "ci_lo", "ci_hi") else v) for k, v in cb.items()}
+
+    def cmp_table(head_a, head_b, rows, what="Change"):
+        return ('<div class="scroll"><table><thead><tr><th></th>'
+                f'<th class="n">{head_a}</th><th class="n">{head_b}</th>'
+                f'<th class="n">{what} [95% interval]</th><th>Verdict</th></tr></thead>'
+                f'<tbody>{"".join(rows)}</tbody></table></div>')
+
     def cells_table(Ca, Cb, keys, hl=None):
         rows = "".join(
             f'<tr{" class=hl" if k == hl else ""}><td>{chip(k)}</td>'
@@ -391,46 +419,60 @@ one frame's depth into the next lands within 0.12% median error, against 4–7% 
 <section class="part" id="results">
 <span class="pnum">Part 4 — Results</span>
 <h2>Result 1 — filling helps depth a little, and both projections equally</h2>
-{cells_table(C1, C8, ("fisheye_masked", "fisheye_full", "persp_masked", "persp_full"))}
-<p class="note">Rows are comparable within a projection, not across it — the two pixel grids sample the world
-differently. That is why the real test below is a difference of differences.</p>
+{cmp_table("Black corners", "Filled with truth", [
+  cmp_row("Fisheye, 1 frame", C1["fisheye_masked"]["AbsRel"], C1["fisheye_full"]["AbsRel"], E1["AbsRel"]["fisheye"], neg="filling is better", pos="black is better"),
+  cmp_row("Rectified, 1 frame", C1["persp_masked"]["AbsRel"], C1["persp_full"]["AbsRel"], E1["AbsRel"]["persp"], neg="filling is better", pos="black is better"),
+  cmp_row("Fisheye, 8 frames", C8["fisheye_masked"]["AbsRel"], C8["fisheye_full"]["AbsRel"], E8["AbsRel"]["fisheye"], neg="filling is better", pos="black is better"),
+  cmp_row("Rectified, 8 frames", C8["persp_masked"]["AbsRel"], C8["persp_full"]["AbsRel"], E8["AbsRel"]["persp"], neg="filling is better", pos="black is better"),
+], what="AbsRel change")}
+<p class="note">AbsRel: average relative depth error. Lower is better. Compare rows within a projection, not
+across it — the fisheye and rectified grids sample the world differently.</p>
+<p><strong>Filling helps, in all four rows.</strong> Now the actual test: does it help the rectified frame
+<em>more</em> than the fisheye one?</p>
 <div class="scroll"><table>
-<thead><tr><th>Change from filling (lower AbsRel = better)</th><th class="n">Fisheye: 3 − 1</th><th class="n">Rectified: 4 − 2</th><th class="n">Difference between them</th></tr></thead>
+<thead><tr><th>Is the rectified gain bigger than the fisheye gain?</th><th class="n">Fisheye gain</th><th class="n">Rectified gain</th><th class="n">Gap between them [95% interval]</th><th>Verdict</th></tr></thead>
 <tbody>
-<tr><td>1 frame</td><td class="n">{num(E1['AbsRel']['fisheye'])}</td><td class="n">{num(E1['AbsRel']['persp'])}</td><td class="n">{num(E1['AbsRel']['interaction'])}</td></tr>
-<tr><td>8 frames</td><td class="n">{num(E8['AbsRel']['fisheye'])}</td><td class="n">{num(E8['AbsRel']['persp'])}</td><td class="n">{num(E8['AbsRel']['interaction'])}</td></tr>
+<tr><td>1 frame</td><td class="n">{E1['AbsRel']['fisheye']['mean']:+.4f}</td><td class="n">{E1['AbsRel']['persp']['mean']:+.4f}</td><td class="n">{E1['AbsRel']['interaction']['mean']:+.4f} <span class="ci">[{E1['AbsRel']['interaction']['ci_lo']:+.4f}, {E1['AbsRel']['interaction']['ci_hi']:+.4f}]</span></td><td><span class="tag t-no">no</span></td></tr>
+<tr><td>8 frames</td><td class="n">{E8['AbsRel']['fisheye']['mean']:+.4f}</td><td class="n">{E8['AbsRel']['persp']['mean']:+.4f}</td><td class="n">{E8['AbsRel']['interaction']['mean']:+.4f} <span class="ci">[{E8['AbsRel']['interaction']['ci_lo']:+.4f}, {E8['AbsRel']['interaction']['ci_hi']:+.4f}]</span></td><td><span class="tag t-no">no</span></td></tr>
 </tbody></table></div>
-{fig("effects", "Each dot is one window. Square = mean, whisker = 95% interval. The right-hand group in each panel is the difference of differences — it would have to be clearly negative for the original claim to hold.")}
-<p><strong>Filling helps. The prediction fails.</strong> The two columns are the same size, and the difference
-between them straddles zero — and flips sign between 1 frame and 8. Six main effects across three metrics are
-real; six differences-of-differences are inconclusive.</p>
+{fig("effects", "Each dot is one window. Square = mean, whisker = 95% interval. The right-hand group in each panel is the gap between the two gains — it would have to sit clearly below zero for the original claim to hold.")}
+<p><strong>The prediction fails.</strong> The two gains are the same size, the gap includes zero in both modes,
+and it even flips sign between them. Across three metrics and two modes: six gains are real, six gaps are not.</p>
 <p>The gain sits in a narrow band just inside the edge of the black. Within 16 pixels of that edge, error drops
 {B['fisheye']['band_gain_pct']:.0f}% (fisheye) and {B['persp']['band_gain_pct']:.0f}% (rectified). Further in, only
 {B['fisheye']['int_gain_pct']:.0f}% and {B['persp']['int_gain_pct']:.0f}%. A boundary effect, the same size in
 both projections.</p>
 
 <h2>Result 2 — filling does not fix the camera</h2>
-<div class="scroll"><table>
-<thead><tr><th>Camera pose, 8-frame windows</th><th class="n">AUC@30 ↑</th><th class="n">Rotation err ↓</th><th class="n">Translation dir err ↓</th><th class="n">Trajectory err ↓</th></tr></thead>
-<tbody>
-{"".join(f'<tr{" class=hl" if k == "persp_crop" else ""}><td>{chip(k)}</td><td class="n">{P8[k]["auc30"]:.3f}</td>'
-         f'<td class="n">{P8[k]["rot_err_deg"]:.2f}°</td><td class="n">{P8[k]["trans_err_deg"]:.2f}°</td>'
-         f'<td class="n">{P8[k]["ate_m"]*100:.1f} cm</td></tr>' for k in ALL if k in P8)}
-</tbody></table></div>
-<div class="scroll"><table>
-<thead><tr><th>Change from filling</th><th class="n">Fisheye: 3 − 1</th><th class="n">Rectified: 4 − 2</th></tr></thead>
-<tbody>
-<tr><td>AUC@30 (negative = filling hurt)</td><td class="n">{num(E8['auc30']['fisheye'], '{:+.3f}')}</td><td class="n">{num(E8['auc30']['persp'], '{:+.3f}')}</td></tr>
-<tr><td>Rotation error (positive = filling hurt)</td><td class="n">{num(E8['rot_err_deg']['fisheye'], '{:+.2f}°')}</td><td class="n">{num(E8['rot_err_deg']['persp'], '{:+.2f}°')}</td></tr>
-<tr><td>Trajectory error (positive = filling hurt)</td><td class="n">{num(E8['ate_m']['fisheye'], '{:+.4f} m')}</td><td class="n">{num(E8['ate_m']['persp'], '{:+.4f} m')}</td></tr>
-</tbody></table></div>
-<p>Rectified: no change you can distinguish from zero. Fisheye: <strong>worse on all three</strong>.</p>
+{cmp_table("Black corners", "Filled with truth", [
+  cmp_row("Fisheye · AUC@30 (higher better)", P8["fisheye_masked"]["auc30"], P8["fisheye_full"]["auc30"], E8["auc30"]["fisheye"], "{:.3f}", "{:+.3f}", neg="black is better", pos="filling is better"),
+  cmp_row("Rectified · AUC@30 (higher better)", P8["persp_masked"]["auc30"], P8["persp_full"]["auc30"], E8["auc30"]["persp"], "{:.3f}", "{:+.3f}", neg="black is better", pos="filling is better"),
+  cmp_row("Fisheye · rotation error (lower better)", P8["fisheye_masked"]["rot_err_deg"], P8["fisheye_full"]["rot_err_deg"], E8["rot_err_deg"]["fisheye"], "{:.2f}°", "{:+.2f}°", neg="filling is better", pos="black is better"),
+  cmp_row("Rectified · rotation error (lower better)", P8["persp_masked"]["rot_err_deg"], P8["persp_full"]["rot_err_deg"], E8["rot_err_deg"]["persp"], "{:.2f}°", "{:+.2f}°", neg="filling is better", pos="black is better"),
+  cmp_row("Fisheye · trajectory error (lower better)", P8["fisheye_masked"]["ate_m"]*100, P8["fisheye_full"]["ate_m"]*100, cm100(E8["ate_m"]["fisheye"]), "{:.1f} cm", "{:+.1f} cm", neg="filling is better", pos="black is better"),
+  cmp_row("Rectified · trajectory error (lower better)", P8["persp_masked"]["ate_m"]*100, P8["persp_full"]["ate_m"]*100, cm100(E8["ate_m"]["persp"]), "{:.1f} cm", "{:+.1f} cm", neg="filling is better", pos="black is better"),
+], what="Change")}
+<p>All from 8-frame windows. <strong>Rectified: nothing changes. Fisheye: filling makes the camera worse on all
+three.</strong></p>
 <p class="note">A reading, not a measurement: the filled fisheye corners are real scene content placed beyond the
-angle the lens can physically image — a lens model no real lens has. The depth head reads extra texture and
-gains; the camera head reads an impossible lens and loses.</p>
+angle the lens can physically image — a lens no real camera has. The depth head sees extra texture and gains;
+the camera head sees an impossible lens and loses.</p>
 
 <h3>The field of view explains it</h3>
-{fig("fov", "Each dot is one frame's inferred horizontal field of view. Inputs 2 and 4 both sit near 108° against a true 124.7° — black corners or real ones. Input 5, truly 106.8°, is read almost right.")}
+<p>Each input has its own true field of view. Inputs 2 and 4 share one, because filling the wedges does not change
+how wide the frame is. Input 5 is a different, narrower camera — so it must be compared against its own number,
+not theirs. The fisheye inputs are not pinhole images at all: there is no pinhole field of view for them to be
+right about, so their reading is listed but not graded.</p>
+<div class="scroll"><table>
+<thead><tr><th>Input</th><th class="n">True field of view</th><th class="n">Model says (1 frame)</th><th class="n">Off by</th></tr></thead>
+<tbody>
+{"".join(f'<tr{" class=hl" if k == "persp_crop" else ""}><td>{chip(k)}</td>'
+         + (f'<td class="n">{F1[k]["gt"]:.1f}°</td><td class="n">{F1[k]["mean"]:.1f}°</td><td class="n">{F1[k]["abs_err"]:.1f}°</td>'
+            if F1[k].get("abs_err") else
+            f'<td class="n">none — spans 112° across its axes</td><td class="n">{F1[k]["mean"]:.1f}°</td><td class="n">—</td>')
+         + '</tr>' for k in INPUTS)}
+</tbody></table></div>
+{fig("fov", "Only the three pinhole inputs, each next to its own true field of view. Inputs 2 and 4 both read about 108° against a true 124.7° — black corners or real ones makes no difference. Input 5, truly 106.8°, is read almost right.")}
 <div class="key">
 <h4>The finding that settles the original idea</h4>
 <p>A clean, black-free {gt_wide:.0f}° photo is still read as {F1['persp_full']['mean']:.0f}° — off by
@@ -438,23 +480,31 @@ gains; the camera head reads an impossible lens and loses.</p>
 <p>The model is not confused by the black. It does not recognise the <em>width</em>. Filling changes the corners;
 it does not change the width.</p>
 </div>
+<p class="note">The frames are square with equal focal lengths, so horizontal and vertical field of view are the
+same number. The model emits both; they agree within 0.8°. The vertical one is plotted.</p>
 
 <h2>Result 3 — cheap filling already takes nearly all of it</h2>
-<p>How much of the gain does the dumbest filler get for free? We tried methods that invent nothing: smearing the
-nearest valid pixel outward, flat averages, two classical inpainters.</p>
+<p>How much of the gain does the dumbest filler get for free? "Smeared" repeats the nearest real pixel outward.
+It invents nothing. All four numbers in a row are AbsRel on the same pixels — the only thing that changes is what
+went into the corners.</p>
 <div class="scroll"><table>
-<thead><tr><th>Share of the real-content gain that smearing already captures</th><th class="n">1 frame</th><th class="n">8 frames</th></tr></thead>
+<thead><tr><th></th><th class="n">Black</th><th class="n">Smeared</th><th class="n">Real scene</th><th class="n">Left for a smarter filler</th></tr></thead>
 <tbody>
-<tr><td>Fisheye</td><td class="n">{rep1['fisheye']['pct']:.0f}%</td><td class="n">{rep8['fisheye']['pct']:.0f}%</td></tr>
-<tr><td>Rectified</td><td class="n">{rep1['persp']['pct']:.0f}%</td><td class="n">{rep8['persp']['pct']:.0f}%</td></tr>
-<tr><td><strong>AbsRel left on the table</strong></td><td class="n"><strong>{left[0]:.4f} / {left[1]:.4f}</strong></td><td class="n"><strong>{left[2]:.4f} / {left[3]:.4f}</strong></td></tr>
+{"".join(f'<tr><td>{proj_lab}, {mode_lab}</td><td class="n">{lad[proj]["rows"]["black"]["AbsRel"]:.4f}</td>'
+         f'<td class="n">{lad[proj]["rows"]["replicate"]["AbsRel"]:.4f}</td>'
+         f'<td class="n">{lad[proj]["rows"]["ORACLE"]["AbsRel"]:.4f}</td>'
+         f'<td class="n"><strong>{lad[proj]["rows"]["replicate"]["AbsRel"] - lad[proj]["rows"]["ORACLE"]["AbsRel"]:+.4f}</strong></td></tr>'
+         for lad, mode_lab in ((LAD1, "1 frame"), (LAD8, "8 frames"))
+         for proj, proj_lab in (("fisheye", "Fisheye"), ("persp", "Rectified")))}
 </tbody></table></div>
-<p>In one case smearing <em>beats</em> the truth: real corner detail is complicated, a smear is simple, and the
-model prefers simple. <strong>The budget for a generative filler is 0 to {max(left):.3f} AbsRel, with no camera
-improvement.</strong></p>
-<p class="note">Incidental, but worth carrying: a flat average fill <em>helps</em> on a rectified frame
-({LAD1['persp']['rows']['mean']['pct']:+.0f}% of the gain) and is far <em>worse than black</em> on a raw fisheye
-({LAD1['fisheye']['rows']['mean']['pct']:+.0f}%). Fill advice does not transfer across projections.</p>
+<p>Read one row left to right. Black is worst. Smearing recovers most of the distance. The real scene adds only
+the last column, which is <strong>the entire budget for a generative filler: at most {max(left):.3f} AbsRel</strong>.
+In the bottom row that budget is negative — smearing already beats the truth, because real corner detail is
+complicated, a smear is simple, and the model prefers simple.</p>
+<p class="note">Incidental, but worth carrying: a flat grey fill <em>helps</em> on a rectified frame
+({LAD1['persp']['rows']['black']['AbsRel']:.4f} → {LAD1['persp']['rows']['mean']['AbsRel']:.4f}) and is much
+<em>worse than black</em> on a raw fisheye ({LAD1['fisheye']['rows']['black']['AbsRel']:.4f} →
+{LAD1['fisheye']['rows']['mean']['AbsRel']:.4f}). Fill advice does not transfer across projections.</p>
 
 <h2>Result 4 — cropping beats a wide filled view</h2>
 <p>Input 5 sidesteps the problem: zoom in until the black is outside the frame. It costs ~17% of the lens's solid
@@ -465,14 +515,23 @@ part they share (input 5 all of them, input 4 about half — a factor of
 input 5 band-limited to input 4's sampling rate. Same framing, input 4's detail.</p>
 {cells_table(CC1, CC8, ("persp_masked", "persp_full", "persp_crop", "persp_crop_lores"), hl="persp_crop")}
 <p class="note">All four rows scored on the same slice of the world — the part input 5 can see.</p>
-<div class="scroll"><table>
-<thead><tr><th>Input 5 minus …</th><th class="n">vs 4 (wide, filled)</th><th class="n">vs 2 (wide, black)</th><th class="n">vs 5b (same view, blurred)</th></tr></thead>
-<tbody>
-<tr><td>Depth, 1 frame (negative = 5 better)</td><td class="n">{num(XC1['AbsRel']['persp_full'])}</td><td class="n">{num(XC1['AbsRel']['persp_masked'])}</td><td class="n">{num(XC1['AbsRel']['persp_crop_lores'])}</td></tr>
-<tr><td>Depth, 8 frames</td><td class="n">{num(XC8['AbsRel']['persp_full'])}</td><td class="n">{num(XC8['AbsRel']['persp_masked'])}</td><td class="n">{num(XC8['AbsRel']['persp_crop_lores'])}</td></tr>
-<tr><td>AUC@30 (positive = 5 better)</td><td class="n">{num(XO8['auc30']['persp_full'], '{:+.3f}')}</td><td class="n">{num(XO8['auc30']['persp_masked'], '{:+.3f}')}</td><td class="n">{num(XO8['auc30']['persp_crop_lores'], '{:+.3f}')}</td></tr>
-<tr><td>Trajectory error (negative = 5 better)</td><td class="n">{num(XO8['ate_m']['persp_full'], '{:+.4f} m')}</td><td class="n">{num(XO8['ate_m']['persp_masked'], '{:+.4f} m')}</td><td class="n">{num(XO8['ate_m']['persp_crop_lores'], '{:+.4f} m')}</td></tr>
-</tbody></table></div>
+{cmp_table("Input 4 — wide, filled", "Input 5 — cropped", [
+  cmp_row("Depth, 1 frame (lower better)", CC1["persp_full"]["AbsRel"], CC1["persp_crop"]["AbsRel"], XC1["AbsRel"]["persp_full"], neg="5 is better", pos="4 is better"),
+  cmp_row("Depth, 8 frames (lower better)", CC8["persp_full"]["AbsRel"], CC8["persp_crop"]["AbsRel"], XC8["AbsRel"]["persp_full"], neg="5 is better", pos="4 is better"),
+  cmp_row("AUC@30 (higher better)", P8["persp_full"]["auc30"], P8["persp_crop"]["auc30"], XO8["auc30"]["persp_full"], "{:.3f}", "{:+.3f}", neg="4 is better", pos="5 is better"),
+  cmp_row("Trajectory error (lower better)", P8["persp_full"]["ate_m"]*100, P8["persp_crop"]["ate_m"]*100, cm100(XO8["ate_m"]["persp_full"]), "{:.1f} cm", "{:+.1f} cm", neg="5 is better", pos="4 is better"),
+], what="Change")}
+<h4>Is input 5 just sharper?</h4>
+{cmp_table("Input 5b — same view, blurred", "Input 5 — cropped", [
+  cmp_row("Depth, 1 frame (lower better)", CC1["persp_crop_lores"]["AbsRel"], CC1["persp_crop"]["AbsRel"], XC1["AbsRel"]["persp_crop_lores"], neg="5 is better", pos="5b is better"),
+  cmp_row("Depth, 8 frames (lower better)", CC8["persp_crop_lores"]["AbsRel"], CC8["persp_crop"]["AbsRel"], XC8["AbsRel"]["persp_crop_lores"], neg="5 is better", pos="5b is better"),
+  cmp_row("AUC@30 (higher better)", P8["persp_crop_lores"]["auc30"], P8["persp_crop"]["auc30"], XO8["auc30"]["persp_crop_lores"], "{:.3f}", "{:+.3f}", neg="5b is better", pos="5 is better"),
+  cmp_row("Trajectory error (lower better)", P8["persp_crop_lores"]["ate_m"]*100, P8["persp_crop"]["ate_m"]*100, cm100(XO8["ate_m"]["persp_crop_lores"]), "{:.1f} cm", "{:+.1f} cm", neg="5 is better", pos="5b is better"),
+], what="Change")}
+<p>No. Blurring input 5 to input 4's level of detail changes almost nothing. One row is real but tiny —
+{abs(XC8['AbsRel']['persp_crop_lores']['mean']):.4f}, about
+{abs(XC8['AbsRel']['persp_full']['mean'])/abs(XC8['AbsRel']['persp_crop_lores']['mean']):.0f}× smaller than the
+gap with input 4 — and it points the wrong way: the blurred version is very slightly better.</p>
 {fig("five_vs_four", "Input 5 against input 4, with the sharpness control 5b beside it. In every panel 5b sits on 5, not on 4 — the gap is field of view, not pixel density.")}
 <p><strong>Cropping wins by {abs(XC1['AbsRel']['persp_full']['mean']):.4f} AbsRel at 1 frame and
 {abs(XC8['AbsRel']['persp_full']['mean']):.4f} at 8 — a {abs(XC8['AbsRel']['persp_full']['mean'])/abs(XC1['AbsRel']['persp_full']['mean']):.1f}× wider gap.</strong>
@@ -481,9 +540,15 @@ The control 5b lands on 5 everywhere (pose {P8['persp_crop_lores']['auc30']:.3f}
 
 <h3>More content does not make multi-frame pay</h3>
 <div class="scroll"><table>
-<thead><tr><th>Gain from 8 frames instead of 1 (positive = it helps)</th><th class="n">Gain [95% interval]</th></tr></thead>
+<thead><tr><th>Input</th><th class="n">AbsRel · 1 frame</th><th class="n">AbsRel · 8 frames</th><th class="n">Gain [95% interval]</th><th>Verdict</th></tr></thead>
 <tbody>
-{"".join(f'<tr{" class=hl" if k == "persp_crop" else ""}><td>{chip(k)}</td><td class="n">{num(mfg(k))}</td></tr>' for k in ALL)}
+{"".join(f'<tr{" class=hl" if k == "persp_crop" else ""}><td>{chip(k)}</td>'
+         f'<td class="n">{C1[k]["AbsRel"]:.4f}</td><td class="n">{C8[k]["AbsRel"]:.4f}</td>'
+         f'<td class="n">{mfg(k)["mean"]:+.4f} <span class="ci">[{mfg(k)["ci_lo"]:+.4f}, {mfg(k)["ci_hi"]:+.4f}]</span></td>'
+         + ('<td><span class="tag t-yes">8 frames help</span></td>' if mfg(k)["excludes_zero"] and mfg(k)["mean"] > 0
+            else '<td><span class="tag t-yes">8 frames hurt</span></td>' if mfg(k)["excludes_zero"]
+            else '<td><span class="tag t-no">no real difference</span></td>')
+         + '</tr>' for k in ALL)}
 </tbody></table></div>
 <p>Input 4 carries strictly more of the scene than input 5. If extra context were what multi-frame needs, input 4
 should gain most. It gains <em>least</em>. Compared window by window, input 5 gains {num(MC['common']['persp_full'])}

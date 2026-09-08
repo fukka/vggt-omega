@@ -187,7 +187,7 @@ def main():
         f"<td>{desc}</td></tr>"
         for st, desc in [
             ("fisheye_masked", f"Aria KB4 原图。传感器方框切掉了成像圆盘(圆盘半径 f·θ<sub>d</sub>(θ<sub>max</sub>) ≈ 271 px,半宽 256 px),四角是镜头没拍到的方向。"),
-            ("persp_masked", f"整锥矫正到针孔平面(focal_out_norm = {meta['focal_out_norm']}, f = {meta['Knew_pinhole'][0]:.1f} px, 水平 FoV {gt_fov:.1f}°)。有效区是「被咬掉的圆角方形」,其余为黑。"),
+            ("persp_masked", f"整锥矫正到针孔平面(focal_out_norm = {meta['focal_out_norm']}, f = {meta['Knew_pinhole'][0]:.1f} px, 视场角 {gt_fov:.1f}°)。有效区是「被咬掉的圆角方形」,其余为黑。"),
             ("fisheye_full", f"同一张 ERP 全景以 KB4 的单调延拓(θ > θ<sub>max</sub> 处用割线斜率 {meta['kb4_slope']:.4f} 延伸,指纹 <code>{meta['kb4_fingerprint']}</code>)重采样到整个方框——四角是<strong>真实场景</strong>,但处在一个真实镜头不存在的投影下。"),
             ("persp_full", f"同一张 ERP 直接针孔重采样到整个方框。四角是真实场景内容,投影也是真实针孔——这是唯一在视觉上像一张普通照片的格子,即预注册假设的落点。"),
             ("persp_crop", f"同一张 ERP,针孔焦距改为内接值(f = {crop_meta['Knew_crop'][0]:.1f} px,{crop_meta['hfov_deg']:.1f}°)。没有需要补的地方;丢掉的是成像锥外圈约 17% 的立体角。残留的纯黑像素同样是场景里的暗部。"),
@@ -196,7 +196,7 @@ def main():
 <section id="inputs">
 <p class="eyebrow">实验设计</p>
 <h2>五个输入:投影方式 × 是否补全,加一个内接裁剪</h2>
-<p>两个正交因子,四个格子跑同一个 VGGT-Omega、同一批帧。<strong>交互项 (④−②) − (③−①) 才是对「回到透视域」这一假设的检验</strong>;四个绝对值各自都有文献给过答案,交互没人测过。第五个输入 ⑤ 不属于 2×2:它把矫正焦距收到内接方框(focal_out_norm = {crop_meta['focal_out_norm']},水平 FoV {crop_meta['hfov_deg']:.1f}°),既不补也不黑,代价是丢掉成像锥的外圈。它是「补全」必须打败的免费替代。</p>
+<p>两个正交因子,四个格子跑同一个 VGGT-Omega、同一批帧。<strong>交互项 (④−②) − (③−①) 才是对「回到透视域」这一假设的检验</strong>;四个绝对值各自都有文献给过答案,交互没人测过。第五个输入 ⑤ 不属于 2×2:它把矫正焦距收到内接方框(focal_out_norm = {crop_meta['focal_out_norm']},视场角 {crop_meta['hfov_deg']:.1f}°),既不补也不黑,代价是丢掉成像锥的外圈。它是「补全」必须打败的免费替代。</p>
 <div class="mtx">
   <div class="hd"></div><div class="hd">保留黑区(基线)</div><div class="hd">黑区用真实内容补全</div>
   <div class="rh">原始鱼眼</div>
@@ -414,7 +414,8 @@ def main():
 <section id="pose">
 <p class="eyebrow">结果 · 相机</p>
 <h2>相机头没有因为补全而变好;FoV 一直是错的</h2>
-<h3>推断的水平 FoV</h3>
+<h3>推断的视场角</h3>
+<p class="note">模型输出两个视场角(VGGT 命名为 fov_h / fov_w,前者对应 fy 即<strong>竖直</strong>方向)。本文的画幅是正方形且 fx = fy,所以两个真值相同、两个读数相差不到 0.8°;下面画的是 fov_h。</p>
 <div class="scroll"><table class="tight">
 <thead><tr><th>单帧</th><th class="n">FoV<sub>h</sub>(均值 ± 标准差, 96 帧)</th><th class="n">真值</th><th class="n">|误差|</th></tr></thead>
 <tbody>{fov_rows(F1)}</tbody></table></div>
