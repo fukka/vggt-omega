@@ -33,13 +33,14 @@ sys.path.append(str(_HERE.parents[1] / "h5-rim-finetune" / "code"))
 sys.path.insert(0, str(_HERE.parents[1] / "common"))
 sys.path.insert(0, str(_HERE.parents[1] / "h14-rect-distill" / "code"))
 sys.path.insert(0, str(_HERE.parents[1] / "h16-orientation" / "code"))
-sys.path.insert(0, str(_HERE.parents[1] / "h39-gravity-render" / "code"))
+sys.path.insert(0, str(_HERE.parents[1] / "h38-derotate" / "code"))
 
 import importlib.util as _ilu  # noqa: E402
 import upright as U  # noqa: E402
 import rect_teacher as RT  # noqa: E402
 import roll_controls as RC  # noqa: E402
-from gravity_render import rot  # noqa: E402  (same grid-rotation helper)
+from derotate import rot  # noqa: E402  (H38's grid-rotation helper, reused
+                          # so both experiments share one sign convention)
 
 
 def _load(name, path):
