@@ -1411,3 +1411,35 @@ less to remove. Given the last two mechanism guesses, that stays labelled.
 
 Both reports need the recommendation split: it generalises as a rule about which
 geometry to pick, not as a promise about the gain.
+
+## 2026-09-08 (very late) — H25: the number this line rests on is an outlier
+
+Thirteen Apartment sequences extracted during yesterday's outage had never been
+used for anything. Scoring the unchanged Apartment-fitted radial curve on them
+was cheap — no teacher inference, no refitting — and it should have been done
+long before now.
+
+The effect is real: all thirteen negative, sd/|mean| = 0.238, and the
+2-parameter control worse than nothing on 13 of 13. B1 and B3 pass.
+
+B2 does not. seq136's -16.6%, the in-room number quoted throughout both reports,
+is 5.74 standard deviations above the thirteen-sequence mean of -7.02%. The
+representative value is 2.4x smaller than the published one. And seq136 is not
+an unusually hard or easy recording — its frozen error is +0.51 sd, ordinary. It
+is specifically unusually responsive to this correction.
+
+The part I find most uncomfortable is that dec_seq132, which I have been calling
+"the harder test" in both reports for days, is the representative recording
+(+0.31 sd). The number that read as a pessimistic sanity check was the honest
+one; the number that read as the result was the outlier.
+
+Scope limit written into the analysis before anyone can quote past it: only the
+radial curve was re-measured. The LoRA's -51.5% was measured on the same
+sequence and has not been. So "the adapter is three times better in-room" is now
+an untested ratio, since both terms could scale together. Trying to launch that
+re-measurement now; the checkpoint search is still running.
+
+Third standing rule, and it subsumes the second: a single designated held-out
+sequence quoted everywhere is not a held-out set. Printing absolute numbers
+beside relative ones does not help when the absolute number comes from one lucky
+recording.

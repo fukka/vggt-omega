@@ -2092,3 +2092,64 @@ that passed while the absolute quantity was near zero or reversed (H9's anchors,
 H19's native fits, now H24's rearranged room). **Always print the absolute
 numbers next to the relative ones**; every time this has bitten, the relative
 number was the one that looked publishable.
+
+## H25 — the headline in-room number was a 5.7-sigma outlier
+
+`h25-sequence-variance/results/seq_variance.json`, reading in that experiment's
+`analysis.md`. The Apartment-fitted 16-number curve, **unchanged**, scored on
+thirteen never-used held-out recordings (seq137, 138, 140-150) plus the two
+originals.
+
+| | near-rim gain | centre damage |
+|---|---|---|
+| **13 never-used sequences** | **-7.02% +- 1.67** | +26.8% +- 12.3 |
+| seq136 (the published number) | **-16.6%** -> **-5.74 sd** | +41.7% (+1.21 sd) |
+| dec_seq132 | -6.5% -> +0.31 sd | +23.5% (-0.27 sd) |
+
+**B1 passes** (sd/|mean| = 0.238, bar 1/3): sequence noise is small relative to
+the effect, and all thirteen are negative. **B3 passes 13/13**: the 2-parameter
+`global` control is worse than nothing on every one. So the effect is real.
+
+**B2 is refuted, and not marginally.** seq136 sits **5.74 sd** above the mean of
+thirteen recordings from the same room and the same device. The representative
+value is **-7.0%, not -16.6%** — the published figure is **2.4x the typical one**.
+
+It is not that seq136 is unusually hard or easy: its frozen rim error is +0.51 sd
+from the thirteen-sequence mean, i.e. ordinary. It is specifically unusually
+**responsive to this correction**.
+
+### The uncomfortable pattern
+
+seq136 has been THE held-out sequence for this whole line, and every in-room
+number in both reports is quoted on it. Meanwhile **dec_seq132 — the recording
+repeatedly described as "the harder test" — is the representative one** (+0.31
+sd). The number that looked like a pessimistic check was the honest one; the
+number that looked like the result was the outlier.
+
+### Scope limit, stated up front
+
+**Only the radial curve was re-measured.** The 122,900-parameter LoRA's -51.5%,
+H18's student arms and every other in-room figure were also measured on seq136
+and have NOT been re-measured. Nothing here shows they are inflated; nothing
+here shows they are not. So any ratio between two arms both measured on seq136 —
+including "the adapter is three times better in-room" — is now **untested**,
+because both terms may scale together. That is the immediate next run.
+
+### Centre damage was understated, in the other direction
+
+The curve damages the near-centre zone by **+26.8% +- 12.3** across the thirteen
+against seq136's +41.7%, so here seq136 was pessimistic by 1.2 sd. The damage is
+large on every sequence and its spread (7.2% to 47.9%) is much wider than the
+rim gain's.
+
+### The methodological lesson, which is the real output
+
+**A single designated held-out sequence, chosen once and quoted everywhere, is
+not a held-out set.** Thirteen recordings that had been sitting extracted and
+unused for one day were enough to show the number this line rests on is an
+outlier in the flattering direction. Every future in-room claim here should be a
+mean over these thirteen with an sd, never a single sequence.
+
+This is the third standing rule, and it subsumes the second: printing absolute
+numbers beside relative ones does not help if the absolute number itself comes
+from one lucky recording.

@@ -1,0 +1,310 @@
+{
+ "coef_global": [
+  1.3676955699920654,
+  -0.1492433398962021
+ ],
+ "coef_radial": [
+  [
+   1.3372890949249268,
+   0.012030057609081268
+  ],
+  [
+   1.4294706583023071,
+   -0.023022731766104698
+  ],
+  [
+   1.4680633544921875,
+   -0.04969635605812073
+  ],
+  [
+   1.4605209827423096,
+   -0.07149124890565872
+  ],
+  [
+   1.453434705734253,
+   -0.10334848612546921
+  ],
+  [
+   1.4336045980453491,
+   -0.14162692427635193
+  ],
+  [
+   1.399863839149475,
+   -0.1847192347049713
+  ],
+  [
+   1.34121835231781,
+   -0.2519870102405548
+  ]
+ ],
+ "zones": {
+  "Apartment_release_clean_seq136_M1292": {
+   "frozen": {
+    "near_rim": 0.4269155060135551,
+    "near_center": 0.2463356725671473,
+    "all": 0.2048840414881047
+   },
+   "global": {
+    "near_rim": 0.4639351169395982,
+    "near_center": 0.26319137356476824,
+    "all": 0.2216743601805154
+   },
+   "radial": {
+    "near_rim": 0.35601464692996365,
+    "near_center": 0.3491334009431489,
+    "all": 0.1825266632446081
+   }
+  },
+  "Apartment_release_decoration_seq132_M1292": {
+   "frozen": {
+    "near_rim": 0.23199093395065434,
+    "near_center": 0.123452619384486,
+    "all": 0.16522409174973182
+   },
+   "global": {
+    "near_rim": 0.2471247820790472,
+    "near_center": 0.12507594097181793,
+    "all": 0.17606226856359414
+   },
+   "radial": {
+    "near_rim": 0.21688781470989532,
+    "near_center": 0.15248477191817744,
+    "all": 0.16692153368318455
+   }
+  },
+  "Apartment_release_clean_seq137_M1292": {
+   "frozen": {
+    "near_rim": 0.363082289525175,
+    "near_center": 0.38548080681698205,
+    "all": 0.20861958829063637
+   },
+   "global": {
+    "near_rim": 0.3979375341899087,
+    "near_center": 0.38803099008303477,
+    "all": 0.22237928701139015
+   },
+   "radial": {
+    "near_rim": 0.3330630953319384,
+    "near_center": 0.4792518303329423,
+    "all": 0.1995999814248288
+   }
+  },
+  "Apartment_release_clean_seq138_M1292": {
+   "frozen": {
+    "near_rim": 0.35213936122530093,
+    "near_center": 0.33990722836972215,
+    "all": 0.22158012502846114
+   },
+   "global": {
+    "near_rim": 0.38467222828631403,
+    "near_center": 0.344545888101654,
+    "all": 0.2332375151758113
+   },
+   "radial": {
+    "near_rim": 0.3211463591785531,
+    "near_center": 0.4164192940018219,
+    "all": 0.21005512957932224
+   }
+  },
+  "Apartment_release_clean_seq140_M1292": {
+   "frozen": {
+    "near_rim": 0.35322662032194146,
+    "near_center": 0.18906932261997839,
+    "all": 0.2071509204353573
+   },
+   "global": {
+    "near_rim": 0.38295716297840604,
+    "near_center": 0.1927566845713645,
+    "all": 0.21903458807331458
+   },
+   "radial": {
+    "near_rim": 0.33335641310304015,
+    "near_center": 0.21589413910285546,
+    "all": 0.19502533451146434
+   }
+  },
+  "Apartment_release_clean_seq141_M1292": {
+   "frozen": {
+    "near_rim": 0.4933847679906001,
+    "near_center": 0.42112095760598367,
+    "all": 0.26981545418727465
+   },
+   "global": {
+    "near_rim": 0.5294098804042978,
+    "near_center": 0.43310223209690557,
+    "all": 0.2866405791952023
+   },
+   "radial": {
+    "near_rim": 0.45306306334663066,
+    "near_center": 0.5755364496261324,
+    "all": 0.25688008733798123
+   }
+  },
+  "Apartment_release_clean_seq142_M1292": {
+   "frozen": {
+    "near_rim": 0.3685851550376085,
+    "near_center": 0.15443311001079688,
+    "all": 0.18669545880621996
+   },
+   "global": {
+    "near_rim": 0.4125705070359078,
+    "near_center": 0.16110785904896968,
+    "all": 0.19981504949565013
+   },
+   "radial": {
+    "near_rim": 0.34098865636921466,
+    "near_center": 0.2033826934377485,
+    "all": 0.17534667446030222
+   }
+  },
+  "Apartment_release_clean_seq143_M1292": {
+   "frozen": {
+    "near_rim": 0.32060580282521567,
+    "near_center": 0.2015764324835174,
+    "all": 0.1918183006403851
+   },
+   "global": {
+    "near_rim": 0.3392577424807361,
+    "near_center": 0.20018944189806018,
+    "all": 0.19775341122613516
+   },
+   "radial": {
+    "near_rim": 0.29416359319221935,
+    "near_center": 0.22749377097717705,
+    "all": 0.17600653690810744
+   }
+  },
+  "Apartment_release_clean_seq144_M1292": {
+   "frozen": {
+    "near_rim": 0.37968380531121104,
+    "near_center": 0.23888022028174466,
+    "all": 0.20172240675953818
+   },
+   "global": {
+    "near_rim": 0.42655968730221905,
+    "near_center": 0.246735670426788,
+    "all": 0.21721429310394
+   },
+   "radial": {
+    "near_rim": 0.3610203938085467,
+    "near_center": 0.3216998394744708,
+    "all": 0.19101102233908657
+   }
+  },
+  "Apartment_release_clean_seq145_M1292": {
+   "frozen": {
+    "near_rim": 0.41415988915019636,
+    "near_center": 0.22887892862349835,
+    "all": 0.2153710531082648
+   },
+   "global": {
+    "near_rim": 0.44696376990023395,
+    "near_center": 0.2522053501433852,
+    "all": 0.22866586974551364
+   },
+   "radial": {
+    "near_rim": 0.3843150794639359,
+    "near_center": 0.31653541371739286,
+    "all": 0.20147901010720012
+   }
+  },
+  "Apartment_release_clean_seq146_M1292": {
+   "frozen": {
+    "near_rim": 0.4612842609818084,
+    "near_center": 0.18260282804955597,
+    "all": 0.22030881758283494
+   },
+   "global": {
+    "near_rim": 0.5006230012494989,
+    "near_center": 0.1777484386439725,
+    "all": 0.23330575122547806
+   },
+   "radial": {
+    "near_rim": 0.43072307362235895,
+    "near_center": 0.19568609466929374,
+    "all": 0.2063448427086966
+   }
+  },
+  "Apartment_release_clean_seq147_M1292": {
+   "frozen": {
+    "near_rim": 0.4471811262330368,
+    "near_center": 0.19489284418078084,
+    "all": 0.22960312539164032
+   },
+   "global": {
+    "near_rim": 0.4940855203018343,
+    "near_center": 0.20892921287151145,
+    "all": 0.24479778180308717
+   },
+   "radial": {
+    "near_rim": 0.40358969191077826,
+    "near_center": 0.288244716287444,
+    "all": 0.21039432575734437
+   }
+  },
+  "Apartment_release_clean_seq148_M1292": {
+   "frozen": {
+    "near_rim": 0.43383511011562126,
+    "near_center": 0.30894018649183824,
+    "all": 0.2354801485112807
+   },
+   "global": {
+    "near_rim": 0.47697101478238835,
+    "near_center": 0.33358796887847836,
+    "all": 0.25106205703699136
+   },
+   "radial": {
+    "near_rim": 0.4117211031473688,
+    "near_center": 0.4238715079808261,
+    "all": 0.22722830369664335
+   }
+  },
+  "Apartment_release_clean_seq149_M1292": {
+   "frozen": {
+    "near_rim": 0.35418812932377586,
+    "near_center": 0.18367783756970635,
+    "all": 0.18330083235095151
+   },
+   "global": {
+    "near_rim": 0.3903717983091597,
+    "near_center": 0.1721492743849107,
+    "all": 0.194992827986745
+   },
+   "radial": {
+    "near_rim": 0.3299193181903015,
+    "near_center": 0.20790289420532798,
+    "all": 0.16828576899485548
+   }
+  },
+  "Apartment_release_clean_seq150_M1292": {
+   "frozen": {
+    "near_rim": 0.452901291309801,
+    "near_center": 0.29879109400031856,
+    "all": 0.21632452865222612
+   },
+   "global": {
+    "near_rim": 0.5012273081535973,
+    "near_center": 0.29958332376358626,
+    "all": 0.23089669342143934
+   },
+   "radial": {
+    "near_rim": 0.4338528372595287,
+    "near_center": 0.3829282939343918,
+    "all": 0.20575011081965097
+   }
+  }
+ },
+ "config": {
+  "cache_root": "/netapp/datasets/f.zhang2/h14_teacher_cache_omega110",
+  "arm": "omega110",
+  "train_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq133_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq134_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq135_M1292",
+  "eval_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq136_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_decoration_seq132_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq137_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq138_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq140_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq141_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq142_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq143_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq144_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq145_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq146_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq147_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq148_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq149_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq150_M1292",
+  "size": 504,
+  "max_frames": 60,
+  "variant": "small",
+  "depth_max_m": 10.0,
+  "fit_pred_range": "",
+  "device": "cuda",
+  "out": "autoresearch/experiments/h25-sequence-variance/results/seq_variance.json"
+ }
+}
