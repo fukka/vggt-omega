@@ -653,3 +653,48 @@
   gates H9's design and cannot be checked locally — the Mac sample has
   groundtruth/ only, no VRS).
 - Dashboard: new section 二·十一; 二·十's ledger and plan rows updated.
+
+## 2026-09-08 — the roll/orientation line (H17)
+
+Prompted by the user asking whether depth foundation models all assume a level
+camera, whether egocentric data violates that, whether an IMU can supply the
+roll, and whether feeding it in would help. Four sub-hypotheses were written and
+locked in `experiments/h17-roll-prior/protocol.md` before H17.2 and H17.3 ran
+(commit a17324f, results in 1c3e9a0 / a95c315 / 867ac5c).
+
+**Order of events, including the two things I got wrong.**
+
+1. Literature first: found arXiv 2608.00678 ("Breaking the Horizontal Prior"),
+   which reports the same effect on four single-image depth models, fixes it
+   with a training-time regulariser, uses no IMU, and whose best algorithmic
+   roll estimator is off by 25.9 deg. Saved to `literature/`. It has no fisheye,
+   no egocentric data, and never measures a real roll distribution — which set
+   the shape of H17.1 and H17.2.
+2. H17.1 (measurement): read ADT's roll from the MPS gravity vector. Median 3.7
+   deg, p99 21.8, none past 40. Also confirmed UPRIGHT_K=3 from geometry.
+3. **Correction to my own published claim.** Re-reading h16's three arms while
+   writing this up, the report's "two thirds of the roll fall-off is the black
+   wedge" is not supported: the arm that HOLDS the black region fixed is the
+   steepest. Projection and boundary are not separated by the arms that exist.
+   The claim was removed from the report and the honest decomposition, plus the
+   fourth arm that would actually settle it, are written down instead.
+4. H17.2: the locked bar passed cleanly and this is the line's best result —
+   multi-view-pretrained backbones are 4-5x less roll-sensitive at 30 deg, and
+   capacity does not substitute.
+5. **A readout bug that looked like a finding.** The first roll probe regressed
+   (sin, cos) and took atan2, giving MAE 70 deg — worse than predicting a
+   constant, which reads as "roll is unreadable". The label-permutation null is
+   what exposed it (a linear probe cannot legitimately lose to a constant).
+   Within +-45 deg, cos spans only [0.707, 1]; direct angle regression took MAE
+   from 70 to 12.75. The null now runs by default.
+6. H17.3 landed between its two bars and, more usefully, split by room: 6.8 deg
+   same-room vs 18.7 deg on the rearranged one.
+
+**Direction: the line is scientifically closed and engineering-deprioritised.**
+H17.4 (derotate / condition / augment) stays locked but unrun, because H17.2 +
+H17.1 together leave almost nothing for a gravity input to recover on ADT. The
+bottleneck is a wider-pose egocentric dataset with dense depth, not a method.
+
+In parallel, on the user's instruction to increase ADT training frames: the data
+ladder was re-run with gradient steps pinned near 48k. 48x the distinct frames
+buys nothing on the honest held-out sequence and triples the near-centre damage.

@@ -207,17 +207,23 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       p99 只有 <strong>21.8°</strong>，98.5% 的帧落在模型的平坦区内。另一条独立且更大的发现：<strong>一条硬黑边本身就值 20° 滚转</strong>
       （0° 上掩掉 1.7% 的像素，全图 +25%、近边缘 +38%）。（§02）
     </p></div>
-    <div class="row"><span class="who">A′ · 真实的头有多歪（新）</span><p>
+    <div class="row"><span class="who">A′ · 换个 backbone 就基本没这问题（新）</span><p>
+      同一条干净曲线跑四个 backbone，30° 时相对各自 0° 的涨幅：<strong>单图预训练的 da3:small +46%、da3:large +52%</strong>，
+      <strong>多视角几何预训练的 vggt +11%、vggt_omega +11%</strong>（40° 是 131%/114% 对 23%/11%）。
+      预注册判据通过。<strong>水平先验是预训练数据的性质，不是深度任务的</strong> —— 而且容量不解决：
+      DA3-Large 精度是 Small 的 2.2 倍，滚转敏感度反而更差。<strong>最便宜的滚转鲁棒性来自换 backbone。</strong>（§02b）
+    </p></div>
+    <div class="row"><span class="who">A″ · 真实的头有多歪（新）</span><p>
       从 Aria 的重力向量直接读出 <strong>60,105 帧</strong>的头部滚转：中位 <strong>3.7°</strong>、p90 10.2°、p99 <strong>21.8°</strong>、
       最大 34.5°，<strong>没有一帧超过 40°</strong>。模型的平坦区（±20°）覆盖 <strong>98.5%</strong> 的帧 —— 两个数独立测得，正好对上。
       顺带用几何独立确认了正立四分之一转的方向。但逐序列差别很大（seq145 有 29.6% 的帧 &gt;10°），
-      而 ADT 只是第一人称数据里最温和的一端。（§02b）
+      而 ADT 只是第一人称数据里最温和的一端。（§02c）
     </p></div>
-    <div class="row"><span class="who">A″ · 模型自己知道被转了吗（新）</span><p>
+    <div class="row"><span class="who">A‴ · 模型自己知道被转了吗（新）</span><p>
       线性探针从冻结特征读滚转角：整体 <strong>12.75°</strong>（置换零假设 25.8°，R²=0.60），
       但 <strong>同房间 6.8°、换了布置的房间 18.7°</strong> —— <strong>它主要记住的是房间</strong>。
       锁定的判据是 &lt;10°（条件化无效）或 &gt;20°（IMU 带真信息），<strong>两个都没触发</strong>。
-      "旋转图片会靠黑楔泄题"这个预测被证伪：两条臂一模一样，因为成像圆盘是旋转对称的。（§02c）
+      "旋转图片会靠黑楔泄题"这个预测被证伪：两条臂一模一样，因为成像圆盘是旋转对称的。（§02d）
     </p></div>
     <div class="row"><span class="who">B · H14 无标签蒸馏 ✗</span><p>
       让冻结模型看<strong>矫正后的透视图</strong>，把它自己的答案搬回鱼眼域当标签。主判据（两个留出序列都要赢对照）
@@ -558,9 +564,165 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 </section>
 
 
-<!-- ============================================================ 02b 真实滚转 -->
+<!-- ============================================================ 02b 四 backbone -->
 <section>
-  <div class="section-head"><span class="eyebrow">02b</span><h2>实验 A′ · 真实的头到底歪多少</h2>
+  <div class="section-head"><span class="eyebrow">02b</span><h2>实验 A′ · 是深度任务的毛病，还是预训练数据的毛病？</h2>
+    <span class="chip done"><span class="dot"></span>预注册判据通过</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      文献把水平先验归因于<strong>训练图像朝向的长尾分布</strong>——人拍照习惯把相机端平，所以模型没见过歪的画面。
+      但那篇论文测的四个模型（Marigold / GenPercept / DAv2 / DistillAD）<strong>全是单图深度模型</strong>，都吃同一批照片。
+      这个归因没有被真正检验过。
+    </p>
+    <p>
+      检验它需要一个<strong>预训练数据里没有这个长尾</strong>的 backbone。手上正好有两个：
+      <strong>VGGT 和 VGGT-Ω 是在多视角几何上预训练的</strong>——它们按构造就见过任意朝向的相机。
+      如果归因正确，这两个应该明显更耐滚转，<em>即使</em>它们的绝对精度更高。
+    </p>
+    <div class="note">
+      <span class="eyebrow">跑之前锁定的判据</span>
+      <p style="margin:0">
+        两个 VGGT 变体在 30° 的涨幅都要<strong>低于 DA3-Small</strong>（+46%）<strong>且低于 +30%</strong>。
+        证伪条件：任一 VGGT 涨得比 DA3-Small 多，或四个模型落在 5 个百分点以内（那说明敏感度来自架构或深度任务本身）。
+      </p>
+    </div>
+    <h3 style="margin-top:22px">怎么做</h3>
+    <p>
+      只用 §02 里那条<strong>干净的臂</strong>：89° 同轴视角、旋转虚拟相机再成像，任何角度画幅都 100% 是真内容。
+      四个 backbone 在<strong>同一个 θ ≤ 44° 的圆盘</strong>上打分，视场固定、画幅像素数按各自的 patch 取整
+      （VGGT-Ω 是 patch 16 → 624²，其余 patch 14 → 630²）。<strong>绝对值不可跨 backbone 比</strong>（容量不同），要看的是各自相对自己 0° 的涨幅。
+    </p>
+  </div>
+
+  <figure style="margin-top:22px">
+    <div class="chartbox">
+      <svg viewBox="0 0 720 330" role="img" aria-label="四个 backbone 在滚转下的误差涨幅分组柱状图。30 度时单图模型 DA3-Small 涨 46%、DA3-Large 涨 52%，而多视角预训练的 VGGT 和 VGGT-Omega 都只涨 11%。40 度时差距扩大到 131% 和 114% 对 23% 和 11%。">
+        <g stroke="var(--rule)" stroke-width="1">
+          <line x1="110" y1="260" x2="700" y2="260"></line>
+          <line x1="110" y1="181.4" x2="700" y2="181.4"></line>
+          <line x1="110" y1="102.9" x2="700" y2="102.9"></line>
+          <line x1="110" y1="40" x2="700" y2="40"></line>
+        </g>
+        <g fill="var(--ink-faint)" font-family="IBM Plex Mono, monospace" font-size="11" text-anchor="end">
+          <text x="100" y="264">0%</text><text x="100" y="185">+50%</text>
+          <text x="100" y="107">+100%</text><text x="100" y="44">+140%</text>
+        </g>
+        <g fill="var(--neg)">
+          <rect x="118" y="256.9" width="30" height="3.1"></rect>
+          <rect x="263" y="239.6" width="30" height="20.4"></rect>
+          <rect x="408" y="187.7" width="30" height="72.3"></rect>
+          <rect x="553" y="54.2" width="30" height="205.8"></rect>
+        </g>
+        <g fill="var(--neg)" opacity="0.55">
+          <rect x="151" y="260" width="30" height="6.3"></rect>
+          <rect x="296" y="244.3" width="30" height="15.7"></rect>
+          <rect x="441" y="178.3" width="30" height="81.7"></rect>
+          <rect x="586" y="80.9" width="30" height="179.1"></rect>
+        </g>
+        <g fill="var(--accent)">
+          <rect x="184" y="256.9" width="30" height="3.1"></rect>
+          <rect x="329" y="249.0" width="30" height="11.0"></rect>
+          <rect x="474" y="242.7" width="30" height="17.3"></rect>
+          <rect x="619" y="223.9" width="30" height="36.1"></rect>
+        </g>
+        <g fill="var(--accent-ink)">
+          <rect x="217" y="258.4" width="30" height="1.6"></rect>
+          <rect x="362" y="255.3" width="30" height="4.7"></rect>
+          <rect x="507" y="242.7" width="30" height="17.3"></rect>
+          <rect x="652" y="242.7" width="30" height="17.3"></rect>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5" text-anchor="middle" fill="var(--ink)">
+          <text x="423" y="182">+46%</text><text x="456" y="173">+52%</text>
+          <text x="489" y="237">+11%</text><text x="522" y="237">+11%</text>
+          <text x="568" y="48">+131%</text><text x="601" y="75">+114%</text>
+          <text x="634" y="218">+23%</text><text x="667" y="237">+11%</text>
+        </g>
+        <g fill="var(--ink)" font-family="IBM Plex Mono, monospace" font-size="12" text-anchor="middle">
+          <text x="182.5" y="284">±10°</text><text x="327.5" y="284">±20°</text>
+          <text x="472.5" y="284">±30°</text><text x="617.5" y="284">±40°</text>
+        </g>
+        <g font-family="Noto Sans SC, sans-serif" font-size="11.5">
+          <rect x="118" y="16" width="11" height="11" fill="var(--neg)"></rect>
+          <text x="134" y="26" fill="var(--ink)">da3:small</text>
+          <rect x="210" y="16" width="11" height="11" fill="var(--neg)" opacity="0.55"></rect>
+          <text x="226" y="26" fill="var(--ink)">da3:large</text>
+          <text x="300" y="26" fill="var(--ink-faint)">单图预训练</text>
+          <rect x="410" y="16" width="11" height="11" fill="var(--accent)"></rect>
+          <text x="426" y="26" fill="var(--ink)">vggt</text>
+          <rect x="470" y="16" width="11" height="11" fill="var(--accent-ink)"></rect>
+          <text x="486" y="26" fill="var(--ink)">vggt_omega</text>
+          <text x="570" y="26" fill="var(--ink-faint)">多视角几何预训练</text>
+        </g>
+        <text x="405" y="308" text-anchor="middle" fill="var(--ink-faint)"
+              font-family="Noto Sans SC, sans-serif" font-size="11.5">纵轴＝全图 AbsRel 相对<b>各 backbone 自己</b> 0° 的涨幅（± 两侧取平均）· 干净臂，任何角度无黑边</text>
+      </svg>
+    </div>
+    <figcaption>
+      <strong>两族分得干干净净。</strong>单图预训练的两个在 30° 涨 46–52%，多视角预训练的两个都只涨 11% ——
+      而后者的绝对精度还更好（0° 时 0.051 / 0.083 对 0.069 / 0.155）。
+    </figcaption>
+  </figure>
+
+  <div class="scroll" style="margin-top:16px">
+    <table>
+      <caption>seq136，20 帧。<strong>0° 那列不可跨行比</strong>（容量不同、VGGT-Ω 画幅 624² 而非 630²）；右四列是各自相对自己 0° 的涨幅，那才是本表要说的事。</caption>
+      <thead><tr><th>backbone</th><th style="text-align:left">预训练</th><th>0° 全图</th><th>±10°</th><th>±20°</th><th>±30°</th><th>±40°</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">da3:small</td><td style="text-align:left">单图深度</td><td class="num">0.1545</td><td class="num">+2%</td><td class="num">+13%</td><td class="num bad">+46%</td><td class="num bad">+131%</td></tr>
+        <tr><td class="mono">da3:large</td><td style="text-align:left">单图深度</td><td class="num">0.0690</td><td class="num good">−4%</td><td class="num">+10%</td><td class="num bad">+52%</td><td class="num bad">+114%</td></tr>
+        <tr class="flip"><td class="mono">vggt (1B)</td><td style="text-align:left">多视角几何</td><td class="num">0.0828</td><td class="num">+2%</td><td class="num good">+7%</td><td class="num good">+11%</td><td class="num good">+23%</td></tr>
+        <tr class="flip"><td class="mono">vggt_omega</td><td style="text-align:left">多视角几何</td><td class="num good">0.0507</td><td class="num">+1%</td><td class="num good">+3%</td><td class="num good">+11%</td><td class="num good">+11%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:18px">
+    <h3>逐条判据</h3>
+  </div>
+  <div class="crit">
+    <div class="row"><span class="who">主判据 ✓</span><p>
+      两个 VGGT 变体在 30° 都是 <strong>+11%</strong>，既低于 DA3-Small 的 +46%，也低于预注册的 +30% 门槛。<strong>通过。</strong>
+    </p></div>
+    <div class="row"><span class="who">证伪条件 ✓ 均未触发</span><p>
+      没有任何一个 VGGT 涨得比 DA3-Small 多；四个模型也没有落在 5 个百分点以内（46 / 52 / 11 / 11）。
+    </p></div>
+    <div class="row"><span class="who">容量不是解释 ✓</span><p>
+      DA3-Large 在 0° 上比 DA3-Small 准 <strong>2.2 倍</strong>，30° 的涨幅却<strong>更大</strong>（+52% 对 +46%）。
+      <strong>把单图配方做大不买滚转鲁棒性。</strong>
+    </p></div>
+  </div>
+
+  <div class="col">
+    <h3 style="margin-top:22px">再想一层</h3>
+    <p>
+      <strong>这条把文献的归因从"猜测"变成了"被检验过"。</strong>
+      arXiv 2608.00678 说水平先验来自照片集的朝向长尾，但它测的四个模型全在同一批照片上训练，无法区分
+      "长尾造成的"和"深度任务本身造成的"。换成<strong>预训练里没有这个长尾</strong>的 backbone，效应基本消失 ——
+      归因成立。
+    </p>
+    <p>
+      <strong>最便宜的滚转鲁棒性来自 backbone，不来自方法。</strong>
+      换成多视角预训练的 backbone：30° 的代价从 46–52% 降到 11%，40° 从 114–131% 降到 11–23%，
+      而且<strong>绝对精度还更好</strong>。这比滚转增广便宜，比 IMU 条件化便宜，也不需要任何额外输入。
+    </p>
+    <p>
+      <strong>它也把"喂 IMU"这条路对 VGGT 家族基本关掉了。</strong>
+      §02c 会给出 ADT 真实滚转的 p99 是 21.8°，而 VGGT-Ω 在 ±20° 内只涨 3%。
+      <strong>没有留下什么可供重力信息去挽回的东西。</strong>这条路真正剩下的适用场景，是"必须用单图 backbone + 姿态分布很宽"的组合。
+    </p>
+    <p style="color:var(--ink-faint)">
+      边界：一个序列、20 帧、单种子。VGGT 与 VGGT-Ω 在这里是<strong>单帧</strong>跑的，多帧融合机制没有参与 ——
+      所以这份鲁棒性来自预训练表征本身，不是来自帧间融合。本节的 <code>rim/ctr</code> 与 §01 的表不可比（掩码和投影都不同）。
+    </p>
+  </div>
+</section>
+
+
+<!-- ==== 02c 真实滚转 -->
+<section>
+  <div class="section-head"><span class="eyebrow">02c</span><h2>实验 A″ · 真实的头到底歪多少</h2>
     <span class="chip done"><span class="dot"></span>60,105 帧，从重力向量读出</span></div>
 
   <div class="col">
@@ -683,9 +845,9 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
   </div>
 </section>
 
-<!-- ============================================================ 02c 探针 -->
+<!-- ==== 02d 探针 -->
 <section>
-  <div class="section-head"><span class="eyebrow">02c</span><h2>实验 A″ · 模型自己知道它被转了吗</h2>
+  <div class="section-head"><span class="eyebrow">02d</span><h2>实验 A‴ · 模型自己知道它被转了吗</h2>
     <span class="chip run"><span class="dot"></span>落在两个判据之间</span></div>
 
   <div class="col">
@@ -756,8 +918,8 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <div class="note warn">
       <span class="eyebrow">这一节和 §02b 合起来，把整条滚转线的价值重新定了位</span>
       <p>
-        <strong>科学价值</strong>：水平先验存在（§02，与文献一致）、它和 ADT 的姿态分布是对上的（§02b）、
-        特征只在房间内编码滚转（§02c）。这三条是可以写进论文的。
+        <strong>科学价值</strong>：水平先验存在（§02，与文献一致）、它和 ADT 的姿态分布是对上的（§02c）、
+        特征只在房间内编码滚转（§02d）。这三条是可以写进论文的。
       </p>
       <p>
         <strong>工程价值（在 ADT 上）：小。</strong>能被"用上 IMU"改善的只有那 1.5% 超过 20° 的帧。
@@ -1574,25 +1736,47 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
   </div>
 
   <div class="col" style="margin-top:32px">
-    <h3>③ 加数据：更多同房间的数据不买泛化</h3>
+    <h3>③ 加数据：把梯度步固定住之后，加数据买到的是零</h3>
     <p style="margin-bottom:14px">
-      六个序列里躺着 17,027 帧同时带 RGB 和深度，而所有实验只用了 360 帧（2.1%）。
-      这个 60 帧／序列的上限是继承来的，从没按任何判据选过。所以直接放开它：
-      把<strong>有标签臂</strong>的训练数据加到每序列 240、600 帧，其他一切不变。
+      六个序列里躺着 17,027 帧同时带 RGB 和深度，而最初的实验只用了 360 帧（2.1%）。这个 60 帧／序列的上限是继承来的，从没按任何判据选过。
+      第一次放开它时（60 / 240 / 600 帧，都跑 20 轮）看起来"加数据有用"——<strong>但那三行的梯度步是 4.8k / 19.2k / 48k，数据和计算一起变了</strong>，
+      所以分不清是哪一个在起作用。这是一个真实的设计缺陷。
+    </p>
+    <p style="margin-bottom:14px">
+      重跑，<strong>把梯度步钉在 ~48k</strong>，只让独立帧数变。<code>60 × 200 轮</code> 那一行是关键对照：同样 48k 步，但反复看同样的 240 帧。
     </p>
   </div>
   <div class="scroll">
     <table>
-      <caption>gt 臂，20 轮，相对冻结模型的变化。<strong>两列的走向是相反的，这就是全部要点。</strong></caption>
+      <caption>gt 臂，相对冻结模型的变化。上面两行是原来的（步数不同，仅供对照）；<strong>下面四行梯度步相同，只有独立帧数在变</strong>。</caption>
       <thead>
-        <tr><th>每序列帧数</th><th>梯度步</th><th>seq136 近边缘</th><th>seq136 近中心</th><th>dec_seq132 近边缘</th><th>dec_seq132 近中心</th></tr>
+        <tr><th>每序列帧 × 轮</th><th>梯度步</th><th>独立帧</th><th>seq136 边缘</th><th>seq136 近中心</th><th>dec_seq132 边缘</th><th>dec_seq132 近中心</th></tr>
       </thead>
       <tbody>
-        <tr><td class="mono">60（此前全部实验）</td><td class="num">4,800</td><td class="num">−58.3%</td><td class="num good">−38.2%</td><td class="num good">−27.3%</td><td class="num">+27.8%</td></tr>
-        <tr><td class="mono">240</td><td class="num">19,200</td><td class="num">−64.1%</td><td class="num good">−52.9%</td><td class="num">−16.9%</td><td class="num bad">+89.0%</td></tr>
-        <tr class="flip"><td class="mono">600（10 倍数据）</td><td class="num">48,000</td><td class="num good">−69.3%</td><td class="num good">−45.4%</td><td class="num bad">−18.9%</td><td class="num bad">+100.7%</td></tr>
+        <tr style="opacity:.6"><td class="mono">60 × 20</td><td class="num">4.8k</td><td class="num">240</td><td class="num">−58.3%</td><td class="num">−38.2%</td><td class="num good">−27.3%</td><td class="num">+27.8%</td></tr>
+        <tr style="opacity:.6"><td class="mono">240 × 20</td><td class="num">19.2k</td><td class="num">960</td><td class="num">−64.1%</td><td class="num">−52.9%</td><td class="num">−16.9%</td><td class="num bad">+89.0%</td></tr>
+        <tr class="flip"><td class="mono"><b>60 × 200</b>（对照）</td><td class="num">48k</td><td class="num">240</td><td class="num">−67.1%</td><td class="num">−54.3%</td><td class="num">−21.7%</td><td class="num">+58.0%</td></tr>
+        <tr><td class="mono">600 × 20</td><td class="num">48k</td><td class="num">2,400</td><td class="num">−69.3%</td><td class="num">−45.4%</td><td class="num">−18.9%</td><td class="num bad">+100.7%</td></tr>
+        <tr><td class="mono">1200 × 10</td><td class="num">48k</td><td class="num">4,800</td><td class="num" colspan="4" style="text-align:center;color:var(--ink-faint)">跑步中</td></tr>
+        <tr><td class="mono"><b>2880 × 4</b>（盘上全部）</td><td class="num">46k</td><td class="num">11,418</td><td class="num good">−71.3%</td><td class="num good">−52.0%</td><td class="num">−20.9%</td><td class="num bad">+145.3%</td></tr>
       </tbody>
     </table>
+  </div>
+  <div class="col">
+    <p style="margin-top:16px">
+      <strong>把独立帧数从 240 加到 11,418（48 倍），在同样的计算量下：</strong>
+      同房间的 seq136 从 −67.1% 走到 −71.3%（边际），<strong>真正的留出序列 dec_seq132 从 −21.7% 走到 −20.9%（没动）</strong>，
+      而它的近中心损伤从 <strong>+58% 恶化到 +145%</strong>。
+    </p>
+    <p>
+      所以原来那张表里"加数据变好"的部分，<strong>主要是多训了 10 倍步数</strong>。
+      在这间公寓里，多出来的帧只让模型把房间记得更牢：<strong>seq136 越来越好，dec_seq132 的近中心越来越坏，两条曲线朝相反方向走。</strong>
+      在诚实的留出序列上，最好的结果仍然是最小、最短的那一次（60 × 20，−27.3%）。
+    </p>
+    <p style="color:var(--ink-faint)">
+      单种子、无误差棒。dec_seq132 的边缘四个数都落在 −17…−27% 这个带里，可以认为没有分辨力；
+      有分辨力的是<strong>近中心随梯度步单调恶化</strong>这条趋势（+27.8 → +58.0 → +100.7 → +145.3）。
+    </p>
   </div>
   <div class="col">
     <h3 style="margin-top:22px">再想一层</h3>
@@ -1608,9 +1792,8 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <div class="note warn">
       <span class="eyebrow">结论：瓶颈不是数据量，是场景数</span>
       <p>
-        <strong>同房间的 seq136 单调变好</strong>（−58.3% → −64.1% → −69.3%），
-        <strong>重新布置过的 dec_seq132 在边缘上不但没跟着变好，近中心还从 +27.8% 恶化到 +100.7%</strong>。
-        十倍的数据换来的是十倍的"这个房间长什么样"，而不是"这只镜头怎么畸变"。
+        <strong>在固定计算量下，48 倍的独立帧在诚实的留出序列上买到的是零</strong>（−21.7% → −20.9%），
+        代价是近中心损伤翻了一倍半（+58% → +145%）。多出来的帧换来的是更多的"这个房间长什么样"，而不是"这只镜头怎么畸变"。
       </p>
       <p>
         这条同时是一个方法论结论：<strong>"把手上的数据用满"不是过拟合问题的便宜答案</strong>。
@@ -1631,12 +1814,13 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <ul class="plain">
       <li><strong>边缘惩罚是 2.0–2.6×，跨四个 backbone 成立，不随模型变大而消失。</strong>值得为它专门做方法。（§01）</li>
       <li><strong>模型对滚转不等变</strong>：无黑边的矫正输入下 20° 内 ≤ +13%、30° +48%、40° +131%；边缘/中心比值到 30° 不动，中心和边缘一起变差。与文献的"水平先验"一致。（§02）</li>
-      <li><strong>但真实第一人称数据几乎不去那里</strong>：ADT 60,105 帧的头部滚转中位 3.7°、p99 21.8°、无一超过 40°。模型的平坦区（±20°）和数据的分布是<strong>对上的</strong>，所以在 ADT 上逐帧重力对齐买不到东西。（§02b）</li>
+      <li><strong>而且这是预训练数据的性质，不是深度任务的</strong>：同一条曲线上，单图预训练的 da3:small / da3:large 在 30° 涨 +46% / +52%，多视角几何预训练的 vggt / vggt_omega 都只涨 <strong>+11%</strong>，且绝对精度更好。容量不解决（DA3-Large 更准却更敏感）。<strong>最便宜的滚转鲁棒性是换 backbone。</strong>（§02b）</li>
+      <li><strong>但真实第一人称数据几乎不去那里</strong>：ADT 60,105 帧的头部滚转中位 3.7°、p99 21.8°、无一超过 40°。模型的平坦区（±20°）和数据的分布是<strong>对上的</strong>，所以在 ADT 上逐帧重力对齐买不到东西。（§02c）</li>
       <li><strong>一条硬黑边就值 20° 滚转</strong>：0° 上掩掉 1.7% 的锥体像素，全图 +25%、近边缘 +38%。和 H14 的 110° 教师翻负是同一件事：<strong>不裁、不掩、不填零。</strong>（§02, §03）</li>
       <li><strong>自蒸馏要盯教师的"准"，不要盯"广"</strong>（H14 / H14.2：教师优势只有 11–15%，铺满覆盖后学生更差）。覆盖不到的地方留空，比给一个更差的标签好。（§03–04）</li>
       <li><strong>把镜头几何显式喂给网络是惰性的</strong>（H15：输给打乱场 10/16、输给不喂 10/16），<strong>但喂错的几何是有害的</strong>（赢错配场 16/16）。这是一个可判定场景下的干净否定。（§05）</li>
       <li><strong>边缘的视差盈余里有真实的径向信息</strong>（H9：锚点误差 4%，两个对照 6/6，无深度真值），但"逐 θ 档一条曲线"这个模型类把它浪费了（仿射差距只缩小 6–26%，判据要求减半）。（§06）</li>
-      <li><strong>同一个房间里加十倍数据，只买记忆不买泛化</strong>；<strong>无标签蒸馏学到的东西比有标签的更能迁移</strong>（跨房间 −28.5%/−10.7% 对 −11.8%/−5.0%）。（§07）</li>
+      <li><strong>固定计算量下，同一个房间里加 48 倍数据，在诚实的留出序列上买到的是零</strong>（近中心损伤反而从 +58% 涨到 +145%）；<strong>无标签蒸馏学到的东西比有标签的更能迁移</strong>（跨房间 −28.5%/−10.7% 对 −11.8%/−5.0%）。（§07）</li>
     </ul>
 
     <h3 style="margin-top:26px">不确定的（以及为什么）</h3>

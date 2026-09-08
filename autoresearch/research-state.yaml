@@ -13,11 +13,14 @@ project:
   domain: "3D vision / depth foundation models / fisheye adaptation"
 
 constraints:
-  - "This machine is CPU-Claude (Mac, no usable GPU). GPU runs go through GitHub issues labelled gpu; lambda_63 box. See docs/handoff/POLICY.md."
+  - "This account works BOTH lanes as of 2026-08-31 (user instruction): GPU runs on lambda_63 / space-container AND paper reading, code, CPU tests, docs. The other account is still active, so a GitHub issue labelled `cpu` and claimed by it is theirs — do not edit the files it names."
   - "git add explicit paths only, NEVER -A (two sessions share this working tree)."
   - "Working venv for CPU torch: recreate python3.9 + torch 2.2.2 + numpy<2 per raytun3r memory; DA3-Small runs on Mac CPU."
   - "Local data on Mac: ADT sample (see local-adt-sample memory), ScanNet++ 3f15a9266d sample at ~/Desktop/ADT/scannetpp_example/ (licensed — never commit content, only statistics)."
   - "Known confounds to control in ANY radial claim: depth-vs-eccentricity (fov.py distance control), dead-pixel layout (ring tilt), resampling asymmetry, one-frozen-affine U-shape artifact, denominator/coverage bugs."
+  - "NEW 2026-09-08: never feed the model a hard black border. Masking 1.7% of the cone at 0 deg costs +25% all / +38% near_rim — as much as a 20 deg roll — and it is the same mechanism that inverted H14's 110 deg teacher. No crops, no masks, no zero padding; to roll, roll the camera and re-image."
+  - "NEW 2026-09-08: any data-scaling claim must hold GRADIENT STEPS fixed. The first 60/240/600 ladder ran all rungs at 20 epochs, so data and compute moved together and the apparent data gain was mostly compute."
+  - "NEW 2026-09-08: decoration_seq132 is the ONLY sequence that separates 'learned the lens' from 'memorised the room'. Make it the primary bar sequence; seq136 is a sanity check only."
 
 literature:
   survey: "docs/research/fisheye-wide-fov-adaptation.md (2026-07-29, 1283 lines, verified sources) + autoresearch/literature/"
@@ -444,3 +447,65 @@ workspace:
   experiments_dir: "autoresearch/experiments/"
   to_human_dir: "autoresearch/to_human/"
   paper_dir: "autoresearch/paper/"
+
+# ---------------------------------------------------------------- roll line
+# Added 2026-09-08. Protocol locked in
+# autoresearch/experiments/h17-roll-prior/protocol.md before H17.2/.3 ran.
+h17_roll_prior:
+  question: >
+    Do depth foundation models all assume a level camera; is that assumption
+    violated by egocentric data; can the device's own IMU/gravity supply the
+    roll; and is feeding it in worth anything?
+  status: "3 of 4 sub-hypotheses resolved"
+  sub:
+    h17_1_distribution:
+      status: done
+      kind: exploratory measurement
+      result: >
+        ADT's real head roll, read from the MPS gravity vector over 60,105
+        frames: median 3.7 deg, p90 10.2, p99 21.8, max 34.5, none past 40.
+        The model's flat zone (+-20 deg) and the data's p99 coincide, measured
+        independently. Per-sequence spread is large (seq145 29.6% of frames
+        beyond 10 deg vs decoration_seq132 0.8%), so it is activity-dependent.
+        Side result: confirms UPRIGHT_K=3 from geometry rather than from a loss.
+      artefacts: [results/autoresearch-h17-roll/roll_distribution.json]
+    h17_2_backbones:
+      status: done
+      kind: CONFIRMATORY — locked bar PASSED
+      result: >
+        Rise in all-image AbsRel at 30 deg vs each backbone's own 0 deg, clean
+        pinhole arm: da3:small +46%, da3:large +52%, vggt +11%, vggt_omega +11%
+        (at 40 deg: +131 / +114 / +23 / +11). Locked prediction was "both VGGT
+        variants below DA3-Small and under +30%". The horizontal prior is a
+        PRETRAINING-DATA property, not a property of depth estimation, and
+        capacity does not substitute — DA3-Large is 2.2x more accurate at 0 deg
+        and MORE roll-sensitive at 30. Cheapest roll robustness is the backbone.
+      artefacts: [results/autoresearch-h17-roll/roll_backbones_seq136.json]
+    h17_3_probe:
+      status: done
+      kind: CONFIRMATORY — landed BETWEEN the two locked bars
+      result: >
+        Ridge probe from frozen DA3-Small tokens to the roll angle: MAE 12.75
+        deg against a 25.8 deg label-permuted null, R2 0.60 — but 6.8 deg on the
+        same-room held-out sequence and 18.7 on the rearranged one. Bars were
+        <10 (conditioning inert) and >20 (IMU carries new information); neither
+        fired. The features encode roll WITHIN a known room and only weakly in a
+        new one, so H15's "conditioning on what it already knows is inert" does
+        not transfer. Two protocol expectations broken: the picture-rolled
+        control is not easier than the camera-rolled arm (Aria's imaged disc is
+        rotationally symmetric, so the wedge leaks nothing), and the first
+        readout — (sin, cos) then atan2 — gave MAE 70 deg, worse than a
+        constant, because cos spans only [0.707, 1] within +-45 deg.
+      artefacts: [results/autoresearch-h17-roll/roll_probe.json]
+    h17_4_use_the_gravity:
+      status: deprioritised, not run
+      why: >
+        H17.2 shows the VGGT family is already near roll-invariant (+11% at 30
+        deg) and H17.1 shows ADT's p99 roll is 21.8 deg, so on this data there
+        is almost nothing for a gravity input to recover. The arms
+        (raw/derotate/condition/augment) and their bars stay locked in
+        protocol.md for the day a wider-pose egocentric dataset with dense depth
+        exists — that dataset, not a method, is this line's bottleneck.
+  next:
+    - "The fourth roll arm that would actually separate projection from boundary: a virtual fisheye camera whose cone sits strictly inside its frame, rolled about its optical axis. Within-arm comparisons across angles are then clean."
+    - "Find a head-mounted dataset with a wider pose distribution AND dense depth. Without one, H17.4 cannot be worth running."
