@@ -1729,3 +1729,61 @@ operational_progress_lines_must_name_the_recording:
   cause: "The per-angle print named the angle and not the sequence."
   cost: "Two diagnostic runs; both confirmed exact reproduction (0.1545, 0.0690)."
   fix: "Any progress line inside a loop over recordings must name the recording. Applied to derotate.py."
+
+# ------------------------------------------------- H39 resolved 2026-09-08
+h39_gravity_render:
+  status: "DA3-Small passes all three bars; VGGT-Omega fails B1/B3 — same finding from the other side"
+  artifacts: autoresearch/experiments/h39-gravity-render/results/ (12 JSONs + summary.json)
+  analysis: autoresearch/experiments/h39-gravity-render/analysis.md
+  what_it_measures: >
+    The deployment operation H38 recommended but did not measure: render the
+    view gravity-aligned instead of device-aligned, using the REAL per-frame
+    head roll from MPS. H38's raw@0 is aligned to the DEVICE, and device and
+    gravity coincide only when the head is level.
+  da3_small:
+    gain: "-2.37% +- 2.26 pooled over 6 recordings, better on 5/6"
+    wrong_sign_arm: "+9.94% (4.2x the gain's magnitude — this is what identifies the sign)"
+    per_frame_dose: "+10.14% at |psi| >= 8 deg, -1.26% at |psi| < 3 deg"
+  vggt_omega:
+    gain: "+0.10% +- 3.26, better on 3/6; wrong-sign arm +0.72% — indistinguishable"
+    b3_fails_informatively: "per-frame gain MORE negative at high roll (-5.59%) than low (-2.46%)"
+  B1_IS_THE_FIRST_EXTERNAL_CHECK_IN_THIS_LINE: >
+    H35 computed 1.80% for DA3-Small by integrating a SYNTHETIC roll curve
+    against the MEASURED roll distribution. H39 recovers 2.37% +- 2.26 by a
+    direct A/B on real frames with their real roll. Agreement within a third.
+    Every previous bar in this line was against a null, a control or a
+    permutation — never against an independent estimate of the same number.
+  does_not_contradict_h35: >
+    H35 said 0.46% is AVAILABLE for vggt_omega; H39 says it cannot be collected
+    this way because collecting it costs about that much. Second time price and
+    prize came out equal for this backbone (H38: +6.0% vs +6.8%).
+  subprediction_held: >
+    H17.1 read seq142-148 as a contiguous block 4-5 deg further tilted — a
+    per-session mounting offset, exactly what a gravity render removes. Gain on
+    seq142/144/145 is -3.88% against -0.86% on seq136/138/149. Recorded before
+    running.
+  THE_ROLL_LINE_END_TO_END: >
+    Read the roll from the IMU and fold it into the RENDERING WARP — if you are
+    running a single-image backbone. ~2.4% on ordinary indoor footage, ~10% on
+    the frames that need it, one rotation of the sampling grid, no labels, no
+    training, no model change. On a multi-view-pretrained backbone there is
+    nothing to collect. Four parts asked in the opening question, four answered.
+  limits:
+    - "Six recordings, one apartment, one device. B1's two estimates share the footage though not the method."
+    - "9-12 frames per recording dropped: the depth frames start ~1 s before the trajectory."
+    - "The vggt_omega reading (resampling cost growing with the angle) explains B3's sign but was not measured separately."
+
+discarded_run_h39_first_launch:
+  what_broke: >
+    Re-derived the device->camera rotation instead of copying it and dropped the
+    .T; ADDED the quarter-turn offset where roll_distribution.main SUBTRACTS it.
+    Median |roll| came out 168 deg against H17.1's 2.7. Worst timestamp join 12 s.
+  caught_by: >
+    The run's own diagnostics, and independently by B2 — written to stop a
+    convention ambiguity being resolved by whichever arm scored better, its
+    falsification condition is "the two gravity arms land within noise of each
+    other", and the broken run gave +125% and +146%.
+  rule: >
+    COPY A CONVENTION FROM THE CODE THAT ESTABLISHED IT, AND SAY IN A COMMENT
+    THAT IT IS COPIED. Re-deriving it looks like the same work and is not.
+  also_fixed: "Frames whose nearest trajectory sample is > 33 ms away are dropped and counted (9-12 per recording)."
