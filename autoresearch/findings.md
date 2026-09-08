@@ -1286,3 +1286,71 @@ stronger teacher.
   labels. "Distil a stronger model" does not transfer at all.
 * Anyone quoting the in-room number without the cross-room one gets the
   mechanism backwards.
+
+## H18.2 — everything that transfers is 16 numbers. Locked prediction passes hard. 2026-09-08
+
+Replace the 122.9k-parameter LoRA with something that can only express a radial
+relation, fit it on the four training sequences **only**, apply it unchanged
+everywhere. `code/radial_probe.py`, supervision = the same `omega110` teacher
+targets the LoRA saw, scale-aligned the same way. No depth labels anywhere.
+
+near_rim AbsRel, relative to the frozen model:
+
+| sequence | frozen | `global` (2 params) | **`radial` (16 params)** | `omega110` LoRA (122,900) |
+|---|---|---|---|---|
+| seq136 — held out, same room | 0.4269 | +8.7% | **−16.6%** | **−51.5%** |
+| decoration_seq132 — rearranged | 0.2320 | +6.5% | **−6.5%** | −22.4% |
+| **DinoToy_seq030 — other room** | 0.1920 | +2.7% | **−26.0%** | −20.0% |
+| **BlackCeramicBowl_seq030 — other room** | 0.4971 | −1.6% | **−8.9%** | −9.0% |
+
+**Locked prediction: `radial` reproduces at least half of `omega110`'s
+cross-room gain and beats `global` on both LiteOffice sequences. It reproduces
+130% and 99%, and beats `global` everywhere. PASSES, emphatically.**
+
+`global` — the same functional form with the theta dependence removed — is
+**worse than doing nothing** on three of the four sequences. So the transferable
+content is radial *structure*, not a rescale. That was the falsification
+condition and it did not fire.
+
+### The finding
+
+**Sixteen numbers carry everything that crosses a room. The other 122,884
+parameters buy a large in-room gain that transfers not at all.**
+
+* in-room the LoRA is 3.1x / 3.4x better than the radial curve;
+* across rooms the radial curve **matches or beats it** (−26.0 vs −20.0,
+  −8.9 vs −9.0).
+
+That is the mechanism the cross-room inversion was pointing at, now measured
+rather than hypothesised. The rectified teacher's transferable content is a
+per-theta recalibration of the frozen model's depth — a property of the **lens**,
+which is why it carries to another room and another device. The LoRA's extra
+capacity fits the **room**.
+
+Fitted curve: `log(target) = a(theta) * log(pred) + b(theta)`, with a running
+1.337 → 1.468 → 1.341 from centre to rim and b falling monotonically
++0.012 → −0.252. A power law near 1.4 with a rim-dependent offset.
+
+### Convergent validity with H9 — two unrelated label-free sources, one object
+
+H9 fit the same functional form from **parallax anchors** and got seq136
+0.4269 → 0.3613 (−15.4%, `raycal_inv`) / 0.3724 (−12.8%, `raycal_shrunk`).
+This fits it from a **rectified teacher** and gets 0.4269 → 0.3560 (−16.6%).
+
+Two supervision sources with nothing in common — triangulated metric anchors
+from camera motion, and a stronger model's predictions under a change of
+projection — converge on the same 16-parameter object and the same magnitude.
+H9 additionally needed per-sequence test-time adaptation; this one curve is fit
+once and applied to a different room unchanged.
+
+### What this changes practically
+
+A 16-number radial calibration can be shipped instead of a LoRA, and it
+transfers **better**. The LoRA is the right choice only when the deployment room
+is the training room. Neither needs a depth label.
+
+Caveats: one fit, no seeds (the fit is least squares on 240 frames, so seed
+variance is not the relevant uncertainty; frame sampling is). Cross-room is
+still 120 frames over two near-static sequences and is now carrying two claims
+rather than one. `radial` beating `omega110` on DinoToy suggests the LoRA's
+room-specific fitting actively costs transfer, which is consistent but untested.
