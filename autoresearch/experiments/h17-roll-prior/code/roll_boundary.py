@@ -78,6 +78,17 @@ def main(argv=None):
     p.add_argument("--common-theta-deg", type=float, default=44.0)
     p.add_argument("--depth-max-m", type=float, default=10.0)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--mirror", action="store_true",
+                   help="H34. Flip the SOURCE fisheye image left-right before it "
+                        "enters the rig, leaving the camera model untouched. A "
+                        "roll of +theta on mirrored content is, in content "
+                        "terms, -theta on the original — so if the roll "
+                        "asymmetry is carried by the scene, it flips sign here. "
+                        "If it is carried by something fixed in image space "
+                        "(our principal-point offset, the quarter-turn upright "
+                        "convention, or a handedness the model learned in image "
+                        "coordinates) it survives unchanged. Default off, so "
+                        "H16/H28/H32/H33 stay reproducible.")
     p.add_argument("--out", default=None)
     a = p.parse_args(argv)
 
@@ -157,7 +168,10 @@ def main(argv=None):
                     def fz(warped, _view, _m=masked, _d=disc):
                         return U.forward_z(bb, warped * _d if _m else warped)
                     with torch.no_grad():
-                        d, _ = rig.teach(fz, s.src.image(f).to(a.device), align=False)
+                        src = s.src.image(f).to(a.device)
+                        if a.mirror:
+                            src = torch.flip(src, dims=[-1])
+                        d, _ = rig.teach(fz, src, align=False)
                     preds[f] = np.where(cov, d.float().cpu().numpy(), 0.0)
                 results[arm][str(deg)] = zones(preds, cone & cov & common)
             r0, r1 = results["pinhole"][str(deg)], results["pinhole_masked"][str(deg)]
