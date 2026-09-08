@@ -69,19 +69,30 @@ ARMS = ("device", "grav_p", "grav_m")
 
 
 def frame_rolls(seq_dir: Path, calib: Path, offset_deg: float, stems):
-    """Per-frame roll in degrees, joined to the stored frames by timestamp."""
+    """Per-frame roll in degrees, joined to the stored frames by timestamp.
+
+    Both conventions here are copied from `roll_distribution.main`, not
+    re-derived: the device->camera rotation is TRANSPOSED, and the quarter-turn
+    offset is SUBTRACTED. Getting either wrong moves the whole distribution by
+    tens or hundreds of degrees -- the first run of this experiment reported a
+    median |roll| of 168 deg against H17.1's 2.7 and was discarded.
+
+    Returns (roll_deg, join_error_ms). Frames whose nearest trajectory sample is
+    further than one video frame away are the caller's problem to drop; the
+    depth frames start about a second before the trajectory does.
+    """
     ts, R_wd, g_w = RD.read_trajectory(seq_dir / "groundtruth" / "aria_trajectory.csv")
     cal = json.loads(Path(calib).read_text())
     qx, qy, qz, qw = cal["T_device_camera"]["quaternion_xyzw"]
-    R_cd = RD.quat_to_R(qx, qy, qz, qw)
-    r = RD.wrap180(RD.rolls_deg(R_wd, g_w, R_cd) + offset_deg)
+    R_cd = RD.quat_to_R(qx, qy, qz, qw).T            # camera <- device
+    r = RD.wrap180(RD.rolls_deg(R_wd, g_w, R_cd) - offset_deg)
     out, dt = [], []
     for st in stems:
         m = re.search(r"_(\d+)$", st)
         t_us = float(m.group(1)) / 1000.0     # stems carry nanoseconds
         i = int(np.argmin(np.abs(ts - t_us)))
         out.append(float(r[i])); dt.append(abs(float(ts[i] - t_us)) / 1000.0)
-    return np.array(out), float(np.max(dt))
+    return np.array(out), np.array(dt)
 
 
 def main(argv=None):
@@ -99,6 +110,9 @@ def main(argv=None):
     p.add_argument("--common-theta-deg", type=float, default=44.0)
     p.add_argument("--depth-max-m", type=float, default=10.0)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--max-join-ms", type=float, default=33.0,
+                   help="drop frames whose nearest trajectory sample is further "
+                        "away than this; one video frame at 30 Hz is 33 ms")
     p.add_argument("--out", default=None)
     a = p.parse_args(argv)
 
@@ -115,11 +129,24 @@ def main(argv=None):
     common = cone & (np.rad2deg(theta_np) <= a.common_theta_deg)
     gts = {f: s.gt_range(f, cos_t).numpy() for f in s.frames}
 
-    psi, dt_ms = frame_rolls(Path(a.seq), Path(a.calib), a.offset_deg,
-                             [s.stem(f) for f in s.frames])
+    psi_all, dt_all = frame_rolls(Path(a.seq), Path(a.calib), a.offset_deg,
+                                  [s.stem(f) for f in s.frames])
+    # One video frame at 30 Hz is 33 ms. Anything further from a trajectory
+    # sample than that is not a roll measurement for THIS frame, so it is
+    # dropped rather than used.
+    keep = dt_all <= a.max_join_ms
+    if not keep.all():
+        print(f"[h39] dropping {int((~keep).sum())} of {len(keep)} frames whose "
+              f"nearest trajectory sample is > {a.max_join_ms:g} ms away "
+              f"(worst {dt_all.max():.0f} ms)", flush=True)
+    s.frames = [f for f, k in zip(s.frames, keep) if k]
+    psi = psi_all[keep]
+    gts = {f: gts[f] for f in s.frames}
+    if len(s.frames) < 10:
+        sys.exit(f"[h39] only {len(s.frames)} frames survive the timestamp join")
     print(f"[h39] {s.name}: {len(s.frames)} frames, |roll| median "
           f"{np.median(np.abs(psi)):.2f} deg, p90 {np.percentile(np.abs(psi), 90):.2f}, "
-          f"max {np.abs(psi).max():.2f}; worst timestamp join {dt_ms:.1f} ms", flush=True)
+          f"max {np.abs(psi).max():.2f}; worst join {dt_all[keep].max():.1f} ms", flush=True)
 
     from raytun3r.backbones import build_backbone
 
@@ -208,7 +235,9 @@ def main(argv=None):
         Path(a.out).parent.mkdir(parents=True, exist_ok=True)
         Path(a.out).write_text(json.dumps(
             {"seq": s.name, "frames": [int(f) for f in s.frames],
-             "roll_deg": [float(x) for x in psi], "join_worst_ms": dt_ms,
+             "roll_deg": [float(x) for x in psi],
+             "join_worst_ms": float(dt_all[keep].max()),
+             "frames_dropped": int((~keep).sum()),
              "models": all_models, "config": vars(a)}, indent=1))
         print(f"[h39] wrote {a.out}", flush=True)
 
