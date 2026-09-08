@@ -1556,3 +1556,38 @@ h36_structural_finding:
     carried the old domain's assumptions. H34 mirrored the image and not the
     ground truth; H36 copied depth_convention from the Aria path. Both were
     caught only by a sanity bar on an untransformed baseline.
+
+# ------------------------------------------------- H36b resolved 2026-09-08
+h36b_outcome:
+  status: the external-domain question IS answered — from an artifact already on disk
+  source: results/depthfisheye-sws-v3/lora/eval_native_final.json (another work stream)
+  analysis: autoresearch/experiments/h36-external-domain/analysis.md
+  settles_the_void_first: >
+    That evaluation reports overall AbsRel 0.043 on SynWoodScape. The dataset is
+    tractable, so H36's three runs at 2.64 / 5.99 / 3.15 were MY PLUMBING, not
+    the domain. I could not determine that from inside my own pipeline.
+  the_profile: >
+    424M scored pixels, four cameras. AbsRel by incidence angle: 1.07% at ~6.9
+    deg, 2.10% at ~34.4, 2.55% at ~48.2, 5.06% at ~75.7, 8.50% at ~103.2.
+    Monotone. Centre-to-rim ratio 7.90 over the full 190-degree cone.
+  THE_COMPARISON_THAT_MATTERS: >
+    The 7.9x is partly reach — 103 deg is far outside anything Aria sees. AT A
+    MATCHED ABSOLUTE ANGLE the agreement is striking: SynWoodScape at ~48 deg
+    gives 2.38; Aria rim/centre is 2.17 +- 0.38 (H28, 13 recordings). Two
+    datasets sharing nothing land within a fifth of a standard deviation.
+  what_it_is_not:
+    - "Not a frozen model — LoRA fine-tuned ON SynWoodScape, so it had every chance to fix its own rim and did not."
+    - "Not my measurement — another work stream's code, zones and conventions; I am reading their artifact."
+    - "Not a controlled comparison — nothing held fixed between datasets but the plotted quantity."
+  CORRECTS_A_CAVEAT_ONE_TICK_OLD: >
+    "Nothing in this line has been validated outside Aria" is TOO STRONG. The
+    rim penalty itself replicates on an unrelated fisheye domain at comparable
+    magnitude; the METHODS built on it (label-free student, six-number curve,
+    border advice) remain Aria-only. Both reports updated.
+
+lesson_look_for_the_measurement_before_building_it:
+  rule: "Before building a measurement in a new domain, look for one that already exists."
+  cost_this_time: "Three void GPU runs. The answer was in results/depthfisheye-sws-v3/ the whole time."
+  same_family_as:
+    - "H21 — check what is invariant before assuming a re-render needs the expensive model re-run."
+    - "H25 — thirteen extracted sequences sat unused for a day while claims rested on one."

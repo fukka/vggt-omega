@@ -1794,3 +1794,35 @@ spend a fourth.
 So the gap stands and both reports now say it: this line has never been
 validated outside Aria, and "verified across thirteen recordings and four
 backbones" reads like external validation while being nothing of the kind.
+
+## 2026-09-08 (later) — H36b: the answer was already on disk
+
+After three void runs I stopped trying to build the measurement and went looking
+for one that existed. The depthfisheye work stream in this same repository has a
+validated by-theta evaluation on SynWoodScape — 424 million scored pixels, four
+cameras — and it answers the question directly.
+
+It also settles what I could not determine from inside my own pipeline: that
+evaluation gets overall AbsRel 0.043, so SynWoodScape is entirely tractable and
+my 2.64 / 5.99 / 3.15 were plumbing, not domain.
+
+The result is better than I expected. Error grows monotonically with incidence
+angle on a dataset that shares nothing with ours — outdoors, synthetic,
+automotive, a 190-degree lens. The headline centre-to-rim ratio is 7.9, though
+much of that is reach, since 103 degrees is far outside anything an Aria camera
+sees. The comparison that matters is at matched angle: SynWoodScape at 48
+degrees gives 2.38 against our 2.17 +- 0.38. Within a fifth of a standard
+deviation, on two datasets with nothing in common.
+
+And that model was fine-tuned on its own data, so it had every chance to fix its
+rim and did not, which makes the agreement more surprising rather than less.
+
+I corrected the caveat I added one tick ago. "Nothing in this line has been
+validated outside Aria" was too strong: the rim penalty replicates, the methods
+built on it do not have that evidence.
+
+The lesson cost three GPU runs and belongs with two others from this line: before
+building a measurement in a new domain, look for one that already exists. H21 was
+the same shape (check what is invariant before re-running the expensive model)
+and so was H25 (thirteen sequences sat extracted and unused while every claim
+rested on one).

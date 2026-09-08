@@ -57,3 +57,67 @@ measurement.
 
 Both reports should say so, because "verified across thirteen recordings and
 four backbones" reads like external validation and is not.
+
+---
+
+# H36b — the question answered, from artifacts that were already on disk
+
+After three void runs I stopped trying to build the measurement and looked for
+one that already existed. The `depthfisheye` work stream — a separate line in
+this repo, reproducing a SynWoodScape paper — has **its own validated evaluation
+with a by-θ breakdown**, over **424 million scored pixels** across four cameras.
+
+## First, it settles the void
+
+That evaluation reports **overall AbsRel 0.043**. SynWoodScape is entirely
+tractable. **My three runs at 2.64 / 5.99 / 3.15 were my plumbing, not the
+domain** — which is what I could not determine from inside my own pipeline.
+
+## The answer
+
+| θ | AbsRel | ratio to centre |
+|---|---|---|
+| ~6.9° (centre) | 1.07% | 1.00 |
+| ~20.6° | 1.53% | 1.43 |
+| ~34.4° | 2.10% | 1.96 |
+| **~48.2°** | **2.55%** | **2.38** |
+| ~61.9° | 3.10% | 2.90 |
+| ~75.7° | 5.06% | 4.73 |
+| ~89.5° | 7.29% | 6.81 |
+| ~103.2° | 8.50% | **7.90** |
+
+**The error grows monotonically with incidence angle on a completely different
+fisheye domain** — synthetic, automotive, outdoor, ~190° lens.
+
+## The comparison that matters
+
+The headline ×7.9 is partly just reach: 103° is far outside anything an Aria
+camera can see. **At a matched absolute angle the agreement is striking:**
+
+* SynWoodScape at **~48°**: ratio **2.38**
+* Aria rim (≥38°, cone ends 54.8°) over centre: **2.17 ± 0.38** (H28, thirteen
+  recordings)
+
+Two datasets that share nothing — indoor head-worn versus outdoor automotive,
+real versus synthetic, 55° versus 190° — land within a fifth of a standard
+deviation of each other over the same angular range.
+
+## What this is not
+
+* **Not a frozen model.** This one is LoRA fine-tuned *on SynWoodScape*. It has
+  had every chance to fix its own rim and the rim is still 2.4× the centre at
+  matched angle. That makes the agreement more surprising, not less, but it is
+  a different regime from the frozen models everywhere else in this line.
+* **Not my measurement.** Different zone definitions, different metric
+  conventions, another work stream's code. I am reading their artifact, not
+  reproducing it.
+* **Not a controlled comparison.** Nothing was held fixed between the two
+  datasets except the quantity being plotted.
+
+## What it changes
+
+The caveat added one tick ago — *"nothing in this line has been validated
+outside Aria"* — is now **too strong**. The honest version: the rim penalty
+itself replicates on an unrelated fisheye domain at comparable magnitude; the
+*methods* built on it (the label-free student, the six-number curve, the border
+advice) remain Aria-only.

@@ -2766,3 +2766,55 @@ Three runs could not separate those and I stopped rather than spend a fourth.
 extensively but all within one camera family, one apartment, one small office.
 "Verified across thirteen recordings and four backbones" reads like external
 validation and is not. Both reports now say so.
+
+## H36b — the rim penalty replicates outside Aria, and at the same magnitude
+
+After three void runs I stopped building the measurement and looked for one that
+existed. The `depthfisheye` work stream in this repo has a **validated
+by-theta evaluation on SynWoodScape**, 424M scored pixels, four cameras.
+
+**It settles the void first**: that evaluation reports overall AbsRel **0.043**.
+SynWoodScape is tractable, so my 2.64 / 5.99 / 3.15 were **my plumbing, not the
+domain**.
+
+| theta | AbsRel | ratio to centre |
+|---|---|---|
+| ~6.9 deg (centre) | 1.07% | 1.00 |
+| ~34.4 deg | 2.10% | 1.96 |
+| **~48.2 deg** | **2.55%** | **2.38** |
+| ~75.7 deg | 5.06% | 4.73 |
+| ~103.2 deg | 8.50% | **7.90** |
+
+**Error grows monotonically with incidence angle on a completely different
+fisheye domain** — synthetic, automotive, outdoor, ~190 degree lens.
+
+### The comparison that matters
+
+The headline 7.9x is partly reach: 103 degrees is far outside anything Aria can
+see. **At a matched absolute angle the agreement is striking**: SynWoodScape at
+~48 deg gives **2.38**, Aria's rim/centre is **2.17 +- 0.38** (H28, thirteen
+recordings). Two datasets sharing nothing — indoor head-worn vs outdoor
+automotive, real vs synthetic, 55 vs 190 degrees — land within a fifth of a
+standard deviation over the same angular range.
+
+### What it is not
+
+Not a frozen model (LoRA fine-tuned ON SynWoodScape — it had every chance to fix
+its own rim and did not, which makes the agreement more surprising, not less).
+Not my measurement (another work stream's code and conventions; I am reading
+their artifact). Not a controlled comparison (nothing held fixed but the
+plotted quantity).
+
+### What it changes
+
+The caveat added one tick ago — "nothing in this line has been validated outside
+Aria" — is **too strong**. Honest version: **the rim penalty itself replicates on
+an unrelated fisheye domain at comparable magnitude; the METHODS built on it
+remain Aria-only.**
+
+### The lesson, which cost three runs
+
+**Before building a measurement in a new domain, look for one that already
+exists.** The answer had been sitting in `results/depthfisheye-sws-v3/` the whole
+time. Same lesson as H21 (check what is invariant before re-running the expensive
+model) and H25 (thirteen sequences sat extracted and unused for a day).
