@@ -66,6 +66,14 @@ def main(argv=None):
     p.add_argument("--px-per-frame", type=int, default=20000)
     p.add_argument("--size", type=int, default=504)
     p.add_argument("--max-frames", type=int, default=60)
+    p.add_argument("--src-size", type=int, default=0,
+                   help="H23. Read the SOURCE frames at this resolution before "
+                        "warping to each lens (native ADT is 1408). 0 = same as "
+                        "--size, which is H21/H22 behaviour. The cached teacher "
+                        "target is always warped from the --size grid, so the "
+                        "supervision is identical between src-size arms and the "
+                        "only thing that changes is how much real detail the "
+                        "warped INPUT carries at the rim.")
     p.add_argument("--variant", default="small")
     p.add_argument("--depth-max-m", type=float, default=10.0)
     p.add_argument("--seed", type=int, default=0)
@@ -96,6 +104,11 @@ def main(argv=None):
         # one warp per lens, reused for every frame of this sequence
         W = {L: LF.grid_between(src, fam[L]) for L in lenses}
         B = {L: bins_of(fam[L]) for L in lenses}
+        s_img, W_img = s, W
+        if a.src_size and a.src_size != a.size:
+            s_img = Seq(sd, a.src_size, a.max_frames)
+            assert s_img.frames == s.frames, "frame lists diverged across sizes"
+            W_img = {L: LF.grid_between(s_img.src.camera, fam[L]) for L in lenses}
         d = root / s.name
         man = json.loads((d / "manifest.json").read_text())
         cov = torch.from_numpy(np.load(d / "covered.npy").astype(np.float32))
@@ -112,7 +125,7 @@ def main(argv=None):
                 tgt = tgt * float(np.exp(-off.get(stem, 0.0)))
                 # range is invariant under a fixed-cone lens change: resample it
                 tgt_L = LF.warp(torch.from_numpy(tgt), g, mode="nearest").numpy()
-                img_L = LF.warp(s.src.image(n), g, mode="bilinear")
+                img_L = LF.warp(s_img.src.image(n), W_img[L][0], mode="bilinear")
                 with torch.no_grad():
                     pr = U.forward_range(bb, img_L.to(a.device),
                                          cos_t.to(a.device)).float().cpu().numpy()
@@ -133,6 +146,11 @@ def main(argv=None):
         src = s.src.camera
         fam = LF.lens_family(lenses, a.size, float(src.theta_max))
         W = {L: LF.grid_between(src, fam[L]) for L in lenses}
+        s_img, W_img = s, W
+        if a.src_size and a.src_size != a.size:
+            s_img = Seq(sd, a.src_size, a.max_frames)
+            assert s_img.frames == s.frames, "frame lists diverged across sizes"
+            W_img = {L: LF.grid_between(s_img.src.camera, fam[L]) for L in lenses}
         for L in lenses:
             g, valid = W[L]
             cos_t, t_idx, t_mid, cone = bins_of(fam[L])
@@ -140,7 +158,7 @@ def main(argv=None):
                        border_token=False, dpt_grid=False, depth_convention="z")
             P, G = [], []
             for n in s.frames:
-                img_L = LF.warp(s.src.image(n), g, mode="bilinear")
+                img_L = LF.warp(s_img.src.image(n), W_img[L][0], mode="bilinear")
                 with torch.no_grad():
                     pr = U.forward_range(bb, img_L.to(a.device),
                                          cos_t.to(a.device)).float().cpu().numpy()
