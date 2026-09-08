@@ -40,10 +40,21 @@ for **every** target lens, including the real one, where it beats the real
 lens's own curve by **5.8 points** (−26.8% against −21.0%) on seq136 and **4.4**
 on dec132 (−14.3% against −9.9%).
 
-The likely reason is mechanical rather than deep: `equisolid` allocates more
-image radius to high θ than Aria's KB4, so a fitting set rendered through it
-contains more rim pixels, and the rim is exactly where a(θ) is least well
-determined and where the score is taken. Same object, better estimated.
+**Correction, 2026-09-08.** This section originally guessed that `equisolid`
+"allocates more image radius to high θ ... so its fitting set contains more rim
+pixels". **That is backwards**, and it is checkable with no data at all: every
+lens is normalised so `r(θ_max) = R_disc`, so what matters is the shape of
+`r(θ)/r(θ_max)`. `equisolid` gives the outer half of the angle range **73.5%** of
+the disc area, against equidistant's 75.0% and stereographic's 77.9% — *fewer*
+rim pixels, not more.
+
+The ranking above is therefore monotone in the **opposite** direction to the
+original guess: the geometry with the fewest rim pixels made the best fitting
+set. Why that would be is now genuinely open. H22 tests the corrected direction
+by extending the family at both ends (`orthographic` compresses further,
+`rectilinear` expands far past everything here). The guess was labelled "likely
+mechanical" rather than measured, but it was stated in the wrong direction and
+committed, so it is corrected rather than quietly dropped.
 
 ## What this changes
 

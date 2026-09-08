@@ -198,6 +198,21 @@ def main(argv=None):
             o[k] = float((np.array([tab[i, j] for i, j in cells]) * w).sum() / max(w.sum(), 1.0))
         return 100.0 * (o["corr"] / o["frozen"] - 1.0)
 
+    # How much of the disc AREA each lens gives to the outer half of the angle
+    # range. Computed from the shape's own r(theta), so it needs no data.
+    # H21's analysis guessed this backwards; H22 exists to test the corrected
+    # direction, so the number belongs in the output rather than a side note.
+    def rim_area_share(name):
+        d = LF.SHAPES[name][0]
+        tm = np.radians(54.83)
+        v = float(d(np.array([tm / 2.0]), np)[0] / d(np.array([tm]), np)[0])
+        return 1.0 - v * v
+
+    rim_share = {L: rim_area_share(L) for L in lenses}
+    print("\n[h21] share of the disc area given to the outer half of the angle range")
+    for L in sorted(lenses, key=lambda x: rim_share[x]):
+        print(f"  {L:>14s}  {100 * rim_share[L]:5.1f}%")
+
     curves = {L: fit_curve(fit[L]) for L in lenses}
     glob = {L: fit_curve(fit[L], radial=False) for L in lenses}
     ev_seqs = [Path(x).name for x in a.eval_seqs.split(",")]
@@ -214,6 +229,7 @@ def main(argv=None):
         print(f"    {La:>14s} vs {Lb:<14s} {d_:.4f}")
 
     res = {"lenses": lenses, "eval_seqs": ev_seqs, "config": vars(a),
+           "rim_area_share": rim_share,
            "coef_a": {L: curves[L][:, 0].tolist() for L in lenses},
            "pairwise_da": [{"a": x, "b": y, "d": z} for x, y, z in pw],
            "mean_pairwise_da": mean_pw, "matrix": {}, "global_diag": {}}
