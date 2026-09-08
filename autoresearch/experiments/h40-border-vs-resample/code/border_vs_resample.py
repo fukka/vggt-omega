@@ -1,10 +1,19 @@
 """H40 - border x resampling, 2x2, at a freely chosen angle with no border.
 
-The 89 degree square view used elsewhere in this line has a corner ray of 62.9
-deg and already runs off Aria's 54.83 deg cone, which is why rotating it creates
-black corners. A 60 degree view has a corner ray of 42.4 deg and never leaves
-the cone, so it can be rotated by any angle with NO border at all. Its inscribed
-disc is at 30 deg, so scoring is capped there and is invariant under rotation.
+FIRST DESIGN WAS VOID and its own sanity check said so. I reasoned that a 60
+deg view has a corner ray of 42.4 deg, inside Aria's 54.83 deg cone, so rotating
+it creates no border. That confuses two different things: the view's RAYS stay
+inside the cone, but rotating a square RASTER by 30 deg always throws its corners
+outside the raster -- 15.3% of the frame went black, which the construction check
+caught before a single number was interpreted.
+
+The repair is to do the rotation on a LARGER canvas and crop afterwards. Render
+a big view of side VS >= vs*sqrt(2) at the same focal length; its inscribed disc
+(radius VS/2) contains every corner of the rotated vs x vs crop, so the crop is
+fully populated after any rotation. With vs=630 and 60 deg, VS=896 and the big
+view spans 78.5 deg with its own corners at 49.1 deg -- still inside the cone,
+so nothing is black anywhere. The model always sees the same vs x vs, 60 deg
+crop; only how many times it was resampled changes.
 
 Four arms, one angle:
 
@@ -66,11 +75,12 @@ def main(argv=None):
     p.add_argument("--models", default="da3:small,vggt_omega")
     p.add_argument("--omega-ckpt", default="checkpoints/VGGT-Omega-1B-512/model.pt")
     p.add_argument("--view-fov", type=float, default=60.0,
-                   help="60 deg keeps the corner ray at 42.4 deg, inside Aria's "
-                        "54.83 deg cone, so rotation never creates a border")
+                   help="FOV of the CROP the model sees. The rotation happens on "
+                        "a canvas sqrt(2) times wider so the crop stays full.")
     p.add_argument("--view-size", type=int, default=630)
-    p.add_argument("--common-theta-deg", type=float, default=29.0,
-                   help="inside the 60 deg view's inscribed disc (30 deg)")
+    p.add_argument("--common-theta-deg", type=float, default=28.0,
+                   help="inside the 60 deg crop's inscribed disc (30 deg), with "
+                        "a margin so the crop edge cannot bleed in")
     p.add_argument("--depth-max-m", type=float, default=10.0)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--out", default=None)
@@ -117,52 +127,69 @@ def main(argv=None):
             continue
         ps = bb.patch_size
         vs = int(round(a.view_size / ps)) * ps
+        VS = int(np.ceil(vs * np.sqrt(2) / ps)) * ps          # >= vs*sqrt(2)
+        o = (VS - vs) // 2                                     # crop offset
+        t = np.tan(np.radians(a.view_fov / 2))
+        fov_big = 2 * np.degrees(np.arctan((VS / vs) * t))
         c = (vs - 1) / 2.0
         yy, xx = torch.meshgrid(torch.arange(vs, dtype=torch.float32),
                                 torch.arange(vs, dtype=torch.float32), indexing="ij")
         disc = ((((xx - c) ** 2 + (yy - c) ** 2) <= (vs / 2.0 - 1.0) ** 2)
                 .to(a.device))
-        rig = RT.Rig(cam, [RC.RolledView(fov_x_deg=a.view_fov, width=vs,
-                                         height=vs, roll_deg=0.0)], patch=ps)
-        bb.install(None, rig.views[0].pin, (vs, vs), patch_undistort=False,
+
+        big = RT.Rig(cam, [RC.RolledView(fov_x_deg=float(fov_big), width=VS,
+                                         height=VS, roll_deg=0.0)], patch=ps)
+        small = RT.Rig(cam, [RC.RolledView(fov_x_deg=a.view_fov, width=vs,
+                                           height=vs, roll_deg=0.0)], patch=ps)
+        bb.install(None, small.views[0].pin, (vs, vs), patch_undistort=False,
                    border_token=False, dpt_grid=False, depth_convention="z")
-        cov = rig.covered.numpy()
+        cov = big.covered.numpy()
         mask = cone & cov & common
 
-        # --- construction check: the rotated view must contain no black -----
+        def crop(x):
+            return x[..., o:o + vs, o:o + vs]
+
+        def twice(x):
+            return rot(rot(x, -a.delta_deg), a.delta_deg)
+
+        # --- construction check: the CROP must contain no black -------------
         probe = {}
         with torch.no_grad():
             def grab(w, _v):
                 probe["img"] = w.detach().clone()
                 return torch.ones(w.shape[-2:], device=w.device)
-            rig.teach(grab, s.src.image(s.frames[0]).to(a.device), align=False)
-        img = probe["img"]
-        blk0 = float((img.abs().sum(0) < 1e-6).float().mean())
-        blkr = float((rot(img, -a.delta_deg).abs().sum(0) < 1e-6).float().mean())
-        print(f"[h40] {spec}: view {vs}x{vs} @ {a.view_fov} deg  "
-              f"black fraction: direct {blk0:.4f}, rotated {blkr:.4f}"
-              f"{'   <-- NOT BORDER-FREE' if blkr > 0.002 else ''}", flush=True)
+            big.teach(grab, s.src.image(s.frames[0]).to(a.device), align=False)
+        W = probe["img"]
+        blk0 = float((crop(W).abs().sum(0) < 1e-6).float().mean())
+        blkr = float((crop(twice(W)).abs().sum(0) < 1e-6).float().mean())
+        print(f"[h40] {spec}: crop {vs} @ {a.view_fov:.1f} deg from canvas {VS} "
+              f"@ {fov_big:.1f} deg   black in crop: direct {blk0:.4f}, "
+              f"rotated {blkr:.4f}"
+              f"{'   <-- NOT BORDER-FREE, VOID' if blkr > 0.002 else ''}",
+              flush=True)
 
         R = {}
         for arm in ARMS:
             preds = {}
             for f in s.frames:
                 def fz(w, _v, _a=arm):
-                    if _a == "direct":
-                        return U.forward_z(bb, w)
-                    if _a == "masked":
-                        return U.forward_z(bb, w * disc)
-                    x = rot(rot(w, -a.delta_deg), a.delta_deg)
-                    return U.forward_z(bb, x * disc if _a == "rt_masked" else x)
+                    x = crop(w if _a in ("direct", "masked") else twice(w))
+                    if _a in ("masked", "rt_masked"):
+                        x = x * disc
+                    z = U.forward_z(bb, x)
+                    full = torch.zeros(w.shape[-2:], dtype=z.dtype, device=z.device)
+                    full[o:o + vs, o:o + vs] = z
+                    return full
                 with torch.no_grad():
-                    d, _ = rig.teach(fz, s.src.image(f).to(a.device), align=False)
+                    d, _ = big.teach(fz, s.src.image(f).to(a.device), align=False)
                 preds[f] = np.where(cov, d.float().cpu().numpy(), 0.0)
             R[arm] = all_absrel(preds, mask)
         base = R["direct"]
         cost = {k: 100 * (R[k] / base - 1) for k in ARMS}
         add = 100 * ((1 + cost["rt"] / 100) * (1 + cost["masked"] / 100) - 1)
         out[spec] = {"absrel": R, "cost_pct": cost, "multiplicative_pct": add,
-                     "black_direct": blk0, "black_rotated": blkr}
+                     "black_direct": blk0, "black_rotated": blkr,
+                     "crop_px": vs, "canvas_px": VS, "fov_big_deg": float(fov_big)}
         print(f"  direct {base:.4f} | resampling {cost['rt']:+.2f}% | "
               f"border {cost['masked']:+.2f}% | both {cost['rt_masked']:+.2f}% "
               f"(multiplicative would be {add:+.2f}%)", flush=True)

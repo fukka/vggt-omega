@@ -16,14 +16,26 @@ maximum real roll is ~28°.
 **That was true of that construction, not of the question.** A different view
 geometry isolates it directly.
 
-## The construction
+## The construction — first version VOID, repaired
 
-Aria's cone is 54.83°. The 89° square view used throughout this line has a
-corner ray of 62.9°, so it *already* runs off the cone — which is why rotating
-it creates black corners. A **60° square view has a corner ray of 42.4°**, well
-inside the cone, so rotating it about its optical axis **never creates a
-border**. Its inscribed disc is at 30°, so scoring is capped at θ ≤ 29° and is
-invariant under the rotation.
+**The first construction was wrong and its own sanity check said so**, before a
+single number was interpreted. I reasoned that a 60° view has a corner ray of
+42.4°, inside Aria's 54.83° cone, so rotating it creates no border. That
+confuses two different things: the view's **rays** stay inside the cone, but
+rotating a square **raster** by 30° always throws its corners outside the
+raster. 15.3% of the frame went black, and the arms it produced (DA3-Small
+"resampling" +80%) were measuring a border again — exactly the quantity the
+experiment exists to separate out.
+
+**Repair: rotate on a larger canvas and crop afterwards.** Render a big view of
+side VS ≥ vs·√2 at the same focal length. Its inscribed disc, radius VS/2,
+contains every corner of the rotated vs×vs crop, so the crop stays fully
+populated under any rotation. With vs = 630 and 60°, VS = 896 and the canvas
+spans 78.5° with its own corners at 49.1° — still inside the 54.83° cone, so
+nothing is black anywhere at all. The model always sees the same 630 px, 60°
+crop; only the number of times it was resampled changes. Scoring is capped at
+θ ≤ 28°, inside the crop's 30° inscribed disc with a margin so the crop edge
+cannot bleed in.
 
 That makes a clean 2×2 possible at a single, freely chosen angle:
 
@@ -58,10 +70,10 @@ leaves the cone.
 
 ## Sanity check (not a bar)
 
-At δ = 0 the `rt` arm must be bit-equivalent to `direct`, and the fraction of
-black pixels inside the 60° view must be **zero at every rotation angle**. Both
-are printed. If any black appears, the construction has failed and the run is
-void — the entire point is a border-free rotation.
+The fraction of black pixels **inside the crop** must be zero after the double
+rotation. It is printed for every backbone and recording. If any appears, the
+construction has failed and the run is void — the entire point is a border-free
+rotation. This check has already voided one design; it stays.
 
 ## Cost
 
