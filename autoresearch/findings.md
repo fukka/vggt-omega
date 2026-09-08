@@ -1588,3 +1588,48 @@ not.** Both quantities come from the fit alone.
 Caveat that remains: eight bins is few, and LOO on eight points is itself noisy.
 What carries weight is that all four Apartment measurements land above the
 baseline and all four LiteOffice ones land below it, with no overlap.
+
+## H18.5 pre-study (CPU) — the simulation failed, and the failure is the useful part
+
+With the box down indefinitely I tried to answer H18.5's mechanistic question —
+"is the binding constraint pixels or viewpoints?" — by characterising the
+estimator synthetically (`code/radial_estimator_sim.py`). It does not work, and
+recording why is worth more than the numbers.
+
+Generative model: each frame is a scene view whose pixels occupy a narrow band
+of log-depth, plus a per-frame bias (scene-level) and i.i.d. per-pixel noise.
+`spread` draws band centres across the whole depth range, `single` from a narrow
+slice.
+
+| frames | `spread` mean pairwise \|da\| | `single` | ratio |
+|---|---|---|---|
+| 2 | 0.113 | 0.048 | 0.43 |
+| 60 | 0.0067 | 0.0060 | 0.90 |
+| 240 | 0.0061 | 0.0045 | 0.75 |
+
+**Both cross \|da\| < 0.10 at 2–4 frames.** The real data needs somewhere
+between 120 (insufficient) and 240 (sufficient). The simulation is off by two
+orders of magnitude, so **it does not reproduce the phenomenon and its ordering
+prediction cannot be trusted.**
+
+It also inverts the ordering I expected: `single` comes out *more* stable than
+`spread` at every count. That is explicable inside the model — a per-frame bias
+is a pure intercept shift, and once band centres are spread out those biases
+become correlated with `log(pred)` within a bin and alias into the slope. Real
+or not, it is a property of my model, not evidence about ADT.
+
+**What the failure says, and this is the part to keep.** A per-frame intercept
+plus i.i.d. pixel noise **cannot** produce "120 frames insufficient, 240
+sufficient". Real frames must carry far more correlated structure than that —
+most plausibly the model's *errors* are spatially structured within a frame (a
+whole wall predicted wrong together), which is neither an intercept nor
+independent noise. So:
+
+* H18.5's real stability curve will be governed by something this model lacks;
+* **analytic or simulated sample-size estimates should not be trusted for this
+  problem** — the effective sample size per frame is far below any naive count;
+* the pixel-count sweep (500 → 60,000 px/frame moved \|da\| from 0.0147 to
+  0.0049, roughly root-n) is equally model-dependent and says nothing real.
+
+Kept out of the human report: it is a negative result about my own instrument,
+not about the problem.
