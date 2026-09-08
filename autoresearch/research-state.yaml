@@ -707,3 +707,28 @@ h18_5_fitting_set_sufficiency:
     viewpoints". LiteOffice has both confounded (120 frames AND near-static).
     In deployment those have very different costs: record for longer, versus
     ask the wearer to move around.
+
+# ------------------------------------------------------- outage 2026-09-08
+lambda_63_outage:
+  first_seen: "2026-09-08 ~02:30 local"
+  still_down_at: "~03:35 local (>1 h, five consecutive loop ticks)"
+  note: >
+    The box is shared and reboots unannounced; this is the documented failure
+    mode, not a new one. No GPU work was launched during the outage.
+  work_left_mid_flight_and_NOT_self_restarting: >
+    tmux `ext` was extracting the 13 Apartment sequences whose depth VRS had
+    never been unpacked, and died partway. 10 of 13 were finished and are on
+    /netapp/datasets/f.zhang2/adt_apartment_extra (seq137,138,140-147);
+    seq148, 149, 150 were not. `extract_more.sh` skips any sequence whose
+    depth_npy already holds >100 files, so re-running it finishes the rest and
+    costs nothing for the ten already done. WHOEVER PICKS THIS UP MUST RESTART
+    IT — the tmux session does not survive the reboot and nothing else will.
+  blocked_on_the_box:
+    - "H18.5 — protocol locked (500ca6b), runner committed (7d4e642), one GPU pass then the whole sweep in numpy. This is the first thing to run."
+    - "The RolledView rotation test in h17-roll-prior/code/test_roll.py, which skips without the full env."
+    - "Pushing the h18 omega/radial artefacts to the `results` branch. They are safe on `organized` under autoresearch/experiments/*/results/, but the branch convention wants them on `results`, and that worktree lives on the box."
+  nothing_is_stranded: >
+    Verified during the outage: working tree clean, organized level with origin,
+    zero unpushed commits, and all 27 h17/h18 result JSONs committed to the
+    repo rather than living only on the box. Every number in the report is
+    reproducible from git even if the box never returns.
