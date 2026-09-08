@@ -1,0 +1,166 @@
+{
+ "lenses": [
+  "aria_kb4",
+  "equidistant",
+  "stereographic",
+  "equisolid"
+ ],
+ "eval_seqs": [
+  "Apartment_release_clean_seq136_M1292",
+  "Apartment_release_decoration_seq132_M1292"
+ ],
+ "config": {
+  "cache_root": "/netapp/datasets/f.zhang2/h14_teacher_cache_omega110",
+  "arm": "omega110",
+  "lenses": "aria_kb4,equidistant,stereographic,equisolid",
+  "fit_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq133_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq134_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq135_M1292",
+  "eval_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq136_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_decoration_seq132_M1292",
+  "px_per_frame": 20000,
+  "size": 504,
+  "max_frames": 60,
+  "variant": "small",
+  "depth_max_m": 10.0,
+  "seed": 0,
+  "device": "cuda",
+  "out": "autoresearch/experiments/h21-lens-identity/results/lens_identity.json"
+ },
+ "coef_a": {
+  "aria_kb4": [
+   1.6228063064079963,
+   1.7807220522229763,
+   1.8996747146555923,
+   1.9223897001937802,
+   1.915937589267841,
+   1.8832286928415038,
+   1.8403320506286984,
+   1.799025690000522
+  ],
+  "equidistant": [
+   1.5842213161521206,
+   1.7424989693825874,
+   1.9032056170952998,
+   1.9604527033137937,
+   1.9909035429114321,
+   1.9976470001619937,
+   2.0046214711090404,
+   2.0094802917345502
+  ],
+  "stereographic": [
+   1.5974069399767665,
+   1.7459961421782253,
+   1.8786203032618298,
+   1.907094106603605,
+   1.9202640420503454,
+   1.9039772452690167,
+   1.869898759137535,
+   1.8274664351331362
+  ],
+  "equisolid": [
+   1.5863870796758963,
+   1.7551381769205079,
+   1.9197418907002992,
+   1.9893315173064017,
+   2.0445767782090973,
+   2.063975615485124,
+   2.09407232515012,
+   2.107377009931013
+  ]
+ },
+ "pairwise_da": [
+  {
+   "a": "aria_kb4",
+   "b": "equidistant",
+   "d": 0.08531628272930461
+  },
+  {
+   "a": "aria_kb4",
+   "b": "stereographic",
+   "d": 0.022444717538923326
+  },
+  {
+   "a": "aria_kb4",
+   "b": "equisolid",
+   "d": 0.1275612251535857
+  },
+  {
+   "a": "equidistant",
+   "b": "stereographic",
+   "d": 0.07195906643636574
+  },
+  {
+   "a": "equidistant",
+   "b": "equisolid",
+   "d": 0.04594618518970514
+  },
+  {
+   "a": "stereographic",
+   "b": "equisolid",
+   "d": 0.11648951754621747
+  }
+ ],
+ "mean_pairwise_da": 0.07828616576568366,
+ "matrix": {
+  "Apartment_release_clean_seq136_M1292|aria_kb4": [
+   -21.0474583565886,
+   -25.757659899641936,
+   -23.256708417183482,
+   -26.905543089114158
+  ],
+  "Apartment_release_clean_seq136_M1292|equidistant": [
+   -26.02064179626211,
+   -32.77200418988875,
+   -28.57211322427232,
+   -34.919599377429144
+  ],
+  "Apartment_release_clean_seq136_M1292|stereographic": [
+   -23.55323824423847,
+   -29.093344258562126,
+   -25.934238050394566,
+   -30.618597237212843
+  ],
+  "Apartment_release_clean_seq136_M1292|equisolid": [
+   -26.7750100384449,
+   -34.15695117906512,
+   -29.435334387730848,
+   -36.60838136658368
+  ],
+  "Apartment_release_decoration_seq132_M1292|aria_kb4": [
+   -9.911820042837327,
+   -11.266834992712338,
+   -11.792724412235733,
+   -12.38913012103433
+  ],
+  "Apartment_release_decoration_seq132_M1292|equidistant": [
+   -13.69792060497006,
+   -15.86178246446418,
+   -16.243066470356695,
+   -17.969399103359084
+  ],
+  "Apartment_release_decoration_seq132_M1292|stereographic": [
+   -11.745871429746725,
+   -13.311191538221435,
+   -13.90953557377208,
+   -14.767351832493214
+  ],
+  "Apartment_release_decoration_seq132_M1292|equisolid": [
+   -14.28119965944017,
+   -16.851063006282985,
+   -17.0073061965184,
+   -19.315748164240667
+  ]
+ },
+ "global_diag": {
+  "Apartment_release_clean_seq136_M1292": [
+   5.214822628297355,
+   3.465258108795144,
+   4.654972502248111,
+   2.314729206882471
+  ],
+  "Apartment_release_decoration_seq132_M1292": [
+   4.046307409718364,
+   3.245043065525466,
+   3.5019390814707174,
+   2.196108315003076
+  ]
+ }
+}

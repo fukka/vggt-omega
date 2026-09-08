@@ -899,3 +899,54 @@ h21_candidate:
     Moving footage from a third device — still the only thing this line cannot
     get from what is on disk. Check the 13 extra Apartment sequences first, but
     they are all M1292, so they do not answer it.
+
+# ------------------------------------------------- H21 resolved 2026-09-08
+h21_outcome:
+  status: B2 REFUTED (pre-registered) — "a property of the lens" withdrawn
+  artifact: autoresearch/experiments/h21-lens-identity/results/lens_identity.json
+  analysis: autoresearch/experiments/h21-lens-identity/analysis.md
+  headline: >
+    Cross-lens minus same-lens is +0.84 (seq136) and +0.47 (dec132) points, both
+    inside H20's +-1.0 draw-to-draw sd. Matching the lens buys nothing. What
+    dominates is which geometry the curve was FITTED on: row means span 7.5
+    points, about 9x the matching effect.
+  the_restatement: >
+    WRONG "a recalibration of depth against viewing angle - a property of the
+    lens". RIGHT "a property of how the backbone's error grows with incidence
+    angle, largely independent of how the lens distributes pixels across that
+    angle". Calibration is a one-off, not per-camera. Corrected in both reports.
+  new_recommendation: >
+    Resample the footage to a rim-stretching geometry (equisolid) BEFORE fitting,
+    then apply the curve to the real images. Worth 5.8 points on the real Aria
+    lens (-26.8% vs its own -21.0%). First recommendation in this line that
+    improves a result rather than only constraining one.
+  do_not_lean_on_b1: >
+    Mean pairwise |da| 0.0783 vs a 0.069 floor, with two of six pairs BELOW the
+    floor. The four curves are close to the same shape; treat B1 as undecided.
+  limits_recorded_up_front:
+    - "Synthetic re-renderings, not four real cameras: same footage, cone, optics, MTF, vignetting, native resolution. Lens-independence is established for RADIAL MAPPING only."
+    - "Coefficients are NOT comparable to H18.2's — every arm was resampled, so a(theta) runs 1.6-2.1 against the unwarped 1.34-1.47. Within-experiment only."
+  method_note_worth_reusing: >
+    Cost no teacher inference because the cache stores range and grid_between
+    resamples by ray, so range is invariant under a fixed-cone lens change.
+    Check what is invariant before assuming a re-render means re-running the
+    expensive model.
+
+standing_rule_2026_09_08:
+  rule: >
+    Before publishing a characterisation, name the axis it was never varied
+    along.
+  why: >
+    Third instance. H18.5's "30 frames" needed "with motion" (H19). H19's
+    "motion" needed "about 2 m of it" (H20). H18.2's "property of the lens"
+    needed "of the angle, not the lens" (H21) — and that last one was a claim
+    whose entire content was about the axis nobody had varied.
+
+h22_candidate:
+  question: >
+    H21 says fit-geometry beats lens-matching by ~9x and points at rim pixel
+    count as the reason. Is that the whole story? Push it: fit on a geometry
+    that stretches the rim FURTHER than equisolid, and see whether the gain
+    keeps rising or turns over. If it keeps rising, "resample before fitting"
+    becomes a tunable knob with an optimum worth finding.
+  cost: one GPU pass, no new data, no teacher inference — same machinery as H21.

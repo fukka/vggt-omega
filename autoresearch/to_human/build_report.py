@@ -34,7 +34,10 @@ import sys
 from html.parser import HTMLParser
 from pathlib import Path
 
-STALE = ("三分之二", "这一块是黑边", "发布 16 个数的径向标定")
+STALE = ("三分之二", "这一块是黑边", "发布 16 个数的径向标定",
+         # H21 refuted this inference: matching the lens buys nothing (+0.84 pt,
+         # inside noise), and the curve is a property of the ANGLE, not the lens.
+         "所以它能带到另一个房间、另一台设备")
 VOID = {"img", "br", "meta", "link", "input", "hr",
         "path", "rect", "circle", "line", "polyline", "polygon", "text"}
 EXTRA_CSS = """<style>

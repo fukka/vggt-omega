@@ -1275,3 +1275,39 @@ Worth noting the pattern: this is the second time a "how much data" number was
 published without a qualifier that the next experiment supplied. H18.5's 30
 frames needed "with motion"; H19's "motion" needed "about 2 m of it". Recorded
 as a pattern rather than a one-off.
+
+## 2026-09-08 (evening) — H21: I was wrong about "a property of the lens"
+
+The H20 candidate said H21 needed moving footage from a third device. That was a
+bad judgement about my own tooling. H15's lens family builds lenses over one
+fixed cone filling the same disc, so a warp between any two is a pure radial
+re-distribution of the same rays — no void, no extrapolation. That holds room,
+scene, wearer, motion, teacher and backbone fixed and varies only the radial
+mapping, which is a cleaner contrast than a third real device could give, and it
+needed no new data at all.
+
+It also cost no teacher inference, because the cache stores range and
+grid_between resamples by ray, so range is invariant under a fixed-cone lens
+change. Worth remembering as a pattern: check what is invariant before assuming
+a re-render means re-running the expensive model.
+
+The result refutes B2 and with it a phrase I have published twice. Cross-lens
+application loses 0.84 and 0.47 points against same-lens, both inside H20's
+draw-to-draw noise. Matching the lens buys nothing. What does matter is which
+geometry the curve was fitted on — a 7.5-point spread, about 9x the matching
+effect — and equisolid's curve is the best curve for every lens including the
+real one, beating the real lens's own by 5.8 points.
+
+So "a property of the lens" becomes "a property of how the backbone errs against
+incidence angle, largely independent of how the lens spreads pixels across it".
+Both reports corrected, and both gain a figure.
+
+The useful side is that this is the first recommendation in this line that makes
+a result better rather than only fencing it: resample to a rim-stretching
+geometry before fitting, then apply the curve to the real images.
+
+Third time now that a published characterisation was tighter than its evidence
+and the next experiment supplied the missing qualifier. Promoted from observation
+to standing rule in findings.md: before publishing a characterisation, name the
+axis it was never varied along. Here that axis was the lens itself, in a claim
+whose whole content was about the lens.

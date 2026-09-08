@@ -1832,3 +1832,71 @@ the number: H18.5's 30 frames needed "with motion", and H19's "motion" needed
 "about 2 m of it". Each time the number alone was published first and the
 qualifier arrived from the next experiment. The general form is in the H19
 entry; H20 is the second instance, which makes it a pattern rather than a slip.
+
+## H21 — the curve is not lens-specific. "A property of the lens" was wrong.
+
+`h21-lens-identity/results/lens_identity.json`, full reading in that
+experiment's `analysis.md`. Four lenses over the Aria cone via H15's lens family;
+every arm warped once from the real Aria camera so resampling blur is common.
+Costs no teacher inference — the cache stores range and `grid_between` resamples
+by ray, so range is invariant under a fixed-cone lens change.
+
+**B3 passes**: `global` is worse than nothing on every diagonal (+2.3 to +5.2%)
+against `radial`'s -21 to -36.6%. The setting is sound.
+
+**B2 refuted** — the pre-registered falsification. Cross-lens minus same-lens is
+**+0.84 points** (seq136) and **+0.47** (dec132), both inside H20's +-1.0
+draw-to-draw sd. **Matching the lens buys nothing.**
+
+**B1 marginal, do not lean on it**: mean pairwise |da| 0.0783 against a 0.069
+floor, with two of six pairs BELOW the floor (aria-stereographic 0.0224,
+equidistant-equisolid 0.0459).
+
+### What dominates instead: which geometry you fit on
+
+Row means span **7.5 points** (aria_kb4 -24.2, stereographic -27.3, equidistant
+-30.6, equisolid -31.7 on seq136) against a 0.84-point matching effect —
+**about 9x**. And `equisolid`'s curve is the best curve for *every* target lens,
+beating the real Aria lens's own curve by **5.8 points** (-26.8% vs -21.0%) and
+4.4 on dec132.
+
+Likely mechanical rather than deep: equisolid allocates more image radius to
+high theta than KB4, so its fitting set holds more rim pixels — and the rim is
+where a(theta) is least determined and where the score is taken. Same object,
+better estimated. That is the same shape of explanation as H20's motion result:
+what limits the fit is information about the rim.
+
+### The restatement both reports needed
+
+Wrong: "a recalibration of depth against viewing angle — a property of the lens".
+Right: **a property of how the backbone's error grows with incidence angle,
+largely independent of how the lens distributes pixels across that angle.**
+
+Calibration is therefore a genuine one-off, not a per-camera step.
+
+### A new actionable recommendation
+
+**Resample the footage to a rim-stretching geometry before fitting**, then apply
+the curve to the real images. Worth 5.8 points on the real Aria lens here, for
+free. This is the first recommendation in this line that improves a result rather
+than only constraining it.
+
+### Two limits, recorded rather than discovered later
+
+Synthetic re-renderings, not four real cameras: same footage, cone, optics, MTF,
+vignetting and native resolution throughout. Lens-independence is established for
+**radial mapping** — which is what the curve is indexed by — not for everything
+"lens" covers.
+
+Coefficients here are NOT comparable to H18.2's: every arm went through a
+resample, so a(theta) runs 1.6-2.1 where the unwarped fit ran 1.34-1.47.
+Within-experiment comparisons only.
+
+### Third time for the same pattern
+
+H18.5's "30 frames" needed "with motion"; H19's "motion" needed "about 2 m";
+now H18.2's "property of the lens" needed "of the angle, not the lens". Each
+time the published phrasing was tighter than the evidence, and the next
+experiment supplied the qualifier. This is now a standing rule, not an
+observation: **before publishing a characterisation, name the axis it was never
+varied along.**
