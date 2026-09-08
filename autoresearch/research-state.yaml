@@ -672,6 +672,24 @@ h18_3_lens_constant:
     - autoresearch/experiments/h14-rect-distill/results/omega/radial_fit_lite.json
     - autoresearch/experiments/h14-rect-distill/results/omega/radial_apt_rng.json
     - autoresearch/experiments/h14-rect-distill/results/omega/radial_lite_rng.json
+  correction_2026_09_08: >
+    The depth-range confound H18.3 flagged is NOT what separates the two fits.
+    Restricting the fitting pixels to 0.5-4.5 m moves the Apartment `a` by at
+    most 0.0057 (4.4% of its spread) and the LiteOffice one by up to 0.5653
+    (84.8%). The Apartment mass was already inside that range, so the two sets
+    do not differ in effective span. What differs is that LiteOffice's fit
+    leans on pixels where the frozen model predicts outside the scene's own
+    0.41-4.66 m range — on its own gross errors. The H18.3 conclusion stands;
+    its stated reason was wrong.
+  open_puzzle: >
+    Removing that mass makes LiteOffice's INNER-bin coefficients look more
+    Apartment-like while making its transfer WORSE (-12.9% -> -7.3%). The outer
+    bins, which are what near_rim scores, barely move. So the difference is
+    coming through the evaluation's per-frame scale+shift alignment — a channel
+    this project has measured before (82% of one sequence's rim penalty was
+    affine placement). Cheap to check when the box returns: re-score under
+    scale_only and under a frozen affine; if the gap collapses, it was
+    alignment and not correction.
 h18_4_backbone_specific:
   status: "locked prediction PASSED"
   result: >

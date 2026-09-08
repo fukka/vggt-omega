@@ -1464,3 +1464,48 @@ LiteOffice curve's jaggedness is noise rather than structure, then *smoothing it
 with the quadratic form should improve its transfer*. If smoothing does not help,
 the jaggedness is real and the smooth-form story is wrong. Either answer is
 worth having and neither has been tested.
+
+## H18.3 follow-up (CPU) — the depth-range confound I flagged is NOT what separates the two fits
+
+H18.3 recorded a worry: a log-log slope is not identified independently of the
+depth range it is fitted over, LiteOffice spans 0.41–4.66 m against the
+Apartment's 0.44–10 m, so comparing their coefficients might compare the fitting
+sets rather than the lenses. I ran the range-matched refit but never actually
+checked whether that worry was operative. It is not.
+
+Effect of restricting the fitting pixels to predicted depth 0.5–4.5 m:
+
+| fit | max change in `a` | as % of that curve's own spread |
+|---|---|---|
+| Apartment | **0.0057** | 4.4% |
+| LiteOffice | **0.5653** | 84.8% |
+
+**The Apartment fit's mass was already inside 0.5–4.5 m** — restricting it
+changes nothing, which is why the range-matched Apartment gains were
+bit-identical. So the two fitting sets do **not** differ in effective depth
+span, and the confound is not the explanation. The finding above stands but its
+stated reason was wrong.
+
+**What actually differs**: a large part of LiteOffice's fitting mass sits where
+the frozen model predicts **outside the scene's own 0.41–4.66 m range** — that
+is, on its own gross errors. Restricting the range removes exactly that mass.
+
+### And a puzzle worth recording rather than explaining away
+
+Removing it makes LiteOffice's coefficients look **more** Apartment-like in the
+inner bins (bin 0: 0.596 → 1.161, bin 2: 1.263 → 1.522, against the Apartment's
+1.337 and 1.468) while making its transfer **worse** (−12.9% → −7.3% on seq136's
+rim). The outer bins, which are the ones near_rim actually scores (bin centres
+44.6 and 51.4 deg), barely move: 0.793 → 0.835 and 0.915 → 0.939, both far below
+the Apartment's 1.400 and 1.341.
+
+So the rim correction is weak in both versions, and the transfer difference is
+coming from the **inner** bins. The plausible route is the evaluation's per-frame
+scale+shift alignment: changing the centre changes where the affine sits, which
+changes the rim residual. This project has measured that channel before — 82% of
+one sequence's rim penalty came from affine placement — so it is not a new
+mechanism, but it has not been checked here.
+
+**Testable when the box returns**, and cheap: score the same corrected
+predictions under `scale_only` and under a frozen affine. If the −12.9 / −7.3
+gap collapses, the difference was alignment, not correction.
