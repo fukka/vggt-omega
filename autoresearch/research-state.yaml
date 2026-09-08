@@ -758,7 +758,6 @@ lambda_63_outage:
     costs nothing for the ten already done. WHOEVER PICKS THIS UP MUST RESTART
     IT — the tmux session does not survive the reboot and nothing else will.
   blocked_on_the_box:
-    - "The RolledView rotation test in h17-roll-prior/code/test_roll.py, which skips without the full env."
     - "Pushing the h18 omega/radial artefacts to the `results` branch. They are safe on `organized` under autoresearch/experiments/*/results/, but the branch convention wants them on `results`, and that worktree lives on the box."
   nothing_is_stranded: >
     Verified during the outage: working tree clean, organized level with origin,
@@ -851,3 +850,12 @@ h20_candidate:
     confound H19 cannot break alone. Check what is already extracted before
     planning any capture: H19 cost one GPU pass only because the omega110
     teacher cache already covered both LiteOffice sequences.
+
+cleared_2026_09_08:
+  test_roll: >
+    Ran under the `raytun3r` env on lambda_63: 12 passed, 0 skipped, 0.09 s.
+    The RolledView rotation test no longer skips. Off the blocked list.
+  env_note: >
+    The conda env for every autoresearch run on lambda_63 is `raytun3r`
+    (torch 2.11.0+cu128). Recorded here because recovering it after a context
+    loss cost a round trip.
