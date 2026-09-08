@@ -796,3 +796,39 @@ student — otherwise the matched control is impossible to express. And a patch-
 teacher cannot take the 504 px fisheye frame; padding was rejected on the
 strength of 02e's dose curve, so it resizes 504 -> 512 -> 504, a 1.6% rescale
 against `resample0` measuring one bilinear pass as free.
+
+## 2026-09-08 — H18 cross-room: the decomposition inverts, and I had published the wrong half
+
+Followed the state's own next-steps: seeds, then cross-room. Both mattered, the
+second decisively.
+
+**Three seeds.** omega110 -51.5+-2.0 / -22.4+-1.8, omega_rt -47.6+-1.1 /
+-17.8+-1.0. Bar 2 passes on all three. Bar 3 (near_center) fails on all three
+(+12.4 / +20.1 / +16.9), so that failure is robust rather than a one-seed
+artefact — worth knowing, since I had reported it as a 2.4-point miss.
+
+**Cross-room inverts the reading.** On LiteOffice: omega110 -20.0 / -9.0, rect
+-28.5 / -10.7, gt -11.8 / -5.0, and **omega_rt +0.8 / -0.1**. The arm that
+carried most of the in-room gain transfers nothing at all; every rectified arm
+transfers. So:
+
+    in-room:      teacher strength first-order, rectification +3.9 points
+    across rooms: teacher strength ~0,          rectification is the whole effect
+
+An hour earlier I published "teacher strength is first-order, H14's mechanism
+second-order" with no qualifier. It is true in-room only, and this project has
+found repeatedly that the cross-room test is the honest one — so the published
+sentence had the mechanism backwards for the test that matters. Section 03b now
+carries both halves and says which one was wrong.
+
+Two further things fell out. The **weaker** DA3 rectified teacher transfers
+*best* (-28.5 / -10.7) while being far worse in-room, so stronger teacher buys
+in-room gain and costs a little transfer. And both rectified arms beat the
+labelled ceiling across rooms, extending the earlier cross-room reversal to a
+much stronger teacher.
+
+Hypothesis recorded, not tested: the rectified path teaches a systematic radial
+relation, which is low-dimensional enough that a 122.9k-parameter LoRA can only
+represent it globally; the fisheye path teaches "be like VGGT-Omega on these
+images", which is high-dimensional enough to be fitted per room. The next
+experiment in the state file tests exactly that.

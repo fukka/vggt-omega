@@ -570,21 +570,39 @@ h18_omega_teacher:
     the two held-out sequences, i.e. 91% / 84% of what the dense-label ceiling
     buys. H14's own rect arm got -13.2% / +4.7%.
   the_control_that_decides_the_reading: >
-    omega_rt (same teacher, same resampling, NO change of projection) recovers
-    81% / 66% on its own. So teacher strength is first-order and the rectified
-    projection is second-order, worth a further 5.7 / 4.9 points at the rim —
-    and it is also what causes the near_center bar to fail (+12.4% vs the
-    control's +2.0%). H14's mechanism is real but not the main effect.
+    omega_rt (same teacher, same resampling, NO change of projection). The
+    decomposition INVERTS between the two tests, and the earlier unqualified
+    "teacher strength is first-order" was wrong for the test that matters.
+    IN-ROOM (held-out sequence, 3 seeds): omega_rt -47.6+-1.1 / -17.8+-1.0 vs
+    omega110 -51.5+-2.0 / -22.4+-1.8, so teacher strength is first-order and
+    rectification adds ~3.9 points and causes the near_center failure.
+    ACROSS ROOMS (LiteOffice): omega_rt +0.8% / -0.1% — it transfers NOTHING —
+    while every rectified arm does (omega110 -20.0 / -9.0, rect -28.5 / -10.7,
+    gt -11.8 / -5.0). So H14's own mechanism is what produces a TRANSFERABLE
+    improvement; "distil a stronger model" produces a room-specific one.
   claim_now: >
-    NOT self-distillation. "A frozen stronger model can be distilled into a
-    small fisheye-domain model with no depth labels, recovering 66-84% of what
-    dense ground truth buys at the near rim; rectifying the view first adds
-    another 10-18%." It requires a stronger model to exist — state that cost
-    with the result, every time.
+    NOT self-distillation, and it must be stated as two claims because they
+    point different ways. IN-ROOM: a frozen stronger model distilled label-free
+    recovers 82-89% of the dense-label gain at the rim, and the rectified
+    projection is a small part of that. ACROSS ROOMS: only the rectified
+    projection survives (and beats dense labels); distilling a stronger model
+    transfers nothing. Quoting the in-room number alone gets the mechanism
+    backwards. It also requires a stronger model to exist, which
+    self-distillation did not.
+  trade_off_found: >
+    The WEAKER DA3-Small rectified teacher transfers best (-28.5 / -10.7) while
+    being far worse in-room (-13.2 / +4.7). Stronger teacher -> more in-room
+    gain, slightly less transfer.
+  seeds: >
+    3 seeds on omega110 and omega_rt. Bar 2 passes on all three; bar 3
+    (near_center) fails on all three (+12.4 / +20.1 / +16.9), so that failure is
+    robust. The rim advantage of rectification favours omega110 on 6/6
+    seed-sequence cells but one seed nearly ties, so it is directionally
+    consistent and small rather than decisive.
   artefacts:
     - autoresearch/experiments/h14-rect-distill/results/omega/
     - results/autoresearch-h14-omega/ (on lambda_63 and the results branch)
   next:
-    - "Seeds and error bars: this is one seed, and it is now the project's headline positive result."
-    - "Cross-room: run omega110 on LiteOffice. The label-free arm previously BEAT the labelled one across rooms; with a much stronger teacher that comparison is the interesting one."
-    - "Does the student saturate? It recovers 84-91% of the label ceiling from a teacher that is 4.4x stronger than the old one — try a larger student or more LoRA rank to see whether the remaining gap is student capacity."
+    - "Test the mechanism hypothesis directly: is the rectified target transferable because it is a low-dimensional radial relation? Fit a purely radial correction to the omega110 targets and see how much of the cross-room gain a radial-only student reproduces."
+    - "Scale the cross-room test. It is now carrying the whole mechanistic claim and it is 120 frames over two near-static sequences."
+    - "Does the student saturate in-room? It recovers 82-89% of the label ceiling from a 4.4x stronger teacher; a larger student or LoRA rank would say whether the residual is student capacity."

@@ -241,7 +241,9 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       §02e 说耐黑边是 backbone 的性质，于是用 <strong>VGGT-Ω 跑 110° 教师</strong>：同样的画幅、同样 22.5% 黑边，
       DA3 教师翻负 +33%，VGGT-Ω 是 <strong>−65%</strong>，而且<strong>覆盖 100% 的边缘环带</strong>。
       学生（<strong>零深度标签</strong>）拿到 <strong>−52.7% / −22.8%</strong>，相当于稠密真值增益的 <strong>91% / 84%</strong>（原来是 23% 和负数）。
-      但匹配对照说清楚了分解：<strong>大头是"蒸馏了更强的模型"（81%/66%），矫正投影另加 10–18%</strong>。（§03b）
+      但匹配对照给出的分解<strong>在两个检验之间是反的</strong>：<strong>房间内</strong>大头是"蒸馏了更强的模型"，矫正只多加 3.9 点；
+      <strong>跨房间</strong>那条不换投影的臂<strong>迁移为零</strong>（+0.8% / −0.1%），<strong>矫正投影是全部</strong>。
+      所以真正可迁移的是 H14 原来那个机制。（§03b）
     </p></div>
     <div class="row"><span class="who">C · H14.2 环形视角 ✗</span><p>
       拆掉"虚拟视角必须是方的"这条隐藏约束，教师对边缘环带的覆盖从 <strong>70% 提到 99.3%</strong> ——
@@ -1378,7 +1380,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 <!-- ============================================================ 03b H18 -->
 <section>
   <div class="section-head"><span class="eyebrow">03b</span><h2>实验 B′ · H18：换掉教师，H14 的想法活了</h2>
-    <span class="chip done"><span class="dot"></span>4 条判据过 3 条</span></div>
+    <span class="chip done"><span class="dot"></span>4 条判据过 3 条 · 跨房间反转</span></div>
 
   <div class="col">
     <h3>想法</h3>
@@ -1418,11 +1420,11 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
   </div>
   <div class="scroll">
     <table>
-      <caption><code>omega_rt</code> 是<strong>关键对照</strong>：同一个教师、同样两次重采样、<strong>唯独不换投影</strong>。没有它这个结果无法解读。</caption>
+      <caption><code>omega_rt</code> 是<strong>关键对照</strong>：同一个教师、同样两次重采样、<strong>唯独不换投影</strong>。没有它这个结果无法解读。前两行是 <strong>3 个种子的均值 ± 标准差</strong>，其余为单种子。</caption>
       <thead><tr><th>臂</th><th style="text-align:left">教师</th><th>seq136 边缘（近中心）</th><th>dec_seq132 边缘（近中心）</th><th>用真值</th></tr></thead>
       <tbody>
-        <tr class="flip"><td class="mono">omega110</td><td style="text-align:left">VGGT-Ω，110° <b>矫正视角</b></td><td class="num good">−52.7% (−34.5%)</td><td class="num good">−22.8% (+12.4%)</td><td>否</td></tr>
-        <tr class="flip"><td class="mono">omega_rt</td><td style="text-align:left">VGGT-Ω，<b>直接看鱼眼</b></td><td class="num good">−47.1% (−38.7%)</td><td class="num good">−17.9% (+2.0%)</td><td>否</td></tr>
+        <tr class="flip"><td class="mono">omega110</td><td style="text-align:left">VGGT-Ω，110° <b>矫正视角</b></td><td class="num good">−51.5 ± 2.0%<br><span style="color:var(--ink-faint);font-size:.85em">(近中心 −31.7 ± 4.1%)</span></td><td class="num good">−22.4 ± 1.8%<br><span style="color:var(--ink-faint);font-size:.85em">(近中心 +16.4 ± 3.9%)</span></td><td>否</td></tr>
+        <tr class="flip"><td class="mono">omega_rt</td><td style="text-align:left">VGGT-Ω，<b>直接看鱼眼</b></td><td class="num good">−47.6 ± 1.1%<br><span style="color:var(--ink-faint);font-size:.85em">(近中心 −36.4 ± 2.1%)</span></td><td class="num good">−17.8 ± 1.0%<br><span style="color:var(--ink-faint);font-size:.85em">(近中心 +6.6 ± 4.3%)</span></td><td>否</td></tr>
         <tr><td class="mono">rect</td><td style="text-align:left">DA3-Small，95° 矫正视角</td><td class="num">−13.2% (+43.3%)</td><td class="num bad">+4.7% (−4.1%)</td><td>否</td></tr>
         <tr><td class="mono">roundtrip</td><td style="text-align:left">DA3-Small，直接看鱼眼</td><td class="num">−0.1%</td><td class="num">+0.0%</td><td>否</td></tr>
         <tr><td class="mono">gt</td><td style="text-align:left"><b>稠密深度真值</b></td><td class="num">−57.9% (−39.0%)</td><td class="num">−27.2% (+24.4%)</td><td>是</td></tr>
@@ -1445,40 +1447,73 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <div class="row"><span class="who">P3 中心不塌 ✗（差 2.4 点）</span><p>
       近中心不得恶化超过 +10%。seq136 是 <strong>−34.5%（通过）</strong>，dec_seq132 是 <strong>+12.4%（不通过）</strong>。
       注意：有标签的 <code>gt</code> 臂在同一序列同一 zone 上是 <strong>+24.4%</strong> —— 无标签臂比上限还温和，但判据按字面算仍是没过。
+      <strong>三个种子都没过</strong>（+12.4 / +20.1 / +16.9），所以这不是单种子的偶然。
     </p></div>
     <div class="row"><span class="who">P4 主序列 ✓</span><p>dec_seq132 作主判据序列，全文先报它。</p></div>
   </div>
 
   <div class="col">
-    <h3 style="margin-top:22px">再想一层：对照说了什么</h3>
+    <h3 style="margin-top:22px">再想一层：对照说了什么 —— 而且它在跨房间时反过来</h3>
     <p>
       <code>omega_rt</code> 是我在看到 −52.7% 之后补跑的，因为没有它，这个数<strong>无法区分两种解释</strong>：
       "矫正投影解锁了模型已知的东西"（H14 的机制），还是"只不过蒸馏了一个更强的模型"。
+      在留出<em>序列</em>上，答案是后者占大头：鱼眼教师单独就拿到 −47.6%，矫正只多加 3.9 个点，
+      而且矫正就是近中心判据失败的原因（+16.4% 对 +6.6%）。
     </p>
-    <ul class="plain">
-      <li><strong>大头是后者。</strong>鱼眼教师单独就拿回标签增益的 <strong>81% / 66%</strong>，完全不需要矫正。</li>
-      <li><strong>矫正投影确实另加 5.7 / 4.9 个点</strong>（相当于标签增益的 10% / 18%），两个序列方向一致。</li>
-      <li><strong>而且它就是 P3 失败的原因</strong>：<code>omega_rt</code> 的近中心是 −38.7% / +2.0%，<code>omega110</code> 是 −34.5% / +12.4%。
-        <strong>矫正买到边缘，花掉近中心。</strong></li>
-    </ul>
-    <p>
-      所以 <strong>H14 的机制是真的，但它是二阶的；一阶是教师强度</strong>。这和 H14 当初想证明的<em>不是</em>同一件事，
-      但它是数据支持的那件事。
+    <p style="margin-bottom:14px">
+      <strong>但把同一批检查点拿去跨房间，结论整个翻过来。</strong>LiteOffice，另一个房间、另一台设备，用它自己的标定打分：
     </p>
-    <div class="note">
-      <span class="eyebrow">现在这条主张的准确表述</span>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>近边缘 AbsRel 的变化。<strong>唯一没有换投影的那条臂，迁移为零。</strong></caption>
+      <thead><tr><th>臂</th><th>DinoToy_seq030</th><th>BlackCeramicBowl_seq030</th><th>（对照：公寓留出 dec_seq132）</th></tr></thead>
+      <tbody>
+        <tr class="flip"><td class="mono">omega110（矫正）</td><td class="num good">−20.0%</td><td class="num good">−9.0%</td><td class="num">−22.4%</td></tr>
+        <tr class="flip"><td class="mono">omega_rt（不换投影）</td><td class="num bad">+0.8%</td><td class="num bad">−0.1%</td><td class="num">−17.8%</td></tr>
+        <tr><td class="mono">rect（DA3 95°，矫正）</td><td class="num good">−28.5%</td><td class="num good">−10.7%</td><td class="num bad">+4.7%</td></tr>
+        <tr><td class="mono">gt（稠密标签）</td><td class="num">−11.8%</td><td class="num">−5.0%</td><td class="num">−27.2%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note warn" style="margin-top:16px">
+      <span class="eyebrow">分解在两个检验之间整个反过来 —— 这条更正了本节一小时前的说法</span>
       <p>
-        <strong>不再是自蒸馏。</strong>正确的说法是：
-        <strong>一个冻结的更强模型可以在完全没有深度标签的情况下蒸馏进一个小的鱼眼域模型，
-        在近边缘拿回稠密真值所买增益的 66–84%；先把视角矫正一下再多拿 10–18%。</strong>
+        <strong>房间内</strong>：教师强度一阶（−47.6%），矫正投影二阶（+3.9 点）。<br>
+        <strong>跨房间</strong>：教师强度单独<strong>是零</strong>（+0.8% / −0.1%），<strong>矫正投影是全部</strong>。
       </p>
       <p>
-        代价必须一起说：<strong>它需要存在一个更强的模型</strong>，而自蒸馏不需要。
-        引用这个结果的任何地方都要带上这一句。
+        本节最初写的是"教师强度一阶、H14 的机制二阶"，<strong>没有加限定词</strong>。那句话<strong>只在房间内成立</strong>。
+        而本页每一节都得出过同一条方法论结论：<strong>跨房间才是诚实的检验</strong>。
+        所以 <strong>H14 原本那个机制（矫正视角）才是产生<em>可迁移</em>改进的那一个</strong>；
+        "蒸馏一个更强的模型"产生的是<strong>只属于这个房间</strong>的改进。
+      </p>
+    </div>
+    <p>
+      <strong>为什么？一个假设，不是结论。</strong>两种目标都是图像的确定函数，所以"确定性"不是区别所在。
+      比较可能的是：矫正那条路教的是一个<strong>系统性的径向关系</strong>——处处相同的几何修正，
+      这是一个 12.3 万参数的 LoRA 只能整体表达的低维东西；而鱼眼那条路教的是"在这些图上像 VGGT-Ω 一样"，
+      一个高得多维的目标，学生可以逐房间地去拟合它。<strong>没有验证。</strong>
+    </p>
+    <p>
+      <strong>还掉出一个权衡</strong>：<em>更弱</em>的 DA3 矫正教师<strong>迁移得最好</strong>（−28.5% / −10.7%），
+      比强得多的 VGGT-Ω 矫正教师（−20.0% / −9.0%）还好，而它在房间内差得多（−13.2% / +4.7%）。
+      <strong>教师越强，房间内收益越大，可迁移的部分反而略少。</strong>
+      两条矫正臂在跨房间上都赢了有标签上限，这把此前那个"跨房间反转"扩展到了强得多的教师。
+    </p>
+    <div class="note">
+      <span class="eyebrow">所以这条主张的准确表述</span>
+      <p>
+        <strong>房间内</strong>：冻结的更强模型在零标签下蒸馏，拿回稠密真值增益的 <strong>82–89%</strong>；矫正投影只占其中一小部分。<br>
+        <strong>跨房间</strong>：<strong>只有矫正投影活下来</strong>，而且赢过稠密标签；"蒸馏更强模型"完全不迁移。
+      </p>
+      <p>
+        <strong>只引用房间内那个数字的人，会把机制讲反。</strong>
       </p>
     </div>
     <p style="color:var(--ink-faint)">
-      边界：单种子；学生全程是 DA3-Small；教师<strong>单帧</strong>运行，VGGT-Ω 的多帧机制没有参与；
+      边界：前两条臂 3 个种子，其余单种子；学生全程是 DA3-Small；教师<strong>单帧</strong>运行，VGGT-Ω 的多帧机制没有参与；
       <code>omega_rt</code> 把鱼眼帧 504 → 512 → 504 缩放了一次（patch-16 的教师吃不了 504 px，而<strong>补边不是选项</strong> —— §02e），
       1.6% 的缩放，参照 <code>resample0</code> 测得的"一次双线性重采样是免费的"。
     </p>
