@@ -3409,3 +3409,81 @@ added a point that did not line up, and H43/H43b explain the **published**
 version away without explaining the **residual** one. **No mechanism is
 offered.** What has changed is that the residual is the only version left, and
 it is four times smaller than what was published.
+
+# Outer-loop synthesis, 2026-09-08 (second) — where the line stands after H36–H43b
+
+Ten experiments since the last synthesis. Written as a synthesis rather than
+another append, for the same reason as the first one.
+
+## What these ten added
+
+1. **The rim penalty replicates outside Aria** (H36b). A separate work stream's
+   validated SynWoodScape evaluation — synthetic, automotive, outdoors, 190°
+   lens, 424M scored pixels — gives 2.38× at the angle where the two datasets
+   overlap against our 2.17 ± 0.38. **The phenomenon is external; the methods
+   built on it are still Aria-only.**
+
+2. **The border ordering is a property of the backbones** (H37, H40). DA3-Large
+   worst of four on 13/13, VGGT-Omega best on 13/13, a 45× spread — and at a
+   matched angle the border is not *most* of de-rotation's price but
+   **essentially all of it** (+105.7% against +0.8% for the resampling), the two
+   composing multiplicatively.
+
+3. **The fourth part of the opening question is answered** (H38, H39). *Read the
+   roll and fold it into the resampling grid* — worth **2.65% ± 2.43** on a
+   single-image backbone and **+10%** on the frames that need it; nothing on a
+   multi-view one. No labels, no training, no model change.
+
+4. **The roll curve is now the best-measured object in the line** (H41, H42).
+   Thirteen recordings, 15 angles, four backbones, an exact per-frame
+   gravity-aligned zero, recording sd under 0.05 inside ±11°. The
+   pretraining-family split is a whole-curve property: at ±22° every DA3 value
+   ≥ 1.226 and every VGGT value ≤ 1.093, no overlap.
+
+5. **Three published claims were retired by fixing a reference, not by new
+   data** (H41, H42, H43b):
+   * §03u's "the penalty is not monotone near zero" — its zero was the device
+     render on frames tilted a median 4°.
+   * "Capacity does not substitute — DA3-Large is *more* roll-sensitive" —
+     measured properly it is slightly *less*, and integrated it is identical.
+   * "+30° costs 2.3× what −30° costs" — **roughly four fifths of that is the
+     origin**, and on VGGT the same curve changes sign depending on where zero
+     is put.
+
+## The one thing still open in this line
+
+The **residual** asymmetry, measured about the true zero, is not zero and does
+not have one sign: `da3:large` +7.8%, `vggt` −7.0%, `da3:small` +4.7%,
+`vggt_omega` −0.9%. Four models seeing identical pixels lean different ways, so
+**it cannot be purely geometric** — a principal-point offset or a rendering
+handedness would push all four the same way. That narrows it to something
+involving the models, and nothing here says what. **No mechanism is offered.**
+It is four times smaller than what was published, and nothing in either report
+leans on it.
+
+## The methodological output of these ten
+
+* **A sanity check on the construction is worth more than one on the result.**
+  Four cases, and in every one the broken version produced a number that read
+  like a finding: H34's untransformed baseline, H36's whole-image bar, H39's
+  B2, H40's black-pixel fraction.
+* **When a curve looks odd near its origin, suspect the origin.** Paid for
+  itself three times (H41 twice, H43 once).
+* **Copy a convention from the code that established it, and say so in a
+  comment.** Re-deriving it looks like the same work and is not.
+* **Say which results rest on extrapolation, and quote the one that does not.**
+  H43 published a hedged verdict *and named the run that would remove the
+  hedge*; when that run reversed it, the cost was a paragraph, not a
+  retraction.
+* **An arm added for one reason often answers a second question.** H39 rendered
+  both rotation signs to pin a convention; that also gave H38's price/prize
+  decomposition for free.
+
+## Where the line is
+
+**Closed.** All four parts of the opening question are answered, every in-room
+number is on thirteen recordings, the curve is measured for four backbones, and
+the last disputed claim is retired. What remains open is not in this line: the
+**cross-room evidence is still 120 frames over two near-static recordings**, and
+fixing it needs a data decision that has been with the user for many ticks and
+has not been acted on.
