@@ -1304,3 +1304,29 @@ h29_outcome:
     "DA3-Large is the best of the four on a clean frame and the worst with a
     border" was four backbones on ONE recording; H29 re-measured two. The
     "worst of the four" half is untested for vggt and vggt_omega.
+
+# ------------------------------------------------- H30 resolved 2026-09-08
+h30_outcome:
+  status: B1 and B3 PASS 13/13; the pre-registered prediction landed at +1.29 sd
+  artifact: autoresearch/experiments/h30-lens-variance/results/lens_13.json
+  analysis: autoresearch/experiments/h30-lens-variance/analysis.md
+  the_recommendation_holds: >
+    On the real Aria lens a foreign rim-compressing curve beats the lens's own
+    on 13/13 recordings. Own curve -14.9% +- 3.2, best foreign -18.9% +- 4.4,
+    advantage +4.03 +- 1.33 pts against the +5.75 published on seq136. Worth
+    ABOUT 4 POINTS, NOT 5-6, and never negative on any recording.
+  b3: "row means orthographic -26.5% <= equisolid -25.2% <= aria_kb4 -18.4%"
+  prediction_landed_but_weakly: >
+    seq136 at +1.29 sd against a pre-registered bar of 1 sd. P(z>1) ~ 16%, so
+    this test alone is p ~ 0.16 and proves nothing on its own.
+  WHAT_THE_OBSERVATION_ACTUALLY_RESTS_ON: >
+    Six interventions on seq136 all positive: +5.74 (H25 curve), +2.60 (H26
+    adapter), +3.12 (H27 gt), +3.32 and +5.96 (H29 border), +1.29 (H30). Sign
+    test p ~ 0.016 before counting two above 5 sd. Three UNPERTURBED
+    measurements at -0.11, +0.07, +0.52 (H28). That split is the evidence.
+    Still an observation, NOT a mechanism.
+  STANDING_INSTRUCTION: >
+    Any intervention measured only on seq136 should be assumed inflated. Every
+    published in-room figure in this line has been re-measured; this is for
+    future work. The converse (a DESCRIPTIVE number on seq136 is
+    representative) held every time checked but rests on three points.

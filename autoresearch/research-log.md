@@ -1575,3 +1575,32 @@ Also caught a claim H29 cannot support: "DA3-Large is the best of the four on a
 clean frame and the worst with a border" was four backbones on one recording,
 and I only re-measured two. The "worst of the four" half is now untested for
 VGGT and VGGT-Omega and should say so rather than riding on the two that were.
+
+## 2026-09-08 (late night) — H30: the advice holds, and my own observation survived a test
+
+Two questions in one run: does section 4.6's advice hold across recordings, and
+does the observation I ended H29 with actually predict?
+
+The advice holds unanimously. On the real Aria lens a foreign rim-compressing
+curve beats the lens's own on 13 of 13 recordings, worth +4.03 +- 1.33 points
+rather than the 5.8 published on seq136. Never negative anywhere, which is what
+makes it worth recommending.
+
+The prediction landed: seq136's advantage is +1.29 sd above the mean, against a
+pre-registered bar of 1 sd. I want to be precise about how much that is worth,
+because the whole campaign has been about not over-reading single numbers.
+P(z>1) is about 16%, so this test alone is p ~ 0.16 and proves nothing.
+
+What does carry weight is the campaign as a whole. Six interventions measured on
+seq136 (+5.74, +2.60, +3.12, +3.32, +5.96, +1.29) are all on the positive side —
+a sign test gives p ~ 0.016 before accounting for two of them exceeding 5 sd —
+while three unperturbed measurements sit at -0.11, +0.07 and +0.52. That split is
+clean, and H30's contribution is one pre-registered point on the correct side,
+which is the most a single run can be.
+
+It stays an observation rather than a mechanism. It says what seq136 does, not
+why, and this line has already spent two mechanism guesses.
+
+The practical form is now a standing instruction rather than a curiosity: any
+intervention measured only on seq136 should be assumed inflated. Every published
+in-room figure has been re-measured, so this is for future work.

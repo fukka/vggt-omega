@@ -1,0 +1,378 @@
+{
+ "lenses": [
+  "orthographic",
+  "equisolid",
+  "aria_kb4"
+ ],
+ "eval_seqs": [
+  "Apartment_release_clean_seq136_M1292",
+  "Apartment_release_clean_seq137_M1292",
+  "Apartment_release_clean_seq138_M1292",
+  "Apartment_release_clean_seq140_M1292",
+  "Apartment_release_clean_seq141_M1292",
+  "Apartment_release_clean_seq142_M1292",
+  "Apartment_release_clean_seq143_M1292",
+  "Apartment_release_clean_seq144_M1292",
+  "Apartment_release_clean_seq145_M1292",
+  "Apartment_release_clean_seq146_M1292",
+  "Apartment_release_clean_seq147_M1292",
+  "Apartment_release_clean_seq148_M1292",
+  "Apartment_release_clean_seq149_M1292",
+  "Apartment_release_clean_seq150_M1292"
+ ],
+ "config": {
+  "cache_root": "/netapp/datasets/f.zhang2/h14_teacher_cache_omega110",
+  "arm": "omega110",
+  "lenses": "orthographic,equisolid,aria_kb4",
+  "fit_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq133_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq134_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq135_M1292",
+  "eval_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq136_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq137_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq138_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq140_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq141_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq142_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq143_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq144_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq145_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq146_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq147_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq148_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq149_M1292,/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq150_M1292",
+  "px_per_frame": 20000,
+  "size": 504,
+  "max_frames": 60,
+  "src_size": 0,
+  "variant": "small",
+  "depth_max_m": 10.0,
+  "seed": 0,
+  "device": "cuda",
+  "out": "autoresearch/experiments/h30-lens-variance/results/lens_13.json"
+ },
+ "rim_area_share": {
+  "orthographic": 0.682741998693283,
+  "equisolid": 0.735126684559192,
+  "aria_kb4": 0.7944262100533845
+ },
+ "coef_a": {
+  "orthographic": [
+   1.3048557996541694,
+   1.5068118173666802,
+   1.7891473123829293,
+   2.0420053732940278,
+   2.3058086119941548,
+   2.5011740120440416,
+   2.647234642621979,
+   2.4771498608909885
+  ],
+  "equisolid": [
+   1.584042281502938,
+   1.757768377272215,
+   1.9177023018429802,
+   1.991152638838873,
+   2.0416580426795132,
+   2.0634868414126335,
+   2.095682912383783,
+   2.1104536113138206
+  ],
+  "aria_kb4": [
+   1.6276017983884479,
+   1.7773436540063356,
+   1.8998715983225547,
+   1.9256774472184086,
+   1.9191467661300836,
+   1.884547935457444,
+   1.8398189736129678,
+   1.799964927736761
+  ]
+ },
+ "pairwise_da": [
+  {
+   "a": "orthographic",
+   "b": "equisolid",
+   "d": 0.29120456067886535
+  },
+  {
+   "a": "orthographic",
+   "b": "aria_kb4",
+   "d": 0.41352732150038574
+  },
+  {
+   "a": "equisolid",
+   "b": "aria_kb4",
+   "d": 0.12678043670162675
+  }
+ ],
+ "mean_pairwise_da": 0.27717077296029263,
+ "matrix": {
+  "Apartment_release_clean_seq136_M1292|orthographic": [
+   -40.813385289315605,
+   -39.99182519213308,
+   -26.237005358029897
+  ],
+  "Apartment_release_clean_seq136_M1292|equisolid": [
+   -31.883892141830337,
+   -36.64183319980414,
+   -26.817303845955408
+  ],
+  "Apartment_release_clean_seq136_M1292|aria_kb4": [
+   -20.24652892380353,
+   -26.94443448958095,
+   -21.068420874379047
+  ],
+  "Apartment_release_clean_seq137_M1292|orthographic": [
+   -40.56342267119175,
+   -21.254967890316934,
+   -7.9598669863218285
+  ],
+  "Apartment_release_clean_seq137_M1292|equisolid": [
+   -35.09603097061279,
+   -23.391432900884023,
+   -12.294642528507648
+  ],
+  "Apartment_release_clean_seq137_M1292|aria_kb4": [
+   -24.91674699702199,
+   -18.409251102760038,
+   -10.056324215232825
+  ],
+  "Apartment_release_clean_seq138_M1292|orthographic": [
+   -39.20486243900297,
+   -31.997270239597054,
+   -19.20841508500978
+  ],
+  "Apartment_release_clean_seq138_M1292|equisolid": [
+   -30.978619921623263,
+   -30.759613230216853,
+   -23.87891692416366
+  ],
+  "Apartment_release_clean_seq138_M1292|aria_kb4": [
+   -20.552193188576318,
+   -22.548912007766177,
+   -19.57045660989155
+  ],
+  "Apartment_release_clean_seq140_M1292|orthographic": [
+   -34.374088272672346,
+   -24.291672527551032,
+   -14.899869310329061
+  ],
+  "Apartment_release_clean_seq140_M1292|equisolid": [
+   -28.509096865517858,
+   -23.47437685628766,
+   -17.277660802662552
+  ],
+  "Apartment_release_clean_seq140_M1292|aria_kb4": [
+   -19.593340618272215,
+   -17.32172546653361,
+   -13.44859700889237
+  ],
+  "Apartment_release_clean_seq141_M1292|orthographic": [
+   -41.1813628725781,
+   -29.11897727533066,
+   -14.661459870778504
+  ],
+  "Apartment_release_clean_seq141_M1292|equisolid": [
+   -34.13432752581074,
+   -28.35662712510438,
+   -18.138193284102222
+  ],
+  "Apartment_release_clean_seq141_M1292|aria_kb4": [
+   -23.962391313029908,
+   -21.562398583390973,
+   -14.667875235871064
+  ],
+  "Apartment_release_clean_seq142_M1292|orthographic": [
+   -38.492210751964265,
+   -30.23353238272022,
+   -15.11707705582297
+  ],
+  "Apartment_release_clean_seq142_M1292|equisolid": [
+   -30.518372438156092,
+   -29.728009468390226,
+   -19.675977160411474
+  ],
+  "Apartment_release_clean_seq142_M1292|aria_kb4": [
+   -19.81143234531463,
+   -21.48471358485763,
+   -15.25352239989035
+  ],
+  "Apartment_release_clean_seq143_M1292|orthographic": [
+   -33.74327040427184,
+   -30.501374253117408,
+   -21.657559707411178
+  ],
+  "Apartment_release_clean_seq143_M1292|equisolid": [
+   -27.595196017470315,
+   -28.170503790658707,
+   -22.25411962676399
+  ],
+  "Apartment_release_clean_seq143_M1292|aria_kb4": [
+   -18.41207606074603,
+   -20.856802516810703,
+   -17.59570650342709
+  ],
+  "Apartment_release_clean_seq144_M1292|orthographic": [
+   -37.35606643890791,
+   -26.08335836879736,
+   -14.495398377502921
+  ],
+  "Apartment_release_clean_seq144_M1292|equisolid": [
+   -29.885531779697082,
+   -26.25968421991316,
+   -18.3275487889359
+  ],
+  "Apartment_release_clean_seq144_M1292|aria_kb4": [
+   -20.055577674157554,
+   -19.462462816837068,
+   -14.29392629746966
+  ],
+  "Apartment_release_clean_seq145_M1292|orthographic": [
+   -31.439053771622284,
+   -29.837952021156266,
+   -19.55186883889234
+  ],
+  "Apartment_release_clean_seq145_M1292|equisolid": [
+   -25.4620717321156,
+   -27.674112772357272,
+   -21.350928487526666
+  ],
+  "Apartment_release_clean_seq145_M1292|aria_kb4": [
+   -16.83411242272046,
+   -19.968362708681198,
+   -16.479050413541962
+  ],
+  "Apartment_release_clean_seq146_M1292|orthographic": [
+   -33.45632454857943,
+   -22.393500919384945,
+   -12.568059312366152
+  ],
+  "Apartment_release_clean_seq146_M1292|equisolid": [
+   -27.367090121978876,
+   -21.596754382951055,
+   -15.22544356182185
+  ],
+  "Apartment_release_clean_seq146_M1292|aria_kb4": [
+   -18.88239205829135,
+   -15.777254360119109,
+   -11.78717580467774
+  ],
+  "Apartment_release_clean_seq147_M1292|orthographic": [
+   -38.41113498037841,
+   -36.308062815108435,
+   -27.16594494871235
+  ],
+  "Apartment_release_clean_seq147_M1292|equisolid": [
+   -31.290590707307132,
+   -32.76600784006685,
+   -28.168252181465125
+  ],
+  "Apartment_release_clean_seq147_M1292|aria_kb4": [
+   -21.553465444068042,
+   -23.811925640601885,
+   -21.4348364930379
+  ],
+  "Apartment_release_clean_seq148_M1292|orthographic": [
+   -37.44675868027555,
+   -22.98878967033723,
+   -6.336659739611972
+  ],
+  "Apartment_release_clean_seq148_M1292|equisolid": [
+   -32.541697044781316,
+   -25.719356545647454,
+   -14.022102013670857
+  ],
+  "Apartment_release_clean_seq148_M1292|aria_kb4": [
+   -22.871935452525072,
+   -20.12888552619988,
+   -12.400635298392837
+  ],
+  "Apartment_release_clean_seq149_M1292|orthographic": [
+   -32.62656136755202,
+   -27.449357668829887,
+   -19.06390812768214
+  ],
+  "Apartment_release_clean_seq149_M1292|equisolid": [
+   -25.50083280134281,
+   -25.47728878452694,
+   -20.498535263675876
+  ],
+  "Apartment_release_clean_seq149_M1292|aria_kb4": [
+   -16.657686805048154,
+   -17.826338774420115,
+   -14.984321077035357
+  ],
+  "Apartment_release_clean_seq150_M1292|orthographic": [
+   -33.441961016573494,
+   -24.9372127714249,
+   -10.407877127883458
+  ],
+  "Apartment_release_clean_seq150_M1292|equisolid": [
+   -28.46996525873726,
+   -25.19951644701789,
+   -15.18467659023247
+  ],
+  "Apartment_release_clean_seq150_M1292|aria_kb4": [
+   -19.880740106704632,
+   -18.737907114417652,
+   -11.957521031161578
+  ]
+ },
+ "global_diag": {
+  "Apartment_release_clean_seq136_M1292": [
+   -0.5467529307374153,
+   2.315218634469085,
+   5.222131595567148
+  ],
+  "Apartment_release_clean_seq137_M1292": [
+   0.7395674816284448,
+   6.848432497594215,
+   8.49955928538202
+  ],
+  "Apartment_release_clean_seq138_M1292": [
+   0.10639830651937299,
+   3.5643868469708018,
+   6.674346402023779
+  ],
+  "Apartment_release_clean_seq140_M1292": [
+   0.5981896443012724,
+   4.274675362989022,
+   4.746410287894665
+  ],
+  "Apartment_release_clean_seq141_M1292": [
+   -0.4345655978906904,
+   3.9399226482190963,
+   6.673425845807279
+  ],
+  "Apartment_release_clean_seq142_M1292": [
+   -0.05234581180689757,
+   4.591300601974213,
+   10.029074752990041
+  ],
+  "Apartment_release_clean_seq143_M1292": [
+   -0.32371729792313175,
+   1.3545895466948288,
+   3.248889710966152
+  ],
+  "Apartment_release_clean_seq144_M1292": [
+   -0.2504810728336304,
+   4.813041529594919,
+   7.871210974720655
+  ],
+  "Apartment_release_clean_seq145_M1292": [
+   0.3740442928877652,
+   3.0663525086974674,
+   5.690372377933062
+  ],
+  "Apartment_release_clean_seq146_M1292": [
+   0.09193596801000403,
+   3.9004505358598562,
+   6.126737546007099
+  ],
+  "Apartment_release_clean_seq147_M1292": [
+   0.1175463467405935,
+   3.1842150868546693,
+   6.056682412761671
+  ],
+  "Apartment_release_clean_seq148_M1292": [
+   0.5419382389274974,
+   5.87623385571554,
+   9.837227085477963
+  ],
+  "Apartment_release_clean_seq149_M1292": [
+   0.7641397394298144,
+   4.802929531656952,
+   6.68098002081019
+  ],
+  "Apartment_release_clean_seq150_M1292": [
+   1.0810362654765981,
+   6.354593489690541,
+   10.055939931484858
+  ]
+ }
+}

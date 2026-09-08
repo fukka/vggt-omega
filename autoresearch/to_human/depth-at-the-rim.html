@@ -985,10 +985,11 @@ ul.plain li strong{color:var(--ink)}
 
   <div class="col">
     <p>
-      So there is a single best thing to fit on, and it is <strong>not your own lens</strong>. Any
-      of the three squeezing shapes beats the real lens's own curve by about 5–6 points. The
-      differences between those three are inside the noise, so the useful advice is the direction,
-      not a particular shape.
+      So there is a single best thing to fit on, and it is <strong>not your own lens</strong>. The
+      squeezing shapes beat the real lens's own curve on <strong>every one of thirteen
+      recordings</strong>, by 4.0 points on average. The differences between the squeezing shapes
+      themselves are inside the noise, so the useful advice is the direction, not a particular
+      shape.
     </p>
     <p>
       "Matching does not help" holds across the four shapes that look like real fisheye lenses. It
@@ -1070,8 +1071,9 @@ ul.plain li strong{color:var(--ink)}
   <div class="headline">
     <p class="big">Re-render your footage to squeeze the outer edge, fit the curve there, then use
       it on your real images.</p>
-    <p>Worth 5–6 points on the model we built this on, and it costs one resample. This is the first
-      thing in this report that makes a result <em>better</em> rather than just warning you off
+    <p>Worth <strong>4.0 ± 1.3 points</strong> on the real lens, measured across thirteen
+      recordings, and positive on every one of them. It costs one resample. This is the first thing
+      in this report that makes a result <em>better</em> rather than just warning you off
       something — but see the end of this section for how far the gain travels.</p>
   </div>
 
@@ -1162,7 +1164,8 @@ ul.plain li strong{color:var(--ink)}
         not need to be the right camera at all (§4.6).</li>
       <li><strong>Re-render to squeeze the outer edge before you fit.</strong> Fit the curve on a
         version of your footage that gives the outer part of the view <em>less</em> of the frame,
-        then apply it to the real images. Any of several shapes work; the direction is what matters.
+        then apply it to the real images. Worth 4.0 ± 1.3 points and positive on all thirteen
+        recordings we tried. Any of several shapes work; the direction is what matters.
         <strong>Check what it is worth on your own model before shipping it</strong> — the ordering
         holds on a stronger model but most of the gain does not, and the most stretched shape turns
         actively harmful.</li>
@@ -1174,10 +1177,15 @@ ul.plain li strong{color:var(--ink)}
     <ul class="plain">
       <li>Most results are one seed. The label-free result has three. The others rest on consistent
         direction (16 of 16, 6 of 6) and on bars set in advance — not on any single large difference.</li>
-      <li>Every same-room number in §4.3 and §4.4 was originally measured on a single recording
-        that turned out to be an outlier. All of them have since been re-measured across thirteen
-        (§4.4). The exception is the "rearranged room" column, still a single recording — though we
-        now know it is a representative one.</li>
+      <li>Every same-room number in this report was originally measured on a single recording that
+        turned out to be an outlier, and all of them have since been re-measured across thirteen.
+        The exception is the "rearranged room" column, still a single recording — though we now know
+        it is a representative one.</li>
+      <li>That recording has a pattern worth naming, because it will apply to anyone repeating this
+        work: <strong>it exaggerated everything we <em>did</em> to the images and nothing we merely
+        <em>measured</em> about them.</strong> Six separate interventions read 1.3 to 6.0 standard
+        deviations high on it; three plain measurements read normal. So the rim penalty and the tilt
+        curve were fine as published, while every method's benefit was overstated.</li>
       <li>The "82%" companion to §4.3's headline is still that single recording, unlike the 94%
         beside it, which is thirteen.</li>
       <li>The cross-room test is <strong>120 frames over two sequences</strong> where the wearer

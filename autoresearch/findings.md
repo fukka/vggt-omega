@@ -2383,3 +2383,56 @@ practical warning in either report.
 with a border" was four backbones on one recording; H29 re-measured two. The
 "worst of the four" half is now supported for the two tested and untested for
 VGGT and VGGT-Omega.
+
+## H30 — the "squeeze before you fit" gain holds 13/13; the prediction landed weakly
+
+`h30-lens-variance/results/lens_13.json`. Curves fitted on the same four
+training sequences from the same cache; only the evaluation set changed.
+
+**B1 passes 13/13.** On the real Aria lens a foreign rim-compressing curve beats
+the lens's own on every recording.
+
+| | thirteen recordings | seq136 |
+|---|---|---|
+| the real lens's own curve | -14.9% +- 3.2 | -21.1% |
+| best rim-compressing curve | -18.9% +- 4.4 | -26.8% |
+| **advantage** | **+4.03 +- 1.33 pts** | +5.75 pts |
+
+The advice stands and is worth **about 4 points, not 5-6**, and is never
+negative on any recording. **B3 passes**: orthographic -26.5% <= equisolid
+-25.2% <= aria_kb4 -18.4%.
+
+### B2 — the pre-registered prediction was right, and one test is weak
+
+H29's observation (seq136 responds unusually strongly to interventions) was
+stated, not measured. H30 pre-registered that seq136's advantage would sit more
+than 1 sd above the thirteen-recording mean. **It does: +1.29 sd.**
+
+**That single result is weak** — P(z>1) is about 16%, so p ~ 0.16 alone. What
+makes the observation credible is the campaign:
+
+| intervention on seq136 | z | | unperturbed | z |
+|---|---|---|---|---|
+| H25 radial curve | **+5.74** | | H28 rim/centre | -0.11 |
+| H26 adapter | +2.60 | | H28 roll +-20 | +0.07 |
+| H27 GT arm | +3.12 | | H28 roll +-30 | +0.52 |
+| H29 border small | +3.32 | | | |
+| H29 border large | **+5.96** | | | |
+| H30 lens advantage | +1.29 | | | |
+
+**Six interventions, all positive** — sign test p ~ 0.016 before counting that
+two exceed 5 sd. **Three unperturbed measurements, all at zero.** That split is
+what the observation rests on; H30 contributes one more point on the correct
+side, pre-registered, which is the most a single run can be.
+
+Still an observation, **not a mechanism**: it says what seq136 does, not why.
+
+### The standing consequence
+
+**Any intervention measured only on seq136 should be assumed inflated.** Every
+published in-room figure in this line has now been re-measured; this is the
+instruction for anything measured in future.
+
+The converse — that a *descriptive* number on seq136 is representative — held
+every time it was checked, but rests on three data points and should not be
+leaned on.
