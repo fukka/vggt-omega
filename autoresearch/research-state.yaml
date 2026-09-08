@@ -1414,3 +1414,33 @@ pattern_averaging_hides_things:
   instances:
     - "H28: the rim/centre 2.0-2.6x band was four single-recording numbers, not a spread across models."
     - "H32: the +-30 deg roll penalty is the midpoint of 24% and 56%."
+
+# ------------------------------------------------- H33 resolved 2026-09-08
+h33_outcome:
+  status: B1 FAILS, B2 passes, falsification NOT triggered — undecided
+  artifact: autoresearch/experiments/h33-roll-asymmetry/results/
+  analysis: autoresearch/experiments/h33-roll-asymmetry/analysis.md
+  per_backbone_difference_plus30_minus_minus30:
+    da3_small: "+22.84 +- 25.58 pts, +30 costlier on 7/8"
+    da3_large: "+4.60 +- 20.13 pts, +30 costlier on 4/8 — AT CHANCE"
+    vggt: "+8.38 +- 5.39 pts, 8/8"
+    vggt_omega: "+3.67 +- 5.16 pts, 7/8"
+  why_undecided: >
+    Toward the setup: all four have a positive mean, and a purely model-specific
+    effect should vanish or invert somewhere. Against a pure artefact:
+    magnitudes differ 6x across models seeing IDENTICAL pixels, and da3:large is
+    at chance while vggt is 8/8. Defensible reading is that both are present —
+    a common +4 to +8 pts the setup could explain, plus a larger noisier
+    DA3-Small-specific part. Separating them needs the upright convention itself
+    varied, which is invasive and was not attempted. NO third design offered.
+  CONSEQUENCE_FOR_H32: >
+    "+30 costs 2.3x what -30 costs" was measured on DA3-Small ONLY, and
+    DA3-Small has the largest and noisiest asymmetry of the four while
+    DA3-Large shows none (4/8). NARROWED, not withdrawn: quote it as "on
+    DA3-Small", never as a fact about depth models.
+  metric_caution: >
+    The protocol asked for the +30/-30 RATIO. Multi-view -30 baselines are
+    0.6-3.7% with one cell at -0.2%, so ratios explode and one was nan on
+    partial data. Uncritically that reads "VGGT is 5x asymmetric" — entirely an
+    artefact of dividing by noise. Amendment to the difference is recorded in
+    that experiment's protocol.md as made AFTER seeing partial data.

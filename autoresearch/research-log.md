@@ -1669,3 +1669,36 @@ a pattern rather than an incident.
 Also noted without over-reading: the wearers' signed median roll is -2.70
 degrees and the penalty minimum sits near -5. 9 of 13, p ~ 0.13. A hint, and no
 mechanism offered.
+
+## 2026-09-08 (night) — H33: the either/or did not resolve, and the claim narrows
+
+H32's asymmetry was one tick old and already in both reports, so I tested whether
+it belongs to the models or to our own rendering. Four backbones, identical
+pixels, only the model changing.
+
+The answer is neither cleanly. B1 failed: the single-image and multi-view
+families differ by 7.7 points against a 24-point spread inside the single-image
+family. But the falsification did not trigger either, because the four do not
+agree — magnitudes span 6x and da3:large sits at chance, 4 of 8, while vggt is 8
+of 8.
+
+So the honest reading is that both effects are present: a small common asymmetry
+of +4 to +8 points that every model shows and that our setup could account for,
+plus a much larger, much noisier DA3-Small-specific part. I am not offering a
+third design; separating them needs the upright convention varied, which is
+invasive and was not part of this run.
+
+The consequence for what is published is concrete. H32's "+30 costs 2.3x what
+-30 costs" was measured on DA3-Small alone, and DA3-Small turns out to be the
+model with the largest and noisiest asymmetry of the four, while DA3-Large shows
+none. The claim narrows to DA3-Small rather than being withdrawn — it does
+reproduce, 7 of 8 here against 11 of 13 in H32 — but it should never have been
+stated as a fact about depth models on one backbone's evidence.
+
+Worth recording separately: the protocol asked for a ratio, and on the
+multi-view models the denominator is 0.6-3.7% with one cell at -0.2%. Ratios
+exploded and one was already nan on partial data. Quoted uncritically that gives
+"VGGT is 5x asymmetric", a headline made entirely of dividing by noise. I
+switched to the difference and wrote the change into the protocol as an
+amendment, stating that it was made after seeing partial data and that the reason
+was well-definedness rather than which answer it produced.

@@ -2532,3 +2532,58 @@ Ignoring head roll costs about **1.5%** of depth error on ordinary indoor
 footage — cheap enough to ignore. If you spend effort on it, spend it on
 **positive roll beyond 20 deg**: 1.5% of frames, a quarter of the cost, and more
 than twice as expensive as the same angle the other way.
+
+## H33 — the roll asymmetry test came out undecided; H32's claim narrows to DA3-Small
+
+`h33-roll-asymmetry/`, four backbones on identical pixels, eight recordings.
+Primary statistic per the recorded amendment: `(+30) - (-30)` in points.
+
+| | mean diff | sd | +30 costlier on |
+|---|---|---|---|
+| `da3:small` | **+22.84** | 25.58 | 7/8 |
+| `da3:large` | +4.60 | 20.13 | **4/8** |
+| `vggt` | +8.38 | 5.39 | **8/8** |
+| `vggt_omega` | +3.67 | 5.16 | 7/8 |
+
+**B1 fails.** Single-image pair +13.72 +- 24.15, multi-view +6.03 +- 5.65 — a
+7.69-point gap against a 24-point within-family spread. The family split is not
+there. **B2 passes**: da3:small reproduces the asymmetry 7/8, consistent with
+H32's 11/13. **The falsification did not trigger either**: the four do not agree
+within noise, spanning 6x, with da3:large at chance.
+
+### The experiment did not separate the two explanations
+
+Designed as a clean either/or; the data gave neither.
+
+**Toward the setup:** all four have a positive mean. A purely model-specific
+effect should vanish or invert somewhere and does not.
+**Against a pure artefact:** magnitudes differ 6x across models seeing literally
+identical pixels, and da3:large is at chance (4/8) while vggt is 8/8.
+
+**Defensible reading:** both are present — a small common asymmetry of roughly
++4 to +8 points that every model shows and the setup could account for, plus a
+larger and much noisier **DA3-Small-specific** component (+22.8 +- 25.6). This
+run cannot separate them. Separating them would need the upright convention
+itself varied, which is invasive and was not attempted.
+
+### H32's claim is narrowed, not withdrawn
+
+H32 reported "+30 costs 2.3x what -30 costs" as a property of the roll penalty.
+**That was DA3-Small only**, and DA3-Small turns out to have the largest and
+noisiest asymmetry of the four.
+
+* holds for **DA3-Small** (7/8 here, 11/13 in H32);
+* **DA3-Large shows no consistent asymmetry** (4/8) — so not a DA3-family
+  property;
+* all four have a small positive mean, part of which may be our own rendering.
+
+Quote the 2.3x as "on DA3-Small", never as a fact about depth models.
+
+### Caution for the next person
+
+The protocol originally asked for the +30/-30 **ratio**. The multi-view models'
+-30 baseline is 0.6-3.7% and one cell is -0.2%, so ratios explode and one was
+already `nan`. Uncritically quoted that reads "VGGT is 5x asymmetric" — a
+headline produced entirely by dividing by noise. The switch to the difference is
+recorded in that experiment's `protocol.md` as a change made AFTER seeing partial
+data, with well-definedness as the reason.

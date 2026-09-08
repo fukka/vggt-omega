@@ -443,11 +443,33 @@ ul.plain li strong{color:var(--ink)}
       frame, versus a detector that flags the occasional one.
     </p>
     <p>
-      <strong>Tilting one way is twice as bad as the other.</strong> At 30°, tilting one direction
-      costs 24% and the other 56% — and every earlier version of this report averaged the two into
-      a single "±30° = +46%". The asymmetry only shows up past about 20°, and it was invisible until
-      we measured the two signs separately.
+      <strong>Tilting one way is twice as bad as the other — for one of the four models.</strong>
+      At 30°, tilting one direction costs 24% and the other 56%, and every earlier version of this
+      report averaged the two into a single "±30° = +46%". The asymmetry only appears past about
+      20°, and it was invisible until we measured the two signs separately.
     </p>
+    <div class="note warn">
+      <span class="lbl">…and then we checked whether it was really about the models</span>
+      <p>
+        Three things in our pipeline are not left-right symmetric — we rotate every image a quarter
+        turn before the model sees it, the lens centre sits a few pixels off the middle, and the
+        wearer's hands are always low and to one side. Any of those could produce this signature
+        with no help from the model. So we ran the same test on four different depth models, which
+        all see <em>exactly</em> the same pixels.
+      </p>
+      <p>
+        <strong>It came out undecided, and the honest answer is "partly both".</strong> All four
+        models lean the same way, which is what a rendering quirk would do. But the size differs
+        six-fold between models that see identical images, and the second DA3 model shows no
+        consistent lean at all (4 times out of 8, a coin flip), which a rendering quirk would not do.
+      </p>
+      <p>
+        So the 24%-versus-56% figure above is <strong>a result about DA3-Small</strong>, the model
+        with the largest and noisiest asymmetry of the four. It reproduces on that model (7 of 8
+        recordings here, 11 of 13 earlier). It should not be quoted as a fact about depth models in
+        general, and we cannot yet say how much of it is our own rendering.
+      </p>
+    </div>
 
     <p>
       One last check on this section, because a later part of this report (§4.4) found that the
