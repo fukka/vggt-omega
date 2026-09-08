@@ -1176,3 +1176,37 @@ h27_outcome:
   what_is_still_open:
     - "The rearranged-room ratio (82%) rests on dec_seq132 alone. Much less worrying — H25 showed it is the representative recording (+0.31 sd) — but it is one recording and should be described as one."
     - "THE LARGEST OPEN EXPOSURE: the cross-room numbers were never measured on seq136, so this arc does not reach them. Still 120 frames over two near-static recordings. No amount of Apartment footage fixes it."
+
+# ------------------------------------- data inventory 2026-09-08, NOT ACTED ON
+adt_unused_sequences:
+  finding: >
+    The raw ADT tree holds 39 non-"clean" Apartment sequences that have never
+    been touched: 16 meal, 10 decoration, 9 work, 4 recognition. `decoration` is
+    the rearranged-furniture scene — the one H25 showed is the REPRESENTATIVE
+    recording — and only seq132 of the ten is extracted.
+  why_they_are_unusable_as_they_stand: >
+    Their .download_status.json says depth:false, main_groundtruth:false and
+    every mps_*:false. Only main_vrs (RGB) was downloaded. No depth to score
+    against and no trajectory for pose, so they cannot be used without fetching
+    more from the ADT CDN.
+  what_it_would_buy: >
+    Scaling the rearranged-room test from ONE recording to ten, which is the gap
+    H27 flagged as still open (the "82%" companion figure). And 25 meal/work
+    sequences would give real scene-content diversity in the same room. It would
+    NOT touch the cross-room exposure — LiteOffice is still the only second
+    device and there is no more of it anywhere on disk.
+  BLOCKED_ON_A_DECISION_NOT_A_TICKET: >
+    /netapp/datasets is 98% full: 787 GB free of 31 TB, on a SHARED filesystem
+    (aman.walia, dong.huo also use it). A decoration sequence is ~11 GB as
+    RGB-only today; with depth+groundtruth+mps it lands nearer 20-25 GB raw, and
+    5.9 GB once extracted. Ten of them is ~150-250 GB transient, 15-30% of the
+    remaining headroom on a box other people depend on.
+  bounded_plan_if_approved: >
+    One sequence at a time — download, extract to adt_apartment_extra, delete
+    the raw — which caps the transient footprint near 25 GB instead of 250 GB.
+    Downloader recipe is in the Mac-local memory note `adt-dataset-downloader`:
+    runner dir /user/f.zhang2/Documents/adt_seq131_dl, edit sequences.txt, launch
+    ./run.sh in tmux. Env is `myadt`, not `raytun3r`.
+  do_not_launch_without_asking: >
+    Filling a shared research filesystem past 98% affects colleagues and is not
+    reversible from here. Flagged to the user rather than started.

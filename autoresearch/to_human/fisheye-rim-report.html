@@ -219,8 +219,9 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       正是③让它成立：VGGT-Ω 耐边界，所以能跑 <strong>110° 教师、100% 锥体覆盖</strong>（同样的画幅，DA3 教师会翻负 +33%，它是 −65%）。
       学生<strong>零深度标签</strong>拿到近边缘增益。H14 原来的教师只有 −13.2% / +4.7% ——
       <strong>想法是对的，问题在教师。</strong>
-      <strong>数字已修正：</strong>原发布的 −51.5% 测在一条离群录像上，13 条录像的均值是
-      <strong>−38.6% ± 4.9</strong>（§03l）；"相当于真值增益 89% / 82%"的分母尚未重测，<strong>暂不引用</strong>。（§03b, §03k, §03l）
+      <strong>数字已修正：</strong>原发布的 −51.5% 测在一条离群录像上；13 条录像的均值是
+      <strong>−38.6% ± 4.9</strong>，而无标签比值是 <strong>94.2%</strong>（原发布 89%，<strong>低估了</strong>）。
+      四条臂现已全部重测。（§03b, §03k–§03m）
     </p></div>
 
     <div class="row"><span class="who">⑤ 但跨房间只剩 6 个数</span><p>
@@ -2778,6 +2779,104 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
         <strong>这次修正花掉两个数字，换来结论下面一块硬得多的地板。</strong>
       </p>
     </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head"><span class="eyebrow">03m</span><h2>实验 B¹² · H27：修正弧线闭合 —— 数字全部下调，比值全部上升</h2>
+    <span class="chip done"><span class="dot"></span>B2 / B3 通过 · 四条臂全部重测完毕</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      §03k 修正了曲线，§03l 修正了 adapter 和对照。还剩一个头条活在 seq136 上，
+      而它正是 §03b 的开场句：<strong>"零深度标签的学生，恢复了真值训练收益的 89% / 82%"</strong>。
+    </p>
+    <p>
+      这两个都是比值，而<strong>分母是一个只测过 seq136 的 GT 训练臂</strong>。
+      那条录像上测过的所有东西都已证明虚高，<strong>而且虚高倍数各不相同</strong>，所以这个比值不能假定安全。
+    </p>
+    <p>
+      顺带把对照补齐：§03l 只跑了 <code>omega_rt_s2</code>，这次加上另外两个 seed ——
+      <strong>B3 检查的就是"13/13"是不是单个 seed 的偶然</strong>。
+    </p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <caption>同房间近边缘增益。四条臂现在全部是 13 条录像的均值加标准差。</caption>
+      <thead><tr><th>臂</th><th>已发布（seq136）</th><th>13 条录像</th><th>偏离</th><th>虚高倍数</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">真值标签训练</td><td class="num">−57.9%</td><td class="num good"><b>−40.99% ± 5.42</b></td><td class="num bad">3.12 sd</td><td class="num">×1.41</td></tr>
+        <tr><td class="mono">adapter omega110</td><td class="num">−51.5%</td><td class="num good"><b>−38.59% ± 4.86</b></td><td class="num bad">2.60 sd</td><td class="num">×1.33</td></tr>
+        <tr><td class="mono">对照 omega_rt（3 seed）</td><td class="num">−47.6%</td><td class="num"><b>−35.14% ± 5.86</b></td><td class="num">—</td><td class="num">×1.35</td></tr>
+        <tr class="flip"><td class="mono">16 个数的曲线</td><td class="num">−16.6%</td><td class="num"><b>−7.02% ± 1.67</b></td><td class="num bad"><b>5.74 sd</b></td><td class="num bad"><b>×2.36</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="scroll" style="margin-top:14px">
+    <table>
+      <caption><strong>绝对值全部下调，而每一个比值都变好了。</strong></caption>
+      <thead><tr><th>比值</th><th>已发布</th><th>13 条录像</th></tr></thead>
+      <tbody>
+        <tr class="flip"><td class="mono">无标签 ÷ 真值训练</td><td class="num">88.9%</td><td class="num good"><b>94.2%</b></td></tr>
+        <tr class="flip"><td class="mono">adapter ÷ 曲线</td><td class="num">3.10×</td><td class="num good"><b>5.50×</b></td></tr>
+        <tr><td class="mono">adapter − 对照</td><td class="num">−3.9 点</td><td class="num good">−3.44 点，<b>13/13</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:18px">
+    <h3>逐条判据</h3>
+  </div>
+  <div class="crit">
+    <div class="row"><span class="who">B1 ✗ 未通过（−3.12 sd）</span><p>
+      GT 臂同样虚高。<strong>四条臂无一例外</strong> —— 那条录像上没有任何一个数字是代表性的。
+    </p></div>
+    <div class="row"><span class="who">B2 ✓ 通过，而且朝有利方向</span><p>
+      无标签比值在 13 条录像上是 <strong>94.2%</strong>，已发布的是 88.9%。
+      <strong>这条线里被引用最多的那句话，是被低估了，不是错了。</strong>
+    </p></div>
+    <div class="row"><span class="who">B3 ✓ 通过 13/13，用完整三 seed 对照</span><p>
+      差距 −3.44 点对 §03l 单 seed 的 −3.66。<strong>§03b 的核心比较不取决于挑了哪个对照 seed。</strong>
+    </p></div>
+  </div>
+
+  <div class="col">
+    <h3 style="margin-top:22px">再想一层</h3>
+    <div class="note">
+      <span class="eyebrow">"虚高倍数"那一列本身就是一个发现</span>
+      <p>
+        三条<strong>学习出来的</strong>臂虚高倍数几乎一致（1.33、1.35、1.41），
+        而 <strong>16 个数的曲线是 2.36</strong>，几乎两倍。
+        <strong>seq136 把最弱的方法抬得最狠</strong> —— 这正是绝对值全部下调、比值反而全部变好的原因。
+      </p>
+      <p>
+        还给出一条能用的规则：曲线的 sd/|均值| 是 <strong>0.238</strong>，adapter 是 <strong>0.126</strong>。
+        <strong>关于曲线的主张，需要比关于 adapter 的主张更多的录像。</strong>
+      </p>
+    </div>
+    <div class="note warn">
+      <span class="eyebrow">这条弧线关掉了什么、没关掉什么</span>
+      <p>
+        <strong>关掉了：</strong>每个房间内数字现在都是 13 条录像的均值加标准差。
+        三条倚赖 seq136 的结论全部存活，两条变得更好。
+      </p>
+      <p>
+        <strong>没关掉：</strong>"重新布置房间"那个 82% 仍然只有一条录像 ——
+        比 seq136 令人安心得多（§03k 证明它是代表性的那条），但它<strong>就是一条</strong>，应当如实描述。
+      </p>
+      <p>
+        <strong>够不到：</strong>跨房间数字从来没测在 seq136 上，所以这条弧线碰不到它们。
+        它们仍然是 <strong>120 帧、两条近静止录像</strong>，现在毫无疑问是
+        <strong>这条线最大的开放暴露面</strong> —— 而且<strong>再多的公寓素材也修不好它</strong>。
+      </p>
+    </div>
+    <p>
+      三个 tick 之前，这条线只有一条被指定的留出录像，而且不知道它是离群点。
+      这一切之所以发生，只是因为停机时提取的 13 条序列在磁盘上躺着没人用。
+    </p>
   </div>
 </section>
 
