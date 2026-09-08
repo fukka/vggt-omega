@@ -1601,9 +1601,9 @@ reports_current_as_of:
     rim penalty replicates outside Aria (2.38 at ~48 deg vs our 2.17 +- 0.38),
     the methods built on it do not have external evidence.
 
-# ------------------------------- H37 in flight 2026-09-08
+# ------------------------------- H37 resolved 2026-09-08
 h37_border_four_backbones:
-  status: "protocol + runner locked and pushed; launch pending remote git reconcile"
+  status: "ALL THREE BARS PASS 13/13; sanity clean"
   question: >
     H29 flagged the one published multi-backbone claim it could not support:
     "DA3-Large is the worst of the four with a border" was measured on seq136
@@ -1623,3 +1623,58 @@ h37_border_four_backbones:
   sanity_not_a_bar: >
     Border cost positive on every recording for every backbone, or the run is
     void (the H34 rule).
+
+h37_outcome:
+  artifacts: autoresearch/experiments/h37-border-four-backbones/results/ (14 JSONs + summary.json)
+  analysis: autoresearch/experiments/h37-border-four-backbones/analysis.md
+  the_four_way_table_on_13_recordings:
+    vggt_omega: "+6.0% +- 4.6   (seq136 +29.1%, z +5.01, range +1.2..+19.0)"
+    vggt:       "+48.4% +- 18.0 (seq136 +106.5%, z +3.22, range +28.3..+86.7)"
+    da3_small:  "+59.0% +- 14.1 (seq136 +105.7%, z +3.32) — from H29"
+    da3_large:  "+268.9% +- 61.5 (seq136 +635.5%, z +5.96) — from H29"
+  b1_b2: >
+    DA3-Large worst of the four on 13/13 and VGGT-Omega best on 13/13, no
+    exception at either end. Closes the last published multi-backbone claim
+    resting on seq136. Also verifies section 4.3's STATED REASON for the
+    VGGT-Omega teacher, which H31 had not — H31 verified the choice.
+  the_ratio_grew: >
+    Published 21.8x (seq136) -> 45.1x on thirteen-recording means. seq136
+    amplified DA3-Large x2.36 and VGGT-Omega x4.88, flattering the weaker side
+    more. Fourth time a ratio improved when absolute numbers came down.
+  DO_NOT_QUOTE: >
+    The mean of per-recording ratios is 70.4 +- 61.8, range 16.7-255.2, because
+    VGGT-Omega's cost reaches +1.2%. H33's divide-by-noise trap. Ratio of means
+    (45.1) is the citable form.
+  B3_IS_THE_ONE_THAT_MATTERED: >
+    The seq136 amplification observation was fitted on nine interventions that
+    already existed and had never predicted anything. Pre-registered here as
+    z > 0 for both new backbones; landed at +3.22 and +5.01. ELEVEN OF ELEVEN,
+    two of them out of sample, against three unperturbed measurements at -0.11,
+    +0.07, +0.52. Still an observation, still no mechanism offered.
+  not_established:
+    - "vggt vs da3:small is NOT separated: 8/13, means +48.4 vs +59.0, ranges overlap almost completely. Published as a near-tie on seq136; this cannot order them."
+    - "No mechanism. Two mechanism guesses already died on the neighbouring effect (H22, H23); no third offered."
+  strengthens_h17_6: >
+    Border tolerance is NOT a pretraining-family property — the two VGGT
+    variants differ by 8x on thirteen-recording means, vggt_omega lower 13/13.
+    Roll robustness IS one (H17.2). Two axes, each now on thirteen recordings,
+    disagreeing about the same pair of models.
+
+pattern_which_model_not_how_big:
+  rule: >
+    In this line the actionable variable has been WHICH MODEL three times, and
+    HOW BIG zero times. Clean-benchmark accuracy predicts none of the three
+    robustness axes.
+  instances:
+    - "rim: VGGT-Omega is the most accurate AND has the steepest field; scaling DA3 does not flatten the field."
+    - "roll: changing the pretraining family buys 4x (H35); DA3-Small -> DA3-Large buys nothing (1.80% -> 1.85%)."
+    - "border: 45x between backbones (H37), and DA3-Large — the more accurate DA3 on a clean frame — is the worst of the four."
+
+operational_do_not_hand_write_a_git_loop:
+  symptom: >
+    A per-file loop comparing 77 untracked files against origin blobs hung after
+    14 files on lambda_63 — parent process alive, no git children, no progress
+    for 14 minutes.
+  fix: "git stash push -u — one command, fully reversible, worked immediately."
+  rule: "Do not hand-write a loop for something git has a native operation for."
+  same_family_as: "h36b — look for the thing that already exists before building it."
