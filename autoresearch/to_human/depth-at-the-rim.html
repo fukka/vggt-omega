@@ -606,12 +606,13 @@ ul.plain li strong{color:var(--ink)}
       <caption>Before training anything: is the teacher actually better than the raw model at the
         rim? Scored only on pixels the teacher can see. The first two rows use an
         <em>identical</em> view with an identical black frame, so they differ only in which model
-        is the teacher.</caption>
-      <thead><tr><th>Teacher</th><th>How much of the rim it sees</th><th>Share of its frame that is black</th><th>Rim error change (− is better)</th></tr></thead>
+        is the teacher. The last column is the average over thirteen recordings; the ordering it
+        shows held on <strong>all thirteen</strong>.</caption>
+      <thead><tr><th>Teacher</th><th>How much of the rim it sees</th><th>Share of its frame that is black</th><th>Rim error change<br><span style="font-weight:400">thirteen recordings</span></th></tr></thead>
       <tbody>
-        <tr><td class="mono">DA3-Small, wide</td><td class="n">100%</td><td class="n">22.5%</td><td class="n bad">+33%</td></tr>
-        <tr class="hi"><td class="mono">VGGT-Omega, wide</td><td class="n good">100%</td><td class="n">22.5%</td><td class="n good">−65%</td></tr>
-        <tr><td class="mono">DA3-Small, narrow</td><td class="n">70%</td><td class="n">1.3%</td><td class="n">−15%</td></tr>
+        <tr><td class="mono">DA3-Small, wide</td><td class="n">100%</td><td class="n">22.5%</td><td class="n bad">+19.8% ± 7.9</td></tr>
+        <tr class="hi"><td class="mono">VGGT-Omega, wide</td><td class="n good">100%</td><td class="n">22.5%</td><td class="n good">−48.2% ± 7.2</td></tr>
+        <tr><td class="mono">DA3-Small, narrow</td><td class="n">70%</td><td class="n">1.3%</td><td class="n">−6.9% ± 6.2</td></tr>
       </tbody>
     </table>
   </div>
@@ -1183,9 +1184,11 @@ ul.plain li strong{color:var(--ink)}
         it is a representative one.</li>
       <li>That recording has a pattern worth naming, because it will apply to anyone repeating this
         work: <strong>it exaggerated everything we <em>did</em> to the images and nothing we merely
-        <em>measured</em> about them.</strong> Six separate interventions read 1.3 to 6.0 standard
-        deviations high on it; three plain measurements read normal. So the rim penalty and the tilt
-        curve were fine as published, while every method's benefit was overstated.</li>
+        <em>measured</em> about them.</strong> Nine separate interventions came out 0.5 to 6.0
+        standard deviations stronger on it than the average — including ones that made things
+        <em>worse</em>, which came out worse still — while three plain measurements read normal. So
+        the rim penalty and the tilt curve were fine as published; every method's effect, helpful or
+        harmful, was overstated.</li>
       <li>The "82%" companion to §4.3's headline is still that single recording, unlike the 94%
         beside it, which is thirteen.</li>
       <li>The cross-room test is <strong>120 frames over two sequences</strong> where the wearer

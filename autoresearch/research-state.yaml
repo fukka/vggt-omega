@@ -1344,3 +1344,36 @@ gotcha_precheck_needs_two_flags:
     32 runs on 2026-09-08, including part of the expensive VGGT-Omega arm,
     produced manifests with nothing in them. Caught only by inspecting the JSON
     rather than trusting the exit code.
+
+# ------------------------------------------------- H31 resolved — CAMPAIGN CLOSED
+h31_outcome:
+  status: B1 and B2 PASS 13/13; B3 prediction holds at -2.91 sd
+  artifact: autoresearch/experiments/h31-teacher-precheck/results/
+  analysis: autoresearch/experiments/h31-teacher-precheck/analysis.md
+  the_method_choice_was_sound: >
+    omega_wide beats da3_wide at the rim on 13/13. da3_wide is worse than doing
+    nothing on 13/13 (+6.9% to +31.1%). Section 4.3's teacher was chosen
+    correctly and the reason now rests on thirteen recordings.
+  corrected:
+    da3_narrow: "-15% published -> -6.9% +- 6.2 over 13 (seq136 -9.9%)"
+    da3_wide:   "+33% published -> +19.8% +- 7.9 over 13 (seq136 +35.2%)"
+    omega_wide: "-65% published -> -48.2% +- 7.2 over 13 (seq136 -69.1%)"
+  reproduction_gap_flagged: >
+    The narrow arm published -15% and reproduces at -9.9% on seq136. Likely the
+    frame count (20 here vs 60 originally) on the arm with the smallest effect.
+    Nothing depends on it, but recorded rather than smoothed over.
+  PATTERN_RESTATED_CORRECTLY: >
+    H31 supplies two interventions with OPPOSITE signs. da3_wide hurts and
+    seq136 reads +1.95 sd MORE harmful; omega_wide helps and seq136 reads
+    2.91 sd MORE helpful. So "seq136 reads high" was the wrong formulation.
+    RIGHT: SEQ136 AMPLIFIES THE MAGNITUDE OF WHATEVER YOU DO TO IT, IN WHICHEVER
+    DIRECTION THE INTERVENTION POINTS. All nine interventions fit: |z| = 5.74,
+    2.60, 3.12, 3.32, 5.96, 1.29, 1.95, 2.91, 0.48 — nine of nine, sign test
+    p ~ 0.002, median 2.91 — against three unperturbed measurements at -0.11,
+    +0.07, +0.52. Observation, NOT a mechanism.
+
+verification_campaign_closed:
+  covered: "H25 curve, H26 adapter+control, H27 gt arm, H28 foundation, H29 border, H30 lens advice, H31 teacher choice"
+  still_on_one_recording:
+    - "the rearranged-room column — one recording, but H25 showed it is the representative one"
+    - "the cross-room numbers — never measured on seq136, blocked on the shared-filesystem decision put to the user and not acted on"

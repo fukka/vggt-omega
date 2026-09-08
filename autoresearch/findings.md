@@ -2436,3 +2436,52 @@ instruction for anything measured in future.
 The converse — that a *descriptive* number on seq136 is representative — held
 every time it was checked, but rests on three data points and should not be
 leaned on.
+
+## H31 — the method choice was sound; the verification campaign closes
+
+`h31-teacher-precheck/results/`, 42 pre-checks. Reading in that experiment's
+`analysis.md`.
+
+**B1 passes 13/13.** `omega_wide` beats `da3_wide` at the rim on every
+recording. The bar was deliberately strict — a single failure falsifies, because
+a method choice should not rest on a majority vote — and it never failed.
+
+**B2 passes 13/13.** `da3_wide` is worse than doing nothing everywhere, +6.9% to
++31.1%.
+
+| config | thirteen recordings | seq136 | published |
+|---|---|---|---|
+| DA3-Small, 95 deg narrow | -6.9% +- 6.2 | -9.9% | -15% |
+| DA3-Small, 110 deg wide | **+19.8% +- 7.9** | +35.2% | +33% |
+| VGGT-Omega, 110 deg wide | **-48.2% +- 7.2** | -69.1% | -65% |
+
+Section 4.3's teacher was chosen correctly, and the reason — the wide view is
+unusable for DA3 and fine for VGGT-Omega — now rests on thirteen recordings.
+
+**Reproduction gap, flagged not smoothed:** the two decision-critical arms
+reproduce closely on seq136 (+33 -> +35.2, -65 -> -69.1) but the narrow arm does
+not (-15% published, -9.9% reproduced). Likely the frame count, 20 here against
+60 originally, on the arm with the smallest effect. Nothing depends on that
+number, but a 5-point gap should not go unmentioned.
+
+### The pattern gets its proper form
+
+H31 supplies two interventions with OPPOSITE signs, which forces a better
+statement. `da3_wide` hurts and seq136 reads +1.95 sd MORE harmful; `omega_wide`
+helps and seq136 reads 2.91 sd MORE helpful. So the rule is not "reads high":
+
+**seq136 amplifies the magnitude of whatever you do to it, in whichever
+direction the intervention points.**
+
+All nine interventions in this campaign are amplified — |z| = 5.74, 2.60, 3.12,
+3.32, 5.96, 1.29, 1.95, 2.91, 0.48 — **nine of nine, sign test p ~ 0.002, median
+|z| = 2.91** — against three unperturbed measurements at -0.11, +0.07, +0.52.
+
+Still an observation, **not a mechanism**.
+
+### The campaign is closed
+
+Nothing published in this line rests on a single recording now, except the
+**rearranged-room** column (one recording, but H25 showed it is the
+representative one) and the **cross-room** numbers, which were never measured on
+seq136 and are blocked on a data decision put to the user and not acted on.

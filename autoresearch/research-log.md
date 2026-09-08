@@ -1604,3 +1604,33 @@ why, and this line has already spent two mechanism guesses.
 The practical form is now a standing instruction rather than a curiosity: any
 intervention measured only on seq136 should be assumed inflated. Every published
 in-room figure has been re-measured, so this is for future work.
+
+## 2026-09-08 (end) — H31 closes the campaign, and the pattern finally has the right shape
+
+The last decision-critical number was the teacher pre-check that made section 4.3
+use VGGT-Omega at all. Both bars passed 13 of 13, and B1's bar was strict on
+purpose — one failure would have falsified it, because a method choice should not
+rest on a majority vote. It never failed. The wide view is unusable for DA3 on
+every recording (+6.9% to +31.1% worse than doing nothing) and fine for
+VGGT-Omega on every recording.
+
+The part I did not anticipate is that H31 supplies two interventions pointing in
+OPPOSITE directions, which fixes a sloppiness in how I had been stating the
+seq136 pattern. da3_wide hurts and seq136 reads 1.95 sd MORE harmful; omega_wide
+helps and seq136 reads 2.91 sd MORE helpful. So "seq136 reads high" was wrong as
+a formulation. The right one is that it AMPLIFIES the magnitude of whatever is
+done to it, in whichever direction the intervention points. All nine
+interventions across the campaign fit that, sign test p ~ 0.002, median |z| 2.91,
+against three unperturbed measurements sitting at zero.
+
+Also flagged a reproduction gap rather than letting it slide: the narrow teacher
+arm published -15% and reproduces at -9.9%, almost certainly the frame count (20
+here against 60 originally) on the arm with the smallest effect. Nothing depends
+on it, but a 5-point gap in a table I am re-verifying deserves a line.
+
+That closes the verification campaign. H25 through H31 re-measured every
+published in-room figure across thirteen recordings. What is left resting on a
+single recording is the rearranged-room column, which H25 showed is the
+representative recording, and the cross-room numbers, which were never on seq136
+and are blocked on the shared-filesystem decision I put to the user several ticks
+ago and have not acted on.
