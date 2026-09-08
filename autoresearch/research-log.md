@@ -1047,3 +1047,35 @@ session after the stale-fragment republish and the two withdrawn claims:
 **appending to a summary once per tick degrades it monotonically unless
 something re-reads the whole.** The build already asserts on known-stale
 strings; a length check on section 00 would have caught this one earlier.
+
+## 2026-09-08 — ninth tick down; the build process itself was not in the repo
+
+Same defect class as yesterday's summary bloat, one level up: the **header** —
+the first thing a reader sees — still said "2026-09-07" and "six experiments"
+when there are ten across sixteen sections. Fixed.
+
+The larger thing found while fixing it: **the build process lived only in a
+session scratchpad.** The report is assembled from four fragments with figures
+inlined as data URIs, and nothing in the repo could reproduce that. Anyone else
+— the other account, or any future session — could edit the fragments and have
+no way to publish. It is also what let the stale-fragment republish happen
+earlier: the guards existed only as lines I retyped into a shell each time.
+
+`autoresearch/to_human/build_report.py` now carries the whole thing, with the
+guards as assertions instead of habits. Each one exists because something got
+past me:
+
+* **STALE** — the three strings from withdrawn claims. If one reappears, a
+  fragment has been resurrected from an old copy, which is exactly what
+  happened when the black-wedge attribution was republished twice after being
+  retracted.
+* **ONE_PAGE** — section 00 must stay under 2,500 characters and 9 rows. It had
+  reached 14 rows and 6,283 characters by being appended to once per work
+  session. This is the check I said yesterday would have caught it; it exists
+  now rather than as a note.
+* **tag balance** — an unbalanced `<div>` has slipped into the hand-edited
+  fragments twice this session.
+* **missing figures** — fails loudly rather than publishing a broken `src`.
+
+Verified by rebuilding through it: 16 sections, section 00 at 7 rows / 1,213
+characters, 2.45 MB.
