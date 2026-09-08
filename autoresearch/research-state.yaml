@@ -1787,3 +1787,65 @@ discarded_run_h39_first_launch:
     COPY A CONVENTION FROM THE CODE THAT ESTABLISHED IT, AND SAY IN A COMMENT
     THAT IT IS COPIED. Re-deriving it looks like the same work and is not.
   also_fixed: "Frames whose nearest trajectory sample is > 33 ms away are dropped and counted (9-12 per recording)."
+
+# --------------------------------------- H39 extended + H39b 2026-09-08
+h39_on_thirteen:
+  status: "DA3-Small holds and tightens; VGGT-Omega NOT identified (B2 refuses it)"
+  da3_small: "-2.65% +- 2.43, 11/13; +10.02% at |psi|>=8 deg, -0.68% at <3 deg"
+  vggt_omega: "-1.04% +- 4.11, 7/13 — B2 FAILS (wrong-sign arm +0.08%), so NOT a result"
+  B2_EARNED_ITS_KEEP_TWICE: >
+    Written to stop a CONVENTION being chosen by score. It has now also caught
+    (a) the discarded first launch, where both arms were equally bad because the
+    roll itself was wrong, and (b) VGGT-Omega's -1.04% on thirteen recordings,
+    which passes B1 and would have made a quotable "even the multi-view model
+    gains 1%". Do not quote either the 6-recording +0.10% or the 13-recording
+    -1.04%; the arms do not separate.
+
+h39b_decomposition:
+  status: "P1 PASS (da3:small), P2 PASS, P3 FAILS on vggt_omega — and that failure is the measurement"
+  kind: "EXPLORATORY — the pooled numbers it acts on were already seen"
+  artifact: autoresearch/experiments/h39-gravity-render/results/decomposition.json
+  analysis: autoresearch/experiments/h39-gravity-render/analysis_h39b.md
+  the_split: >
+    grav_p = S - A, grav_m = S + A. S (symmetric in the rotation sign) is the
+    price: resampling. A (antisymmetric) is the prize: the roll removed. This is
+    H38's null-arm decomposition WITHOUT a null arm — the two signs were
+    rendered to identify a convention and paid for this as well.
+  THE_NUMBER_THE_RECOMMENDATION_RESTS_ON: >
+    da3:small price S = 3.03% +- 2.78 against H38's 64.1% for the SAME rotation
+    WITH a border — 0.047 of it. THE BORDER WAS ESSENTIALLY THE WHOLE PRICE and
+    the resampling is nearly free. That is why "fold it into the warp" is worth
+    saying: ~95% of the obvious approach's cost is an artefact the warp never
+    creates.
+  axis_never_varied: >
+    THE ROTATION ANGLE. H38's 64.1% is at +-30 deg; H39's S is at the real roll
+    (median 4-7 deg) and S GROWS with angle. So 0.047 is an UPPER BOUND, not an
+    angle-matched ratio. Nearest comparison in-data: the |psi|>=8 cell (median
+    ~11 deg) gives S = 11.51%, under a fifth of 64.1%. Isolating S at 30 deg
+    needs a real 30-degree roll; ADT's max is ~28 with p99 21.8, so not here.
+  p3_failure_is_the_measurement: >
+    H39 OFFERED a reading for why vggt_omega gains nothing. Now measured: its
+    price rises with angle (1.86 -> 5.62%) while its prize does not
+    (-0.38 -> +0.72%). The operation cannot pay there at any roll. On da3:small
+    both rise and the prize rises faster (0.26 -> 21.52 vs 0.95 -> 11.51).
+  gating_exploratory: >
+    Net gain applied to every frame +2.07%; gated at |psi| >= 6 deg it is +2.44%
+    from 36% of frames. BUT every gate from 2 to 8 deg lands between +2.18 and
+    +2.44 — 0.26 points against a per-recording sd of 2.43. DO NOT NAME 6 DEG AS
+    AN OPTIMUM. Honest form: gate anywhere in 2-8 deg, worth a few tenths of a
+    point and two thirds of the compute. The practical row is 12-30 deg at
+    +16.75%, which is H35's tail finding in a second form.
+  bug_recorded_not_deleted: >
+    vggt_omega's S is -0.48% +- 3.07. The first run divided H38's 7.4% by it and
+    printed "7.4e9x cheaper" — H33's divide-by-noise trap three experiments
+    later. The script now refuses a ratio unless the denominator is
+    distinguishable from zero, and reports P1 undecided for that backbone.
+
+pattern_an_arm_added_for_one_reason:
+  rule: >
+    An arm added for one reason often answers a second question. Look before
+    running.
+  instance: >
+    H39 rendered both rotation signs to keep a convention from being chosen by
+    score. That also gave H38's price/prize decomposition for free, with no GPU.
+  same_family_as: "h21 (check what is invariant before re-running the expensive model), h36b (look for the measurement before building it)."
