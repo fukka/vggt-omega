@@ -3111,3 +3111,72 @@ divided H38's 7.4% by it and printed **"7.4e9× cheaper"** — H33's
 divide-by-noise trap in a new costume, three experiments later. The script now
 refuses a ratio unless the denominator is distinguishable from zero, and P1 is
 reported undecided for that backbone rather than passed.
+
+## H40 — at a matched angle, the border is not most of the price. It is all of it.
+
+§03z had to carry a caveat: "the border was ~95% of de-rotation's price" came
+from H38's 64.1% at ±30° divided by H39b's 3.03% at the real roll of 4–7°, and
+the price grows with the angle, so 0.047 was an upper bound. I had written in
+the report that isolating it at 30° "cannot be done on this data" because ADT's
+maximum real roll is ~28°. **That was true of the construction, not of the
+question.**
+
+A 60° crop rotated on a canvas wide enough to keep every corner gives a
+border-free rotation at any angle. Fourteen recordings, 20 frames each,
+construction check clean (0.0000 black, direct and rotated, everywhere):
+
+| | `da3:small` | `vggt_omega` |
+|---|---|---|
+| two resamplings, no border | **+0.81% ± 0.67** (13/14) | **+1.19% ± 0.84** (14/14) |
+| a border, no extra resampling | **+105.73% ± 29.61** | **+6.63% ± 8.26** |
+| both | +114.50% ± 31.97 | +7.21% ± 7.81 |
+| product of the two singles | +107.40% | +7.95% |
+
+**130× for DA3-Small, against a bar of 4×.** The angle-matched number is
+*stronger* than the upper bound §03z published — which is not what an unvaried
+axis usually does.
+
+### The two costs multiply
+
+`both` lands within 7–9% of the product of the two single-factor costs. Border
+and resampling are **independent multiplicative factors on the error**. Nothing
+in this line had established that, and it licenses reasoning about them
+separately.
+
+### The bar that failed corrects the previous experiment
+
+Resampling at 30° is **0.81%**, *below* H39b's real-roll price of 3.03% — the
+opposite of the pre-registered expectation. The two are not the same operation:
+
+* H40 re-interpolates an already-rendered view — same source pixels, twice
+  through a grid sample. That is **~1%**.
+* H39's gravity render warps from a *differently oriented view*: a different
+  region of the lens, a different local sampling density, different distortion.
+
+**And a term H39b never accounted for.** In H39, `grav_p` has residual roll 0
+and `grav_m` has 2ψ, while `device` has ψ. So the symmetric part contains
+[f(0) + f(2ψ)]/2 − f(ψ), and the roll penalty f is **convex** (flat to ±20°,
+steep after). By Jensen that bracket is positive and grows with ψ — which is
+exactly the growth H39b's P2 reported and attributed to resampling. **Most of
+H39b's S at high roll is the curvature of the roll curve, not a price.**
+
+**What survives untouched:** H39's headline, −2.65% ± 2.43, is a direct A/B
+between `device` and `grav_p` with no decomposition in it. What is restated is
+calling S "the price: resampling". Correct version: *S is the symmetric part of
+the two arms, containing the operation's real cost (~1 point of interpolation
+plus reading a different part of the lens) and a Jensen term from the convexity
+of the roll penalty.*
+
+### The design that was void first, and why its check mattered
+
+I reasoned that a 60° view's corner ray of 42.4° sits inside Aria's 54.83° cone,
+so rotating it makes no border. That confuses the view's **rays** staying inside
+the cone with the square **raster** keeping its corners — rotating any square
+raster by 30° throws 15.3% of it outside itself. The arms it produced —
+DA3-Small "resampling" **+80.4%** — were measuring a border again, the one
+quantity the experiment exists to remove, and they would have destroyed the
+conclusion rather than merely blurring it.
+
+The pre-registered check printed `0.1534 <-- NOT BORDER-FREE` on the first line
+of every recording. **Fourth time in this line a construction-level sanity bar
+has caught something no amount of looking at the scores would have.**

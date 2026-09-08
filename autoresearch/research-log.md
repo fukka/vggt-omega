@@ -1906,3 +1906,23 @@ question, and it is cheaper to look than to run.**
 Two things this tick got right by refusing a number rather than producing one:
 B2 blocked VGGT-Omega's −1.04% on thirteen recordings, and the gating curve was
 reported as flat between 2° and 8° rather than as an optimum at 6°.
+
+### H40 — a caveat removed, a label corrected, and a void design in between
+
+Three launches. The first failed at import in under two minutes (`rot` lives in
+H38's `derotate.py`, not H39's `gravity_render.py` — H39 rotates by building
+RolledViews and never needed one). The second was void: my border-free geometry
+confused the view's rays staying inside the cone with a square raster keeping
+its corners under rotation. The third ran clean on fourteen recordings.
+
+The void one is the interesting failure. It produced a plausible-looking
+"resampling costs +80%", which is a number I would have had no way to challenge
+from the scores alone — it is the same order as the border cost it was supposed
+to exclude. Only the construction check caught it, and the check existed only
+because the protocol demanded one.
+
+Worth stating as a rule this line keeps re-learning: **a sanity check on the
+construction is worth more than a sanity check on the result.** H34's untransformed
+baseline, H36's whole-image bar, H39's B2, and now H40's black-pixel fraction —
+four cases, and in every one the broken version produced a number that read
+like a finding.
