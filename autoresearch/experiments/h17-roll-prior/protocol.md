@@ -131,3 +131,77 @@ measured independently and they coincide. If they generally coincide, the
 horizontal prior is not a bug on this data — it is a prior matched to its
 deployment distribution, and the interesting claim becomes about which
 egocentric activities fall outside it.
+
+## H17.5 — the boundary or the projection? (locked 2026-09-08, before running)
+
+### The open question this closes
+
+h16 left one thing undecomposed, and the report says so: the clean `pinhole`
+arm rises +48% (all-image AbsRel) at 30 deg while `fisheye_frame` rises +82%
+and `fisheye_disc` — which holds its black region FIXED at every angle — rises
++146%. The `pinhole` arm differs from the fisheye arms in *two* ways at once:
+it has no hard black boundary, **and** it is a rectified projection. Nothing
+run so far separates them.
+
+The obvious fourth arm (a virtual fisheye whose cone sits strictly inside its
+frame) does not actually help: it still shows the model a hard black annulus,
+so it changes which confound is present rather than removing one. The geometry
+is unavoidable — Aria's imaged cone does not fit inside its square frame, so
+*any* roll performed in a fisheye frame either clips content or introduces an
+annulus.
+
+### The design that does separate them
+
+Go the other way: put the hard boundary **into the clean arm**.
+
+Mask the 89 deg pinhole view to its inscribed disc, at every angle. The
+arithmetic makes this a near-exact analogue of `fisheye_disc`:
+
+* an 89 deg square view has a half-edge ray of 44.5 deg and a corner ray of
+  54.3 deg, so its **inscribed disc is exactly the theta <= 44.5 deg cap**;
+* everything is already scored on the theta <= 44 deg disc, so the mask removes
+  only content *outside the scored region* — which is precisely what
+  `fisheye_disc` does when it drops the 1.7% of the cone outside its inscribed
+  circle.
+
+So `pinhole_masked` is `pinhole` plus one hard black boundary and nothing else.
+The projection, the resampling, the scored pixels and the rolled-camera
+construction are identical.
+
+### Arms
+
+| arm | projection | hard black boundary | 30 deg rise |
+|---|---|---|---|
+| `pinhole` | rectified | no | +48% (measured) |
+| `pinhole_masked` | rectified | **yes** | this experiment |
+| `fisheye_disc` | fisheye | yes | +146% (measured) |
+| `fisheye_frame` | fisheye | yes, and it moves | +82% (measured) |
+
+### Prediction (locked)
+
+**If the hard boundary is what makes the fisheye curves steep**, then adding one
+to the rectified arm should reproduce most of the gap: `pinhole_masked` rises
+**at least +100%** at 30 deg (against `pinhole`'s +48%).
+
+**If the fisheye projection is what makes them steep**, the rectified arm should
+stay gentle even with a boundary: `pinhole_masked` **at most +70%** at 30 deg.
+
+An outcome between +70% and +100% means both contribute and neither dominates;
+that is a real possibility and will be reported as such rather than rounded to
+whichever story is tidier.
+
+### Secondary, and independently useful
+
+The 0 deg cost of the mask. `fisheye_disc` pays +25% all-image / +38% near_rim
+at 0 deg for masking 1.7% of the cone. If `pinhole_masked` pays a comparable
+0 deg cost, then "a hard black border is a large insult" is a **general**
+property of this backbone rather than something about fisheye framing — which
+is the form the standing rule in `research-state.yaml` claims, and it has not
+been tested outside the fisheye setting.
+
+### Not a bar, but recorded
+
+DA3-Small only, seq136, 20 frames, one seed — same scale as every other arm in
+h16/h17, so the comparison is like-for-like. This does not establish the
+boundary effect across backbones; H17.2 showed roll sensitivity itself is
+backbone-dependent, so the boundary sensitivity may be too.
