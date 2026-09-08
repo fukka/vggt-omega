@@ -8,6 +8,14 @@ equirectangular panorama at the same pose, so they differ in nothing else:
     fisheye_masked   same pixels, real imaged-disc mask       -> 14.75% invalid
     persp_full       pinhole aligned to FisheyeRectifier      -> 0% invalid
     persp_masked     same pixels, analytic rectification mask -> 32.29% invalid
+    persp_crop       inscribed pinhole (focal_out_norm 0.371, 106.9 deg): no
+                     invalid region by construction -- the free alternative that
+                     drops the rim instead of filling the corners (cell 5)
+
+Grading region (``--region``): ``own`` grades a full/masked pair on the masked
+arm's mask and the crop on its own frame; ``crop`` restricts EVERY arm to the
+crop's footprint on its grid (``mask_<proj>_in_crop.npy``), the smallest region
+common to all five, so cross-arm comparisons are on identical scene directions.
 
 Why rendered rather than real footage: the `_full` arms hold **true content** in
 regions a real Aria frame cannot supply, because the lens never imaged them. That
@@ -75,8 +83,9 @@ from torch.utils.data import Dataset
 from ..data.fill import apply_fill
 from .metrics import align_depth, depth_metrics
 
-SETTINGS = ("fisheye_full", "fisheye_masked", "persp_full", "persp_masked")
+SETTINGS = ("fisheye_full", "fisheye_masked", "persp_full", "persp_masked", "persp_crop")
 PROJECTIONS = ("fisheye", "persp")
+REGIONS = ("own", "crop")
 
 
 def parse_setting(setting: str):
@@ -93,6 +102,8 @@ def parse_setting(setting: str):
             return proj, "full"
         if setting == f"{proj}_masked":
             return proj, "black"
+        if setting == f"{proj}_crop":
+            return proj, "crop"
         if setting.startswith(f"{proj}_fill_"):
             return proj, setting[len(proj) + 6:]
     raise ValueError(f"unknown setting {setting!r}")
@@ -103,7 +114,8 @@ def grading_mask_of(setting: str) -> str:
     never on the larger region the full arm happens to have. Otherwise the full
     arm would score better for covering more, and the experiment would measure
     coverage instead of what is in the hole."""
-    return f"mask_{parse_setting(setting)[0]}_valid"
+    proj, arm = parse_setting(setting)
+    return f"mask_{proj}_crop_valid" if arm == "crop" else f"mask_{proj}_valid"
 
 
 # The images in a frame dir are in the rot90(k=3) upright frame; meta.json's
@@ -223,9 +235,11 @@ class RenderedWindowDataset(Dataset):
 
     def __init__(self, root: str, setting: str, seq_len: int = 1,
                  sequences: Optional[List[str]] = None,
-                 manifest: Optional[str] = None) -> None:
+                 manifest: Optional[str] = None, region: str = "own") -> None:
         parse_setting(setting)          # raises on an unknown setting
-        self.setting, self.seq_len, self.root = setting, seq_len, root
+        if region not in REGIONS:
+            raise ValueError(f"region must be one of {REGIONS}, got {region!r}")
+        self.setting, self.seq_len, self.root, self.region = setting, seq_len, root, region
         frames = find_frames(root, sequences)
         if not frames:
             raise SystemExit(f"[exp_rendered] no rendered frames under {root!r}")
@@ -276,16 +290,24 @@ class RenderedWindowDataset(Dataset):
         imgs, deps, masks = [], [], []
         proj, arm = parse_setting(self.setting)
         for d in self.windows[i]:
-            gm = np.load(os.path.join(d, f"{grading_mask_of(self.setting)}.npy")).astype(bool)
-            src = "full" if arm == "full" else "masked"
+            # The arm's OWN valid mask: what the fill treats as the hole.
+            vm = np.load(os.path.join(d, f"{grading_mask_of(self.setting)}.npy")).astype(bool)
+            src = {"full": "full", "crop": "crop"}.get(arm, "masked")
             rgb = np.load(os.path.join(d, f"{proj}_{src}_rgb.npy"))
             if rgb.dtype == np.uint8:
                 rgb = rgb.astype(np.float32) / 255.0
             dep = np.load(os.path.join(d, f"{proj}_{src}_depth.npy")).astype(np.float32)
-            if arm not in ("full", "black"):
+            if arm not in ("full", "black", "crop"):
                 # The masked arm already holds zeros in the hole; fill it. The
                 # grading mask is untouched, so filled pixels are never scored.
-                rgb = apply_fill(rgb, gm, arm)
+                rgb = apply_fill(rgb, vm, arm)
+            # The GRADING mask: the own mask, or -- region="crop" -- the own mask
+            # restricted to the inscribed crop's footprint on this grid, so every
+            # arm is scored on the same scene directions (the smallest region,
+            # the crop's). The crop's footprint of itself is the whole frame.
+            gm = vm
+            if self.region == "crop" and arm != "crop":
+                gm = gm & np.load(os.path.join(d, f"mask_{proj}_in_crop.npy")).astype(bool)
             imgs.append(torch.from_numpy(np.ascontiguousarray(rgb)).permute(2, 0, 1))
             deps.append(torch.from_numpy(dep))
             # Grade only where the analytic mask AND the GT agree -- the full arm's
@@ -298,9 +320,10 @@ class RenderedWindowDataset(Dataset):
 @torch.no_grad()
 def evaluate(model, root: str, setting: str, seq_len: int, device: torch.device,
              sequences: Optional[List[str]] = None, manifest: Optional[str] = None,
-             align: str = "scale_shift", qual_dir: Optional[str] = None) -> dict:
+             align: str = "scale_shift", qual_dir: Optional[str] = None,
+             region: str = "own") -> dict:
     from vggt_omega.utils.rotation import quat_to_mat
-    ds = RenderedWindowDataset(root, setting, seq_len, sequences, manifest)
+    ds = RenderedWindowDataset(root, setting, seq_len, sequences, manifest, region)
     proj, _arm = parse_setting(setting)
     per_frame, fovs = [], []
     windows: "OrderedDict[str, dict]" = OrderedDict()
@@ -486,11 +509,14 @@ def cluster_bootstrap(a: Dict[str, float], b: Dict[str, float],
             "frames_per_group": [len(v) for v in vals]}
 
 
-def report(results: Dict[str, Dict[str, dict]], out_dir: str) -> str:
+def report(results: Dict[str, Dict[str, dict]], out_dir: str, region: str = "own") -> str:
     """Per-setting table plus the contrasts that actually answer the question."""
     lines = ["", "=" * 86,
-             "VGGT-Omega on rendered ADT — 4 settings x single/multi-frame",
-             "(AbsRel lower better; graded on the MASKED arm's region in both arms)",
+             "VGGT-Omega on rendered ADT — settings x single/multi-frame",
+             "(AbsRel lower better; graded on the MASKED arm's region in both arms)"
+             if region == "own" else
+             "(AbsRel lower better; EVERY arm graded on the inscribed crop's footprint -- "
+             "the smallest common region -- intersected with its own valid mask)",
              "=" * 86,
              f"{'setting':<18}{'mode':<8}{'n':>5}{'win':>5}{'AbsRel':>10}{'RMSE':>9}"
              f"{'delta1':>10}{'fov_h':>9}"]
@@ -633,6 +659,41 @@ def report(results: Dict[str, Dict[str, dict]], out_dir: str) -> str:
             lines.append(f"    {st:<22}{r['fov_h_deg']:>8.1f}{r['fov_h_std']:>7.1f}"
                          f"{gt:>8.1f}{err:>8.1f}")
 
+    # The inscribed crop against everything else. It is the free alternative
+    # (no black, no fill, 83% of the cone), so the question is whether cropping
+    # the black away beats filling it in -- and, in the common-region run,
+    # whether either beats the raw fisheye on identical scene directions.
+    for mode, res in results.items():
+        if "persp_crop" not in res:
+            continue
+        def pfc(st):
+            return (res.get(st) or {}).get("_per_frame") or {}
+        gc = (res["persp_crop"].get("_group_of") or {})
+        lines += ["", f"[{mode}] inscribed crop (5) vs the others  (AbsRel crop - other; "
+                      f"negative = crop better; region = {region}):"]
+        for st in ("persp_masked", "persp_full", "fisheye_masked", "fisheye_full"):
+            cb = cluster_bootstrap(pfc("persp_crop"), pfc(st), gc)
+            if cb is None:
+                continue
+            star = "  SIGNIFICANT" if cb["excludes_zero"] else "  n.s. (CI spans 0)"
+            note = "" if st.startswith("persp") else "  (cross-projection: same directions, different pixel grid)"
+            lines.append(f"    vs {st:<16}{cb['mean']:+.4f}  CI(win) [{cb['ci_lo']:+.4f}, "
+                         f"{cb['ci_hi']:+.4f}]  n={cb['n_pairs']}f/{cb['n_groups']}w{star}{note}")
+        if "_per_window" in res["persp_crop"]:
+            wg = res["persp_crop"]["_window_group"]
+            for key in ("auc30", "rot_err_deg", "trans_err_deg", "ate_m"):
+                row = f"    pose {key:<14}"
+                for st in ("persp_masked", "persp_full", "fisheye_masked", "fisheye_full"):
+                    a_ = {k: v[key] for k, v in res["persp_crop"]["_per_window"].items()}
+                    b_ = {k: v[key] for k, v in ((res.get(st) or {}).get("_per_window") or {}).items()}
+                    cb = cluster_bootstrap(a_, b_, wg)
+                    if cb is None:
+                        continue
+                    star = "*" if cb["excludes_zero"] else " "
+                    row += f"  vs {st}: {cb['mean']:+.3f} [{cb['ci_lo']:+.3f},{cb['ci_hi']:+.3f}]{star}"
+                lines.append(row)
+            lines.append("    (pose is relative within a window and does not depend on the grading region)")
+
     # The fill ladder, if any fill arms were run. The decision-relevant number is
     # not "does true content help" -- that is already answered -- but how much of
     # that gain a fill which INVENTS NOTHING already captures. If a flat mean or a
@@ -718,6 +779,10 @@ def main() -> None:
                     help="comma-separated; '<proj>_full', '<proj>_masked', or "
                          "'<proj>_fill_<mode>' for the fill ladder")
     ap.add_argument("--align", default="scale_shift")
+    ap.add_argument("--region", default="own", choices=REGIONS,
+                    help="own: each arm on its own valid mask (the masked arm's for a "
+                         "full/masked pair); crop: every arm restricted to the "
+                         "inscribed crop's footprint, the smallest common region")
     args = ap.parse_args()
 
     settings = [x.strip() for x in args.settings.split(",") if x.strip()]
@@ -740,12 +805,12 @@ def main() -> None:
             results[mode][s] = evaluate(
                 model, args.render_root, s, sl, device, seqs,
                 args.manifest or None, args.align,
-                qual_dir=os.path.join(args.out, "qual"))
+                qual_dir=os.path.join(args.out, "qual"), region=args.region)
             print("   ", {k: round(v, 4) for k, v in results[mode][s].items()
                           if isinstance(v, float)})
             with open(os.path.join(args.out, "results.json"), "w") as fh:
                 json.dump(results, fh, indent=2, default=str)
-    print(report(results, args.out))
+    print(report(results, args.out, args.region))
 
 
 if __name__ == "__main__":
