@@ -959,3 +959,35 @@ Also added the postscript H9 deserved: the curve it fitted from parallax anchors
 is the same object section 03c fitted from a rectified teacher, -15.4% against
 -16.6%. Two independent lines of this project were estimating the same thing,
 and the reader of section 06 should not have to reach section 03c to find out.
+
+## 2026-09-08 — box down a third tick; wrote the tests the new code never had
+
+lambda_63 still unreachable (~45 min). The bounded waiter exhausted its budget
+and was not re-armed — the 20-minute cron re-checks anyway, and a second waiter
+would be redundant.
+
+First did an integrity check, since a long outage is exactly when work gets
+stranded: working tree clean, `organized` level with origin, zero unpushed
+commits, and all 27 h17/h18 result JSONs present in the repo rather than only
+on the box. So every conclusion on the report is reproducible from git even if
+the box never returns.
+
+Then wrote `h17-roll-prior/code/test_roll.py`. Nine scripts went in this session
+and none had a test, which is out of line with how the rest of this repo is
+built — and two of them produce numbers quoted as headlines. Twelve tests, all
+passing:
+
+* the roll read: a level camera must read zero, a camera rolled by phi must read
+  phi back, and the result must not depend on gravity's magnitude or on which
+  arbitrary device frame the camera is bolted into. The sign convention is now
+  pinned too — `rolls_deg` returns the angle the IMAGE rotates by, which is the
+  negative of the camera's roll. Harmless (02c reports |roll|) but it was
+  undocumented.
+* the radial fit: recovers a generated curve exactly, stays unbiased under
+  noise, and applying it inverts the fit.
+* the 02e border geometry: the half-edge/corner arithmetic that justifies
+  scoring at 30 deg rather than 44, and the black fractions quoted in the text.
+
+The RolledView rotation test (optical axis must not move — that is what makes it
+a roll and not a tilt, and it is why the clean arm stays inside the cone) needs
+the full env and skips cleanly here.
