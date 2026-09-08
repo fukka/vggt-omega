@@ -3043,3 +3043,71 @@ Four parts asked, four answered: they do assume level (H17.2); real footage
 violates it mildly (H17.1); it costs 0.46–1.80% (H35); and you can get some of
 it back, on one model family, by putting the gravity vector in the resampling
 rather than after it (H38, H39).
+
+## H39 on thirteen, and H39b — the border was the price, not the resampling
+
+### The deployment number, on the full thirteen
+
+| backbone | 6 recordings | **13 recordings** |
+|---|---|---|
+| `da3:small` | −2.37% ± 2.26 (5/6) | **−2.65% ± 2.43 (11/13)**, +10.02% at &#124;ψ&#124; ≥ 8° |
+| `vggt_omega` | +0.10% ± 3.26 (3/6) | −1.04% ± 4.11 (7/13) — **not identified** |
+
+**B2 earned its keep a second time.** On thirteen recordings VGGT-Omega's better
+arm reads −1.04%, which passes B1 and would make a quotable headline: "even the
+multi-view model gains 1%". B2 refuses it — the wrong-sign arm is +0.08%,
+nowhere near the ≥3× worse a real roll removal requires, and the better arm wins
+on 7 of 13. Nothing is identified, so nothing is claimed. The bar was written to
+stop a *convention* being chosen by score; it has now also caught a broken run
+and a spurious positive.
+
+### H39b: splitting the two arms into a price and a prize
+
+Rendering both signs hands over a decomposition for free — the symmetric part is
+what the operation costs, the antisymmetric part is the roll it buys back:
+
+| backbone | price S | prize A | net |
+|---|---|---|---|
+| `da3:small` | **+3.03% ± 2.78** | **+5.68% ± 3.40** | −2.65% |
+| `vggt_omega` | −0.48% ± 3.07 | +0.56% ± 1.81 | not established |
+
+**The number the whole recommendation rests on.** H38 charged **64.1%** for the
+same rotation *with a border*. Folding it into the warp costs **3.03%** —
+**0.047 of it**. The border was essentially the entire price; the resampling is
+nearly free. That is why "use the gravity vector in the resampling, not after
+it" is worth saying: not because the sign is easier to get right, but because
+~95% of the obvious approach's cost is an artefact the warp never creates.
+
+**Name the axis it was never varied along: the rotation angle.** H38's 64.1% is
+at ±30°; H39's price is at the real roll, median 4–7°, and it *grows* with the
+angle. So 0.047 is an upper bound. The nearest comparison inside this data is
+the |ψ| ≥ 8° cell (median ~11°), where the price is 11.51% — still under a fifth
+of H38's. Isolating it at 30° needs frames with a real 30° roll and ADT's
+maximum is ~28°, so it cannot be done here.
+
+**P3's failure is the measurement H39 lacked.** H39 had *offered* a reading for
+why VGGT-Omega gains nothing. Now measured: on that backbone the price rises
+with the angle (1.86% → 5.62%) while the prize does not (−0.38% → +0.72%). The
+operation cannot pay there at any roll. On DA3-Small both rise and the prize
+rises faster (0.26 → 21.52 against 0.95 → 11.51).
+
+### Gating, exploratory
+
+The two curves cross, and ψ is known at inference time. Net gain applied to
+every frame is +2.07%; gated at ≥6° it is +2.44% from 36% of the frames. But
+**every gate from 2° to 8° lands between +2.18% and +2.44%** — a 0.26-point
+spread against a per-recording sd of 2.43. Naming 6° as an optimum would be
+reading a maximum out of noise. Honest form: *gate anywhere in 2–8°; it is
+worth a few tenths of a point and two thirds of the compute.*
+
+The practically interesting row is 12–30°, where the net gain is **+16.75%** —
+the same shape as H35's tail finding. On a single-image backbone the money is in
+the rare tilted frame.
+
+### The bug, recorded rather than deleted
+
+VGGT-Omega's price is −0.48% ± 3.07, indistinguishable from zero. The first run
+divided H38's 7.4% by it and printed **"7.4e9× cheaper"** — H33's
+divide-by-noise trap in a new costume, three experiments later. The script now
+refuses a ratio unless the denominator is distinguishable from zero, and P1 is
+reported undecided for that backbone rather than passed.

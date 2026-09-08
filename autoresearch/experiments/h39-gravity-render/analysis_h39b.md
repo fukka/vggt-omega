@@ -89,3 +89,44 @@ backbone rather than passed.
   nor the 13-recording −1.04% is a result.
 * The §03x recommendation gains its quantitative justification: the border was
   ~95% of de-rotation's price, measured, with the angle caveat stated.
+
+## Part 3 — gating on the roll (EXPLORATORY, found by looking)
+
+The price and the prize cross. Below the crossing the operation costs more than
+it saves, and ψ is known at inference time, so it can be gated on. DA3-Small,
+per-frame net gain over the thirteen recordings:
+
+| &#124;ψ&#124; | n | price | prize | net |
+|---|---|---|---|---|
+| 0–2° | 160 | +0.81 | +0.23 | **−0.58%** |
+| 2–4° | 142 | +0.61 | +0.78 | +0.17% |
+| 4–6° | 113 | +3.95 | +2.43 | **−1.52%** |
+| 6–8° | 93 | +5.20 | +6.79 | +1.59% |
+| 8–12° | 91 | +6.82 | +12.21 | +5.39% |
+| 12–30° | 51 | +20.10 | +36.85 | **+16.75%** |
+
+| applied | net gain |
+|---|---|
+| every frame | +2.07% |
+| gated ≥2° | +2.21% |
+| gated ≥4° | +2.18% |
+| **gated ≥6°** | **+2.44%** (36% of frames) |
+| gated ≥8° | +2.21% |
+| gated ≥10° | +2.03% |
+
+**What this supports:** applying the alignment only where the roll is worth
+correcting is slightly better than applying it everywhere, and needs the work on
+about a third of the frames.
+
+**What it does not support:** "6° is the optimum". The curve across thresholds
+is flat — every gate from 2° to 8° lands between +2.18% and +2.44%, a spread of
+0.26 points against a per-recording sd of 2.43. Naming 6° would be reading a
+maximum out of noise, which is the failure mode this line has flagged four
+times. The honest statement is **"gate anywhere in 2–8°; it is worth a few
+tenths of a point and a third of the compute"**, and the threshold was chosen
+on the same recordings that measure the gain, so it is not a validated
+operating point.
+
+The 12–30° row is the one that matters practically: **+16.75%** on the frames
+that are really tilted. That is the same shape as H35's tail finding — the rare
+large roll is where the money is on a single-image backbone.

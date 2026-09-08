@@ -100,7 +100,45 @@ print("P1  resampling alone is under half of H38's bordered price: "
 print(f"P2  S grows with |roll| on both backbones -> {'PASS' if p2 else 'FAIL'}")
 print(f"P3  A's slope beats S's slope on both -> {'PASS' if p3 else 'FAIL'}")
 
+# ---- EXPLORATORY, found by looking at the binned curves ------------------
+# The price and the prize cross. Below the crossing the operation costs more
+# than it saves, and psi is known at inference time, so it can be gated on.
+# The threshold is chosen on the SAME recordings that measure the gain, so it
+# is an estimate and not a validated operating point.
+print("\n[h39b] EXPLORATORY — gating on |psi|, da3:small, per-frame net gain")
+roll_a, S_a, A_a = [], [], []
+for s in have:
+    pf = rows[s]["da3:small"]["per_frame"]
+    rr = rows[s]["roll"]
+    for k in range(len(rr)):
+        dv, pv, mv = pf["device"][k], pf["grav_p"][k], pf["grav_m"][k]
+        if None in (dv, pv, mv) or dv <= 0:
+            continue
+        gp, gm = 100 * (pv / dv - 1), 100 * (mv / dv - 1)
+        roll_a.append(rr[k]); S_a.append((gp + gm) / 2); A_a.append((gm - gp) / 2)
+roll_a, S_a, A_a = np.array(roll_a), np.array(S_a), np.array(A_a)
+net = A_a - S_a
+for lo, hi in ((0, 2), (2, 4), (4, 6), (6, 8), (8, 12), (12, 30)):
+    sel = (roll_a >= lo) & (roll_a < hi)
+    if sel.sum() >= 8:
+        print(f"    |psi| {lo:2d}-{hi:2d}deg  n={int(sel.sum()):3d}  "
+              f"price {S_a[sel].mean():+6.2f}  prize {A_a[sel].mean():+6.2f}  "
+              f"net {net[sel].mean():+6.2f}%")
+always = float(net.mean())
+gates = {}
+for t in (0, 2, 4, 6, 8, 10):
+    g = roll_a >= t
+    gates[t] = float(net[g].sum() / len(net))
+best = max(gates, key=gates.get)
+print(f"    applied to every frame: {always:+.2f}%   "
+      + "   ".join(f"gated >={t}deg: {v:+.2f}%" for t, v in gates.items()))
+print(f"    best gate on this data: |psi| >= {best} deg  ({gates[best]:+.2f}%), "
+      f"covering {100*float((roll_a>=best).mean()):.0f}% of frames")
+gate_out = {"always_pct": always, "gates": gates, "best_gate_deg": best,
+            "best_gate_frame_share": float((roll_a >= best).mean())}
+
 (RES / "decomposition.json").write_text(json.dumps(
     {"recordings": have, "per_model": out,
-     "predictions": {"P1": p1, "P2": p2, "P3": p3}}, indent=2))
+     "predictions": {"P1": p1, "P2": p2, "P3": p3},
+     "gating_exploratory": gate_out}, indent=2))
 print(f"\n[h39b] wrote {RES / 'decomposition.json'}")

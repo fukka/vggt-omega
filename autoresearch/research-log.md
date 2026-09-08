@@ -1890,3 +1890,19 @@ looks like the same work and is not.
 Depth frames also start about a second before the trajectory, so frames whose
 nearest trajectory sample is further than one video frame (33 ms) away are now
 dropped and counted — 9 to 12 per recording.
+
+### H39 extended to thirteen, and the decomposition that was already paid for
+
+The extension cost one launch: `run_h39.sh` now takes a sequence list, and the
+remaining seven of the thirteen ran on both GPUs in about fifteen minutes.
+DA3-Small's deployment number moved 2.37% → 2.65% and its support 5/6 → 11/13.
+
+H39b cost no GPU at all. Rendering both rotation signs had been done to
+identify a convention; it also splits the result into a price and a prize for
+free, which is the `null`-arm decomposition of H38 without a `null` arm. Worth
+remembering as a pattern: **an arm added for one reason often answers a second
+question, and it is cheaper to look than to run.**
+
+Two things this tick got right by refusing a number rather than producing one:
+B2 blocked VGGT-Omega's −1.04% on thirteen recordings, and the gating curve was
+reported as flat between 2° and 8° rather than as an optimum at 6°.
