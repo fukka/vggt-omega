@@ -1702,3 +1702,34 @@ exploded and one was already nan on partial data. Quoted uncritically that gives
 switched to the difference and wrote the change into the protocol as an
 amendment, stating that it was made after seeing partial data and that the reason
 was well-definedness rather than which answer it produced.
+
+## 2026-09-08 (late) — H34 void, and I am stopping the asymmetry line
+
+The mirror test failed its own sanity bar. Level-0 error went from 0.1545 to
+0.6145 — mirroring alone made the input four times worse before any roll was
+applied — because I mirrored the source image and not the ground truth. The
+model predicted a mirrored scene and was scored against the unmirrored one.
+
+What makes this worth writing down is how good the wrong answer looked. B1
+"passed" 7 of 8 with a negative mean, which reads exactly like "the asymmetry
+flips under mirroring, therefore it travels with the scene, therefore H32's
+finding survives and the artefact caveat can be dropped". That is a clean,
+publishable-sounding conclusion and it is entirely an artefact of a baseline four
+times too large. B3 was a routine sanity check and it is the only reason this did
+not go out.
+
+I am stopping the asymmetry line here rather than fixing the test. Mirroring the
+GT properly means mirroring source and ground truth together before the rig,
+since the mirror is in the fisheye frame and the scoring is in the pinhole frame
+with a warp and a roll in between. That is real surgery for a second-order
+detail that has already consumed three experiments.
+
+More to the point, the largest open weakness in this whole line — the cross-room
+evidence, 120 frames over two near-static recordings — is blocked on a data
+decision that has been sitting with the user for several ticks. Spending further
+runs on the sign of a roll penalty while that sits is bad prioritisation, and I
+would rather say so than keep generating activity.
+
+The asymmetry rests where H33 left it: DA3-Small only, DA3-Large shows none,
+some part possibly our own rendering, extent unknown. Both reports already say
+that, so nothing needs changing.

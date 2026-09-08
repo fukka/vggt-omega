@@ -1444,3 +1444,38 @@ h33_outcome:
     partial data. Uncritically that reads "VGGT is 5x asymmetric" — entirely an
     artefact of dividing by noise. Amendment to the difference is recorded in
     that experiment's protocol.md as made AFTER seeing partial data.
+
+# ------------------------------------------------- H34 VOID 2026-09-08
+h34_outcome:
+  status: VOID — B3 failed; design error in my own construction
+  artifact: autoresearch/experiments/h34-mirror/results/
+  analysis: autoresearch/experiments/h34-mirror/analysis.md
+  what_broke: >
+    Level-0 whole-image error 0.1545 un-mirrored vs 0.6145 mirrored — 4x
+    degradation from mirroring alone, before any roll. I mirrored the SOURCE
+    IMAGE and NOT THE GROUND TRUTH, so the model predicted a mirrored scene and
+    was scored against the unmirrored one.
+  the_trap_b3_prevented: >
+    B1 "passed" 7/8 with a negative mean, which reads exactly like "the
+    asymmetry flips under mirroring, so it travels with the scene". Pure
+    artefact: with a baseline 4x too large, rolling reduces measured error so
+    every difference goes negative. WITHOUT B3 THIS WOULD HAVE BEEN PUBLISHED.
+  why_the_fix_is_not_cheap: >
+    The mirror is in the fisheye source frame; scoring is in the pinhole view
+    frame with the rig warp and the roll in between, and the principal point is
+    off-centre — so flipping the output back is not the inverse of flipping the
+    input. Needs source and GT mirrored together before the rig, changing how
+    `zones` obtains ground truth.
+  DECISION_STOP_THE_ASYMMETRY_LINE: >
+    Second-order detail, three experiments spent (H32 found it, H33 could not
+    attribute it, H34 void). Meanwhile the CROSS-ROOM exposure — the largest
+    open weakness in the line — is blocked on a data decision sitting with the
+    user for several ticks. Further runs here are bad prioritisation. The
+    asymmetry rests where H33 left it and both reports already say so; nothing
+    needs changing.
+
+lesson_transform_tests_need_a_baseline_bar:
+  rule: "Any test that transforms the input needs a bar on the UNTRANSFORMED baseline."
+  why: >
+    H34's B3 was a routine sanity check and is the only reason a 4x-broken input
+    did not produce a clean-looking published finding.

@@ -1,0 +1,97 @@
+{
+ "seq": "Apartment_release_clean_seq145_M1292",
+ "frames": 20,
+ "models": {
+  "da3:small": {
+   "pinhole": {
+    "-30.0": {
+     "near_rim": 1.0774274757922002,
+     "center": 0.3995206835703247,
+     "all": 0.4799249270197339,
+     "rim_over_center": 2.6968002411383254
+    },
+    "-20.0": {
+     "near_rim": 1.142076522939811,
+     "center": 0.3895129722686442,
+     "all": 0.4948649491360925,
+     "rim_over_center": 2.9320628688898442
+    },
+    "0.0": {
+     "near_rim": 1.1014838680927752,
+     "center": 0.3895540904487315,
+     "all": 0.48652091596263075,
+     "rim_over_center": 2.827550512494848
+    },
+    "20.0": {
+     "near_rim": 1.105878245854116,
+     "center": 0.36856230699765846,
+     "all": 0.4863973399802466,
+     "rim_over_center": 3.000519111307663
+    },
+    "30.0": {
+     "near_rim": 1.085509394478266,
+     "center": 0.36971072553251727,
+     "all": 0.47829289201834707,
+     "rim_over_center": 2.936104688103759
+    }
+   },
+   "pinhole_masked": {
+    "-30.0": {
+     "near_rim": 1.3248853297624268,
+     "center": 0.329667518444481,
+     "all": 0.5302813356841207,
+     "rim_over_center": 4.0188531039206685
+    },
+    "-20.0": {
+     "near_rim": 1.314888296065004,
+     "center": 0.32855527352605174,
+     "all": 0.5258281129073173,
+     "rim_over_center": 4.002030714508511
+    },
+    "0.0": {
+     "near_rim": 1.1541000251772167,
+     "center": 0.3997479809969045,
+     "all": 0.5145718649710093,
+     "rim_over_center": 2.887069053604935
+    },
+    "20.0": {
+     "near_rim": 1.1931130283065743,
+     "center": 0.38956736362202266,
+     "all": 0.5181968549715812,
+     "rim_over_center": 3.062661659368856
+    },
+    "30.0": {
+     "near_rim": 1.1883207669014453,
+     "center": 0.36944556102027054,
+     "all": 0.523497916505527,
+     "rim_over_center": 3.2164976177268105
+    }
+   }
+  }
+ },
+ "summary": {
+  "da3:small": {
+   "border_cost_all_pct": 5.76562036451751,
+   "border_cost_rim_pct": 4.776843184780044,
+   "roll30_no_border_pct": -1.5234712836394437,
+   "roll30_with_border_pct": 2.393788304867517,
+   "base_all": 0.48652091596263075,
+   "masked_all": 0.5145718649710093
+  }
+ },
+ "config": {
+  "seq": "/netapp/datasets/f.zhang2/adt_apartment_extra/Apartment_release_clean_seq145_M1292",
+  "angles": "-30,-20,0,20,30",
+  "size": 504,
+  "max_frames": 20,
+  "models": "da3:small",
+  "omega_ckpt": "checkpoints/VGGT-Omega-1B-512/model.pt",
+  "view_fov": 89.0,
+  "view_size": 630,
+  "common_theta_deg": 44.0,
+  "depth_max_m": 10.0,
+  "device": "cuda",
+  "mirror": true,
+  "out": "/user/f.zhang2/projects/vggt-omega-organized/autoresearch/experiments/h34-mirror/results/mirror_seq145.json"
+ }
+}

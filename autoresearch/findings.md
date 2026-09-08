@@ -2587,3 +2587,35 @@ already `nan`. Uncritically quoted that reads "VGGT is 5x asymmetric" — a
 headline produced entirely by dividing by noise. The switch to the difference is
 recorded in that experiment's `protocol.md` as a change made AFTER seeing partial
 data, with well-definedness as the reason.
+
+## H34 — VOID. The mirror test had a design error, and B3 caught it.
+
+`h34-mirror/`. **B3 failed and the test is void.** Level-0 whole-image error is
+**0.1545 un-mirrored against 0.6145 mirrored** — a 4x degradation from mirroring
+alone, before any roll. On seq136 near-rim goes 0.329 -> 1.537.
+
+**The error:** I mirrored the source image and did NOT mirror the ground truth,
+so the model predicted a mirrored scene and was scored against the unmirrored
+one. Every mirrored-arm number is that mismatch.
+
+**The trap it would have been:** B1 "passed" at 7/8 with a negative mean, which
+reads exactly like "the asymmetry flips under mirroring, so it travels with the
+scene". It is an artefact — with a baseline 4x too large, rolling reduces the
+measured error, so every difference goes negative. **Without B3 this would have
+been published as a clean positive result.**
+
+**Why the fix is not cheap:** the mirror is applied in the fisheye source frame,
+the scoring happens in the pinhole view frame, with the rig warp and the roll in
+between, and the principal point is off-centre — so flipping the output back is
+not the inverse of flipping the input. It needs source and GT mirrored together
+before the rig, which changes how `zones` obtains ground truth.
+
+**Decision: stop here.** The asymmetry is second-order and has now consumed H32,
+H33 and H34, while the cross-room exposure — the largest open weakness in the
+line — sits blocked on a data decision with the user. The asymmetry rests where
+H33 left it (DA3-Small only, DA3-Large shows none, some part possibly our
+rendering), which both reports already state. Nothing needs changing.
+
+**Lesson worth keeping: any test that transforms the input needs a bar on the
+untransformed baseline.** B3 was routine and it is the only reason this did not
+go out as a finding.
