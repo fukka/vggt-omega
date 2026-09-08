@@ -3336,9 +3336,11 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
         已作为规矩记下：<strong>发布前若对两臂做了平均，先检查它们是否不同，再引用均值。</strong>
       </p>
       <p style="margin-top:10px">
-        <strong>注意：这个不对称本身正在被 H33 检验</strong> ——
-        它也可能来自我们的<strong>转正约定</strong>（四分之一转、主点偏 4.5 px）或场景内容，
-        而不是模型的性质。若是那样，这个发现要从"关于深度模型"的主张里撤回。
+        <strong>H33 已经检验过了（§03s），结论是收窄而不是撤回：</strong>
+        这个 2.3 倍<strong>只测过 DA3-Small</strong>，而它恰恰是四个 backbone 里不对称最大也最吵的那个，
+        <strong>DA3-Large 完全没有</strong>（4/8）。四个都有小的正均值，
+        <strong>其中一部分可能来自我们自己的渲染，比例不明</strong>。
+        引用时必须说"<strong>在 DA3-Small 上</strong>"。
       </p>
     </div>
     <div class="note">
@@ -3347,6 +3349,144 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
         真实分布的<strong>有符号中位数是 −2.70°</strong>（§02c 已排除标定原因），
         而惩罚曲线的最低点在 <strong>−5° 附近</strong>。佩戴者的典型倾斜落在模型最便宜的角度附近。
         <strong>9/13，p ≈ 0.13 —— 这是提示，不是发现</strong>，不提机制。
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head"><span class="eyebrow">03s</span><h2>实验 B¹⁸ · H33：那个不对称，非此即彼没有解开</h2>
+    <span class="chip kill"><span class="dot"></span>B1 未通过 · 证伪条件也未触发 · 主张收窄到 DA3-Small</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      §03r 的不对称只有一个 tick 大、已经进了两份报告。它可能是模型的性质，
+      <strong>也可能是我们自己的产物</strong> —— 这条流水线里有三样东西本身就不左右对称：
+      每张图送进模型前<strong>转了四分之一圈</strong>、转正帧里<strong>主点偏心 4.5 px</strong>、
+      以及<strong>场景内容</strong>（手和桌面总在偏低偏一侧）。
+    </p>
+    <p>
+      检验：<strong>同一套渲染、同一个转正约定、同一批像素，只换模型</strong>，跑两个预训练家族的四个 backbone。
+      若是模型的性质，两个家族应当不同；若是 setup 的产物，四个应当一致。
+    </p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <caption>差值 <span class="mono">(+30°) − (−30°)</span>，百分点，8 条录像。
+        <strong>注：协议原本要的是比值</strong> —— 多视角模型的 −30° 基线只有 0.6–3.7%（有一格 −0.2%），
+        比值会炸出 <code>nan</code>，"VGGT 不对称 5 倍"这种标题<strong>纯粹是除以噪声</strong>造出来的。
+        改用差值一事已作为<strong>修正案</strong>写入协议，并注明是看过部分数据之后改的。</caption>
+      <thead><tr><th>backbone</th><th>平均差值</th><th>sd</th><th>+30 更贵</th></tr></thead>
+      <tbody>
+        <tr class="flip"><td class="mono"><b>da3:small</b></td><td class="num bad"><b>+22.84</b></td><td class="num">25.58</td><td class="num">7/8</td></tr>
+        <tr><td class="mono">da3:large</td><td class="num">+4.60</td><td class="num">20.13</td><td class="num bad"><b>4/8（抛硬币）</b></td></tr>
+        <tr><td class="mono">vggt</td><td class="num">+8.38</td><td class="num good">5.39</td><td class="num">8/8</td></tr>
+        <tr><td class="mono">vggt_omega</td><td class="num">+3.67</td><td class="num good">5.16</td><td class="num">7/8</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:18px">
+    <h3>逐条判据</h3>
+  </div>
+  <div class="crit">
+    <div class="row"><span class="who">B1 ✗ 未通过</span><p>
+      单图家族 +13.72 ± 24.15、多视角家族 +6.03 ± 5.65 —— 相差 7.69 点，
+      而<strong>单图家族内部离散度就有 24 点</strong>。<strong>家族分裂不存在。</strong>
+    </p></div>
+    <div class="row"><span class="who">B2 ✓ 通过</span><p>
+      da3:small 复现了不对称（7/8，对上 §03r 的 11/13）。
+    </p></div>
+    <div class="row"><span class="who">证伪条件 ○ 也未触发</span><p>
+      四个并<strong>不</strong>在噪声内一致：量级跨 <strong>6 倍</strong>，
+      da3:large 是抛硬币而 vggt 是 8/8。
+    </p></div>
+  </div>
+
+  <div class="col">
+    <h3 style="margin-top:22px">再想一层</h3>
+    <div class="note warn">
+      <span class="eyebrow">我设计了一个非此即彼，数据两个都没给</span>
+      <p>
+        <strong>指向 setup 的：</strong>四个模型全部同向。纯粹模型特有的效应总该在某处消失或反号 —— 它没有。<br>
+        <strong>反对纯粹假象的：</strong>看到<strong>完全相同像素</strong>的模型之间量级差 6 倍，
+        da3:large 在抛硬币而 vggt 是 8/8。渲染不对称不该这样。
+      </p>
+      <p>
+        <strong>能站住的读法是两者都在</strong>：一个每个模型都有的 <strong>+4 到 +8 点</strong>共同不对称（setup 可解释），
+        加上一个大得多也吵得多的 <strong>DA3-Small 专属成分</strong>。这次运行分不开它们。
+      </p>
+    </div>
+    <div class="note warn">
+      <span class="eyebrow">§03r 的主张收窄，不撤回</span>
+      <p>
+        "+30° 比 −30° 贵 2.3 倍"<strong>只测过 DA3-Small</strong> ——
+        而它恰恰是四个里不对称最大也最吵的那个，<strong>DA3-Large 完全没有</strong>。
+      </p>
+      <p>
+        引用那个 2.3× <strong>必须说"在 DA3-Small 上"</strong>，不能当作关于深度模型的事实。
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+
+  <div class="section-head"><span class="eyebrow">03t</span><h2>实验 B¹⁹ · H34：镜像检验无效 —— 而 sanity check 救了它</h2>
+    <span class="chip kill"><span class="dot"></span>B3 未通过 · 测试作废 · 支线就此打住</span></div>
+
+  <div class="col">
+    <h3>想法</h3>
+    <p>
+      §03s 的 analysis 我写的是"不提第三个设计——那需要把转正约定变量化，是侵入性改动"。
+      <strong>那句话低估了可做的事</strong>：把源图像<strong>左右镜像</strong>更便宜也更干净。
+    </p>
+    <p>
+      对镜像内容施加 +θ，在内容意义上等价于对原图施加 −θ。所以若不对称由<strong>场景</strong>承载，镜像后<strong>符号翻转</strong>；
+      若由<strong>图像空间里固定的东西</strong>承载（主点偏移、转正约定、模型在图像坐标里的手性），<strong>原样保留</strong>。
+    </p>
+  </div>
+
+  <div class="note warn" style="margin:18px 0">
+    <span class="eyebrow">B3 未通过 —— 测试作废</span>
+    <p>
+      <strong>0° 基线的全图误差：未镜像 0.1545，镜像后 0.6145</strong> ——
+      <strong>还没施加任何滚转，光是镜像就让输入差了 4 倍</strong>。
+    </p>
+    <p>
+      <strong>错在哪：我镜像了源图像，没有镜像真值。</strong>
+      模型预测的是镜像后的场景，却拿未镜像的真值打分。镜像那条臂的每个数字都是这个错配。
+    </p>
+  </div>
+
+  <div class="col">
+    <div class="note warn">
+      <span class="eyebrow">值得记下来的是 —— 错误答案有多好看</span>
+      <p>
+        <strong>B1"通过"了 7/8，均值为负。</strong>那读起来正好是
+        "不对称在镜像下翻转 → 它随场景走 → §03r 的发现成立 → 那条'可能是我们渲染造成的'限定可以拿掉"。
+      </p>
+      <p>
+        <strong>干净、听起来可发表、而且完全是假象</strong> ——
+        基线大了 4 倍，滚转反而"降低"了测得的误差，所有差值自然变负。
+        <strong>B3 是个例行 sanity check，它是这东西没被当成结论发出去的唯一原因。</strong>
+      </p>
+      <p style="margin-top:10px">
+        已记为通则：<strong>任何变换输入的测试，都必须对未变换基线设一条判据。</strong>
+      </p>
+    </div>
+    <div class="note">
+      <span class="eyebrow">这条支线到此打住</span>
+      <p>
+        正确镜像真值不是一行改动：镜像在<strong>鱼眼帧</strong>、打分在<strong>针孔帧</strong>，
+        中间隔着 rig 的 warp 和滚转，主点还偏心 —— <strong>把输出翻回去不是把输入翻过去的逆运算</strong>。
+      </p>
+      <p>
+        不对称是个二阶细节，已经吃掉三个实验（§03r 发现、§03s 归因失败、本节无效）。
+        而<strong>这条线最大的开放弱点 —— 跨房间证据 —— 卡在一个共享文件系统的决定上</strong>。
+        在那件事悬着时继续为一个滚转惩罚的符号消耗运行次数，<strong>是糟糕的优先级</strong>。
       </p>
     </div>
   </div>
