@@ -2029,3 +2029,66 @@ Separating "where content sits" from "how much angle each pixel covers" by
 scaling the same lens into a smaller disc introduces a border, and the border
 result says that is catastrophic. Confounded by construction. Recorded as an
 open problem rather than queued.
+
+## H24 — the ordering generalises to another model. Most of the prize does not.
+
+`h24-backbone-generality/results/da3_large.json`, reading in that experiment's
+`analysis.md`. Identical to H22 except the depth model.
+
+**B1 passes**: Spearman(rim area share, row-mean gain) = **+0.943** (same room)
+and **+1.000** (rearranged), bar +0.8. The one inversion is orthographic and
+equisolid swapping by 0.2 points. The ordering is a property of the task, not of
+DA3-Small — and it holds on a model whose framing sensitivity is wildly
+different (border alongside the scored region: +636% vs +106%).
+
+**B2 passes**: on the real Aria lens the best foreign curve beats the lens's own
+by **+9.1** points (equisolid -17.2 vs own -8.1) and **+4.3** (orthographic -2.2
+vs own +2.1). The same-room margin is larger than DA3-Small's 5.8.
+
+**B3 fails on rectilinear**, both recordings: global (+1.9 / +5.6) beats radial
+(+4.6 / +9.9). Both positive — the sanity check fails in the one cell where the
+method has collapsed for this model. Recorded rather than explained away.
+
+### What the bars nearly hide
+
+| fitted on | rim area | Small | Large | Small (rearr.) | Large (rearr.) |
+|---|---|---|---|---|---|
+| orthographic | 68.3% | -30.5% | -13.5% | -15.6% | **-0.7%** |
+| equisolid | 73.5% | -29.0% | -13.7% | -14.1% | +0.8% |
+| equidistant | 75.0% | -27.7% | -11.3% | -13.3% | +1.0% |
+| stereographic | 77.9% | -24.7% | -8.1% | -11.1% | +1.0% |
+| the real lens | 79.4% | -21.8% | -5.4% | -9.3% | +2.6% |
+| rectilinear | 86.6% | -11.3% | +3.6% | -2.4% | +5.0% |
+
+**On the harder recording DA3-Large's method sits at zero.** Best geometry
+-0.7%, everything else positive. The ordering is perfectly monotone around
+nothing. So B2 "passing" there is -2.2% against +2.1% — *slightly helps* versus
+*actively hurts*. A relative bar cleared while the absolute numbers hover at
+zero, which is exactly the kind of pass that reads better than it is.
+
+### Three claims at three strengths
+
+1. **Which geometry to fit on** generalises. Strong.
+2. **Preferring a foreign rim-compressing curve over the lens's own** generalises.
+   Solid.
+3. **The size of the prize** does not. Less than half on the easy recording,
+   essentially none on the hard one.
+
+Headroom arithmetic, offered as such and NOT as a mechanism: DA3-Large starts
+with half the rim error of DA3-Small (0.191 vs 0.389). A correction that removes
+a systematic component should do less when there is less of it to remove.
+
+### Consequence for both reports
+
+The recommendation generalises **as a rule about which geometry to pick** and not
+**as a promise about how much you gain**. Anyone applying it should fit and check
+against ground truth on their own model first — "it helped a lot on DA3-Small"
+does not carry, and on the most rim-expanding geometry it turns actively harmful.
+
+### A pattern worth naming, again
+
+This is the third time a result in this line was reported by a relative measure
+that passed while the absolute quantity was near zero or reversed (H9's anchors,
+H19's native fits, now H24's rearranged room). **Always print the absolute
+numbers next to the relative ones**; every time this has bitten, the relative
+number was the one that looked publishable.

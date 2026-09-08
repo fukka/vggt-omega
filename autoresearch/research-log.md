@@ -1376,3 +1376,38 @@ design is broken than to run it and discover the confound afterwards.
 
 The useful part: H22's recommendation replicates at a second source resolution
 with the same slope, so it is not an artefact of the 504 pipeline.
+
+## 2026-09-08 (late night) — H24: the rule travels, the prize does not
+
+After two dead mechanisms I stopped guessing why and asked how far the effect
+generalises instead, which is what the recommendation actually depends on.
+Everything from H21 to H23 had used DA3-Small.
+
+DA3-Large keeps the ordering: Spearman +0.943 and +1.000, on a model whose
+framing sensitivity is nothing like DA3-Small's (+636% vs +106% for a border
+alongside the scored region). And it keeps the practical preference — a foreign
+rim-compressing curve beats the real lens's own by 9.1 points, more than
+DA3-Small's 5.8.
+
+But the size of the prize does not travel at all. On the rearranged-room
+recording DA3-Large's best geometry manages -0.7% and every other one makes
+things worse. The ordering there is perfectly monotone around zero.
+
+That nearly slipped past the bars. B2 "passed" on that recording at +4.3 points
+— which is -2.2% against +2.1%, slightly-helps versus actively-hurts. I have now
+seen this three times in this line (H9's anchors, H19's native fits, this), so it
+goes into findings as a rule rather than a note: always print the absolute
+numbers beside the relative ones, because the relative one is always the one that
+looks publishable.
+
+B3 failed on rectilinear in both recordings — global beats radial there — and
+that is recorded rather than smoothed over. It fails in exactly the cell where
+the method has collapsed for this model, which is the least interesting place for
+a sanity check to fail, but it did fail.
+
+The headroom reading is offered as arithmetic, not mechanism: DA3-Large starts
+with half the rim error, so a correction that removes a systematic component has
+less to remove. Given the last two mechanism guesses, that stays labelled.
+
+Both reports need the recommendation split: it generalises as a rule about which
+geometry to pick, not as a promise about the gain.

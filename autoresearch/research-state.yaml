@@ -1025,3 +1025,42 @@ do_not_run_as_designed:
     needs, and it is CONFOUNDED BY CONSTRUCTION: it introduces a border, and the
     border result says a border next to the scored region is catastrophic.
     Written down so nobody runs it and finds the confound afterwards.
+
+# ------------------------------------------------- H24 resolved 2026-09-08
+h24_outcome:
+  status: B1 and B2 PASS, B3 fails on one cell — ordering generalises, prize does not
+  artifact: autoresearch/experiments/h24-backbone-generality/results/da3_large.json
+  analysis: autoresearch/experiments/h24-backbone-generality/analysis.md
+  b1: >
+    Spearman(rim area share, row-mean gain) = +0.943 (same room) and +1.000
+    (rearranged), bar +0.8. Holds on a model whose framing sensitivity is wildly
+    different from DA3-Small's (+636% vs +106% for a border alongside the scored
+    region). The ordering is a property of the task.
+  b2: >
+    On the real Aria lens the best foreign curve beats the lens's own by +9.1
+    points (equisolid -17.2 vs own -8.1) and +4.3 (orthographic -2.2 vs own
+    +2.1). Same-room margin exceeds DA3-Small's 5.8.
+  b3_failure_recorded: >
+    global beats radial on the rectilinear diagonal in both recordings
+    (+1.9 vs +4.6, +5.6 vs +9.9). Both positive: the sanity check fails in the
+    one cell where the method has collapsed for this model.
+  the_finding_the_bars_nearly_hid: >
+    On the rearranged room DA3-Large's best geometry manages -0.7% and every
+    other one makes things WORSE. The ordering is monotone around zero. B2
+    passing there is -2.2% against +2.1% — slightly helps versus actively hurts.
+  headroom_arithmetic_not_mechanism: >
+    DA3-Large starts with half the rim error of DA3-Small (0.191 vs 0.389), so a
+    correction removing a systematic component has less to remove. Labelled as
+    arithmetic because this effect has already refuted two mechanism guesses.
+  consequence_for_reports: >
+    The recommendation generalises AS A RULE ABOUT WHICH GEOMETRY TO PICK and
+    NOT as a promise about the gain. Fit and check against ground truth on your
+    own model first; on the most rim-expanding geometry it turns harmful.
+
+standing_rule_2:
+  rule: "Always print the absolute numbers beside the relative ones."
+  why: >
+    Third instance in this line of a relative measure passing while the absolute
+    quantity sat near zero or reversed: H9's parallax anchors, H19's native
+    fits, H24's rearranged room. Every time, the relative number was the one
+    that looked publishable.

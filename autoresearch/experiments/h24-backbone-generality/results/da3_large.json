@@ -1,0 +1,294 @@
+{
+ "lenses": [
+  "orthographic",
+  "equisolid",
+  "equidistant",
+  "stereographic",
+  "rectilinear",
+  "aria_kb4"
+ ],
+ "eval_seqs": [
+  "Apartment_release_clean_seq136_M1292",
+  "Apartment_release_decoration_seq132_M1292"
+ ],
+ "config": {
+  "cache_root": "/netapp/datasets/f.zhang2/h14_teacher_cache_omega110",
+  "arm": "omega110",
+  "lenses": "orthographic,equisolid,equidistant,stereographic,rectilinear,aria_kb4",
+  "fit_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq131_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq133_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq134_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq135_M1292",
+  "eval_seqs": "/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_clean_seq136_M1292,/user/f.zhang2/Documents/projectaria_tools_adt_data_clean/Apartment_release_decoration_seq132_M1292",
+  "px_per_frame": 20000,
+  "size": 504,
+  "max_frames": 60,
+  "src_size": 0,
+  "variant": "large",
+  "depth_max_m": 10.0,
+  "seed": 0,
+  "device": "cuda",
+  "out": "autoresearch/experiments/h24-backbone-generality/results/da3_large.json"
+ },
+ "rim_area_share": {
+  "orthographic": 0.682741998693283,
+  "equisolid": 0.735126684559192,
+  "equidistant": 0.75,
+  "stereographic": 0.778861768832809,
+  "rectilinear": 0.8664214476543366,
+  "aria_kb4": 0.7944262100533845
+ },
+ "coef_a": {
+  "orthographic": [
+   1.662750886113998,
+   1.944470739578804,
+   2.3009762195051406,
+   2.549146636744888,
+   2.5931088655010766,
+   2.32939986987958,
+   1.9028247773922073,
+   1.374638533872362
+  ],
+  "equisolid": [
+   1.5996117264303713,
+   1.7365954691716075,
+   1.8927024389207194,
+   1.9470711289409632,
+   1.9767483714941203,
+   1.9339187439873002,
+   1.7743757267997142,
+   1.4814817392685364
+  ],
+  "equidistant": [
+   1.44093507611025,
+   1.586447799487185,
+   1.7162136087034863,
+   1.770442538404696,
+   1.818780135589854,
+   1.7900754559148362,
+   1.671746504522656,
+   1.4384039014182952
+  ],
+  "stereographic": [
+   1.3873690261727778,
+   1.4839416086988007,
+   1.5663012076782041,
+   1.600488003962975,
+   1.6412119550434385,
+   1.640880512309627,
+   1.5768680992337039,
+   1.3962755581183275
+  ],
+  "rectilinear": [
+   1.3057020843530427,
+   1.383044909292656,
+   1.4344359000929374,
+   1.4565655959778905,
+   1.460244087200294,
+   1.4381758555551334,
+   1.3749974197682606,
+   1.2610756680970625
+  ],
+  "aria_kb4": [
+   1.3743436184826536,
+   1.5033850274774356,
+   1.595766991891122,
+   1.62624921840368,
+   1.6428643534474165,
+   1.6140661361800597,
+   1.5220205953275836,
+   1.3312689905011141
+  ]
+ },
+ "pairwise_da": [
+  {
+   "a": "orthographic",
+   "b": "equisolid",
+   "d": 0.3160621992958841
+  },
+  {
+   "a": "orthographic",
+   "b": "equidistant",
+   "d": 0.443975280441083
+  },
+  {
+   "a": "orthographic",
+   "b": "stereographic",
+   "d": 0.5509068257327666
+  },
+  {
+   "a": "orthographic",
+   "b": "rectilinear",
+   "d": 0.6928843760313474
+  },
+  {
+   "a": "orthographic",
+   "b": "aria_kb4",
+   "d": 0.5559189496096238
+  },
+  {
+   "a": "equisolid",
+   "b": "equidistant",
+   "d": 0.13868254060775922
+  },
+  {
+   "a": "equisolid",
+   "b": "stereographic",
+   "d": 0.25614617172443477
+  },
+  {
+   "a": "equisolid",
+   "b": "rectilinear",
+   "d": 0.40353297808450694
+  },
+  {
+   "a": "equisolid",
+   "b": "aria_kb4",
+   "d": 0.26656755166278345
+  },
+  {
+   "a": "equidistant",
+   "b": "stereographic",
+   "d": 0.11746363111667554
+  },
+  {
+   "a": "equidistant",
+   "b": "rectilinear",
+   "d": 0.26485043747674775
+  },
+  {
+   "a": "equidistant",
+   "b": "aria_kb4",
+   "d": 0.1278850110550242
+  },
+  {
+   "a": "stereographic",
+   "b": "rectilinear",
+   "d": 0.14738680636007218
+  },
+  {
+   "a": "stereographic",
+   "b": "aria_kb4",
+   "d": 0.029502083897407633
+  },
+  {
+   "a": "rectilinear",
+   "b": "aria_kb4",
+   "d": 0.13696542642172352
+  }
+ ],
+ "mean_pairwise_da": 0.2965820179678561,
+ "matrix": {
+  "Apartment_release_clean_seq136_M1292|orthographic": [
+   -27.92821914866199,
+   -32.204702566614706,
+   -27.18807221432693,
+   -11.69806366060907,
+   27.380176422231138,
+   -9.650500582426503
+  ],
+  "Apartment_release_clean_seq136_M1292|equisolid": [
+   -9.102524980367932,
+   -19.944778294465237,
+   -21.48295635421944,
+   -19.137512671689073,
+   4.490292167545085,
+   -17.209548785049844
+  ],
+  "Apartment_release_clean_seq136_M1292|equidistant": [
+   -6.03563367067067,
+   -14.733698953601193,
+   -16.511571920357614,
+   -16.639364467749097,
+   1.4100361313082566,
+   -15.163140176948342
+  ],
+  "Apartment_release_clean_seq136_M1292|stereographic": [
+   -3.526551861035654,
+   -9.636518805601002,
+   -11.230650404034105,
+   -12.529325318712392,
+   -0.2938154782897162,
+   -11.657745229267402
+  ],
+  "Apartment_release_clean_seq136_M1292|rectilinear": [
+   1.2480505034834,
+   2.631073119582239,
+   3.241614906231627,
+   4.83801571053355,
+   4.5886717573949465,
+   5.275834572570348
+  ],
+  "Apartment_release_clean_seq136_M1292|aria_kb4": [
+   -2.0587652043230764,
+   -6.575791943330023,
+   -7.877604184304476,
+   -8.933628542853778,
+   1.0827707447496504,
+   -8.123103867175985
+  ],
+  "Apartment_release_decoration_seq132_M1292|orthographic": [
+   -11.07179602665045,
+   -7.665113961568082,
+   -9.36852249122837,
+   -6.007240143051817,
+   32.299821918690654,
+   -2.181280934695362
+  ],
+  "Apartment_release_decoration_seq132_M1292|equisolid": [
+   -4.950156443832454,
+   -1.0182326673836117,
+   -2.0428851160091743,
+   -2.4379527806136614,
+   16.339802871296037,
+   -1.2474266952324342
+  ],
+  "Apartment_release_decoration_seq132_M1292|equidistant": [
+   -3.632580570049726,
+   -0.15273813268699143,
+   -1.057096597131968,
+   -1.289631445346795,
+   12.410755122565575,
+   -0.5110901174373295
+  ],
+  "Apartment_release_decoration_seq132_M1292|stereographic": [
+   -2.5023236640468127,
+   0.2504990072786262,
+   -0.5474029843237749,
+   -0.36960130985167483,
+   8.907230957254875,
+   0.1478127661265427
+  ],
+  "Apartment_release_decoration_seq132_M1292|rectilinear": [
+   1.3604200924359988,
+   3.5275052532636852,
+   3.985653475005857,
+   5.216110430520593,
+   9.853831967705817,
+   6.154801413086708
+  ],
+  "Apartment_release_decoration_seq132_M1292|aria_kb4": [
+   -1.273671117853259,
+   1.638785258940323,
+   1.1155419351763785,
+   1.7186841648119122,
+   10.483438830645708,
+   2.105950155727343
+  ]
+ },
+ "global_diag": {
+  "Apartment_release_clean_seq136_M1292": [
+   0.056259743991948774,
+   0.38717406543216093,
+   0.9733277542034902,
+   2.081931755442734,
+   1.9160876894664947,
+   1.6967668169680206
+  ],
+  "Apartment_release_decoration_seq132_M1292": [
+   0.10778484411078093,
+   1.9166801890224239,
+   2.079082885136163,
+   3.4156231066401643,
+   5.569617025089535,
+   3.8617142375609426
+  ]
+ }
+}
