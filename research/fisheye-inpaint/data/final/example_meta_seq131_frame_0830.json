@@ -83,5 +83,25 @@
  "view_exposure": -1.21,
  "world_strength": 0.0,
  "adaptive_threshold": 0.01,
- "blender_seconds": 223.66847586631775
+ "blender_seconds": 223.66847586631775,
+ "crop": {
+  "focal_out_norm": 0.371,
+  "Knew_crop": [
+   189.952,
+   189.952,
+   256.0,
+   256.0
+  ],
+  "hfov_deg": 106.84916995079807,
+  "valid_frac": 1.0,
+  "invalid_px": 0,
+  "fisheye_in_crop_frac": 0.7856521606445312,
+  "persp_in_crop_frac": 0.4998931884765625,
+  "fisheye_in_crop_of_valid": 0.9215397625833933,
+  "persp_in_crop_of_valid": 0.7383203371495538,
+  "sha": {
+   "rgb_sha": "480f57e7df5ca35f",
+   "depth_sha": "1ee7267861f712ef"
+  }
+ }
 }

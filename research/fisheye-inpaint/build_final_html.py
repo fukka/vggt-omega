@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2026.
 """Build research/fisheye-inpaint/to_human/plan.html from ONE evaluation run.
 
@@ -31,16 +32,19 @@ CELLS = OrderedDict([
     ("persp_masked",   ("②", "RECT · BLACK", "矫正透视 · 黑楔形")),
     ("fisheye_full",   ("③", "RAW · FILLED", "原始鱼眼 · 真值补全")),
     ("persp_full",     ("④", "RECT · FILLED", "矫正透视 · 真值补全")),
+    ("persp_crop",     ("⑤", "RECT · CROP", "内接矫正 · 天然无黑区")),
 ])
+CROP_VS = ("persp_masked", "persp_full", "fisheye_masked", "fisheye_full")
 
 # Provenance of the one run this document describes. Collected on the machine
 # that ran it, on the day it ran; a reader can check every hash.
 PROV = {
-    "eval_commit": "9e83625e5e7bb8d607237152f004ccd6073f4193",
-    "eval_commit_short": "9e83625",
+    "eval_commit": "fb3bc00",
+    "eval_commit_short": "fb3bc00",
+    "crop_script_commit": "fbb0ef0",
     "eval_branch": "fisheye-2x2",
-    "run_dir": "wt-fisheye2x2/runs/ev_final  (lambda_63)",
-    "run_finished": "2026-09-07 22:35 (lambda_63 本地时间, UTC−4)",
+    "run_dir": "wt-fisheye2x2/runs/ev5_own 与 runs/ev5_crop  (lambda_63)",
+    "run_finished": "2026-09-07 23:29 (lambda_63 本地时间, UTC−4)",
     "renderer_commit": "58168fa567d6afc4980ade0f18fac0bb969fc1ed",
     "renderer_commit_short": "58168fa",
     "renderer_script": "adt_egocentric/render_oracle_2x2_lambda.py 经 rerender_oracle_set_lit.sh",
@@ -49,7 +53,7 @@ PROV = {
     "ckpt": "VGGT-Omega-1B-512/model.pt",
     "ckpt_md5": "bc5302eada6222303c5e5f8d7dbce709",
     "env": "conda env raytun3r · torch 2.11.0+cu128 · RTX 6000 Ada (GPU 0)",
-    "run_minutes": "约 4 分钟(28 组评估)",
+    "run_minutes": "约 6 分钟(30 + 10 组评估)",
 }
 
 
@@ -73,7 +77,7 @@ def sig(cb):
 
 def main():
     N = json.load(open(os.path.join(FIG, "numbers.json")))
-    R = json.load(open(os.path.join(DATA, "results.json")))
+    R = json.load(open(os.path.join(DATA, "own", "results.json")))
     meta = json.load(open(os.path.join(DATA, "example_meta_seq131_frame_0830.json")))
     css = open(os.path.join(HERE, "to_human", "style.css"), encoding="utf-8").read()
     res1, res8 = R["single"], R["8-frame"]
@@ -83,6 +87,11 @@ def main():
     F1, F8 = N["fov"]["single"], N["fov"]["8-frame"]
     INP = N["inputs"]
     W, B = N["wins"], N["band"]
+    CC1, CC8 = N["cells_common"]["single"], N["cells_common"]["8-frame"]
+    EC1, EC8 = N["effects_common"]["single"], N["effects_common"]["8-frame"]
+    XO1, XO8 = N["crop_effects_own"]["single"], N["crop_effects_own"]["8-frame"]
+    XC1, XC8 = N["crop_effects_common"]["single"], N["crop_effects_common"]["8-frame"]
+    crop_meta = meta["crop"]
     gt_fov = F1["persp_full"]["gt"]
     theta_max = meta["theta_max_deg"]
 
@@ -133,7 +142,7 @@ def main():
 <header class="mast">
   <p class="kicker">研究报告 · VGGT-Omega · ADT / Aria KB4 · Blender 渲染真值补全</p>
   <h1>鱼眼补全与可标定性</h1>
-  <p class="standfirst">把鱼眼图喂给 VGGT-Omega 时,画面里有大片无效黑区:原始鱼眼是成像圆外的四角,矫正成透视图后是四个黑楔形。用<strong>真实场景内容</strong>把它们补上,深度会变好吗?相机估计会变好吗?——而且,变好是不是<strong>因为</strong>图像回到了透视训练域?本文只报告一次评估:同一批 96 帧、四种输入、同一个模型、同一套评分规则,深度与相机位姿两项指标。</p>
+  <p class="standfirst">把鱼眼图喂给 VGGT-Omega 时,画面里有大片无效黑区:原始鱼眼是成像圆外的四角,矫正成透视图后是四个黑楔形。用<strong>真实场景内容</strong>把它们补上,深度会变好吗?相机估计会变好吗?——而且,变好是不是<strong>因为</strong>图像回到了透视训练域?本文只报告一次评估:同一批 96 帧、五种输入(2×2 加上不补也不黑的内接裁剪 ⑤)、同一个模型,深度与相机位姿两项指标,深度分别在各格自己的区域和五格共有的最小区域上打分。</p>
   <div class="meta">
     <span>2026-09-07</span>
     <span>96 帧 / 12 窗口 / 4 段序列</span>
@@ -141,8 +150,8 @@ def main():
     <span>评估代码 {PROV['eval_commit_short']} · 渲染器 {PROV['renderer_commit_short']}</span>
   </div>
   <ul class="toc">
-    <li><a href="#verdict">结论</a></li><li><a href="#inputs">四个输入</a></li><li><a href="#protocol">数据与协议</a></li>
-    <li><a href="#depth">深度精度</a></li><li><a href="#pose">相机位姿精度</a></li><li><a href="#qual">定性结果</a></li>
+    <li><a href="#verdict">结论</a></li><li><a href="#inputs">五个输入</a></li><li><a href="#protocol">数据与协议</a></li>
+    <li><a href="#depth">深度 · 各自区域</a></li><li><a href="#common">深度 · 最小公共区域</a></li><li><a href="#pose">相机位姿精度</a></li><li><a href="#qual">定性结果</a></li>
     <li><a href="#ladder">附录:廉价填充阶梯</a></li><li><a href="#prov">出处与复现</a></li><li><a href="#removed">本版删去了什么</a></li>
   </ul>
 </header>
@@ -156,8 +165,9 @@ def main():
 <ul class="vlist">
 <li><span class="vnum">1</span><div><strong>真值内容让深度变好,两种投影一样好。</strong>单帧:鱼眼 {d1f['mean']:+.4f}、透视 {d1p['mean']:+.4f} AbsRel(负 = 补全更好),两条按窗口聚类的 95% CI 都不含零;8 帧:{d8f['mean']:+.4f} / {d8p['mean']:+.4f},同样显著。<strong>交互项不显著</strong>(单帧 {d1i['mean']:+.4f} [{d1i['ci_lo']:+.4f}, {d1i['ci_hi']:+.4f}];8 帧 {d8i['mean']:+.4f} [{d8i['ci_lo']:+.4f}, {d8i['ci_hi']:+.4f}])。预注册的假设——「收益集中在矫正+补全的 ④ 格,因为它回到了透视训练域」——<strong>没有得到支持</strong>。这是一个「别给模型大片纯黑」的低层效应,与投影无关。</div></li>
 <li><span class="vnum">2</span><div><strong>真值内容没有让相机位姿变好;在鱼眼上反而变差。</strong>8 帧窗口的 AUC@30:鱼眼 {a8f['mean']:+.3f} [{a8f['ci_lo']:+.3f}, {a8f['ci_hi']:+.3f}](显著变差),透视 {a8p['mean']:+.3f} [{a8p['ci_lo']:+.3f}, {a8p['ci_hi']:+.3f}](n.s.)。相对旋转误差在鱼眼上 {r8f['mean']:+.2f}°(显著),透视 {r8p['mean']:+.2f}°(n.s.),交互项 {r8i['mean']:+.2f}° [{r8i['ci_lo']:+.2f}, {r8i['ci_hi']:+.2f}](显著)。所以深度的收益<strong>不是经由更好的相机估计</strong>得到的。</div></li>
-<li><span class="vnum">3</span><div><strong>相机头推断的 FoV 与补不补无关,而且一直是错的。</strong>透视图真值 {gt_fov:.1f}°,模型在 ② 说 {F1['persp_masked']['mean']:.1f}°、在 ④ 说 {F1['persp_full']['mean']:.1f}°——把 32% 的黑楔形换成真实内容只把 FoV 挪了 {abs(F1['persp_full']['mean']-F1['persp_masked']['mean']):.1f}°,离真值仍差 {F1['persp_full']['abs_err']:.0f}°。一张完全干净、无黑边的 125° 针孔图,VGGT-Omega 也读不出它的视场。这正是三个竞争假设里补全治不了的那一个(C:FoV 超出训练分布)。</div></li>
+<li><span class="vnum">3</span><div><strong>相机头推断的 FoV 与补不补无关,而且一直是错的。</strong>透视图真值 {gt_fov:.1f}°,模型在 ② 说 {F1['persp_masked']['mean']:.1f}°、在 ④ 说 {F1['persp_full']['mean']:.1f}°——把 32% 的黑楔形换成真实内容只把 FoV 挪了 {abs(F1['persp_full']['mean']-F1['persp_masked']['mean']):.1f}°,离真值仍差 {F1['persp_full']['abs_err']:.0f}°。一张完全干净、无黑边的 125° 针孔图,VGGT-Omega 也读不出它的视场;而 107° 的 ⑤ 它读成 {F1['persp_crop']['mean']:.1f}°(误差 {F1['persp_crop']['abs_err']:.1f}°)。这正是三个竞争假设里补全治不了的那一个(C:FoV 超出训练分布)。</div></li>
 <li><span class="vnum">4</span><div><strong>可争的空间很小。</strong>真值内容值 {abs(d1f['mean']):.4f}–{abs(d1p['mean']):.4f} AbsRel(单帧);同一次运行里,一个<em>不发明任何内容</em>的最近邻拖影(<code>replicate</code>)已经拿走其中 {rep[('single','persp')]['pct']:.0f}%(透视)/ {rep[('single','fisheye')]['pct']:.0f}%(鱼眼),8 帧时 {rep[('8-frame','persp')]['pct']:.0f}% / {rep[('8-frame','fisheye')]['pct']:.0f}%。留给任何生成式补全的是 <strong>0–0.004 AbsRel</strong>,且不会带来相机精度。</div></li>
+<li><span class="vnum">5</span><div><strong>不补也不留黑、直接裁掉的 ⑤,是要打败的免费方案。</strong>在五格共有的最小区域(⑤ 的视场)上,单帧 AbsRel:⑤−② {XC1['AbsRel']['persp_masked']['mean']:+.4f} [{XC1['AbsRel']['persp_masked']['ci_lo']:+.4f}, {XC1['AbsRel']['persp_masked']['ci_hi']:+.4f}]({'显著' if XC1['AbsRel']['persp_masked']['excludes_zero'] else 'n.s.'}),⑤−④ {XC1['AbsRel']['persp_full']['mean']:+.4f} [{XC1['AbsRel']['persp_full']['ci_lo']:+.4f}, {XC1['AbsRel']['persp_full']['ci_hi']:+.4f}]({'显著' if XC1['AbsRel']['persp_full']['excludes_zero'] else 'n.s.'});8 帧:⑤−② {XC8['AbsRel']['persp_masked']['mean']:+.4f}({'显著' if XC8['AbsRel']['persp_masked']['excludes_zero'] else 'n.s.'}),⑤−④ {XC8['AbsRel']['persp_full']['mean']:+.4f}({'显著' if XC8['AbsRel']['persp_full']['excludes_zero'] else 'n.s.'})。位姿 AUC@30:⑤−② {XO8['auc30']['persp_masked']['mean']:+.3f}({'显著' if XO8['auc30']['persp_masked']['excludes_zero'] else 'n.s.'}),⑤−④ {XO8['auc30']['persp_full']['mean']:+.3f}({'显著' if XO8['auc30']['persp_full']['excludes_zero'] else 'n.s.'})——⑤ 的 AUC@30 是 {P8['persp_crop']['auc30']:.2f},其它四格 0.74–0.79。<strong>直接裁掉黑区,在深度和位姿上都优于把黑区补成真值。</strong>详见<a href="#common">最小公共区域</a>与<a href="#pose">位姿</a>两节。</div></li>
 </ul>
 </div>
 </section>
@@ -173,12 +183,13 @@ def main():
             ("persp_masked", f"整锥矫正到针孔平面(focal_out_norm = {meta['focal_out_norm']}, f = {meta['Knew_pinhole'][0]:.1f} px, 水平 FoV {gt_fov:.1f}°)。有效区是「被咬掉的圆角方形」,其余为黑。"),
             ("fisheye_full", f"同一张 ERP 全景以 KB4 的单调延拓(θ > θ<sub>max</sub> 处用割线斜率 {meta['kb4_slope']:.4f} 延伸,指纹 <code>{meta['kb4_fingerprint']}</code>)重采样到整个方框——四角是<strong>真实场景</strong>,但处在一个真实镜头不存在的投影下。"),
             ("persp_full", f"同一张 ERP 直接针孔重采样到整个方框。四角是真实场景内容,投影也是真实针孔——这是唯一在视觉上像一张普通照片的格子,即预注册假设的落点。"),
+            ("persp_crop", f"同一张 ERP,针孔焦距改为内接值(f = {crop_meta['Knew_crop'][0]:.1f} px,{crop_meta['hfov_deg']:.1f}°)。没有需要补的地方;丢掉的是成像锥外圈约 17% 的立体角。残留的纯黑像素同样是场景里的暗部。"),
         ])
     A(f"""
 <section id="inputs">
 <p class="eyebrow">实验设计</p>
-<h2>四个输入:投影方式 × 是否补全</h2>
-<p>两个正交因子,四个格子跑同一个 VGGT-Omega、同一批帧、同一套评分区域。<strong>交互项 (④−②) − (③−①) 才是对「回到透视域」这一假设的检验</strong>;四个绝对值各自都有文献给过答案,交互没人测过。</p>
+<h2>五个输入:投影方式 × 是否补全,加一个内接裁剪</h2>
+<p>两个正交因子,四个格子跑同一个 VGGT-Omega、同一批帧。<strong>交互项 (④−②) − (③−①) 才是对「回到透视域」这一假设的检验</strong>;四个绝对值各自都有文献给过答案,交互没人测过。第五个输入 ⑤ 不属于 2×2:它把矫正焦距收到内接方框(focal_out_norm = {crop_meta['focal_out_norm']},水平 FoV {crop_meta['hfov_deg']:.1f}°),既不补也不黑,代价是丢掉成像锥的外圈。它是「补全」必须打败的免费替代。</p>
 <div class="mtx">
   <div class="hd"></div><div class="hd">保留黑区(基线)</div><div class="hd">黑区用真实内容补全</div>
   <div class="rh">原始鱼眼</div>
@@ -187,16 +198,18 @@ def main():
   <div class="rh">矫正为透视</div>
   <div><span class="cellid">② RECT · BLACK</span><span class="cellname">外接矫正 + 黑楔形</span>{gt_fov:.1f}° 针孔,完整保留成像锥,四角为黑。<span class="pred">预测:比 ① 好,但被黑楔形拖累。</span></div>
   <div><span class="cellid">④ RECT · FILLED</span><span class="cellname">外接矫正 + 楔形补真值</span>唯一在视觉上完整的透视照片。<span class="pred">预测(假设 A):④ 显著优于 ②,且 ④−② 明显大于 ③−①。</span></div>
+  <div class="rh">内接裁剪</div>
+  <div style="grid-column:span 2"><span class="cellid">⑤ RECT · CROP</span><span class="cellname">内接矫正,{crop_meta['hfov_deg']:.1f}°,零黑区</span>同一张 ERP、同一位姿、同一 ISP 与超采样,只有输出焦距不同(f = {crop_meta['Knew_crop'][0]:.1f} px)。96 帧全部 100% 有效,0 个无效像素(实测)。它的视场落在 ② 网格有效区的 {100*crop_meta['persp_in_crop_of_valid']:.1f}%、① 网格有效区的 {100*crop_meta['fisheye_in_crop_of_valid']:.1f}% 之内——这就是「最小公共区域」。<span class="pred">预测:若补全的价值只在「不黑」,⑤ 应与 ④ 相当;若 ④ 打不过 ⑤,补全路线不划算。</span></div>
 </div>
 
 <h3>模型真正收到的张量</h3>
-<p>下图是评估脚本在喂给模型之前存盘的输入,不是示意图。四格来自<strong>同一帧、同一张渲染的 ERP 全景、同一位姿</strong>,只在投影与四角内容上不同。</p>
-<div class="wide"><img src="{b64(os.path.join(FIG,'inputs_w00.jpg'))}" alt="四个输入,窗口 00">
+<p>下图是评估脚本在喂给模型之前存盘的输入,不是示意图。五格来自<strong>同一帧、同一张渲染的 ERP 全景、同一位姿</strong>,只在投影、四角内容与焦距上不同。</p>
+<div class="wide"><img src="{b64(os.path.join(FIG,'inputs_w00.jpg'))}" alt="五个输入,窗口 00">
 <div class="cap">窗口 00 第一帧(seq131 / frame_1999)。标题里的「纯黑像素」与「评分区」是在这一张上实测的;下表是 96 帧的平均。</div></div>
 <div class="scroll"><table class="tight">
 <thead><tr><th>格子</th><th class="n">纯黑像素(96 帧均值)</th><th class="n">参与评分</th><th>输入是什么</th></tr></thead>
 <tbody>{inp_rows}</tbody></table></div>
-<p class="note">③/④ 里残留的 1.7–2.1% 纯黑像素不是没渲染:它们全部带有有效的渲染深度(黑像素中深度为 0 的比例 = 0.0%),且有 1.4–1.8% 落在评分区内部——是拟合光照(曝光 −1.21 EV)下的阴影和深色物体,与投影无关,四格同等受影响。</p>
+<p class="note">③/④/⑤ 里残留的 1.7–2.1% 纯黑像素不是没渲染:它们全部带有有效的渲染深度(黑像素中深度为 0 的比例 = 0.0%),且有 1.4–1.8% 落在评分区内部——是拟合光照(曝光 −1.21 EV)下的阴影和深色物体,与投影无关,四格同等受影响。</p>
 <div class="wide"><img src="{b64(os.path.join(FIG,'inputs_w01.jpg'))}" alt="四个输入,窗口 01"><div class="cap">窗口 01(seq131 / frame_0830)。</div></div>
 <div class="wide"><img src="{b64(os.path.join(FIG,'inputs_w03.jpg'))}" alt="四个输入,窗口 03"><div class="cap">窗口 03(seq134 / frame_2561)。</div></div>
 </section>
@@ -211,8 +224,8 @@ def main():
 <p>③ 和 ④ 要求在<strong>镜头根本没拍到的方向</strong>上放真实内容。真实 Aria 帧给不出这个,只有拥有整个场景的渲染器能给。所以 96 帧全部由 Blender/Cycles 从 ADT 的物体级场景重建(354 个 GLB、43 盏拟合光源)按 ADT 的真实相机轨迹渲染成 ERP 全景({meta['eq_w']}×{meta['eq_h']},{meta['cycles_samples']} 采样,OPTIX),再用 <code>cv2.remap</code> 重采样成四个输入;深度来自渲染器的 Z-pass,四格共享。光照是<strong>按真实帧拟合</strong>的(<code>{meta['lights_json'].split('/')[-1]}</code>,曝光 {meta['view_exposure']} EV);历史上一版把灯装在 2.35 m、低于它要照亮的家具,那一版的数字本文不再引用(见<a href="#removed">删去了什么</a>)。</p>
 <h3>帧与窗口</h3>
 <p>4 段 ADT 序列(seq131/134/136 clean,seq132 decoration)× 每段 3 个窗口 × 每窗 8 帧,步长 10 帧,每窗真实位移约 2.0–2.5 m。<strong>窗口是独立性的单位</strong>:同一窗口的 8 帧共享场景、光照和不到一秒的轨迹,把它们当 96 个独立样本会让区间窄约 √8 倍。所有区间都是按窗口重采样的 bootstrap(10000 次,n = 12 窗),配对差在帧或窗口级别逐一相减。</p>
-<h3>评分规则</h3>
-<p>同一投影的两格(① vs ③,② vs ④)<strong>都在「黑」那一格的有效区上打分</strong>——否则「补全」格会因为多覆盖了面积而得分,测的是覆盖率而不是补全。填进去的像素永远不被评分。深度用 scale-shift 对齐后的 AbsRel / RMSE / δ<sub>1</sub>。跨投影的绝对值<strong>不可比</strong>(矫正网格把边缘过采样约 10 倍),可比的是同投影内的差和两投影差的交互。</p>
+<h3>评分规则:两种区域</h3>
+<p><strong>各自区域</strong>:同一投影的两格(① vs ③,② vs ④)<strong>都在「黑」那一格的有效区上打分</strong>——否则「补全」格会因为多覆盖了面积而得分,测的是覆盖率而不是补全。填进去的像素永远不被评分。深度用 scale-shift 对齐后的 AbsRel / RMSE / δ<sub>1</sub>。跨投影的绝对值<strong>不可比</strong>(矫正网格把边缘过采样约 10 倍),可比的是同投影内的差和两投影差的交互。<br><strong>最小公共区域</strong>:⑤ 的视场是五格里最小的,把它在每个网格上的足迹(<code>mask_*_in_crop.npy</code>,由每个像素的射线是否落进 ⑤ 的画幅解析算出)与各格自己的有效区求交,五格就都在<strong>同一组场景方向</strong>上打分。像素网格仍不同(权重不同),所以跨投影的差仍要带着这层保留看;但这是五格能做到的最公平的比较。两种区域是同一批预测的两种打分,位姿与之无关——脚本用 AUC@30 逐窗逐位相等这一点确认两次运行的预测确实相同。</p>
 <h3>相机位姿怎么算</h3>
 <p>VGGT 把第一帧定为世界系、平移只到尺度,所以位姿全部按<strong>窗口内相对位姿</strong>评:8 帧的 28 个 i&lt;j 对,每对比较 E<sub>i</sub>E<sub>j</sub><sup>−1</sup> 的旋转角误差(RRA)与相对平移方向夹角(RTA),AUC@30 = max(RRA,RTA) 在 1..30° 阈值下的平均准确率(VGGT 论文的口径);ATE 是相机中心经 Sim(3) 对齐后的 RMSE(米)。真值相机来自渲染器的 <code>T_WC</code>(原始 Aria 相机)乘以 rot90 的固定旋转;这个约定<strong>用数据验证过</strong>:用它把 frame_0840 的深度反投影再投到 frame_0830,深度中位相对误差 0.12%、98% 像素 &lt;3%;错误候选是 4–7%。单帧模式没有相对位姿,只评 FoV。推断 FoV 只对透视格有真值({gt_fov:.1f}°);鱼眼格的数字是相机头「相信」的值,没有对应的真值。</p>
 <h3>模型</h3>
@@ -236,7 +249,8 @@ def main():
     A(f"""
 <section id="depth">
 <p class="eyebrow">结果 · 深度</p>
-<h2>真值内容有用,而且两种投影一样有用</h2>
+<h2>各自区域:真值内容有用,而且两种投影一样有用</h2>
+<p class="note">⑤ 在这两张表里是在<strong>自己整个画幅</strong>上打分的,与其它四格的区域不同,只能定性地看;⑤ 与其它格子的正式比较在<a href="#common">下一节</a>。</p>
 <div class="scroll"><table>
 <thead><tr><th>单帧</th><th class="n">AbsRel ↓</th><th class="n">RMSE (m) ↓</th><th class="n">δ<sub>1</sub> ↑</th><th class="n">帧 / 窗</th></tr></thead>
 <tbody>{cell_rows(C1)}</tbody></table></div>
@@ -268,7 +282,70 @@ def main():
 <div class="scroll"><table class="tight">
 <thead><tr><th>格子</th><th class="n">Δ AbsRel(负 = 多帧更好)</th></tr></thead>
 <tbody>{mvs_rows}</tbody></table></div>
-<p>只有 ③(鱼眼+真值补全)在 8 帧时<strong>显著变差</strong>({mvs['fisheye_full']['mean']:+.4f});其余三格跨零。这与下一节位姿的发现同源:③ 的四角内容处在一个不存在的镜头投影下,多帧时它通过跨视图注意力影响相机估计。</p>
+<p>③(鱼眼+真值补全)在 8 帧时<strong>显著变差</strong>({mvs['fisheye_full']['mean']:+.4f}),⑤ 在 8 帧时<strong>显著变好</strong>({mvs['persp_crop']['mean']:+.4f})——多帧只在相机被估对的格子里兑现;其余格子跨零。这与下一节位姿的发现同源:③ 的四角内容处在一个不存在的镜头投影下,多帧时它通过跨视图注意力影响相机估计。</p>
+</section>
+""")
+
+    # ------------------------------------------------------------ common region
+    def ccell_rows(C):
+        return "".join(
+            f"<tr{' class=hl' if st=='persp_crop' else ''}><td><span class='cellid'>{CELLS[st][0]} {CELLS[st][1]}</span>{CELLS[st][2]}</td>"
+            f"<td class='n'>{C[st]['AbsRel']:.4f}</td><td class='n'>{C[st]['RMSE']:.3f}</td><td class='n'>{C[st]['delta1']:.4f}</td>"
+            f"<td class='n'>{C[st]['n_valid']/1000:.0f}k</td></tr>" for st in CELLS)
+    def ceff_rows(E, metric, fmt, good):
+        e = E[metric]
+        return (f"<tr><td>{metric}</td><td class='n'>{ci(e['fisheye'], fmt)}</td><td class='n'>{ci(e['persp'], fmt)}</td>"
+                f"<td class='n'>{ci(e['interaction'], fmt)}</td><td>{good}</td></tr>")
+    def xrows(X, metric, fmt):
+        e = X[metric]
+        return "".join(f"<td class='n'>{ci(e[st], fmt)}</td>" if st in e else "<td>—</td>" for st in CROP_VS)
+    xhead = "".join(f"<th class='n'>⑤ − {CELLS[st][0]}<br><span class='ref'>{CELLS[st][1]}</span></th>" for st in CROP_VS)
+    A(f"""
+<section id="common">
+<p class="eyebrow">结果 · 深度 · 最小公共区域</p>
+<h2>五格在同一组场景方向上:裁掉黑区 vs 补上黑区</h2>
+<p>这一节所有格子都只在 ⑤ 的视场内打分(与各自有效区求交)。表中「像素」是每帧平均参与打分的像素数——⑤ 用整幅 262k 像素看这块场景,② 只用 {CC1['persp_masked']['n_valid']/1000:.0f}k、① 用 {CC1['fisheye_masked']['n_valid']/1000:.0f}k,因为同一块场景在不同网格上占的像素不同。</p>
+<div class="scroll"><table>
+<thead><tr><th>单帧 · 公共区域</th><th class="n">AbsRel ↓</th><th class="n">RMSE (m) ↓</th><th class="n">δ<sub>1</sub> ↑</th><th class="n">像素/帧</th></tr></thead>
+<tbody>{ccell_rows(CC1)}</tbody></table></div>
+<div class="scroll"><table>
+<thead><tr><th>8 帧 · 公共区域</th><th class="n">AbsRel ↓</th><th class="n">RMSE (m) ↓</th><th class="n">δ<sub>1</sub> ↑</th><th class="n">像素/帧</th></tr></thead>
+<tbody>{ccell_rows(CC8)}</tbody></table></div>
+
+<h3>⑤ 减 其它格子(负 = ⑤ 更好),按窗口聚类的 95% CI</h3>
+<div class="scroll"><table>
+<thead><tr><th>公共区域</th>{xhead}</tr></thead>
+<tbody>
+<tr><td>AbsRel · 单帧</td>{xrows(XC1,'AbsRel','{:+.4f}')}</tr>
+<tr><td>δ<sub>1</sub> · 单帧</td>{xrows(XC1,'delta1','{:+.4f}')}</tr>
+<tr><td>AbsRel · 8 帧</td>{xrows(XC8,'AbsRel','{:+.4f}')}</tr>
+<tr><td>δ<sub>1</sub> · 8 帧</td>{xrows(XC8,'delta1','{:+.4f}')}</tr>
+</tbody></table></div>
+<div class="scroll"><table>
+<thead><tr><th>各自区域(⑤ 全幅 vs 各格自己的区域;不同场景范围,仅供参照)</th>{xhead}</tr></thead>
+<tbody>
+<tr><td>AbsRel · 单帧</td>{xrows(XO1,'AbsRel','{:+.4f}')}</tr>
+<tr><td>AbsRel · 8 帧</td>{xrows(XO8,'AbsRel','{:+.4f}')}</tr>
+</tbody></table></div>
+<div class="wide"><img src="{b64(os.path.join(FIG,'crop_effects.png'))}" alt="⑤ 减其它格子">
+<div class="cap">⑤ 减 ②/④/①/③,每个点一个窗口。前四张是深度(各自区域 vs 公共区域,单帧 vs 8 帧),最后一张是位姿 AUC@30(与区域无关)。透视两列(⑤−②、⑤−④)是同一投影、同一组方向,是干净的比较;鱼眼两列跨投影,网格权重不同。</div></div>
+
+<h3>2×2 的效应在公共区域上还成立吗</h3>
+<p>把 ①–④ 都限制到 ⑤ 的足迹上再算一遍配对效应。这块区域离黑区边界更远(黑区边界内侧 16 px 的带被大部分切掉),所以真值补全的效应理应更小;它有没有消失,决定了「边界效应」这个解释的边界。</p>
+<div class="scroll"><table>
+<thead><tr><th>单帧 · 公共区域</th><th class="n">鱼眼 ③−①</th><th class="n">透视 ④−②</th><th class="n">交互</th><th>读法</th></tr></thead>
+<tbody>
+{ceff_rows(EC1,'AbsRel','{:+.4f}','负 = 补全更好')}
+{ceff_rows(EC1,'delta1','{:+.4f}','正 = 补全更好')}
+</tbody></table></div>
+<div class="scroll"><table>
+<thead><tr><th>8 帧 · 公共区域</th><th class="n">鱼眼 ③−①</th><th class="n">透视 ④−②</th><th class="n">交互</th><th>读法</th></tr></thead>
+<tbody>
+{ceff_rows(EC8,'AbsRel','{:+.4f}','负 = 补全更好')}
+{ceff_rows(EC8,'delta1','{:+.4f}','正 = 补全更好')}
+</tbody></table></div>
+<p><strong>⑤ 在同一组场景方向上打败了其它四格,单帧与 8 帧、深度与位姿全部显著。</strong>与同投影的两格比,单帧 ⑤−② = {XC1['AbsRel']['persp_masked']['mean']:+.4f}、⑤−④ = {XC1['AbsRel']['persp_full']['mean']:+.4f};8 帧 ⑤−② = {XC8['AbsRel']['persp_masked']['mean']:+.4f}、⑤−④ = {XC8['AbsRel']['persp_full']['mean']:+.4f}。也就是说,在 ④ 用真实内容把黑楔形补满之后,⑤ 仍然比它好——补全把 ② 拉近了 ⑤,但没有到达。</p>
+<p><strong>把打分限制到内部区域后,真值补全的效应大部分消失了。</strong>各自区域上六个主效应全部显著;公共区域上只剩单帧鱼眼一条({EC1['AbsRel']['fisheye']['mean']:+.4f} [{EC1['AbsRel']['fisheye']['ci_lo']:+.4f}, {EC1['AbsRel']['fisheye']['ci_hi']:+.4f}]),单帧透视 {EC1['AbsRel']['persp']['mean']:+.4f}、8 帧鱼眼 {EC8['AbsRel']['fisheye']['mean']:+.4f}、8 帧透视 {EC8['AbsRel']['persp']['mean']:+.4f} 全部跨零(8 帧透视的点估计甚至是补全更差)。这与上一节测到的边界带一致:补全改善的是黑区边界附近 16 px 的像素,而不是画面内部。交互项仍不显著({EC1['AbsRel']['interaction']['mean']:+.4f} / {EC8['AbsRel']['interaction']['mean']:+.4f})。</p>
 </section>
 """)
 
@@ -324,8 +401,18 @@ def main():
 </tbody></table></div>
 <p><strong>在鱼眼上,真值补全让位姿显著变差</strong>:AUC@30 {a8f['mean']:+.3f},旋转误差 {r8f['mean']:+.2f}°,平移方向误差 {t8f['mean']:+.2f}°,ATE {e8f['mean']*100:+.1f} cm,四条 CI 都不含零。在透视上,AUC@30、旋转、ATE 都跨零,只有平移方向误差显著变差({t8p['mean']:+.2f}°)。旋转误差的交互项显著({r8i['mean']:+.2f}° [{r8i['ci_lo']:+.2f}, {r8i['ci_hi']:+.2f}]),方向是「鱼眼上的补全比透视上的补全更伤位姿」。</p>
 <p>一个与数据一致的解释(它是解释,不是测量):③ 的四角内容虽然是真实场景,却被放在 θ &gt; θ<sub>max</sub> 的<strong>延拓 KB4 投影</strong>下——一个真实镜头不存在的成像方式。对深度头这是「更多有纹理的上下文」,所以有用;对相机头这是「一个比任何训练过的镜头都更宽、畸变曲线在边缘处被人为延伸的镜头」,所以有害。④ 的四角内容是真实针孔投影,于是既不帮也不伤。<strong>无论哪种解释,结论都一样:深度的收益不是通过修好相机得到的。</strong></p>
+<h3>⑤ 减 其它格子,位姿(按窗口配对,n = 12)</h3>
+<div class="scroll"><table>
+<thead><tr><th>8 帧</th>{xhead}</tr></thead>
+<tbody>
+<tr><td>AUC@30(正 = ⑤ 更好)</td>{xrows(XO8,'auc30','{:+.3f}')}</tr>
+<tr><td>旋转误差(负 = ⑤ 更好)</td>{xrows(XO8,'rot_err_deg','{:+.2f}°')}</tr>
+<tr><td>平移方向误差(负 = ⑤ 更好)</td>{xrows(XO8,'trans_err_deg','{:+.2f}°')}</tr>
+<tr><td>ATE(负 = ⑤ 更好)</td>{xrows(XO8,'ate_m','{:+.4f} m')}</tr>
+</tbody></table></div>
+<p><strong>位姿上 ⑤ 的差距是另一个量级。</strong>⑤ 的 AUC@30 = {P8['persp_crop']['auc30']:.3f},其它四格 {min(P8[st]['auc30'] for st in CROP_VS):.2f}–{max(P8[st]['auc30'] for st in CROP_VS):.2f};ATE {P8['persp_crop']['ate_m']*100:.1f} cm 对 {min(P8[st]['ate_m'] for st in CROP_VS)*100:.1f}–{max(P8[st]['ate_m'] for st in CROP_VS)*100:.1f} cm;平移方向误差 {P8['persp_crop']['trans_err_deg']:.1f}° 对 {min(P8[st]['trans_err_deg'] for st in CROP_VS):.1f}–{max(P8[st]['trans_err_deg'] for st in CROP_VS):.1f}°。四个配对差全部显著。推断 FoV 也是五格里唯一接近真值的:⑤ 读 {F1['persp_crop']['mean']:.1f}°,真值 {F1['persp_crop']['gt']:.1f}°,误差 {F1['persp_crop']['abs_err']:.1f}°;②/④ 的误差是 {F1['persp_masked']['abs_err']:.0f}° 左右。VGGT-Omega 的相机头对一张 107° 的干净针孔图是<em>能</em>标定的,对 125° 的不能——无论四角是黑的还是真的。这就是「补全能不能恢复可标定性」的答案:不能,因为丢掉可标定性的不是黑区,是视场。</p>
 <div class="wide"><img src="{b64(os.path.join(FIG,'trajectories.png'))}" alt="相机轨迹">
-<div class="cap">12 个窗口的相机中心轨迹:黑色为真值,彩色为四格的预测经 Sim(3) 对齐后的结果,画在各窗口的主轴坐标系里(横轴沿路径、纵轴横向,单位米,<strong>纵轴被放大</strong>)。图例给出该窗口的 AUC@30 / ATE / 平均旋转误差。窗口 06、08、10 是所有格子都难的窗口(装饰序列 seq132 与 seq136 的转弯段);差别在格子之间很小,在窗口之间很大——这就是为什么必须按窗口聚类。</div></div>
+<div class="cap">12 个窗口的相机中心轨迹:黑色为真值,彩色为五格的预测经 Sim(3) 对齐后的结果,画在各窗口的主轴坐标系里(横轴沿路径、纵轴横向,单位米,<strong>纵轴被放大</strong>)。图例给出该窗口的 AUC@30 / ATE / 平均旋转误差。窗口 06、08、10 是所有格子都难的窗口(装饰序列 seq132 与 seq136 的转弯段);差别在格子之间很小,在窗口之间很大——这就是为什么必须按窗口聚类。</div></div>
 </section>
 """)
 
@@ -342,11 +429,11 @@ def main():
         i = w["index"]
         seq = w["group"].rsplit("_w", 1)[0].replace("Apartment_release_", "")
         panels.append(f"""<div class="wide" id="w{i:02d}"><img src="{b64(os.path.join(FIG, f'panels_w{i:02d}.jpg'))}" alt="窗口 {i:02d} 定性面板">
-<div class="cap">窗口 {i:02d} · {seq} · 第一帧 {os.path.basename(w['first_frame'])}。每行一个格子:输入 | 单帧预测 | 单帧 AbsRel 图 | 8 帧预测 | 8 帧 AbsRel 图 | 渲染真值。同投影的两行在相同像素上评分;灰色不评分。误差图下方的数字是<strong>这一帧</strong>的 AbsRel / δ<sub>1</sub>。</div></div>""")
+<div class="cap">窗口 {i:02d} · {seq} · 第一帧 {os.path.basename(w['first_frame'])}。每行一个格子:输入 | 单帧预测 | 单帧 AbsRel 图 | 8 帧预测 | 8 帧 AbsRel 图 | 渲染真值(各自区域)。同投影的两行在相同像素上评分;⑤ 在整幅上评分;灰色不评分。误差图下方的数字是<strong>这一帧</strong>的 AbsRel / δ<sub>1</sub>。</div></div>""")
     A(f"""
 <section id="qual">
 <p class="eyebrow">定性结果</p>
-<h2>12 个窗口,每窗第一帧,四格并排</h2>
+<h2>12 个窗口,每窗第一帧,五格并排</h2>
 <p>下表是每个窗口 8 帧的均值(深度)和整窗的 AUC@30(位姿),点击窗口号跳到对应面板。深度上,补全更好的窗口数:单帧鱼眼 {W['single/fisheye']['absrel_better']}/12、单帧透视 {W['single/persp']['absrel_better']}/12、8 帧鱼眼 {W['8-frame/fisheye']['absrel_better']}/12、8 帧透视 {W['8-frame/persp']['absrel_better']}/12。位姿上,补全的 AUC@30 更低的窗口数:鱼眼 {W['8-frame/fisheye']['auc_lower']}/12、透视 {W['8-frame/persp']['auc_lower']}/12(透视另有 {W['8-frame/persp']['auc_equal']} 窗持平)。</p>
 <div class="scroll"><table class="tight">
 <thead><tr><th rowspan="2">窗口</th><th colspan="4" class="n">AbsRel · 单帧(8 帧均值)</th><th colspan="4" class="n">AbsRel · 8 帧</th><th colspan="4" class="n">AUC@30 · 8 帧</th></tr>
@@ -390,9 +477,10 @@ def main():
 <p class="eyebrow">出处与复现</p>
 <h2>每个数字来自哪个文件</h2>
 <dl class="kv">
-<dt>评估代码</dt><dd><code>finetune/eval/exp_rendered.py</code> @ <code>{PROV['eval_commit']}</code>(分支 <code>{PROV['eval_branch']}</code>)。深度路径与上一版完全相同(四格 AbsRel 逐位一致),位姿与 FoV 评分是本次新增;<code>tests/test_pose_metrics.py</code> 用合成位姿钉住 Sim(3) 不变性、已知旋转角、坍缩预测不得记满分。</dd>
-<dt>运行</dt><dd>{PROV['run_dir']} · 完成于 {PROV['run_finished']} · {PROV['env']} · {PROV['run_minutes']}。</dd>
-<dt>结果文件</dt><dd><code>research/fisheye-inpaint/data/final/results.json</code>(逐帧指标、逐窗位姿、预测/真值外参)、<code>report.txt</code>(评估器自己打印的报告,本文所有 CI 与之逐条核对)、<code>example_meta_seq131_frame_0830.json</code>(一帧的渲染元数据)。</dd>
+<dt>评估代码</dt><dd><code>finetune/eval/exp_rendered.py</code> @ <code>{PROV['eval_commit']}</code>(分支 <code>{PROV['eval_branch']}</code>)。位姿/FoV 评分与 <code>--region</code> 是本轮新增;<code>tests/test_pose_metrics.py</code> 用合成位姿钉住 Sim(3) 不变性、已知旋转角、坍缩预测不得记满分,<code>tests/test_rendered_regions.py</code> 钉住评分区域不会漏进填充。</dd>
+<dt>⑤ 的生成</dt><dd><code>adt_egocentric/add_persp_crop.py</code> @ <code>{PROV['crop_script_commit']}</code>:复用渲染器同一套射线/重采样/深度代码,只换焦距;逐帧断言中心像素深度与 ④ 逐位相等、裁剪足迹落在各网格有效区内(泄漏 &lt; 0.1%)、KB4 指纹一致。</dd>
+<dt>运行</dt><dd>{PROV['run_dir']} · 完成于 {PROV['run_finished']} · {PROV['env']} · {PROV['run_minutes']}。两次运行只差 <code>--region</code>;位姿逐窗逐位相等。</dd>
+<dt>结果文件</dt><dd><code>research/fisheye-inpaint/data/final/own/</code> 与 <code>common/</code> 各含 <code>results.json</code>(逐帧指标、逐窗位姿、预测/真值外参)与 <code>report.txt</code>(评估器自己打印的报告,本文的 CI 与之逐条核对)、<code>example_meta_seq131_frame_0830.json</code>(一帧的渲染元数据)。</dd>
 <dt>渲染</dt><dd><code>{PROV['renderer_script']}</code> @ <code>{PROV['renderer_commit']}</code> → <code>{PROV['render_root']}</code>;manifest md5 <code>{PROV['manifest_md5']}</code>;KB4 指纹 <code>{meta['kb4_fingerprint']}</code>;光照 <code>{meta['lights_json']}</code>,{meta['n_lights_used']} 盏,曝光 {meta['view_exposure']} EV,{meta['cycles_samples']} 采样,ISP 开,ERP {meta['eq_w']}×{meta['eq_h']},输出 {meta['output_size']} px,超采样 {meta['supersample']}×。</dd>
 <dt>模型</dt><dd><code>{PROV['ckpt']}</code>,md5 <code>{PROV['ckpt_md5']}</code>。</dd>
 <dt>图与文</dt><dd><code>research/fisheye-inpaint/make_final_figures.py</code> 从 <code>results.json</code> 与评估器存盘的 <code>qual/raw/*.npz</code> 合成全部图与 <code>numbers.json</code>(它会重算 bootstrap,并在与 report.txt 不一致时拒绝输出);<code>build_final_html.py</code> 从 <code>numbers.json</code> 生成本页。页内没有手抄的数字。</dd>
@@ -403,15 +491,18 @@ R=/user/f.zhang2/projects/adt_egocentric/out/oracle_set_lit
 CUDA_VISIBLE_DEVICES=0 python -m finetune.eval.exp_rendered \\
   --render-root $R --manifest $R/manifest.json \\
   --vggt-checkpoint checkpoints/VGGT-Omega-1B-512/model.pt \\
-  --out runs/ev_final --seq-lens 1,8 \\
-  --settings fisheye_full,fisheye_masked,persp_full,persp_masked,\\
+  --out runs/ev5_own --seq-lens 1,8 --region own \\
+  --settings fisheye_full,fisheye_masked,persp_full,persp_masked,persp_crop,\\
 fisheye_fill_replicate,persp_fill_replicate,fisheye_fill_mean,persp_fill_mean,\\
 fisheye_fill_chanmean,persp_fill_chanmean,fisheye_fill_telea,persp_fill_telea,\\
 fisheye_fill_ns,persp_fill_ns
+CUDA_VISIBLE_DEVICES=0 python -m finetune.eval.exp_rendered ... --out runs/ev5_crop \\
+  --region crop --settings fisheye_full,fisheye_masked,persp_full,persp_masked,persp_crop
+# (⑤ itself: cd adt_egocentric && python add_persp_crop.py --root $R)
 
 # Mac
-python research/fisheye-inpaint/make_final_figures.py --run &lt;copy of runs/ev_final&gt; \\
-  --out research/fisheye-inpaint/to_human/final
+python research/fisheye-inpaint/make_final_figures.py --run &lt;runs/ev5_own&gt; \\
+  --run-crop &lt;runs/ev5_crop&gt; --out research/fisheye-inpaint/to_human/final
 python research/fisheye-inpaint/build_final_html.py</pre>
 </section>
 """)
@@ -430,7 +521,7 @@ python research/fisheye-inpaint/build_final_html.py</pre>
 <h3>仍未解决</h3>
 <ul class="plain">
 <li>「均值填充优于黑色」这条记忆在文献中仍无出处(五路检索)。本文的数据说明它<strong>依赖投影域</strong>——透视图上成立,原始鱼眼上比黑差得多——但这不是出处,不要引用。</li>
-<li>与训练式方案(Fisheye3R 标定 token、RayTun3R 位置编码)的对照表仍开放;它现在要回答的问题是:训练换来的增量是否明显大于 0.004 AbsRel,以及它们能否修好本文证明补全修不好的 FoV。</li>
+<li>与训练式方案(Fisheye3R 标定 token、RayTun3R 位置编码)的对照表仍开放;它现在要回答的问题是:它们能否在保留整个成像锥的同时,达到 ⑤ 丢掉外圈 17% 立体角换来的相机精度(AUC@30 {P8['persp_crop']['auc30']:.2f} vs 0.75)。这才是比「补不补」值得投入的问题。</li>
 </ul>
 </section>
 

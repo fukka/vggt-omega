@@ -38,9 +38,11 @@ CELLS = OrderedDict([
     ("persp_masked",   ("②", "RECT · BLACK", "矫正透视 · 黑楔形")),
     ("fisheye_full",   ("③", "RAW · FILLED", "原始鱼眼 · 真值补全")),
     ("persp_full",     ("④", "RECT · FILLED", "矫正透视 · 真值补全")),
+    ("persp_crop",     ("⑤", "RECT · CROP", "内接矫正 · 天然无黑区")),
 ])
 COLORS = {"fisheye_masked": "#98362f", "persp_masked": "#a86a15",
-          "fisheye_full": "#33704a", "persp_full": "#0b6b6e"}
+          "fisheye_full": "#33704a", "persp_full": "#0b6b6e", "persp_crop": "#5b4a8a"}
+CROP_VS = ("persp_masked", "persp_full", "fisheye_masked", "fisheye_full")
 POSE_KEYS = ("rot_err_deg", "trans_err_deg", "rra15", "rta15", "auc30", "ate_m", "sim3_scale")
 
 
@@ -97,6 +99,25 @@ def paired_effects(res, metric, unit="frame"):
     return out
 
 
+def crop_effects(res, metric, unit="frame"):
+    """persp_crop - other, per frame (clustered by window) or per window (pose)."""
+    def vals(st):
+        r = res.get(st) or {}
+        if unit == "frame":
+            return {k: v[metric] for k, v in (r.get("_per_frame_metrics") or {}).items()}, r.get("_group_of") or {}
+        return {k: v[metric] for k, v in (r.get("_per_window") or {}).items()}, r.get("_window_group") or {}
+    a, ga = vals("persp_crop")
+    out = {}
+    for st in CROP_VS:
+        b, _ = vals(st)
+        cb = cluster_bootstrap(a, b, ga)
+        if cb is None:
+            continue
+        cb["per_group"] = _per_group_means({k: a[k] - b[k] for k in set(a) & set(b)}, ga)
+        out[st] = cb
+    return out
+
+
 def _per_group_means(d, group_of):
     g = OrderedDict()
     for k in sorted(d):
@@ -119,6 +140,18 @@ def check_against_report(results, report_txt):
             if any(abs(g - w) > 5e-5 for g, w in zip(got, want)):
                 raise SystemExit(f"bootstrap mismatch vs report.txt [{mode}] {key}: {got} vs {want}")
             n += 1
+    # The crop-vs-others lines, if present.
+    blk = re.compile(r"^\[(\S+)\] inscribed crop.*?(?=^\[|\Z)", re.S | re.M)
+    line2 = re.compile(r"^\s+vs (\S+)\s+([+-]\d\.\d{4})\s+CI\(win\) \[([+-]\d\.\d{4}), ([+-]\d\.\d{4})\]", re.M)
+    for b in blk.finditer(report_txt):
+        mode = b.group(1)
+        ce = crop_effects(results[mode], "AbsRel")
+        for m in line2.finditer(b.group(0)):
+            got = (ce[m.group(1)]["mean"], ce[m.group(1)]["ci_lo"], ce[m.group(1)]["ci_hi"])
+            want = tuple(float(x) for x in m.group(2, 3, 4))
+            if any(abs(g - w) > 5e-5 for g, w in zip(got, want)):
+                raise SystemExit(f"crop bootstrap mismatch vs report.txt [{mode}] {m.group(1)}: {got} vs {want}")
+            n += 1
     if n < 6:
         raise SystemExit(f"only {n} report lines checked -- report.txt format changed?")
     return n
@@ -138,7 +171,7 @@ def _load_raw(raw_dir, setting, sl, wi):
 def fig_panels(raw_dir, res_by_mode, wi, out_img):
     """One window's first frame: for each cell, input | pred s1 | err s1 | pred s8 | err s8 | GT."""
     rows = list(CELLS)
-    fig, axes = plt.subplots(len(rows), 6, figsize=(18, 12.6), constrained_layout=True)
+    fig, axes = plt.subplots(len(rows), 6, figsize=(18, 3.15 * len(rows)), constrained_layout=True)
     col_titles = ["模型输入", "预测深度 · single", "AbsRel 图 · single",
                   "预测深度 · 8-frame", "AbsRel 图 · 8-frame", "真值深度(渲染 Z-pass)"]
     fdir = None
@@ -174,7 +207,7 @@ def fig_panels(raw_dir, res_by_mode, wi, out_img):
                 a.set_title(t, fontsize=11.5, loc="left")
     fig.colorbar(im, ax=axes[:, 4].tolist(), fraction=0.03, pad=0.01, shrink=.6, label="AbsRel(0–0.3 截断)")
     seq = os.path.basename(os.path.dirname(fdir)).replace("Apartment_release_", "")
-    fig.suptitle(f"窗口 {wi:02d} · {seq}/{os.path.basename(fdir)} · 四格同一帧;评分区以外为灰,四格评分区相同(按各自投影)",
+    fig.suptitle(f"窗口 {wi:02d} · {seq}/{os.path.basename(fdir)} · 五格同一帧;评分区以外为灰;①③ 同区、②④ 同区、⑤ 全幅(各自区域)",
                  fontsize=13, x=0.005, ha="left")
     fig.savefig(out_img, dpi=62, facecolor="white", pil_kwargs={"quality": 86, "optimize": True})
     plt.close(fig)
@@ -182,12 +215,12 @@ def fig_panels(raw_dir, res_by_mode, wi, out_img):
 
 
 def fig_inputs(raw_dir, wi, out_png):
-    fig, axes = plt.subplots(1, 4, figsize=(16, 4.4))
+    fig, axes = plt.subplots(1, len(CELLS), figsize=(4 * len(CELLS), 4.4))
     for a, st in zip(axes, CELLS):
         z = _load_raw(raw_dir, st, 1, wi)
         a.imshow(z["rgb"]); cid, cname, zh = CELLS[st]
         blk = float((z["rgb"].max(-1) == 0).mean()) * 100
-        a.set_title(f"{cid} {cname}\n{zh} · 纯黑像素 {blk:.2f}% · 评分区 {z['mask'].mean()*100:.1f}%", fontsize=10.5)
+        a.set_title(f"{cid} {cname}\n{zh}\n纯黑像素 {blk:.2f}% · 评分区 {z['mask'].mean()*100:.1f}%", fontsize=9.5)
         a.set_xticks([]); a.set_yticks([])
     fig.tight_layout()
     fig.savefig(out_png, dpi=72, bbox_inches="tight", facecolor="white",
@@ -259,7 +292,7 @@ def fig_trajectories(res8, out_png, max_windows=12):
 
 
 def fig_fov(res1, res8, out_png):
-    fig, axes = plt.subplots(1, 2, figsize=(13, 4.2), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(14.5, 4.4), sharey=True)
     rng = np.random.default_rng(0)
     for ax, (res, lab) in zip(axes, [(res1, "single-frame"), (res8, "8-frame")]):
         for i, st in enumerate(CELLS):
@@ -270,8 +303,11 @@ def fig_fov(res1, res8, out_png):
             ax.text(i, f.max() + 1.2, f"{f.mean():.1f}°±{f.std():.1f}", ha="center", fontsize=9)
         gt = res["persp_full"]["gt_fov_h_deg"]
         ax.axhline(gt, color="#a86a15", ls="--", lw=1.2)
-        ax.text(3.45, gt + .6, f"透视真值 {gt:.1f}°", ha="right", fontsize=9, color="#a86a15")
-        ax.set_xticks(range(4)); ax.set_xticklabels([f"{CELLS[s][0]} {CELLS[s][1]}" for s in CELLS], fontsize=9)
+        ax.text(len(CELLS) - .55, gt + .6, f"②④ 真值 {gt:.1f}°", ha="right", fontsize=9, color="#a86a15")
+        gtc = res["persp_crop"]["gt_fov_h_deg"]
+        ax.axhline(gtc, color=COLORS["persp_crop"], ls=":", lw=1.2)
+        ax.text(-0.45, gtc + .6, f"⑤ 真值 {gtc:.1f}°", ha="left", fontsize=9, color=COLORS["persp_crop"])
+        ax.set_xticks(range(len(CELLS))); ax.set_xticklabels([f"{CELLS[s][0]} {CELLS[s][1]}" for s in CELLS], fontsize=8.5)
         ax.set_title(f"相机头推断的水平 FoV · {lab}", fontsize=11, loc="left"); ax.grid(axis="y", alpha=.3)
     axes[0].set_ylabel("FoV_h (deg)")
     fig.tight_layout()
@@ -310,16 +346,60 @@ def fig_effects(effects, out_png):
     plt.close(fig)
 
 
+def fig_crop_effects(numbers, out_png):
+    """persp_crop minus each other arm, per window, own vs common region, depth and pose."""
+    panels = [("crop_effects_own", "single", "AbsRel", "Δ AbsRel · 单帧 · 各自区域"),
+              ("crop_effects_common", "single", "AbsRel", "Δ AbsRel · 单帧 · 公共区域(⑤ 的)"),
+              ("crop_effects_own", "8-frame", "AbsRel", "Δ AbsRel · 8 帧 · 各自区域"),
+              ("crop_effects_common", "8-frame", "AbsRel", "Δ AbsRel · 8 帧 · 公共区域"),
+              ("crop_effects_own", "8-frame", "auc30", "Δ AUC@30 · 8 帧(正 = ⑤ 更好)")]
+    fig, axes = plt.subplots(1, len(panels), figsize=(4.2 * len(panels), 4.3))
+    for ax, (key, mode, metric, title) in zip(axes, panels):
+        e = numbers[key][mode][metric]
+        for i, st in enumerate(CROP_VS):
+            if st not in e:
+                continue
+            cb = e[st]
+            pg = np.array(list(cb["per_group"].values()))
+            col = COLORS[st]
+            ax.scatter(np.full(len(pg), i) + np.linspace(-.15, .15, len(pg)), pg, s=14, color=col, alpha=.5)
+            ax.errorbar([i], [cb["mean"]], yerr=[[cb["mean"] - cb["ci_lo"]], [cb["ci_hi"] - cb["mean"]]],
+                        fmt="s", color=col, ms=6.5, capsize=4, lw=2, zorder=5)
+            fmt = "{:+.3f}" if metric == "auc30" else "{:+.4f}"
+            ax.text(i + 0.18, cb["mean"], fmt.format(cb["mean"]) + ("*" if cb["excludes_zero"] else ""),
+                    ha="left", va="center", fontsize=8.5, color=col, fontweight="bold")
+        ax.axhline(0, color="k", lw=.8); ax.set_xlim(-0.5, len(CROP_VS) - 0.2)
+        ax.set_xticks(range(len(CROP_VS))); ax.set_xticklabels([f"⑤−{CELLS[s][0]}" for s in CROP_VS], fontsize=9)
+        ax.set_title(title, fontsize=10, loc="left"); ax.grid(axis="y", alpha=.3)
+    fig.suptitle("⑤ 内接裁剪 减 其它格子:点 = 一个窗口,方块 = 均值,须 = 按窗口聚类 95% CI,* = 不含零;深度负 = ⑤ 更好",
+                 fontsize=11, x=0.005, ha="left")
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=80, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
 # --------------------------------------------------------------------------- #
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--run", required=True)
+    ap.add_argument("--run", required=True, help="the --region own run (all settings)")
+    ap.add_argument("--run-crop", required=True, help="the --region crop run (five arms)")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
     results = json.load(open(os.path.join(args.run, "results.json")))
     report = open(os.path.join(args.run, "report.txt")).read()
     n = check_against_report(results, report)
-    print(f"[figures] bootstrap reproduces {n} report lines")
+    results_c = json.load(open(os.path.join(args.run_crop, "results.json")))
+    report_c = open(os.path.join(args.run_crop, "report.txt")).read()
+    n += check_against_report(results_c, report_c)
+    print(f"[figures] bootstrap reproduces {n} report lines across both regimes")
+    # The two regimes must be the same frames, the same model, the same
+    # predictions: pose (region-independent) must agree to the bit.
+    for mode in results_c:
+        for st in results_c[mode]:
+            if "_per_window" in results_c[mode][st]:
+                for wk, v in results_c[mode][st]["_per_window"].items():
+                    assert abs(v["auc30"] - results[mode][st]["_per_window"][wk]["auc30"]) < 1e-12, (mode, st, wk)
+    print("[figures] pose identical across regimes -- same predictions, only the grading differs")
     os.makedirs(args.out, exist_ok=True)
     raw = os.path.join(args.run, "qual", "raw")
     res1, res8 = results["single"], results["8-frame"]
@@ -356,6 +436,19 @@ def main():
             rows["black"] = {"AbsRel": float(np.mean(list(blk.values()))), "gain": 0.0, "pct": 0.0, "ci_lo": 0.0, "ci_hi": 0.0}
             lad[proj] = {"span": span, "rows": rows}
         numbers["ladder"][mode] = lad
+    # ---- the inscribed crop: vs the others, own and common region; the 2x2
+    # effects and all five cells under the common region.
+    numbers["crop_effects_own"], numbers["crop_effects_common"] = {}, {}
+    numbers["cells_common"], numbers["effects_common"] = {}, {}
+    for mode in results:
+        numbers["crop_effects_own"][mode] = {m: crop_effects(results[mode], m) for m in ("AbsRel", "delta1", "RMSE")}
+        numbers["crop_effects_common"][mode] = {m: crop_effects(results_c[mode], m) for m in ("AbsRel", "delta1", "RMSE")}
+        if mode != "single":
+            for m in ("auc30", "rot_err_deg", "trans_err_deg", "ate_m", "rra15", "rta15"):
+                numbers["crop_effects_own"][mode][m] = crop_effects(results[mode], m, unit="window")
+        numbers["cells_common"][mode] = {st: {k: results_c[mode][st][k] for k in ("AbsRel", "RMSE", "delta1", "n_frames", "n_groups", "n_valid")}
+                                         for st in results_c[mode]}
+        numbers["effects_common"][mode] = {m: paired_effects(results_c[mode], m) for m in ("AbsRel", "delta1", "RMSE")}
     # multi-frame minus single, per setting
     numbers["multi_vs_single"] = {}
     for st in res1:
@@ -427,6 +520,7 @@ def main():
     fig_trajectories(res8, os.path.join(args.out, "trajectories.png"))
     fig_fov(res1, res8, os.path.join(args.out, "fov.png"))
     fig_effects(numbers["effects"], os.path.join(args.out, "effects.png"))
+    fig_crop_effects(numbers, os.path.join(args.out, "crop_effects.png"))
     with open(os.path.join(args.out, "numbers.json"), "w") as fh:
         json.dump(numbers, fh, indent=1, ensure_ascii=False)
     print(f"[figures] wrote {len(wkeys)} panel figures + inputs/trajectories/fov/effects + numbers.json -> {args.out}")
