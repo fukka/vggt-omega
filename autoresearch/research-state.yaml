@@ -468,6 +468,22 @@ h17_roll_prior:
         independently. Per-sequence spread is large (seq145 29.6% of frames
         beyond 10 deg vs decoration_seq132 0.8%), so it is activity-dependent.
         Side result: confirms UPRIGHT_K=3 from geometry rather than from a loss.
+      resolved_2026_09_08: >
+        The recorded uncertainty ("the -2.7 deg signed median could be a real
+        head tilt or a constant extrinsics offset, and this measurement cannot
+        tell them apart") was itself wrong. A constant offset is per DEVICE, so
+        it would be identical on every M1292 sequence. The signed median ranges
+        +0.44 to -7.50 deg across 19 sequences on that one device, sd 2.38 — an
+        8-degree spread a calibration constant cannot produce. Hypothesis dead.
+        The structure is a contiguous BLOCK (seq142-148 sit 4-5 deg further
+        tilted), which points at a per-session cause: a different wearer, or the
+        device re-seated between sessions. seq144/145, flagged earlier for
+        having 26-30% of frames beyond 10 deg, are inside that block, so the
+        "activity-dependent" reading was close but not right — it is a
+        per-session mounting offset with ordinary head motion on top.
+        Practical value: none. A per-session constant de-roll is cheap and would
+        remove 5-7 deg on a third of the sequences, but the clean curve prices
+        10 deg at +2%, so 6 deg is worth under 1%.
       artefacts: [results/autoresearch-h17-roll/roll_distribution.json]
     h17_2_backbones:
       status: done

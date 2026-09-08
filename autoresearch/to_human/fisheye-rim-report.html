@@ -843,10 +843,49 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       趴在桌上、躺着、钻到车底、骑行、体育运动 —— 这些场景本页一个都没测到，而它们正是会跑出 ±20° 的那些。
       所以这条结论的正确形式是：<strong>ADT 这类家务型 egocentric 数据落在模型的容忍带内；这不能外推到 egocentric 全体。</strong>
     </p>
+    <h3 style="margin-top:22px">那个 −2.7° 的偏置是什么？（后来查清了）</h3>
     <p>
-      <strong>一个还没解释的细节</strong>：分布不是对称的，有符号中位是 <span class="mono">−2.7°</span>，质量集中在 −10°…0°。
-      这可能是佩戴者真实的头部偏置，也可能是设备外参里残留的一个常数偏移 ——
-      <strong>一个常数偏移在这次测量里无法和真实偏置区分</strong>。它小到不影响任何结论（10° 才值 +2%），但不该当成"人的头是歪的"来讲。
+      分布不是对称的，有符号中位是 <span class="mono">−2.7°</span>。本节最初写的是
+      "<em>这可能是真实头部偏置，也可能是外参里的常数偏移，这次测量无法区分</em>"。
+      <strong>那句话是错的 —— 能区分，而且所需的数据就在同一个文件里。</strong>
+    </p>
+    <p>
+      常数外参偏移住在 <code>T_device_camera</code> 里，它是<strong>按设备</strong>的：
+      同一台 M1292 录的每个序列都该得到<em>同一个</em>偏置。而物理上的倾斜（佩戴者的习惯，或这一场眼镜怎么架在头上）是<strong>按场次</strong>的，应该会变。
+    </p>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>逐序列的<strong>有符号</strong>中位滚转，<strong>全部来自同一台设备 M1292</strong>。</caption>
+      <thead><tr><th>区块</th><th>序列</th><th>有符号中位</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">seq131–141</td><td class="num">9 个</td><td class="num">−2.74 … +0.44</td></tr>
+        <tr class="flip"><td class="mono"><b>seq142–148</b></td><td class="num">7 个</td><td class="num bad"><b>−4.65 … −7.50</b></td></tr>
+        <tr><td class="mono">seq149 / 150 / dec132</td><td class="num">3 个</td><td class="num">−2.16 … −3.83</td></tr>
+        <tr><td colspan="2"><b>同一台设备上合计</b></td><td class="num"><b>均值 −3.27，标准差 2.38，跨度 8°</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col" style="margin-top:16px">
+    <p>
+      <strong>同一台设备上跨度 8 度 —— 常数标定偏移做不到这件事。这个假设死了。</strong>
+      而且它也不是逐序列的随机噪声：<strong>seq142–148 是一个连续区块</strong>，整体比之前的序列多倾斜 4–5°。
+      这个形状指向<strong>按场次</strong>的原因 —— 换了佩戴者，或者设备在两次录制之间被重新戴过 —— 而不是逐帧的行为。
+    </p>
+    <p>
+      这也让上面那句"活动内容决定分布"更准确了一点：被点名的 seq144、seq145（26–30% 的帧超过 10°）<strong>正落在那个区块里</strong>。
+      所以真正在变的是<strong>按场次的佩戴/姿态偏置</strong>，超过 10° 的那些帧是这个偏置<em>加上</em>普通的头部运动。
+    </p>
+    <div class="note">
+      <span class="eyebrow">实用价值：在这份数据上是零 —— 这一点也要说</span>
+      <p>
+        <strong>按场次</strong>做一次常数去旋转，比逐帧重力对齐便宜得多，而且能在三分之一的序列上抹掉一个系统性的 5–7°。
+        但 §02 那条干净曲线给 10° 的定价是 <strong>+2%</strong>，所以 6° 值不到 1%。
+        <strong>这条结论关掉了一个不确定项、解释了一个模式，但不买精度。</strong>
+      </p>
+    </div>
+    <p style="color:var(--ink-faint)">
+      两个 LiteOffice 序列（另一台设备 61283）是 +0.43 和 −2.81，均值 −1.19，和上面这幅图景一致 —— 但两个序列本身说明不了什么。
     </p>
     <div class="note warn">
       <span class="eyebrow">这一节改变了下一步的排序</span>

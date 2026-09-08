@@ -1509,3 +1509,46 @@ mechanism, but it has not been checked here.
 **Testable when the box returns**, and cheap: score the same corrected
 predictions under `scale_only` and under a frozen affine. If the −12.9 / −7.3
 gap collapses, the difference was alignment, not correction.
+
+## H17.1 follow-up (CPU) — the −2.7° bias is not a calibration constant, and it comes in a block
+
+§02c recorded an uncertainty and left it: the roll distribution is not symmetric,
+signed median −2.7°, and *"a constant offset cannot be distinguished from a real
+head tilt by this measurement"*. That was wrong — it can, and the data to do it
+was already in the same JSON.
+
+A constant extrinsics offset lives in `T_device_camera`, which is **per device**.
+It would give one fixed bias on every sequence recorded with M1292. A physical
+tilt — the wearer's habit, or how the glasses happened to sit that session — is
+per session and should vary.
+
+Signed median roll per sequence, all on **the same device** (M1292):
+
+| block | sequences | signed median |
+|---|---|---|
+| seq131–141 | 9 sequences | −2.74 … +0.44 |
+| **seq142–148** | **7 sequences** | **−4.65 … −7.50** |
+| seq149, 150, dec132 | 3 | −2.16 … −3.83 |
+
+Mean −3.27°, **sd 2.38°, range +0.44 to −7.50 — an 8-degree spread within one
+device.** A calibration constant cannot do that. **The hypothesis is dead.**
+
+And it is not per-sequence noise either: **seq142–148 form a contiguous block**
+that sits 4–5° further tilted than everything before it. That shape points at a
+per-session cause — a different wearer, or the device re-seated between recording
+sessions — not at per-frame behaviour.
+
+This also sharpens §02c's other statement. The sequences flagged there for having
+26–30% of frames beyond 10° (seq144, seq145) are **inside that block**. So the
+"activity-dependent" reading was close but not right: what varies is a
+**per-session mounting/posture offset**, and the frames beyond 10° are that
+offset plus ordinary head motion on top.
+
+**Practical consequence: none, on this data — and that is worth saying.** A
+per-session constant de-roll is much cheaper than per-frame gravity alignment and
+would remove a systematic 5–7° on a third of the sequences. But §02's clean curve
+prices 10° at +2%, so 6° is worth well under 1%. The finding closes an
+uncertainty and explains a pattern; it does not buy accuracy.
+
+The two LiteOffice sequences (device 61283) sit at +0.43 and −2.81, mean −1.19 —
+consistent with the same picture, but two sequences say nothing on their own.

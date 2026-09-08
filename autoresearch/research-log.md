@@ -1110,3 +1110,31 @@ Section 03c of the report carried the wrong reason for two ticks and now carries
 the measured one plus the puzzle. The lesson is narrow and worth keeping: **a
 caveat I raise is a claim like any other, and running an experiment because of
 it is not the same as checking it.**
+
+## 2026-09-08 — thirteenth tick down; audited my own caveats and one of them was wrong
+
+Acting on last tick's lesson — a caveat I raise is a claim like any other — I
+went back over the uncertainties recorded this session and asked which are
+checkable without the box. One was, and it turned out to be wrong.
+
+§02c said the −2.7° signed median in the roll distribution "could be a real head
+tilt or a constant extrinsics offset, and this measurement cannot tell them
+apart". It can. A constant offset lives in `T_device_camera` and is **per
+device**, so it would be identical on every M1292 sequence. The signed median
+ranges **+0.44 to −7.50 across 19 sequences on that one device**, sd 2.38 — an
+8-degree spread a calibration constant cannot produce. Hypothesis dead, using
+data that was already in the same JSON.
+
+The structure is better than "it varies": **seq142–148 form a contiguous block**
+sitting 4–5° further tilted than everything before it. That is a per-session
+signature — a different wearer, or the device re-seated — not per-frame
+behaviour. And it sharpens the other §02c claim: seq144/145, flagged there for
+having 26–30% of frames beyond 10°, are **inside that block**, so what varies is
+a per-session mounting offset with ordinary head motion on top, not activity as
+such.
+
+Reported the practical value honestly, which is **nil**: a per-session constant
+de-roll is far cheaper than per-frame alignment and would remove 5–7° on a third
+of the sequences, but §02's curve prices 10° at +2%, so 6° is worth under 1%.
+The finding closes an uncertainty and explains a pattern. It does not buy
+accuracy, and saying so is the point.
