@@ -1961,3 +1961,64 @@ rule_when_a_curve_looks_odd_near_its_origin:
     than measuring something new: H40 corrected H39b's label by noticing what
     its two arms' residual rolls actually were, and H41 corrected H32 by putting
     the zero where zero is.
+
+# ------------------------------------------------- H42 resolved 2026-09-08
+h42_curve_four_backbones:
+  status: "B1, B2, B3 all PASS — and two published claims move"
+  artifacts: autoresearch/experiments/h42-curve-four-backbones/results/ (26 JSONs + summary.json)
+  analysis: autoresearch/experiments/h42-curve-four-backbones/analysis.md
+  curve_at_plus_minus_22:
+    da3_small: "-22: 1.307   +22: 1.354"
+    da3_large: "-22: 1.226   +22: 1.304"
+    vggt:      "-22: 1.093   +22: 1.023"
+    vggt_omega: "-22: 1.061  +22: 1.052"
+  b1_family_split_is_a_whole_curve: >
+    At +-22 deg the two families DO NOT OVERLAP: every DA3 value >= 1.226, every
+    VGGT value <= 1.093. H17.2's claim rested on one number per backbone on
+    seq136; it is now a statement about the entire curve on 13 recordings
+    against a gravity-aligned origin.
+  b2_second_loop_closure: >
+    vggt_omega's own curve predicts the null H39 found there: A_pred +2.52% vs
+    measured +0.56%, S_pred -0.21% vs -0.48%. H41 closed this loop with a STEEP
+    curve, H42 closes it with a FLAT one. Magnitudes are 1-3% against a
+    recording sd of several percent; sign and magnitude are all that is claimed.
+  b3_origin_correction_is_general: >
+    Every backbone bottoms out at residual 0 (vggt_omega at -2, inside the grid).
+    So H41's explanation of H32's dip is a property of THE REFERENCE, not of
+    da3:small.
+  WITHDRAWN_capacity_makes_roll_worse: >
+    H17.2 measured +52% (da3:large) vs +46% (da3:small) at 30 deg on seq136 and
+    concluded capacity makes roll robustness WORSE. Here da3:large is FLATTER on
+    both sides (1.226/1.304 vs 1.307/1.354), and H35 already had their
+    integrated costs identical (1.85 vs 1.80). Across all three: WITHIN THE DA3
+    FAMILY CAPACITY MAKES LITTLE DIFFERENCE EITHER WAY. The "more sensitive"
+    half is withdrawn; "changing the pretraining family buys 4x" is untouched
+    and now rests on whole curves.
+  ASYMMETRY_IS_MURKIER_NOW: >
+    Three of four backbones cost more at positive residual (matching H32/H33),
+    but VGGT INVERTS: 1.093 at -22 vs 1.023 at +22, where H33 had it 8/8 the
+    other way at +-30. Different angle, origin and construction, so it CANNOT be
+    adjudicated here and NO MECHANISM IS OFFERED. H32 found it, H33 could not
+    attribute it, H34 was void trying, and this is a fourth point that does not
+    line up. It is LESS CLEAN NOW than when H32 found it; nothing in the reports
+    should lean on it.
+  limits:
+    - "+-22 deg is the outer edge; frames reach 28."
+    - "Curves normalised per backbone, so they compare SHAPE, not accuracy."
+
+gotcha_reused_script_new_config:
+  symptom: >
+    A proven script pointed at a new model list hits a parameter it never
+    needed. residual_curve.py hardcoded weights="pretrained" because H41 only
+    ever ran da3:small; vggt_omega then tried torch.load("pretrained") and the
+    exception aborted main() before any output was written.
+  also_this_tick: "H40 imported `rot` from gravity_render.py, which does not have it (it lives in H38's derotate.py)."
+  rule: >
+    When a proven script is pointed at a new model, dataset or geometry, READ
+    ITS ARGUMENT LIST BEFORE LAUNCHING, not its results afterwards.
+
+phase_note_2026_09_08:
+  observation: >
+    Four experiments in a row (H39/H40 label corrections, H41, H42) have had a
+    previously published number moving as their main output. The line is in the
+    phase where RE-MEASURING is worth more than measuring.
