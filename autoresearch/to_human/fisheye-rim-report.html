@@ -4631,13 +4631,13 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 
   <div class="scroll">
     <table>
-      <caption>反射模型输入、再把答案反射回来的额外全图 AbsRel。13 条录像，20 帧，无滚转。</caption>
-      <thead><tr><th>backbone</th><th>镜像代价</th><th>sd</th><th>范围</th></tr></thead>
+      <caption>反射模型输入、再把答案反射回来的额外全图 AbsRel。13 条录像，20 帧，无滚转。<strong>数字已更正为「均值之比」</strong> —— 原先报的是「逐帧比值的均值」，而 §03t 和 §03w 都已写明后者不可引用。<strong>没有任何一个塌掉</strong>：对齐后 AbsRel 超过约 0.5 才算不可用，这里最高 0.412。</caption>
+      <thead><tr><th>backbone</th><th>镜像代价（<b>均值之比</b>）</th><th>绝对 AbsRel：正常 → 镜像</th><th>原先报的（比值均值）</th></tr></thead>
       <tbody>
-        <tr class="flip"><td class="mono">vggt_omega</td><td class="num good"><b>+58.0%</b></td><td class="num">13.2</td><td class="num">+27.1 … +80.2</td></tr>
-        <tr><td class="mono">vggt</td><td class="num good"><b>+67.0%</b></td><td class="num">16.8</td><td class="num">+39.8 … +99.4</td></tr>
-        <tr class="flip"><td class="mono">da3:small</td><td class="num bad"><b>+254.2%</b></td><td class="num">39.8</td><td class="num">+182.7 … +304.5</td></tr>
-        <tr><td class="mono">da3:large</td><td class="num bad"><b>+350.1%</b></td><td class="num">74.7</td><td class="num">+222.6 … +464.3</td></tr>
+        <tr class="flip"><td class="mono">vggt_omega</td><td class="num good"><b>+49.6%</b></td><td class="num">0.048 → 0.071</td><td class="num">+58.0%</td></tr>
+        <tr><td class="mono">vggt</td><td class="num good"><b>+57.6%</b></td><td class="num">0.073 → 0.115</td><td class="num">+67.0%</td></tr>
+        <tr class="flip"><td class="mono">da3:small</td><td class="num bad"><b>+214.3%</b></td><td class="num">0.131 → 0.412</td><td class="num">+254.2%</td></tr>
+        <tr><td class="mono">da3:large</td><td class="num bad"><b>+291.7%</b></td><td class="num">0.058 → 0.226</td><td class="num">+350.1%</td></tr>
       </tbody>
     </table>
   </div>
@@ -4744,20 +4744,20 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
         <strong>像极了黑边结果</strong>（DA3-Large 两处都最差）。
       </p>
       <p>
-        换成 <strong>60° 视角</strong>（角射线 42.4°，完全在锥内，<strong>任何地方都不黑</strong>），其余不变：
+        换成 <strong>60° 视角</strong>（角射线 42.4°，完全在锥内，<strong>任何地方都不黑</strong>），其余不变。<strong>更正</strong>：改用可引用的「均值之比」之后，无黑边的视角保留了效应的 <strong>60–90%</strong>，而不是当初写的"原封不动" —— <strong>结论不变（黑边不是机制），但那个词太强了</strong>；而且 60° 这条臂<strong>同时也改了视场</strong>，所以连这 10–40% 的下降也不能全算在黑边头上：
       </p>
     </div>
   </div>
 
   <div class="scroll">
     <table>
-      <caption><strong>H47</strong>：7 条录像，无黑角的 60° Aria 视角。</caption>
+      <caption><strong>H47</strong>：7 条录像，无黑角的 60° Aria 视角。两列都是<strong>均值之比</strong>。</caption>
       <thead><tr><th>backbone</th><th>60°（无黑边）</th><th>§03ae 的 89°</th><th>比值</th></tr></thead>
       <tbody>
-        <tr><td class="mono">da3:small</td><td class="num">+210.9% ± 47.6</td><td class="num">+254%</td><td class="num">0.83</td></tr>
-        <tr class="flip"><td class="mono">da3:large</td><td class="num">+350.1% ± 123.3</td><td class="num">+350%</td><td class="num"><b>1.00</b></td></tr>
-        <tr><td class="mono">vggt</td><td class="num">+56.8% ± 16.0</td><td class="num">+67%</td><td class="num">0.85</td></tr>
-        <tr><td class="mono">vggt_omega</td><td class="num">+41.9% ± 7.9</td><td class="num">+58%</td><td class="num">0.72</td></tr>
+        <tr><td class="mono">da3:small</td><td class="num">+154.8%</td><td class="num">+214.3%</td><td class="num">0.72</td></tr>
+        <tr class="flip"><td class="mono">da3:large</td><td class="num">+261.4%</td><td class="num">+291.7%</td><td class="num"><b>0.90</b></td></tr>
+        <tr><td class="mono">vggt</td><td class="num">+45.7%</td><td class="num">+57.6%</td><td class="num">0.79</td></tr>
+        <tr><td class="mono">vggt_omega</td><td class="num">+29.9%</td><td class="num">+49.6%</td><td class="num">0.60</td></tr>
       </tbody>
     </table>
   </div>

@@ -2139,3 +2139,31 @@ unexecuted script was checked against the actual signature —
 of planar z while the loader returns metres, and `rig.teach` wanting a CHW
 tensor. Static reading, not a run — but it is the check that would have caught
 all three of those.
+
+### The box was down, so the tick audited its own numbers — and found them wrong
+
+`lambda_63` stopped answering during H48's launch, so nothing ran. The work
+that filled the tick turned out to be worth more than the run would have been.
+
+Applying `standing_rule_2` ("print the absolute numbers beside the relative
+ones") and H37's ratio rule ("the ratio of means is the citable form") to H45
+and H47 — results committed one and zero ticks ago — showed that both reported
+**the mean of per-frame ratios**, inflating the Aria numbers by **10–60
+percentage points**. H45's headline goes +254/+350/+67/+58 → **+214/+292/+58/+50**.
+
+Two consequences beyond the arithmetic:
+
+* **H47's "unchanged" was too strong.** On the citable statistic the
+  border-free view keeps 60–90%, not 100%. Its conclusion survives; its wording
+  did not, and it also changed the field of view, so even that drop is not the
+  border's alone.
+* **Nothing collapses.** The absolutes were never printed: mirror AbsRel peaks
+  at 0.412 against a normal 0.131, and a scale-shift-aligned AbsRel needs to
+  pass ~0.5 before a depth map is unusable. *Degrades substantially*, not
+  *breaks*.
+
+**Third correction this line has produced from CPU-only arithmetic on already
+committed artefacts**, after H39b and H43. The pattern is worth stating plainly:
+**a tick with no compute is not a tick with no progress, and the cheapest
+experiment available is usually re-reading what is already on disk against the
+rules the line has already written down.**
