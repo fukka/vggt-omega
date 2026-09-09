@@ -3637,3 +3637,43 @@ whose hedged verdict named the run that reversed it.
 | **designed, not run** | H48: ScanNet++ content resampled **into Aria's lens**, then H47's pipeline unchanged. Appears → pipeline or lens. Absent → content. **Cannot separate capture from lens**, because resampling carries sharp stills through Aria's geometry. |
 | **dead end, checked** | Masking the wearer's hands is impossible on these recordings — the `Apartment_release_clean` sequences contain **zero** human/hand instances (all 357 are static objects, `docs/handoff/tickets/027`). |
 | **reports** | §03ae's claim is narrowed in place, §03af carries H46/H47, §08 carries the open question, and the recommendation is *measure it on your own data*. |
+
+## Correction — the mirror numbers were the wrong statistic, and the absolutes were missing
+
+No new data, no GPU, the box unreachable. Two of this line's own standing rules
+applied to its own freshest results.
+
+**1. Mean of per-frame ratios, where the ratio of means is citable.** H33 found
+that per-frame ratios explode on small baselines; H37 wrote it down as *"the
+ratio of means is the citable form"*. `mirror_curve.py` reports the former.
+
+| | **ratio of means** | as reported |
+|---|---|---|
+| **H45** Aria 89°, 13 rec | **+214.3 / +291.7 / +57.6 / +49.6%** | +254.2 / +350.1 / +67.0 / +58.0% |
+| **H47** Aria 60° border-free | **+154.8 / +261.4 / +45.7 / +29.9%** | +210.9 / +350.1 / +56.8 / +41.9% |
+| **H46** ScanNet++ | +29.1 / −2.1 / −26.0 / +2.2% | +28.7 / +0.0 / −15.2 / +2.9% |
+
+(order: `da3:small` / `da3:large` / `vggt` / `vggt_omega`)
+
+Inflation of **10–60 points on Aria**. On ScanNet++ the two agree because the
+effects are small, so **H46's non-replication is unaffected by the choice.**
+
+**2. H47's "unchanged" was too strong.** On the citable statistic the
+border-free view keeps **60–90%** of the effect (0.72, 0.90, 0.79, 0.60), not
+100%. The conclusion stands — **the border is not the mechanism** — but the
+right sentence is *most of it survives*, and the 60° arm also changes the field
+of view, so even that drop is not the border's alone.
+
+**3. The absolutes, which `standing_rule_2` says to print and H45 did not.**
+Mirror AbsRel **0.071 → 0.412** against normal **0.048 → 0.131**. A
+scale-shift-aligned AbsRel above ~0.5 is not a usable depth map and none of
+these reaches it. **Nothing collapses**; the honest verb is *degrades
+substantially*, not *breaks*.
+
+Untouched: the family split, the plumbing bar, H46's non-replication, H47's
+conclusion. **Direction and ordering stand; magnitudes come down and the verb
+softens.**
+
+**Third correction this line has produced from CPU-only arithmetic on already
+committed artefacts** — after H39b's price/prize decomposition and H43's origin
+account. All three needed no data that did not already exist.

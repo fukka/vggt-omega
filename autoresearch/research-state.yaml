@@ -2159,11 +2159,16 @@ h45_mirror_equivariance:
   status: "B1, B2, B3 all PASS — CONFIRMATORY, direction already seen in H44's pilot"
   artifact: autoresearch/experiments/h45-mirror-equivariance/results/summary.json
   analysis: autoresearch/experiments/h45-mirror-equivariance/analysis.md
-  cost_of_reflecting_the_input:
-    vggt_omega: "+58.0% +- 13.2  (+27.1 .. +80.2)"
-    vggt:       "+67.0% +- 16.8  (+39.8 .. +99.4)"
-    da3_small:  "+254.2% +- 39.8 (+182.7 .. +304.5)"
-    da3_large:  "+350.1% +- 74.7 (+222.6 .. +464.3)"
+  cost_of_reflecting_the_input_CORRECTED: >
+    CITABLE (ratio of means): vggt_omega +49.6%, vggt +57.6%, da3:small +214.3%,
+    da3:large +291.7%. The originally reported +58.0 / +67.0 / +254.2 / +350.1
+    were MEANS OF PER-FRAME RATIOS, which H33 and H37 had both already recorded
+    as the wrong statistic. Inflation 10-60 points. See
+    h45-mirror-equivariance/correction.md.
+  absolute_numbers_standing_rule_2: >
+    normal AbsRel 0.048 / 0.073 / 0.131 / 0.058; mirror 0.071 / 0.115 / 0.412 /
+    0.226 (vggt_omega / vggt / da3:small / da3:large). NOTHING COLLAPSES — the
+    verb is "degrades substantially", not "breaks".
   b3_is_what_makes_it_a_result: "flip-twice differs from untouched by 0.000000% on every recording and backbone"
   family_split: >
     NO OVERLAP: every DA3 value >= +182.7%, every VGGT value <= +99.4%. Same
@@ -2212,11 +2217,13 @@ h47_mirror_border:
   status: "B1 and B2 both PASS — it was NOT the black corners"
   artifact: autoresearch/experiments/h47-mirror-border/results/summary.json
   analysis: autoresearch/experiments/h47-mirror-border/analysis.md
-  sixty_deg_no_border_vs_h45_eightynine:
-    da3_small:  "+210.9% +- 47.6  vs +254%  (ratio 0.83)"
-    da3_large:  "+350.1% +- 123.3 vs +350%  (ratio 1.00)"
-    vggt:       "+56.8%  +- 16.0  vs +67%   (ratio 0.85)"
-    vggt_omega: "+41.9%  +-  7.9  vs +58%   (ratio 0.72)"
+  sixty_deg_no_border_vs_h45_eightynine_CORRECTED: >
+    CITABLE (ratio of means): da3:small +154.8% vs +214.3% (0.72), da3:large
+    +261.4% vs +291.7% (0.90), vggt +45.7% vs +57.6% (0.79), vggt_omega +29.9%
+    vs +49.6% (0.60). So the border-free view keeps 60-90% of the effect, NOT
+    100% — "unchanged" was too strong and rested on the inflated statistic. The
+    conclusion stands (the border is not the mechanism) and the 60 deg arm also
+    changes the FIELD OF VIEW, so even that drop is not the border's alone.
   the_candidate_is_dead: >
     Aria's 89 deg view has a 62.9 deg corner ray against a 54.83 deg cone, so it
     HAS black corners, and the principal point sits 4.5 px off centre so
