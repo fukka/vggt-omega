@@ -2482,3 +2482,62 @@ corner_ray_correction_2026_09_09:
     convention bug. It survived three protocols because it was CONSERVATIVE IN
     THE SAFE DIRECTION: the true corner ray is smaller than written, so every
     "fits inside the cone" claim held anyway and nothing failed loudly.
+
+h48_reciprocal_arm_void_and_the_floor_table_2026_09_09:
+  what_happened: >
+    lambda_63 came back after a ~2.5-day network outage and both H48 arms ran.
+    analyze_h48.py returned NEITHER CELL LARGE — one of the three outcomes the
+    protocol named in advance. It was NOT read that way, because the four
+    backbones agreed to three decimals in both arms (R: 0.0844 / 0.0830 /
+    0.0837 / 0.0835) where the native cells spread 0.051-0.119. Four
+    independent models do not land on the same number.
+  the_diagnostic:
+    idea: >
+      A cell can show no effect for two very different reasons: the resampling
+      kept the content and the effect went away (informative), or the scored
+      region holds nothing to get wrong (uninformative). Separate them with a
+      FLOOR, not a range — align a CONSTANT prediction (a fronto-parallel plane
+      that knows nothing) with the same scale_shift fit. That is the score a
+      model gets for knowing nothing.
+    code: "autoresearch/experiments/h48-content-vs-pipeline/code/diag_h48.py, committed before running"
+  what_it_found: >
+    Not an answer to that question: a bug. Same ADT sequence, same theta<=28 deg
+    cone, native Aria depth is 1.14/2.57/4.42 m (spread 1.270) and the resampled
+    R arm 2.18/2.67/3.23 m (spread 0.398). A change of lens cannot flatten a
+    depth distribution threefold.
+  cause: >
+    AriaRemap's map_x/map_y are PIXEL COORDINATES IN THE SOURCE CAMERA'S GRID.
+    The Aria camera of record is built at --size (504); ADT's depth_npy is on
+    the sensor's 1408 grid. cv2.remap samples the sub-rectangle those
+    coordinates land in without complaint, so the arm warped the sensor's
+    TOP-LEFT 504x504 CORNER and scored every model against it while showing the
+    model the whole frame.
+  why_the_bypass_caused_it: >
+    Seq.gt_range() resamples to the target grid AND divides by cos to get range.
+    This arm must not do the second (a pure lens re-parameterisation acts on
+    planar z, and the file says so in a comment). Skipping gt_range to avoid the
+    division silently dropped the resize that came with it. An audit found no
+    second instance in the repo.
+  status_of_that_arm: VOID. Its "no effect either way" reading is withdrawn.
+  fixes:
+    - "AriaRemap records the source grid and REFUSES an array of any other shape, in image() as well as depth(). A silent wrong number becomes a crash."
+    - "to_grid() in autoresearch/data/scannetpp_aria.py: nearest-neighbour, never interpolation — averaging across a depth discontinuity invents a surface."
+    - "The reciprocal arm resamples depth_npy onto the camera's grid first."
+  fix_verified_by: >
+    Re-running the diagnostic on the fixed arm gives 1.15/2.58/4.40 m, spread
+    1.252, floor 0.4836, against native Aria's 1.14/2.57/4.42, 1.270, 0.4888.
+    This is the check the arm should always have carried: a pure lens
+    re-parameterisation of the same content MUST preserve the depth
+    distribution over the same cone.
+  the_floor_table_is_a_result: >
+    Measured without running a single model. The know-nothing floor follows the
+    CONTENT ROW and ignores the LENS COLUMN — Aria content 0.4888 (Aria lens) /
+    0.4836 (ScanNet++ lens); ScanNet++ content 0.1010 / 0.1005. So the
+    resampling carries content through either lens intact, which is exactly what
+    the protocol's third outcome would have required to be false.
+  limitation_it_sets_on_the_forward_arm: >
+    ScanNet++'s central 28 deg cone spans only 1.13-1.66 m — nearly a
+    fronto-parallel patch. Models at 0.035-0.039 against a floor of 0.101 leave
+    2.6-2.9x of headroom, against 4-9x in the Aria cells. The forward arm can
+    resolve an effect but is the weaker half of the 2x2.
+  record: "autoresearch/experiments/h48-content-vs-pipeline/VOID_reciprocal_run1.md"

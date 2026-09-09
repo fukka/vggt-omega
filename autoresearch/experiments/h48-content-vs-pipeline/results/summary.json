@@ -1,0 +1,31 @@
+{
+  "per_model": {
+    "da3:small": {
+      "aria_aria": 154.8,
+      "sca_content_aria_lens": 24.277062483850507,
+      "aria_content_sca_lens": 96.34099005576863,
+      "sca_sca": 13.5
+    },
+    "da3:large": {
+      "aria_aria": 261.4,
+      "sca_content_aria_lens": 6.487474940062536,
+      "aria_content_sca_lens": 106.48193238085148,
+      "sca_sca": 3.3
+    },
+    "vggt": {
+      "aria_aria": 45.7,
+      "sca_content_aria_lens": -3.1995140554850336,
+      "aria_content_sca_lens": 21.049180744659452,
+      "sca_sca": -9.3
+    },
+    "vggt_omega": {
+      "aria_aria": 29.9,
+      "sca_content_aria_lens": 11.248448166047188,
+      "aria_content_sca_lens": 13.25265194467457,
+      "sca_sca": 1.6
+    }
+  },
+  "worst_plumbing_pct": 0.0,
+  "verdict": "NEITHER CELL LARGE \u2014 the resampling itself destroys whatever carries the effect. Stated as a possible outcome in the protocol before the run; the 2x2 cannot answer the question.",
+  "big_threshold_pct": 100.0
+}

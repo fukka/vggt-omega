@@ -45,6 +45,16 @@ The images were never affected: they arrive at 504 already. Only the depth
 path, and only in this arm — the forward arm's camera is 504×336 and its depth
 arrives at 336×504.
 
+The shape of the mistake is worth naming, because it was not carelessness about
+resolution. `Seq.gt_range()` — the canonical accessor, used everywhere else —
+does two things: it resamples `depth_npy` to the target grid (`interpolate`,
+`mode="nearest"`), *and* it divides by cos θ to turn planar z into range. This
+arm must not do the second, since a pure lens re-parameterisation has to act on
+planar z; the file says so in a comment right above the load. Bypassing
+`gt_range` to skip the division silently dropped the resize that came with it.
+An audit of every other `depth_npy` reader in the repo found no second instance:
+they all go through `gt_range` or their own explicit resize.
+
 That also explains the symptom that raised the alarm. With ground truth
 unrelated to the image, no model can do better than the affine fit through the
 mask's mean, so all four land together just above the floor: models
