@@ -2397,3 +2397,32 @@ follows the row → content; follows the column → lens or warp. The third outc
 is written down now rather than discovered later: **if neither resampled cell
 shows it, the resampling itself destroyed whatever carries it and the design
 cannot answer the question.**
+
+### Thirteenth tick — the reciprocal arm, written from the note the resume script left
+
+`resume_after_outage.sh` ended with *"the reciprocal arm still needs writing —
+the protocol has it, the script does not."* This tick wrote it, so the 2×2
+launches complete instead of half.
+
+`mirror_aria2sca.py` pushes **Aria content through ScanNet++'s lens** and then
+runs the same 60° view and the same three arms. Two details that had to be right
+and were checked rather than assumed:
+
+* **The ground truth must stay planar z.** `Seq.gt_range` divides by `cos θ` to
+  get range, which is exactly what must *not* happen before a pure lens
+  re-parameterisation — planar z is invariant under it (same optical centre,
+  same axis, no rotation) and that invariance is the whole reason `AriaRemap`
+  may move the values unchanged. The script loads the raw `depth_npy`
+  millimetres instead.
+* **The scene picked for the lens supplies only its camera.** No ScanNet++
+  imagery enters this arm; that is what makes it the reciprocal cell rather than
+  a third mixture.
+
+It also reports **the ratio of means as its headline and keeps the mean of
+per-frame ratios beside it**, so the two cannot drift apart the way they did in
+H45 and have to be corrected afterwards.
+
+The resume script now launches both directions, one per GPU, and its closing
+note points at the plumbing line — *if any is not 0.000000%, nothing in that
+file is a measurement* — which has been the bar since H44 and is the first thing
+to read when the logs arrive.

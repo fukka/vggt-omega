@@ -42,12 +42,14 @@ run "ssh -o ConnectTimeout=25 $HOST 'cd $REMOTE && \
   git checkout \"stash@{0}^3\" -- autoresearch/experiments/ 2>/dev/null; \
   git log --oneline -1'"
 
-echo "== 4. launch H48 (both directions of the 2x2) on the two GPUs"
+echo "== 4. launch both H48 directions, one per GPU"
 run "ssh -o ConnectTimeout=25 $HOST 'cd $REMOTE && \
   tmux new-session -d -s h48a -c $REMOTE \"( bash autoresearch/experiments/h48-content-vs-pipeline/code/run_h48.sh auto A 0; echo MARKER_H48A=\\\$? ) 2>&1 | tee /tmp/h48a.log; exec bash\" && \
+  tmux new-session -d -s h48r -c $REMOTE \"( bash autoresearch/experiments/h48-content-vs-pipeline/code/run_h48r.sh R 1; echo MARKER_H48R=\\\$? ) 2>&1 | tee /tmp/h48r.log; exec bash\" && \
   tmux ls | grep h48'"
 
 echo
-echo "Then: check /tmp/h48a.log for the per-scene lines, and remember the"
-echo "reciprocal arm (Aria content -> ScanNet++ lens) still needs writing —"
-echo "the protocol has it, the script does not."
+echo "Then: /tmp/h48a.log is ScanNet++ content through Aria's lens,"
+echo "      /tmp/h48r.log is Aria content through ScanNet++'s lens."
+echo "Both carry a PLUMBING line per backbone; if any is not 0.000000%,"
+echo "nothing in that file is a measurement (the bar since H44)."
