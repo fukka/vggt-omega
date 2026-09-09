@@ -3487,3 +3487,60 @@ the last disputed claim is retired. What remains open is not in this line: the
 **cross-room evidence is still 120 frames over two near-static recordings**, and
 fixing it needs a data decision that has been with the user for many ticks and
 has not been acted on.
+
+## H44 VOID / H45 — a construction check that failed, and the result it produced
+
+H44 set out to use a mirror to separate two explanations for the residual roll
+asymmetry, mirroring in the **rendered view** (where the pinhole's principal
+point is exactly centred, planar z is a scalar, and the ground truth is never
+touched) rather than in the fisheye source, which is what voided H34.
+
+**Its mandatory B0 failed by an order of magnitude**: mirroring a *level* frame
+cost +50% to +450% against a 25% bar. H44 is void for its purpose — the mirror
+moves the error regime by 2–5×, so a shape comparison on top of it is
+uninterpretable, which is exactly the trap H34 fell into.
+
+**But the bar could not tell "the construction is wrong" from "these models are
+not mirror-equivariant".** A flip-twice arm settled it — flip and unflip before
+predicting is the identity, so that arm must equal the untouched one, and it
+does at **0.000000%** everywhere. The plumbing is exact and the number is a
+measurement.
+
+### H45: the measurement, on thirteen recordings
+
+| backbone | cost of reflecting the input and reflecting the answer back |
+|---|---|
+| `vggt_omega` | **+58.0% ± 13.2** (+27.1 … +80.2) |
+| `vggt` | **+67.0% ± 16.8** (+39.8 … +99.4) |
+| `da3:small` | **+254.2% ± 39.8** (+182.7 … +304.5) |
+| `da3:large` | **+350.1% ± 74.7** (+222.6 … +464.3) |
+
+**The two pretraining families do not overlap** — every DA3 value ≥ +182.7%,
+every VGGT value ≤ +99.4%. Same direction as roll robustness and as the border
+ordering, a 4–6× gap.
+
+A mirrored room is still a room, and these models are trained on scenes that
+would look ordinary reflected. Reflecting the input still multiplies a
+single-image model's depth error by **3.5×**.
+
+**DA3-Large is the worst again.** Most accurate DA3 on a clean frame; most
+fragile of the four to a border (+269%, H37) and to a reflection (+350%). Roll
+is the exception, where H42 found it slightly flatter than DA3-Small. **Most
+accurate, most fragile on two of the three perturbation axes measured.**
+
+**Practical, and immediate:** horizontal-flip augmentation is a reflex in vision
+pipelines and mirroring a preview is common. On these models neither is a free
+symmetry — it costs +58% at best and +350% at worst. **If anything upstream
+mirrors, un-mirror before the depth model.**
+
+### What it does not say
+
+Nothing about the roll asymmetry — H44 was void precisely because the mirror
+cannot serve as that discriminator. No mechanism; chirality cues in natural
+photographs are the obvious guess and nothing here tests it. And the transform
+lands as a reflection about a different axis than a reader would assume, because
+`forward_z` applies a fixed quarter turn between the flip and the backbone.
+
+**Fifth time a construction-level bar has caught something** — and the first
+time one of them produced a result of its own rather than only preventing a
+wrong one.

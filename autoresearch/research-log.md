@@ -2035,3 +2035,23 @@ Worth noting the shape of the last several ticks: the experiments that moved the
 most were the ones that re-measured something already published, and the two
 most useful were **CPU-only arithmetic on artefacts already committed** (H39b's
 decomposition and H43's origin account). Neither needed data that did not exist.
+
+### The void run that paid for itself
+
+H44's B0 failed by an order of magnitude and the run is void. That is the fifth
+time a construction-level check has caught something in this line, and the first
+time the failure was worth more than the experiment would have been.
+
+The move that made the difference was small: **when a construction bar fails,
+ask whether the bar can distinguish "broken" from "surprising".** B0 could not —
+"the construction is wrong" and "these models are not mirror-equivariant" both
+predict a huge number. One extra arm that must be the identity settled it in two
+minutes, and turned a void run into H45.
+
+Also worth keeping: I read the model ordering off a log tail again and got it
+backwards, deciding VGGT was the mirror-sensitive family when it is DA3. The
+JSONs were keyed by model and the analysis script read them correctly, so
+nothing was published wrong — but that is twice now (H38 was the first) that a
+tail without labels sent me the wrong way for a paragraph. The fix landed in
+`derotate.py` after H38 and did not propagate to the scripts derived from
+`residual_curve.py`.
