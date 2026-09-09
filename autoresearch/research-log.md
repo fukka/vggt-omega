@@ -2372,3 +2372,28 @@ intuition to object to either version.
 
 **The audit found nothing further, and that is the result.** Written down so the
 next tick does not repeat it.
+
+### Twelfth tick — making the restart a single command, and finding a quoting bug by dry-running it
+
+Nothing runnable, so the tick went to the thing that will actually happen next:
+the box comes back and several fragile steps have to happen in the right order.
+`autoresearch/tools/resume_after_outage.sh` does them in one call — **fetch
+results, then stash, then pull, then restore from `stash@{0}^3`, then launch
+into a named tmux session with the marker inside the subshell** — with each step
+carrying the mistake it exists to prevent in a comment.
+
+**The dry run earned its keep immediately.** The launch line interpolated a
+scene list produced by `ls … | tr "\n" " "` into a tmux command inside an ssh
+command: three levels of quoting, and the inner double quotes terminate the
+outer string. `SPACE_CONTAINER.md` already warns *"never build a long command
+over this link"* about the pod; it applies here too. Fixed by pushing the choice
+down — `run_h48.sh auto` picks the scenes on the box, so nothing is
+interpolated.
+
+Also this tick: **H48 became a 2×2.** `AriaRemap` is generic in both cameras, so
+the reciprocal arm (Aria content through ScanNet++'s lens) costs nothing extra
+to write, and two of the four cells are already measured (H47 and H46). Effect
+follows the row → content; follows the column → lens or warp. The third outcome
+is written down now rather than discovered later: **if neither resampled cell
+shows it, the resampling itself destroyed whatever carries it and the design
+cannot answer the question.**
