@@ -2173,11 +2173,12 @@ h45_mirror_equivariance:
     (+269%, H37) and to a reflection (+350%). Roll is the exception (H42 found it
     slightly flatter). MOST ACCURATE, MOST FRAGILE ON TWO OF THREE PERTURBATION
     AXES MEASURED.
-  PRACTICAL: >
-    Horizontal-flip augmentation is a reflex in vision pipelines and mirroring a
-    preview is common. On these models neither is a free symmetry — +58% at best,
-    +350% at worst. IF ANYTHING UPSTREAM MIRRORS, UN-MIRROR BEFORE THE DEPTH
-    MODEL.
+  PRACTICAL_NARROWED_BY_H46: >
+    ORIGINALLY: "horizontal-flip augmentation and mirrored previews are not free
+    symmetries — if anything upstream mirrors, un-mirror before the depth model."
+    H46 shows the effect does NOT appear on ScanNet++ under a matched
+    construction, so the advice becomes CHECK IT ON YOUR OWN DATA. On one of the
+    two datasets tried it would have bought nothing.
   does_not_say:
     - "Nothing about the roll asymmetry — H44 was void precisely because the mirror cannot serve as that discriminator."
     - "No mechanism. Chirality cues in natural photographs are the obvious guess and nothing here tests it."
@@ -2190,3 +2191,60 @@ gotcha_unlabelled_log_tail_again:
   first_time: "H38, which cost two diagnostic runs."
   why_it_recurred: "The fix landed in derotate.py and never propagated to residual_curve.py or to mirror_curve.py, which is derived from it."
   fixed: "Every progress line in both now names the recording, and the mirror script's lines name the backbone too."
+
+# ---------------------------------------- H46 / H47 resolved 2026-09-08
+h46_mirror_external:
+  status: "B1 PASSES (plumbing exact, 104 cells); B2 FAILS both arms — H45 does NOT replicate"
+  artifact: autoresearch/experiments/h46-mirror-external/results/summary.json
+  analysis: autoresearch/experiments/h46-mirror-external/analysis.md
+  scannetpp_rectified_89deg_vs_h45_aria:
+    da3_small:  "+13.5% +- 28.7   vs Aria +254%"
+    da3_large:  "+3.3%  +- 11.6   vs Aria +350%"
+    vggt:       "-9.3%  +- 20.7   vs Aria +67%"
+    vggt_omega: "+1.6%  +-  6.1   vs Aria +58%"
+  raw_frame_arm: "da3:small +20.7, da3:large +27.0, vggt +0.0, vggt_omega +3.2 — baseline 0.22-0.39 AbsRel, 2-4x worse than Aria's, so NOT the matched comparison"
+  design_change_made_early: >
+    The rectified arm was added AFTER THREE SCENES, on the strength of the
+    baseline alone — comparing a perturbation across two error regimes is what
+    voided H44, arriving from the other side.
+
+h47_mirror_border:
+  status: "B1 and B2 both PASS — it was NOT the black corners"
+  artifact: autoresearch/experiments/h47-mirror-border/results/summary.json
+  analysis: autoresearch/experiments/h47-mirror-border/analysis.md
+  sixty_deg_no_border_vs_h45_eightynine:
+    da3_small:  "+210.9% +- 47.6  vs +254%  (ratio 0.83)"
+    da3_large:  "+350.1% +- 123.3 vs +350%  (ratio 1.00)"
+    vggt:       "+56.8%  +- 16.0  vs +67%   (ratio 0.85)"
+    vggt_omega: "+41.9%  +-  7.9  vs +58%   (ratio 0.72)"
+  the_candidate_is_dead: >
+    Aria's 89 deg view has a 62.9 deg corner ray against a 54.83 deg cone, so it
+    HAS black corners, and the principal point sits 4.5 px off centre so
+    mirroring moves an asymmetric black pattern across the rim. H45's ordering
+    looked uncomfortably like the border results. Remove the border entirely
+    (60 deg view, corner ray 42.4 deg) and the effect is UNCHANGED.
+
+h45_STATUS_AFTER_H46_H47:
+  measurement: STANDS — real on Aria, large, and not the border.
+  framing: WITHDRAWN — it is not a property of these models.
+  correct_statement: >
+    On this egocentric footage these models are far from mirror-equivariant; on
+    ScanNet++ under a matched construction they are not.
+  what_differs_UNRANKED:
+    - "Content: egocentric hands, arms, near surfaces, strongly lateralised, vs a room from a tripod."
+    - "Capture: 30 Hz motion-blurred auto-exposed video vs DSLR stills."
+    - "Ground truth: ADT rendered vs ScanNet++ mesh-rendered."
+    - "Scored region: theta <= 44 deg of a fisheye vs a whole frame."
+  CHEAPEST_NEXT_TEST: >
+    ADT ships segmentation (seg_npy), so the wearer's HANDS can be excluded from
+    the score. If the effect is carried by hands it shrinks; if it is the capture
+    or the lens it does not.
+
+pattern_write_the_weakness_next_to_the_result:
+  rule: >
+    Writing the weakness down alongside the result is what makes the correction
+    cheap.
+  instances:
+    - "H43 published a hedged verdict AND named the run that would reverse it; when it did, the cost was a paragraph."
+    - "H45's limits section named the independent check that would break it; the next tick ran it and the correction landed in the same tick it was found."
+  corollary: "Design the follow-up so the DAMAGING outcome is the pre-registered pass condition. H46's B2 and H47's B2 were both written that way before either ran."
