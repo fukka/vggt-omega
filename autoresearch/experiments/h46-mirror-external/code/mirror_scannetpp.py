@@ -26,8 +26,12 @@ import torch
 _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE.parents[3]))
 sys.path.insert(0, str(_HERE.parents[1] / "common"))
+sys.path.insert(0, str(_HERE.parents[1] / "h14-rect-distill" / "code"))
+sys.path.insert(0, str(_HERE.parents[1] / "h16-orientation" / "code"))
 
 import upright as U  # noqa: E402
+import rect_teacher as RT  # noqa: E402
+import roll_controls as RC  # noqa: E402
 from raytun3r.data import ScanNetPPFisheye  # noqa: E402
 from finetune.eval.metrics import align_depth  # noqa: E402
 
@@ -41,6 +45,13 @@ def main(argv=None):
     p.add_argument("--max-frames", type=int, default=20)
     p.add_argument("--models", default="da3:small,da3:large,vggt,vggt_omega")
     p.add_argument("--omega-ckpt", default="checkpoints/VGGT-Omega-1B-512/model.pt")
+    p.add_argument("--view-fov", type=float, default=0.0,
+                   help="0 = feed the captured frame. >0 = rectify a co-axial "
+                        "pinhole view of this FOV first, which is what H45 did "
+                        "on Aria. A square 89 deg view has a 54.2 deg corner "
+                        "ray, inside this lens's 84.8 deg cone, so nothing is "
+                        "black and the two experiments become like-for-like.")
+    p.add_argument("--view-size", type=int, default=630)
     p.add_argument("--depth-max-m", type=float, default=10.0)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--out", default=None)
@@ -65,10 +76,21 @@ def main(argv=None):
         H, W = src.h, src.w
         cone = cam.valid_mask(H, W).numpy() if hasattr(cam, "valid_mask") else \
             np.ones((H, W), bool)
-        bb.install(None, cam, (H, W), patch_undistort=False, border_token=False,
-                   dpt_grid=False, depth_convention="z")
+        rig = None
+        if a.view_fov > 0:
+            vs = int(round(a.view_size / ps)) * ps
+            rig = RT.Rig(cam, [RC.RolledView(fov_x_deg=a.view_fov, width=vs,
+                                             height=vs, roll_deg=0.0)], patch=ps)
+            bb.install(None, rig.views[0].pin, (vs, vs), patch_undistort=False,
+                       border_token=False, dpt_grid=False, depth_convention="z")
+            cone = cone & rig.covered.numpy()
+        else:
+            bb.install(None, cam, (H, W), patch_undistort=False,
+                       border_token=False, dpt_grid=False, depth_convention="z")
         print(f"[h46] [{src.name}] {spec}: {len(src)} frames, {W}x{H}, "
-              f"{src.n_bad} bad frames dropped", flush=True)
+              f"{src.n_bad} bad dropped, "
+              f"{'rectified %.0f deg view' % a.view_fov if rig else 'raw frame'}",
+              flush=True)
 
         per = {arm: [] for arm in ARMS}
         for i in range(len(src)):
@@ -84,16 +106,20 @@ def main(argv=None):
                 continue
             img = src.image(i).to(a.device)
             for arm in ARMS:
+                def fz(w, _v=None, _a=arm):
+                    if _a == "normal":
+                        return U.forward_z(bb, w)
+                    if _a == "twice":
+                        x = torch.flip(torch.flip(w, dims=[-1]), dims=[-1])
+                        return torch.flip(torch.flip(U.forward_z(bb, x), dims=[-1]),
+                                          dims=[-1])
+                    return torch.flip(U.forward_z(bb, torch.flip(w, dims=[-1])),
+                                      dims=[-1])
                 with torch.no_grad():
-                    if arm == "normal":
-                        z = U.forward_z(bb, img)
-                    elif arm == "twice":
-                        x = torch.flip(torch.flip(img, dims=[-1]), dims=[-1])
-                        z = torch.flip(torch.flip(U.forward_z(bb, x), dims=[-1]),
-                                       dims=[-1])
+                    if rig is None:
+                        z = fz(img)
                     else:
-                        z = torch.flip(U.forward_z(bb, torch.flip(img, dims=[-1])),
-                                       dims=[-1])
+                        z, _ = rig.teach(fz, img, align=False)
                 pr = z.float().cpu().numpy()
                 v = valid & (pr > 1e-6)
                 if v.sum() < 1000:
