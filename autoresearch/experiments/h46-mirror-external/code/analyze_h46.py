@@ -15,11 +15,13 @@ H45 = {"da3:small": 254.2, "da3:large": 350.1, "vggt": 67.0, "vggt_omega": 58.0}
 H45_BASELINE = "0.05-0.15 AbsRel"
 
 
-def load(prefix):
+def load(prefixes):
+    """Tags are <arm><gpu-half>: A/B for the raw arm, RA/RB for the rectified."""
     rows: dict[str, dict] = {}
-    for f in sorted(glob.glob(str(RES / f"{prefix}_*.json"))) + sorted(glob.glob(str(RES / f"{prefix}B_*.json"))):
-        d = json.loads(Path(f).read_text())
-        rows.setdefault(d["scene"], {}).update(d["models"])
+    for pre in prefixes:
+        for f in sorted(glob.glob(str(RES / f"{pre}_*.json"))):
+            d = json.loads(Path(f).read_text())
+            rows.setdefault(d["scene"], {}).update(d["models"])
     return rows
 
 
@@ -57,7 +59,8 @@ def report(rows, title):
 p = argparse.ArgumentParser()
 p.parse_args()
 res = {}
-for prefix, title in (("A", "raw captured frame"), ("R", "rectified 89° view")):
+for prefix, title in ((["A", "B"], "raw captured frame"),
+                      (["RA", "RB"], "rectified 89° view")):
     r = report(load(prefix), title)
     if r:
         res[title] = r
