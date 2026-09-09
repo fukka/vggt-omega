@@ -2070,3 +2070,29 @@ had it silently averaged over half the data, this would have gone unnoticed.
 
 **The habit that fixes it: rsync results to the Mac before touching the stash.**
 Fetching first costs seconds and makes the box's working tree disposable.
+
+### The tick that corrected the previous tick
+
+H45 went out with a section, a recommendation, and a limits paragraph naming the
+check that could break it. This tick ran that check and it broke it — not the
+measurement, which H47 confirms is real on Aria and not the border, but the
+framing, which claimed a property of the models when it is a property of the
+models *on this footage*.
+
+Three things worth keeping:
+
+**Design the follow-up so the damaging outcome is the pass condition.** H46's B2
+and H47's B2 were both written that way, before either ran. Neither needed
+arguing about afterwards.
+
+**Fix the input regime before comparing.** The ScanNet++ raw arm had a baseline
+2–4× worse than Aria's, and I added the rectified arm after three scenes rather
+than after thirteen, on the strength of the baseline alone. Comparing a
+perturbation across two error regimes is what voided H44; catching it early cost
+one extra run.
+
+**Fetch results before touching the stash.** `git stash push -u` swept the same
+thirteen result files twice this tick. Recoverable both times from the stash's
+third parent — but the second time I had already written the lesson down and
+still did it, because the stash line was buried inside a launch command. The
+habit has to be in the launch command, not in the log.

@@ -3544,3 +3544,77 @@ lands as a reflection about a different axis than a reader would assume, because
 **Fifth time a construction-level bar has caught something** — and the first
 time one of them produced a result of its own rather than only preventing a
 wrong one.
+
+## H46 / H47 — H45's mirror effect is real on Aria, and local to it
+
+H45 was published one tick ago: reflecting the model's input and reflecting the
+answer back costs +254% (`da3:small`), +350% (`da3:large`), +67% (`vggt`), +58%
+(`vggt_omega`) on thirteen Aria recordings, with a recommendation attached. Its
+own limits section asked for an independent check. Two ran.
+
+### H46 — it does not replicate on ScanNet++
+
+Thirteen scenes, four backbones, three arms, **the same rectified 89° view H45
+used**, plumbing exact on all 104 cells (0.000000%):
+
+| backbone | ScanNet++ (rectified) | **Aria (H45)** |
+|---|---|---|
+| `da3:small` | **+13.5% ± 28.7** | +254% |
+| `da3:large` | **+3.3% ± 11.6** | +350% |
+| `vggt` | **−9.3% ± 20.7** | +67% |
+| `vggt_omega` | **+1.6% ± 6.1** | +58% |
+
+Ten to a hundred times smaller, and for two backbones indistinguishable from
+zero. The rectified arm was added **before seeing more than three scenes**,
+because the raw-frame arm's baseline (0.22–0.39 AbsRel) is 2–4× worse than
+Aria's and a mirror cost on a broken baseline is not comparable — the same
+different-error-regime trap that voided H44, arriving from the other side.
+
+### H47 — and it is not the black corners
+
+The obvious suspect: Aria's 89° view has a 62.9° corner ray against a 54.83°
+cone, so it has black corners, and its principal point sits 4.5 px off centre,
+so mirroring moves an asymmetric black pattern across the rim. H45's ordering
+and magnitudes looked uncomfortably like the border results this line has
+measured three times.
+
+On a **60° Aria view — corner ray 42.4°, no black anywhere** — the effect is
+unchanged:
+
+| backbone | 60°, no border | H45 at 89° | ratio |
+|---|---|---|---|
+| `da3:small` | +210.9% | +254% | 0.83 |
+| `da3:large` | +350.1% | +350% | **1.00** |
+| `vggt` | +56.8% | +67% | 0.85 |
+| `vggt_omega` | +41.9% | +58% | 0.72 |
+
+**H45 did not measure the border.**
+
+### What changes
+
+**The measurement stands; the framing does not.** Not *"these models are far
+from mirror-equivariant"* but *"**on this egocentric footage they are, and on
+ScanNet++ they are not**"*. The recommendation — *if anything upstream mirrors,
+un-mirror before the depth model* — becomes **check it on your own data**,
+because on one of the two datasets tried it would have bought nothing.
+
+### What differs, unranked
+
+Content (egocentric hands and near surfaces, strongly lateralised, versus a
+room from a tripod), capture (30 Hz motion-blurred video versus DSLR stills),
+ground truth (ADT rendered versus mesh-rendered), scored region (θ ≤ 44° of a
+fisheye versus a whole frame). **Nothing here distinguishes them and none is
+preferred.**
+
+The cheapest test of the first is already on disk: **ADT ships segmentation**, so
+the wearer's hands can be excluded from the score. If the effect is carried by
+hands it shrinks; if it is the capture or the lens it does not.
+
+### The thing worth keeping about how this went
+
+H45's own limits section named the check that would break it, and the next tick
+ran it. Both follow-ups were designed with **the outcome that damages H45 as the
+pre-registered pass condition**, and the correction landed in the same tick it
+was found. That is the second time in this line that writing down the weakness
+alongside the result is what made the correction cheap — the first was H43,
+whose hedged verdict named the run that reversed it.
