@@ -3943,3 +3943,57 @@ decimals (1.15/2.58/4.40 vs 1.14/2.57/4.42). The flip-twice plumbing bar passed
 at 0.000000% throughout, in the void run too: it proves the *arms* are exact
 relative to each other and says nothing about whether the input is the intended
 scene.
+
+
+## H50 — the replication is void by its own gate, and one measurement survives
+
+H48's verdict re-run on **disjoint** data (ADT `seq144`–`seq150`, ScanNet++
+scenes 9–16) with the statistic repaired: **retention**, a backbone's effect
+through foreign optics as a fraction of its own native effect, in place of
+H48's absolute 100% cutoff.
+
+**The verdict is VOID.** `protocol.md` fixed three gates before the run and said
+in the same sentence what a failure costs. Gate 2 — resolving power ≥ 2.0× over
+the know-nothing floor — failed for `da3:small` in the ScanNet++-content cell at
+**1.56×**. The rule was not applied. `analyze_h50.py` prints what it would have
+returned (*CONTENT REPLICATES*) as a **labelled non-verdict**, because hiding it
+would be worse than printing it; it is cited as a result nowhere.
+
+That gate exists because H48's first read accepted a "no effect" from a cell
+never shown able to show one. **It fired the first time it was used, on new
+data.**
+
+**What survives is separable.** Retention uses only the two Aria cells, which
+clear the gate everywhere (2.79–9.05×):
+
+| backbone | retention, H48 (scenes 1–8, seq136–143) | retention, H50 (held out) | native effect, H48 → H50 |
+|---|---|---|---|
+| da3:small  | 0.62 | **0.62** | +154.8% → +173.5% |
+| da3:large  | 0.41 | **0.41** | +261.4% → +296.8% |
+| vggt       | 0.46 | **0.46** | +45.7% → +54.5% |
+| vggt_omega | 0.44 | 0.64 | +29.9% → +31.2% |
+
+Three of four agree **to two decimals on disjoint recordings**, and they do so
+while *both* numbers forming each ratio moved by about 12%. **The effect size is
+a property of the recording; the fraction that survives a change of optics looks
+like a property of the backbone.** That is stronger than what the rule was
+written to test, and it is not what the rule tested. `vggt_omega` is the one
+that moved, and it has the smallest denominator of the four.
+
+**Why the gate fired.** `da3:small` on those eight scenes is AbsRel 0.1444
+against a floor of 0.2255 — barely better than a fronto-parallel plane, so its
+cell value (−5.8%) is a near-zero measured by a model with almost no purchase on
+the scene. Not a code failure and not a pipeline property: the same cell gave
+2.40× on H48's eight scenes. ScanNet++'s central 28° cone is often near
+fronto-parallel and eight scenes is a small draw.
+
+**The fix, and the constraint on it.** Another draw of scenes with the selection
+rule fixed **in advance** — by GT depth spread over the scored cone, a *content*
+property measurable without running any model. Choosing scenes by their floor
+*after* seeing which failed would be selection on the result and is not
+available.
+
+**Standing state of the thread:** the content-versus-lens attribution has **no
+pre-registered verdict**. H48 is exploratory, H50 is void by gate, and both
+point the same way. Nothing here weakens H45/H47 — the effect itself is
+re-measured on seven more recordings at +173.5 / +296.8 / +54.5 / +31.2%.
