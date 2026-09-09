@@ -2224,12 +2224,13 @@ h47_mirror_border:
     100% — "unchanged" was too strong and rested on the inflated statistic. The
     conclusion stands (the border is not the mechanism) and the 60 deg arm also
     changes the FIELD OF VIEW, so even that drop is not the border's alone.
-  the_candidate_is_dead: >
-    Aria's 89 deg view has a 62.9 deg corner ray against a 54.83 deg cone, so it
-    HAS black corners, and the principal point sits 4.5 px off centre so
-    mirroring moves an asymmetric black pattern across the rim. H45's ordering
-    looked uncomfortably like the border results. Remove the border entirely
-    (60 deg view, corner ray 42.4 deg) and the effect is UNCHANGED.
+  the_candidate_is_dead_AND_SO_IS_ITS_PREMISE: >
+    CORRECTED 2026-09-09. A square view's corner ray is atan(sqrt(2)*tan(fov/2)),
+    NOT (fov/2)*sqrt(2). Correct: 60 deg -> 39.2, 89 deg -> 54.2, against a 54.83
+    cone. So the 89 deg view has NO black corners either, and H47's premise
+    ("remove the border") was void — what it varied is FIELD OF VIEW. Its
+    conclusion survives trivially. run_h14_sweep.sh and findings.md:754 both
+    carried the correct figure all along. See h47-mirror-border/CORRECTION.md.
 
 h45_STATUS_AFTER_H46_H47:
   measurement: STANDS — real on Aria, large, and not the border.
@@ -2412,3 +2413,27 @@ outage_blocks_both_boxes:
     move the open question and it cannot run. Further CPU-side work on the same
     committed numbers has passed the point of diminishing returns; the two
     literature passes were the last things with real value in them.
+
+corner_ray_correction_2026_09_09:
+  what: "atan(sqrt(2)*tan(fov/2)), not (fov/2)*sqrt(2). 60 deg -> 39.2, 89 deg -> 54.2, Aria cone 54.83."
+  voided:
+    - "H47's premise: neither the 89 nor the 60 deg view has black corners; H47 varied FIELD OF VIEW."
+    - "H46's candidate explanation for the ScanNet++ non-replication."
+    - "H44/H45's black-corner mechanism."
+  consequence: >
+    H46's four candidate differences (content, capture, ground truth, scored
+    region) stand UNREDUCED. Nothing has been eliminated, and H48 is still the
+    experiment that would eliminate one.
+  survives: "H47's conclusion (trivially now) and H40's factorial, whose border arm is a deliberate disc mask."
+  what_H47_actually_measured: >
+    89 deg vs 60 deg field of view, both fully filled: the effect at 60 is 60-90%
+    of the 89 value (0.72 / 0.90 / 0.79 / 0.60). THE EFFECT GROWS WITH FIELD OF
+    VIEW — a real observation that sat under a wrong label. Not a mechanism: a
+    wider view changes resampling, angular content and scored region together.
+  lesson: >
+    The number was already in the repo in two places, correct
+    (run_h14_sweep.sh's table, findings.md:754). Re-deriving a geometric constant
+    instead of looking it up produced the error — the same failure mode as H39's
+    convention bug. It survived three protocols because it was CONSERVATIVE IN
+    THE SAFE DIRECTION: the true corner ray is smaller than written, so every
+    "fits inside the cone" claim held anyway and nothing failed loudly.

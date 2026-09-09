@@ -3169,7 +3169,7 @@ of the roll penalty.*
 
 ### The design that was void first, and why its check mattered
 
-I reasoned that a 60° view's corner ray of 42.4° sits inside Aria's 54.83° cone,
+I reasoned that a 60° view's corner ray of 42.4° sits inside Aria's 54.83° cone (**the figure is wrong — it is 39.2°; see the correction below — but it is inside either way**),
 so rotating it makes no border. That confuses the view's **rays** staying inside
 the cone with the square **raster** keeping its corners — rotating any square
 raster by 30° throws 15.3% of it outside itself. The arms it produced —
@@ -3580,13 +3580,13 @@ different-error-regime trap that voided H44, arriving from the other side.
 
 ### H47 — and it is not the black corners
 
-The obvious suspect: Aria's 89° view has a 62.9° corner ray against a 54.83°
+The obvious suspect, **and it turned out to rest on my own arithmetic error**: Aria's 89° view was said to have a 62.9° corner ray against a 54.83°
 cone, so it has black corners, and its principal point sits 4.5 px off centre,
 so mirroring moves an asymmetric black pattern across the rim. H45's ordering
 and magnitudes looked uncomfortably like the border results this line has
 measured three times.
 
-On a **60° Aria view — corner ray 42.4°, no black anywhere** — the effect is
+On a **60° Aria view** — which is indeed fully filled, though so is the 89° one — the effect is
 unchanged:
 
 | backbone | 60°, no border | H45 at 89° | ratio |
@@ -3815,3 +3815,35 @@ always said so; the summaries had not). The second settles *consequence*: it
 turns H45 from a curiosity about some models into **a caution about a standard
 technique on this kind of data** — which is the form a finding has to take
 before anyone can act on it.
+
+
+## Correction — the 89° view never had black corners
+
+A square view's corner ray is `atan(√2·tan(fov/2))`, **not** `(fov/2)·√2`. I used
+the second in H40's and H47's protocols. Correct values: **60° → 39.2°**,
+**89° → 54.2°**, against Aria's **54.83°** cone. `run_h14_sweep.sh` has carried
+the right table all along — *"89 → corner ray 54.2, 100% real frame content"*,
+black appearing only from 95° — and `findings.md` itself said *"corner ray 54.3°
+< 54.83° at every roll, fill 1.000, no padding anywhere."*
+
+**Voided:** H47's premise (it was written as *border vs no border*; **neither view
+has a border**, so what it varied is **field of view**); H46's candidate
+explanation for the ScanNet++ non-replication; H44/H45's black-corner mechanism.
+**H46's four candidate differences therefore stand unreduced — nothing was
+eliminated.**
+
+**Survives, strengthened:** H47's conclusion that the effect is not caused by
+black corners, now trivially true. H40's factorial is untouched — its border arm
+applies a *deliberate* inscribed-disc mask.
+
+**What the H47 measurement now says:** comparing 89° against 60° field of view,
+both fully filled, the effect at 60° is **60–90%** of the 89° value (0.72, 0.90,
+0.79, 0.60). **The effect grows with field of view.** A real observation that was
+sitting under a wrong label; not offered as a mechanism, since a wider view
+changes resampling, angular content and scored region together.
+
+**The lesson repeats H39's**: the number was already in the repo, in two places,
+correct. Re-deriving a geometric constant instead of looking it up produced it,
+and it survived three protocols because the error was **conservative in the safe
+direction** — the true corner ray is smaller than I wrote, so every "fits inside
+the cone" claim held anyway and nothing failed loudly.
