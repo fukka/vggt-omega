@@ -3481,12 +3481,20 @@ leans on it.
 
 ## Where the line is
 
-**Closed.** All four parts of the opening question are answered, every in-room
-number is on thirteen recordings, the curve is measured for four backbones, and
-the last disputed claim is retired. What remains open is not in this line: the
-**cross-room evidence is still 120 frames over two near-static recordings**, and
-fixing it needs a data decision that has been with the user for many ticks and
-has not been acted on.
+**Closed** — with one thread that grew out of it and is still live.
+
+All four parts of the opening question are answered, every in-room number is on
+thirteen recordings, the curve is measured for four backbones, and the last
+disputed claim is retired.
+
+*Written 2026-09-08 and already qualified by what came next:* H44's construction
+check opened a **mirror thread** that H45–H47 carried and H48 is designed for.
+Its state is recorded below and in `research-state.yaml` under `mirror_thread`.
+
+What remains open beyond both is not in this line at all: the **cross-room
+evidence is still 120 frames over two near-static recordings**, and fixing it
+needs a data decision that has been with the user for many ticks and has not
+been acted on.
 
 ## H44 VOID / H45 — a construction check that failed, and the result it produced
 
@@ -3618,3 +3626,14 @@ pre-registered pass condition**, and the correction landed in the same tick it
 was found. That is the second time in this line that writing down the weakness
 alongside the result is what made the correction cheap — the first was H43,
 whose hedged verdict named the run that reversed it.
+
+## Where the mirror thread stands (live)
+
+| | |
+|---|---|
+| **opened by** | H44's construction check, which failed by an order of magnitude and turned out to be a measurement |
+| **established** | On 13 Aria recordings, reflecting the input and reflecting the answer back costs **+58 / +67 / +254 / +350%** (`vggt_omega` / `vggt` / `da3:small` / `da3:large`), plumbing exact (H45). **Not the black corners** — unchanged on a border-free 60° view (H47). **Does not replicate on ScanNet++** under the same construction, +13.5 / +3.3 / −9.3 / +1.6% (H46). |
+| **open** | Content or pipeline? Four differences, nothing yet distinguishes them. |
+| **designed, not run** | H48: ScanNet++ content resampled **into Aria's lens**, then H47's pipeline unchanged. Appears → pipeline or lens. Absent → content. **Cannot separate capture from lens**, because resampling carries sharp stills through Aria's geometry. |
+| **dead end, checked** | Masking the wearer's hands is impossible on these recordings — the `Apartment_release_clean` sequences contain **zero** human/hand instances (all 357 are static objects, `docs/handoff/tickets/027`). |
+| **reports** | §03ae's claim is narrowed in place, §03af carries H46/H47, §08 carries the open question, and the recommendation is *measure it on your own data*. |
