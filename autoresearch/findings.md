@@ -3725,56 +3725,54 @@ variants fit an affine with **slope ≈ 1 and a small positive intercept**
 variants have slope 1.4–2.0 *and* an intercept of 0.11–0.16. One fit per cell,
 no held-out split — **an observation, and nothing depends on it.**
 
-## Literature check — the roll premise was already published, and it changes what this line can claim
+## Literature check — and a correction to the paragraph I first wrote here
 
-Six ticks into a hardware outage, with nothing runnable, the loop's own advice
-applied: **go back to the literature when a result is surprising and
-unexplained.** It should have happened much earlier.
+Six ticks into a hardware outage, with nothing runnable, I searched the
+literature for prior work on roll and found **arXiv 2608.00678, "Breaking the
+Horizontal Prior"** (2026-08): monocular depth models degrade under camera roll
+because the pretraining orientation distribution is overwhelmingly horizontal.
+DAv2, pooled over five perspective benchmarks: **+13.5%** at [0,15°],
+**+23.9%** at [0,45°], **+32.3%** at [0,90°] — the same order and shape as this
+line's +12.4% at ±20° and ~+40% at ±30° for DA3-Small.
 
-**arXiv 2608.00678, "Breaking the Horizontal Prior"** (2026-08) independently
-establishes what H17.2 established for itself: monocular depth models degrade
-under camera roll, and the cause is the orientation distribution of the
-pretraining data — they name it the *Horizontal Prior*. Their DAv2 numbers,
-pooled over five perspective benchmarks: **+13.5%** at [0,15°], **+23.9%** at
-[0,45°], **+32.3%** at [0,90°]. Same order and same shape as this line's
-+12.4% at ±20° and ~+40% at ±30° for DA3-Small.
+**My first draft of this section said both reports present that premise as this
+line's discovery. That was wrong, and I checked before publishing it.**
 
-### What must be restated as replication
+§02b is titled *"a fault of the depth task, or of the pretraining data?"* and
+opens by attributing the horizontal prior to the literature, naming those four
+models, observing that **all four are single-image**, and stating that the
+attribution had not been tested with a backbone whose pretraining lacks that
+long tail. H17.2 was **designed as a test of a published attribution** and the
+report says so. The framing was right from the start.
 
-*"The horizontal prior is a property of the pretraining data, not of depth
-estimation"* — measured here independently, on different models, but **not
-first**. Both reports currently present it as this line's finding. It is
-corroboration, and describing it any other way would be wrong.
+What was genuinely missing was **attribution in the two places that summarise
+it**: §00's one-page row and §04's recommendations bullet both said "and this is
+a property of the pretraining data" with no source, which reads as ours. Both
+now carry the citation.
 
-### What remains this line's own
+### What is this line's own — unchanged by the check
 
-1. **The pretraining-family split.** All four of their models are single-image
-   (Marigold, GenPercept, DAv2, DistillAD). That **VGGT and VGGT-Omega are 4–5×
-   less roll-sensitive and more accurate** has no counterpart there, and is now
-   a whole-curve result on thirteen recordings.
-2. **Fisheye and egocentric.** Their benchmarks are DIODE, ScanNet, ETH3D,
-   KITTI, NYUv2 — all perspective.
-3. **The cost under a real roll distribution.** They evaluate at synthetic angle
-   ranges; H17.1 + H35 integrate against 60,105 frames of measured head roll and
-   get **0.46–1.85%**. For a deployment decision that is the number that matters
-   and it is not in their paper.
-4. **A training-free fix.** ID-Constraint is a training recipe (0.135 → 0.106).
-   H38/H39 fold the known gravity vector into the resampling grid instead: no
-   labels, no training, no model change.
-5. **The mirror thread.** They say nothing about flip or mirror equivariance.
+1. **The pretraining-family split.** Their four models are all single-image;
+   VGGT and VGGT-Omega being 4–5× less roll-sensitive *and* more accurate has no
+   counterpart there. §02b was built precisely to supply the missing arm.
+2. **Fisheye and egocentric.** Their benchmarks are perspective.
+3. **The cost under a real roll distribution** — 0.46–1.85% integrated against
+   60,105 measured frames, where they evaluate synthetic angle ranges.
+4. **A training-free fix.** ID-Constraint is a training recipe (0.135 → 0.106);
+   H38/H39 fold the gravity vector into the resampling grid.
+5. **The mirror thread** — they say nothing about flip equivariance.
 
-### And one method credit that is not ours
+### One method credit that is not ours
 
 Flip → predict → flip back → relative absolute error is an **established
-inconsistency measure** in this literature. H45's construction is a standard
-probe applied to a new setting, not a new probe, and should be described that
-way.
+inconsistency measure**. H45's construction is a standard probe applied to a new
+setting, not a new probe.
 
-### The process lesson, which is the uncomfortable one
+### The real process lesson, smaller than the one I first wrote
 
-This line ran **thirty-plus experiments** on roll before anyone searched for
-prior work on roll. The bootstrap survey (`docs/research/`, 2026-07-29) predates
-the roll question entirely, and no tick since re-opened it. **A line that grows
-a new question mid-stream needs a new literature pass for that question**, and
-the cost of skipping it here was presenting a replication as a discovery in two
-published reports for several days.
+Not "thirty experiments before a literature search" — the paper was known and
+cited when the roll line opened. It is that **a citation in the experiment
+section does not propagate to the summary sections**, and the summaries are what
+a reader takes away. The same failure mode as the superseded numbers two ticks
+ago: **a correction (or a credit) that lands where the work is written and not
+where it is quoted.**
