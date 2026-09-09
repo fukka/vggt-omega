@@ -2572,3 +2572,75 @@ h48_reciprocal_arm_void_and_the_floor_table_2026_09_09:
     2.6-2.9x of headroom, against 4-9x in the Aria cells. The forward arm can
     resolve an effect but is the weaker half of the 2x2.
   record: "autoresearch/experiments/h48-content-vs-pipeline/VOID_reciprocal_run1.md"
+
+h50_void_by_its_own_gate_2026_09_09:
+  what_it_was: >
+    H48's content verdict re-run on HELD-OUT data (ADT seq144-150, ScanNet++
+    scenes 9-16; H48 used seq136-143 and scenes 1-8) with the statistic fixed:
+    retention (a backbone's effect through foreign optics as a fraction of its
+    own native effect) instead of H48's absolute 100% threshold.
+  verdict: >
+    VOID. protocol.md fixed three gates before the run and said in the same
+    sentence what a failure costs. Gate 2 (resolving power >= 2.0x over the
+    know-nothing floor) FAILED for da3:small in the ScanNet++-content cell at
+    1.56x. The rule was not applied.
+  the_gate_that_fired_is_the_one_h48_taught_us: >
+    It exists because H48's first read accepted a "no effect" from a cell that
+    had never been shown able to show an effect. It fired on genuinely new data
+    the first time it was used.
+  what_would_have_been_said: >
+    analyze_h50.py prints it as a LABELLED NON-VERDICT rather than hiding it:
+    CONTENT REPLICATES, retention 0.62 / 0.41 / 0.46 / 0.64, row > column 4/4.
+    Not cited as a result anywhere.
+  what_survives_and_why_it_is_separable: >
+    Clause 1 (retention) uses only the two Aria cells, which clear the gate
+    everywhere (2.79-9.05x). On disjoint recordings it reproduces H48 to two
+    decimals for three of four backbones -- 0.62 / 0.41 / 0.46 against H48's
+    0.62 / 0.41 / 0.46 -- while BOTH numbers forming each ratio moved about 12%
+    (da3:small native +154.8 -> +173.5, da3:large +261.4 -> +296.8).
+    THE EFFECT SIZE IS A PROPERTY OF THE RECORDING; THE FRACTION THAT SURVIVES A
+    CHANGE OF OPTICS LOOKS LIKE A PROPERTY OF THE BACKBONE. Stronger than what
+    the rule was written to test, and not what it tested.
+  the_one_that_moved: >
+    vggt_omega 0.44 -> 0.64, and it has the smallest native effect of the four
+    (+29.9 / +31.2%) -- a ratio's instability on a small denominator.
+  why_the_gate_fired: >
+    da3:small on those eight ScanNet++ scenes is AbsRel 0.1444 against a floor
+    of 0.2255. Not a code failure and not a pipeline property: the same cell
+    gave 2.40x on H48's eight scenes. ScanNet++'s central 28 deg cone is often
+    near fronto-parallel and eight scenes is a small draw.
+  the_fix_and_its_constraint: >
+    Another draw of scenes with the selection rule fixed IN ADVANCE, by GT depth
+    spread over the scored cone -- a content property measurable without running
+    a model. Choosing scenes by their floor after seeing which failed would be
+    selection on the result and is NOT available.
+  standing_state_of_the_thread: >
+    The content-vs-lens attribution still has NO pre-registered verdict. H48 is
+    exploratory, H50 is void by gate, and both point the same way.
+  record: "autoresearch/experiments/h50-retention-replication/analysis.md"
+
+h51_imagery_vs_capture_running_2026_09_09:
+  question: >
+    H48/H50 put the effect on "the content", which means THE IMAGERY, not THE
+    SCENE -- a resample carries each dataset's sharpness and blur through the
+    other's geometry. Imagery (what an egocentric camera looks at) or capture
+    (how a 30 Hz head-worn sensor records it)?
+  the_separator_was_already_in_the_data: >
+    ADT ships Blender renders of the same recordings. seq131 and seq133-136
+    carry a verified THREE-WAY frame overlap of videos_synthetic / videos_rgb /
+    depth_npy (2878 + 399x4 frames), so the comparison is PAIRED at frame level:
+    same scene, same pose, same lens, same ground-truth .npy, only the
+    photometry differs. Nothing is resampled, so H48's failure class cannot
+    occur.
+  status: >
+    GENUINE BLIND PRE-REGISTRATION, unlike H50 -- no arm had been run and no
+    number seen when the rule was written. retention = mirror(synth) /
+    mirror(real); CAPTURE if < 0.30 for 3 of 4 backbones, IMAGERY if >= 0.60
+    for 3 of 4, otherwise inconclusive and reported as such. The 0.30-0.60 band
+    is left explicitly undecided.
+  named_before_the_run: >
+    The renders differ in more than capture (materials, speculars, noise
+    statistics), so a DROP supports "needs real-sensor photometry" without
+    isolating motion blur, while a SURVIVAL is the cleaner outcome. Recorded so
+    a drop cannot later be reported as "motion blur causes it".
+  record: "autoresearch/experiments/h51-imagery-vs-capture/protocol.md"
