@@ -10,10 +10,15 @@
 _status_2026_09_09:
   roll_orientation_line: "CLOSED. All four parts of the opening question answered. See `roll_orientation_line`."
   live_thread: >
-    `mirror_thread` — real on Aria, absent on ScanNet++. H48 answered the first
-    branch on 2026-09-09: it travels with the CONTENT, not the lens or the warp.
-    See `h48_answered_2026_09_09` and, for the arm that had to be rerun,
-    `h48_reciprocal_arm_void_and_the_floor_table_2026_09_09`.
+    `mirror_thread` — real on Aria, absent on ScanNet++. H48 (exploratory) put
+    it on the CONTENT rather than the lens or the warp; H50 pointed the same way
+    on held-out data but is VOID by its own resolving-power gate, so NO
+    pre-registered rule has returned a verdict yet. H51 (running) asks the next
+    question — imagery or capture — on ADT's own Blender renders.
+    See `h48_answered_2026_09_09`,
+    `h48_reciprocal_arm_void_and_the_floor_table_2026_09_09`,
+    `h50_void_by_its_own_gate_2026_09_09`,
+    `h51_imagery_vs_capture_running_2026_09_09`.
   blocked_on_hardware: >
     CLEARED 2026-09-09. lambda_63 returned after ~2.5 days (a network outage,
     not a reboot: `up 34 days`). Both H48 arms ran the same day.
@@ -22,10 +27,12 @@ _status_2026_09_09:
     only thing that fixes the cross-room evidence, still 120 frames over two
     near-static recordings.
   ready_to_launch: >
-    H48's CONFIRMATORY rerun — pre-register RETENTION with a threshold (the
-    absolute 100% rule was the wrong statistic and did not fire) and run it on
-    scenes and sequences not used here. Everything needed exists; only the rule
-    has to be written down first, and it must be written BEFORE the run.
+    H50b — another draw of ScanNet++ scenes to clear the resolving-power gate
+    that voided H50, with the SELECTION RULE FIXED FIRST: choose by GT depth
+    spread over the scored cone, a content property measurable without running
+    a model. Choosing by floor after seeing which scenes failed would be
+    selection on the result and is not available.
+    See `h50_void_by_its_own_gate_2026_09_09`.
 
   where_to_find_things:
     the_line_end_to_end: "`roll_orientation_line`, then findings.md's two outer-loop syntheses"
