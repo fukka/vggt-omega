@@ -76,6 +76,12 @@ RETIRED = {
     "去掉黑角": 0,      # never legitimate — there were no black corners
     "原封不动": 1,      # 03af, quoting the word the statistical correction retired
     "只重测了 DA3 那一对": 1,   # 00's one-page row, labelled as the old state
+    # H48 (2026-09-09) eliminated one of the four candidate differences. The
+    # wording that said none had been eliminated must not survive anywhere --
+    # it was in body4's open-question row and is the third time a correction
+    # had to chase a quote rather than the work.
+    "一个都没被排除": 0,
+    "目前没有任何东西能区分它们": 0,
 }
 VOID = {"img", "br", "meta", "link", "input", "hr",
         "path", "rect", "circle", "line", "polyline", "polygon", "text"}

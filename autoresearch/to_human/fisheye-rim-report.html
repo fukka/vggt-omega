@@ -172,7 +172,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 <div class="wrap">
 
 <header>
-  <div class="eyebrow">vggt-omega · 鱼眼边缘深度 · 2026-09-08</div>
+  <div class="eyebrow">vggt-omega · 鱼眼边缘深度 · 2026-09-09</div>
   <h1>鱼眼边缘实验台</h1>
   <p class="lede">
     单目深度基础模型在鱼眼画面的<strong>边缘</strong>上明显更差，而第一人称相机里最要紧的内容 ——
@@ -193,7 +193,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
 <section>
   <div class="section-head"><span class="eyebrow">00</span><h2>一页纸的结论</h2></div>
   <div class="col">
-    <p>七条。每条后面括号里是展开它的那一节。</p>
+    <p>八条。每条后面括号里是展开它的那一节。</p>
   </div>
   <div class="crit">
     <div class="row"><span class="who">① 边缘惩罚是真的</span><p>
@@ -4828,7 +4828,8 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
         而<strong>两条臂都没有黑边</strong>，它实际变的是<strong>视场</strong>）；
         上面那条"ScanNet++ 不复现是因为它没有黑角"的<strong>候选解释</strong>；
         以及 §03ae 里同源的黑角机制。
-        <strong>所以 H46 列的四个候选差别一个都没被排除。</strong>
+        <strong>所以在写下这条更正的当天，H46 列的四个候选差别一个也没有被排除掉</strong>——
+        这个状态由 §03ah 结束：H48 排除了<strong>镜头和重采样</strong>。
       </p>
       <p>
         <strong>存活且更强的：</strong>H47 的<strong>结论</strong>——效应不是黑边造成的——
@@ -4946,6 +4947,190 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     </div>
   </div>
 </section>
+
+<section>
+  <div class="section-head"><span class="eyebrow">03ah</span><h2>实验 B³³ · H48：那个镜像效应跟着<strong>内容</strong>走，不跟着镜头走</h2>
+    <span class="chip warn"><span class="dot"></span>探索性 · 预注册的判据<strong>没有触发</strong>，下面说清楚为什么不改它</span></div>
+
+  <div class="col">
+    <h3>这是镜像那条线一直在等的实验</h3>
+    <p>
+      §03ae 立了效应，§03af 说它在 ScanNet++ 上不复现，然后剩下<strong>四个候选差别</strong>——
+      内容、采集、真值、打分区域。H48 是一个 <strong>2×2</strong>：把每个数据集的画面
+      <strong>重采样进另一个数据集的镜头</strong>，下游的 60° 同轴视角、三条臂、打分区域（θ ≤ 28°）全部不变。
+      如果效应跟着<strong>行</strong>（内容）走，那就是内容；跟着<strong>列</strong>（镜头）走，那就是镜头或者重采样本身。
+    </p>
+  </div>
+
+  <div class="scroll" style="margin-top:20px">
+    <table>
+      <caption>镜像代价（均值之比；正数 = 把输入反射、再把答案反射回来，要付出的精度代价）。<strong>加粗的是这次新测的两格。</strong></caption>
+      <thead><tr><th>骨干</th><th>Aria 内容 / Aria 镜头<br><span style="font-weight:400;color:var(--ink-faint)">§03af</span></th><th>ScanNet++ 内容 / <strong>Aria 镜头</strong></th><th>Aria 内容 / <strong>ScanNet++ 镜头</strong></th><th>ScanNet++ / ScanNet++<br><span style="font-weight:400;color:var(--ink-faint)">§03af</span></th></tr></thead>
+      <tbody>
+        <tr><td class="mono">da3:small</td><td>+154.8%</td><td>+24.3%</td><td><strong>+96.3%</strong></td><td>+13.5%</td></tr>
+        <tr><td class="mono">da3:large</td><td>+261.4%</td><td>+6.5%</td><td><strong>+106.5%</strong></td><td>+3.3%</td></tr>
+        <tr><td class="mono">vggt</td><td>+45.7%</td><td>−3.2%</td><td><strong>+21.0%</strong></td><td>−9.3%</td></tr>
+        <tr><td class="mono">vggt_omega</td><td>+29.9%</td><td>+11.2%</td><td><strong>+13.3%</strong></td><td>+1.6%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:24px">
+    <p>
+      四个骨干<strong>方向一致、顺序一致</strong>：两个"Aria 内容"格子大，两个"ScanNet++ 内容"格子小，
+      而画面是从谁的镜头里出来的，对数字的影响远小于画面本身是谁的。
+      换成<strong>保留率</strong>说更清楚——这是无量纲的，所以能横跨效应大小差十倍的骨干去比：
+    </p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <caption>左：Aria 的效应在<strong>换成别人的镜头</strong>之后还剩多少。右：ScanNet++ 的内容<strong>穿过 Aria 的镜头</strong>之后多出多少。</caption>
+      <thead><tr><th>骨干</th><th style="text-align:left">Aria 效应经外来镜头后<strong>保留</strong></th><th style="text-align:left">ScanNet++ 效应经 Aria 镜头后<strong>增加</strong></th></tr></thead>
+      <tbody>
+        <tr><td class="mono">da3:small</td><td style="text-align:left"><strong>62.2%</strong>（154.8 → 96.3）</td><td style="text-align:left">+10.8 个百分点（13.5 → 24.3）</td></tr>
+        <tr><td class="mono">da3:large</td><td style="text-align:left"><strong>40.7%</strong>（261.4 → 106.5）</td><td style="text-align:left">+3.2 个百分点（3.3 → 6.5）</td></tr>
+        <tr><td class="mono">vggt</td><td style="text-align:left"><strong>46.1%</strong>（45.7 → 21.0）</td><td style="text-align:left">+6.1 个百分点（−9.3 → −3.2）</td></tr>
+        <tr><td class="mono">vggt_omega</td><td style="text-align:left"><strong>44.3%</strong>（29.9 → 13.3）</td><td style="text-align:left">+9.6 个百分点（1.6 → 11.2）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:26px">
+    <p>
+      Aria 的画面换掉镜头之后，镜像代价还剩 <strong>41–62%</strong>；
+      ScanNet++ 的画面套上 Aria 的镜头，只多出 <strong>3–11 个百分点</strong>——数值不大，但<strong>四个骨干全是正的</strong>，
+      这比碰巧要多一点。<strong>行压过列。</strong>
+    </p>
+  </div>
+
+  <div class="note warn" style="margin-top:24px">
+    <span class="eyebrow">预注册的判据<strong>没有触发</strong> —— 而且我不打算改它</span>
+    <p>
+      <code>analyze_h48.py</code> 是<strong>两条臂都还没跑之前</strong>就提交的。它的判据是：
+      "Aria 内容"那一列的<strong>两个 DA3 格子都超过 100%</strong>，另一列都不超，才判"内容"。
+      实际落在 <strong>+96.3%</strong> 和 <strong>+106.5%</strong> —— 一个差 3.7 个点。
+      所以脚本机械地走进了 else 分支，原样打印出来是这句：
+    </p>
+    <p style="margin-left:14px;border-left:3px solid var(--rule);padding-left:12px;color:var(--ink-faint)">
+      NEITHER CELL LARGE —— 重采样本身把承载这个效应的东西破坏掉了。
+    </p>
+    <p>
+      <strong>阈值没触发是一回事；这个分支自带的那句解释另有证据反驳，是另一回事。</strong>
+      重采样显然没有破坏什么：下面那张地板表说明"什么都不懂的下限"是<strong>跟着内容行走、无视镜头列</strong>的，
+      而一个 +96.3% 的格子也谈不上被谁破坏了。
+    </p>
+    <p>
+      但我<strong>不会事后把阈值挪到 90% 去换一个"内容"判决</strong>。
+      真正该说的是：<strong>100% 这个绝对阈值本身就是个不该被预注册的统计量</strong>——它不是无量纲的，
+      于是它对一个原生效应 261% 的骨干和一个原生效应 30% 的骨干问了同一个问题，
+      <code>vggt</code> 和 <code>vggt_omega</code> 在<strong>任何一格</strong>都不可能满足它。这是判据的设计缺陷，
+      只是因为数字恰好落在它旁边才暴露出来。今天把它挪一挪，买到的判决正好抵消掉预注册的全部意义。
+    </p>
+    <p>
+      所以结论按证据实际支持的强度写：<strong>按预注册判据——没有结论</strong>；
+      <strong>按表——探索性地，效应主要跟着内容走</strong>。
+      确证版本的实验在这里点名，免得日后悄悄跳过：<strong>预注册"保留率"这个统计量加一个阈值，
+      在这次没用过的场景和序列上重跑</strong>。很便宜。
+    </p>
+  </div>
+
+  <div class="col" style="margin-top:26px">
+    <h3>在读这张表之前，先证明这两格<strong>有能力</strong>显示出效应</h3>
+    <p>
+      这个 2×2 的<strong>第一次</strong>结果被读成了"两边都没有效应"，而那个读法错了两次：
+      一条臂是废的（下面说），另一条也从来没被证明过<em>有能力</em>显示任何效应。
+      检验的办法不是看动态范围，而是看<strong>地板</strong>：
+      拿一个<strong>常数</strong>预测——一个什么都不知道的正对平面——过同一套 <code>scale_shift</code> 对齐，看它得几分。
+      那就是"什么都不懂"能拿到的分。
+    </p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <caption>余量 = 地板 ÷ 基线 AbsRel：每个骨干在那一格里，实际比一个正对平面好多少倍。<strong>在真正用到的每一个场景上都测了，不是只测一个。</strong></caption>
+      <thead><tr><th style="text-align:left">格子</th><th>地板</th><th>da3:small</th><th>da3:large</th><th>vggt</th><th>vggt_omega</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left">ScanNet++ 内容 / Aria 镜头（8 场景）</td><td>0.2145</td><td>2.40×</td><td>2.78×</td><td>3.45×</td><td>4.73×</td></tr>
+        <tr><td style="text-align:left">Aria 内容 / ScanNet++ 镜头（7 序列）</td><td>0.4400</td><td>2.60×</td><td>3.95×</td><td>3.44×</td><td>3.81×</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col" style="margin-top:22px">
+    <p>
+      每一格都过了 2.4×，而且四个骨干的基线是<strong>分开</strong>的
+      （A：0.089 / 0.077 / 0.062 / 0.045；R：0.169 / 0.111 / 0.128 / 0.116），
+      不像废掉那条臂那样全挤在一个数上。<strong>两格都有分辨力。</strong>
+    </p>
+    <p>
+      <strong>这张地板表本身还是个独立结果</strong>，而且一个模型都没跑就测出来了：
+      地板<strong>跟着内容行走、无视镜头列</strong>——Aria 内容 0.4888 / 0.4836，ScanNet++ 内容 0.1010 / 0.1005。
+      "什么都不懂"的分数是场景深度分布的性质，它<strong>穿过任何一只镜头都原样保留</strong>。
+      这就独立说明了：重采样是在<strong>搬运</strong>内容，不是在破坏它——恰好是上面那个 else 分支需要为假的那件事。
+    </p>
+  </div>
+
+  <div class="note" style="margin-top:24px">
+    <span class="eyebrow">这买到了什么，没买到什么</span>
+    <p>
+      §03af 的四个候选差别——<strong>内容、采集、真值、打分区域</strong>——现在<strong>排除掉一个</strong>：
+      <strong>镜头和重采样是最不可能的承载者</strong>。
+    </p>
+    <p>
+      <strong>没有分开的是"内容"和"采集"</strong>，而且这一点在跑之前就写在 <code>protocol.md</code> 里了：
+      重采样把每个数据集的<strong>清晰度、运动模糊、曝光</strong>带进了对方的几何——几何换了，成像没换。
+      所以这里的"内容"意思是<strong>这批画面</strong>，不是<strong>这个场景</strong>。真值和打分区域则完全没碰。
+      <strong>四个里排除一个</strong>——这正是 protocol 当初承诺的上限。
+    </p>
+  </div>
+
+  <div class="col" style="margin-top:26px">
+    <h3>附：其中一条臂的第一次运行是<strong>废的</strong>，以及它是怎么被抓住的</h3>
+    <p>
+      值得记下来，因为暴露它的是一个<strong>模式</strong>，不是一个报错。
+      第一次 2×2 返回"两格都不大"——这是 protocol 事先点名过的可能结局之一，很容易就接受了。
+      不对劲的是：<strong>四个互相独立的骨干在两条臂上都吻合到小数点后三位</strong>
+      （0.0844 / 0.0830 / 0.0837 / 0.0835，而原生格子是 0.051–0.119），逐帧 AbsRel 也几乎不动。
+      <strong>四个独立模型不会落在同一个数上</strong>，除非它们被拿来对比的那个东西什么信息都没给。
+    </p>
+    <p>
+      本来是去测分辨力的那个诊断，先撞上了一个 bug：同一条 ADT 序列、同一个 θ ≤ 28° 光锥，
+      原生 Aria 的深度是 <strong>1.14 / 2.57 / 4.42 m</strong>（spread 1.270），重采样臂却是
+      <strong>2.18 / 2.67 / 3.23 m</strong>（spread 0.398）。
+      <strong>换一只镜头只是把哪条射线落在哪个像素重新排一遍，不可能把深度分布压扁三倍。</strong>
+    </p>
+    <p>
+      原因：<code>AriaRemap</code> 的映射表是<strong>源相机自己网格上的像素坐标</strong>（504），
+      而 ADT 的 <code>depth_npy</code> 在传感器的原始网格上（1408）。
+      <code>cv2.remap</code> 对这个不匹配<strong>不会报错</strong>——它照样去采样那些坐标落到的那一小块，
+      于是这条臂把传感器的<strong>左上角</strong>当成真值，去给一张完整画面打分。
+      图像和真值来自场景的<strong>不同部位</strong>。这条臂作废，它的读数在进报告之前就撤回了。
+    </p>
+    <p>
+      比修复更值得带走的是这个错误的<strong>形状</strong>：<code>Seq.gt_range()</code> 做两件事——
+      重采样到目标网格，<em>以及</em>除以 cos θ 把平面 z 变成距离。这条臂<strong>必须不做第二件</strong>
+      （纯粹的换镜头参数化只能作用在平面 z 上，文件里就写着这句注释）——
+      而<strong>为了躲开除法而绕过这个访问器，就把跟它绑在一起的重采样一起丢了</strong>。
+      现在 <code>AriaRemap</code> 会<strong>拒绝</strong>任何不在源网格上的数组：下一次同类错误是崩溃，不是一个数字。
+      全仓库审计过，没有第二处。
+    </p>
+    <div class="note warn" style="margin-top:18px">
+      <span class="eyebrow">这条线新增的一条规矩</span>
+      <p>
+        <strong>一条做重采样的臂，必须自带一个检查：证明它的重采样确实保住了它声称保住的东西。</strong>
+        这里那个检查只有一句话——<em>同一份内容做纯粹的换镜头参数化，在同一个光锥内必须保持真值深度分布</em>——
+        修好之后它成立到小数点后两位（1.15 / 2.58 / 4.40 对 1.14 / 2.57 / 4.42）。
+      </p>
+      <p>
+        顺带说清楚一件容易误解的事：<strong>翻两次 = 恒等</strong>的管道校验在整个过程中都是 <strong>0.000000%</strong>，
+        <strong>废掉的那次也是</strong>。它证明的是<strong>几条臂彼此之间是精确的</strong>，
+        对"喂进去的到底是不是那个场景"一个字都没说。
+      </p>
+    </div>
+  </div>
+</section>
+
 
 <section>
   <div class="section-head"><span class="eyebrow">04</span><h2>实验 C · H14.2：虚拟视角不必是方的</h2>
@@ -5191,6 +5376,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     </div>
   </div>
 </section>
+
 
 <!-- ============================================================ 06 E H9 -->
 <section>
@@ -5581,7 +5767,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       <li><strong>折进 warp 之后，真实 IMU 上确实付得起 —— 但只对单图 backbone</strong>：用 MPS 读到的<strong>真实逐帧头部滚转</strong>做渲染对齐，DA3-Small 拿回 <strong>2.65% ± 2.43</strong>（<strong>13 条录像，11/13</strong>），在 <strong>|ψ| ≥ 8° 的帧上拿回 +10.02%</strong>，而 |ψ| &lt; 3° 的帧是 −0.68%（没滚转可去时只剩重采样开销）。<strong>VGGT-Ω 上什么都没识别出来</strong>——它的好臂读到 −1.04% 却<strong>通不过 B2</strong>（错符号臂只有 +0.08%，好臂 7/13），所以不作声称。拆开看：<strong>奖金（去掉的滚转）5.68%，对称部分 3.03%</strong>。<strong>同角度 30° 下把两者拆开测</strong>（§03aa，14 条录像）：<strong>两次重采样只要 +0.81%，一条黑边要 +105.7%</strong> —— <strong>130 倍</strong>，而且两者在误差上是<strong>相乘</strong>的（预测与实测差 7–9%）。<strong>黑边不是价钱的大部分，几乎就是全部。</strong>（同时更正：§03y 那个对称部分并不纯是"重采样"，它还含着滚转曲线凸性带来的 Jensen 项；但 −2.65% 那个直接 A/B 不受影响。）这同时是这条线<strong>第一次外部核对</strong>：§03u 用合成曲线对实测分布积分得 1.80%，这里用真实帧直接 A/B 得 2.37%，<strong>两条几乎无共同点的路径吻合到三分之一以内</strong>。（§03y）</li>
       <li><strong>硬黑边的代价由"距离"决定，不由"面积"决定</strong>：黑边从占画幅 3.1% 加到 53.4%，在离边界 14° 处打分代价<strong>不随剂量增长</strong>（+6.6% ~ +32%，非单调）；紧贴边界打分则是 <strong>+106%</strong>（<strong>13 条录像上是 +59% ± 14</strong>，而那个"更多黑边反而更便宜"的反转 <strong>13/13 成立</strong>，§03o）。
       规则：<strong>别让硬边界挨着你关心的 zone</strong>。（§02e, §03o）</li>
-      <li><strong>镜像不是免费的对称性 —— 上游镜过就翻回来</strong>：把模型的输入做一次反射、再把答案反射回来（对任何没有手性偏好的模型都该是恒等操作），代价是 <strong>vggt_omega +50% ± 14、vggt +59% ± 19、da3:small +215% ± 29、da3:large +296% ± 62</strong>（13 条录像，<strong>两个家族完全不重叠</strong>；均值之比，§03ae 的更正）。<strong>但 §03af 把这条收窄了</strong>：同样构造在 <strong>ScanNet++ 上测不出这个效应</strong>（+13.5 / +3.3 / −9.3 / +1.6%），而在 Aria 上它<strong>不是黑边造成的</strong> —— <strong>而且理由比原先写的更简单</strong>：§03af 末尾的更正说明，那个 89° 视角<strong>从头到尾就没有黑角</strong>（角射线 54.2°，锥体 54.83°；我当初把公式算错了）。所以这是<strong>「在这批第一人称素材上」</strong>的性质，不是模型的性质 —— <strong>建议是"在你自己的数据上先量一次"，不是"一律翻回来"。</strong>同时这也是 DA3-Large "最准但最脆"的第二条轴。（§03ae）</li>
+      <li><strong>镜像不是免费的对称性 —— 上游镜过就翻回来</strong>：把模型的输入做一次反射、再把答案反射回来（对任何没有手性偏好的模型都该是恒等操作），代价是 <strong>vggt_omega +50% ± 14、vggt +59% ± 19、da3:small +215% ± 29、da3:large +296% ± 62</strong>（13 条录像，<strong>两个家族完全不重叠</strong>；均值之比，§03ae 的更正）。<strong>但 §03af 把这条收窄了、§03ah 又给它定了性</strong>：同样构造在 <strong>ScanNet++ 上测不出这个效应</strong>（+13.5 / +3.3 / −9.3 / +1.6%），而 H48 的 2×2 说明<strong>它跟着内容走、不跟着镜头走</strong>（§03ah，探索性：预注册判据差 3.7 个点没触发），而在 Aria 上它<strong>不是黑边造成的</strong> —— <strong>而且理由比原先写的更简单</strong>：§03af 末尾的更正说明，那个 89° 视角<strong>从头到尾就没有黑角</strong>（角射线 54.2°，锥体 54.83°；我当初把公式算错了）。所以这是<strong>「在这批第一人称素材上」</strong>的性质，不是模型的性质 —— <strong>建议是"在你自己的数据上先量一次"，不是"一律翻回来"。</strong>同时这也是 DA3-Large "最准但最脆"的第二条轴。（§03ae）</li>
       <li><strong>耐不耐硬边界是 backbone 特有的，而且和滚转是两条不同的轴</strong>：vggt_omega +29% ≪ da3:small +106% ≈ vggt +107% ≪ <strong>da3:large +636%</strong>。<strong>DA3-Large 在干净画幅上最准，加一条边界后崩得最狠，而这个改动没碰到任何被打分的像素。按干净基准的精度选 backbone 会被真实的画幅伪影打掉一大截。</strong>
       （<strong>已修正：</strong>13 条录像上<strong>四者全部重测</strong>（§03w）：vggt_omega <strong>+6.0% ± 4.6</strong>、vggt <strong>+48% ± 18</strong>、da3:small <strong>+59% ± 14</strong>、da3:large <strong>+269% ± 62</strong>；
       <strong>两端排序 13/13 无例外</strong>，DA3-Large 对 VGGT-Ω 是 <strong>45 倍</strong>（发表值 21.8 倍）。崩塌 <strong>4.56 倍</strong>不是 7.4 倍——已发布值高出 3.3 和 6.0 sd，是全项目最大离群。<strong>排序 13/13 成立，"四个里最差"和"VGGT-Ω 最耐边界"现在都是 13/13 无例外</strong>（§03o, §03w）。但 <strong>vggt 和 da3:small 排不出序</strong>：8/13、范围几乎重叠，那个"≈"就只是"分不开"。）</li>
@@ -5619,7 +5805,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <div class="row"><span class="who">跨房间只有 120 帧</span><p>LiteOffice 两个序列各 60 帧，佩戴者近乎静止。它现在<strong>同时扛着好几条主张</strong>（§03b 的反转、§03c 的机制），这是本页最需要补强的一处。</p></div>
     <div class="row"><span class="who">投影和边界没有分开</span><p>§02 的三条臂无法把"换了投影"和"有硬边界"分开——把边界加进矫正臂（掩成内切圆）掩掉的是画幅 21.9%，而 <code>fisheye_disc</code> 只掩掉锥体 1.7%，严重程度差一个量级。<strong>本页不作更强的声称。</strong></p></div>
     <div class="row"><span class="who">来源：滚转前提是文献的，本页检验它</span><p>「滚转敏感性源于预训练数据的朝向分布」是 <strong>arXiv 2608.00678</strong> 的归因。<strong>§02b 从一开始就是这么写的</strong>——它以那篇论文开头、点了它四个模型的名、指出<strong>四个全是单图模型</strong>，并把 §02b 定位成"用一个预训练里没有这条长尾的 backbone 去检验它"。<strong>但那条出处没有传到摘要处</strong>：§00 的一页结论和 §04 的建议条目当初都只写了结论、没写来源，读起来像是本页的发现。<strong>两处已补上。</strong><strong>教训和两轮前的过期数字是同一个</strong>：<strong>更正（或署名）落在了写它的地方，没落在引用它的地方。</strong></p></div>
-    <div class="row"><span class="who">镜像效应：内容还是管道？</span><p>§03ae/§03af 立着一个<strong>没解决的问题</strong>：反射输入的代价在 Aria 上是 <strong>+50% 到 +296%</strong>，<strong>而且不是黑边</strong>——因为<strong>那些视角里根本没有黑角</strong>（§03af 末的更正：89° 的角射线是 54.2°，不是我当初算的 62.9°）。而在 ScanNet++ 上<strong>几乎为零</strong>。<strong>连带作废的是"ScanNet++ 不复现是因为它没有黑角"那个候选解释</strong> —— 所以四个候选差别<strong>一个都没被排除</strong>。两边差四件事——<strong>内容、采集、真值、打分区域</strong>——<strong>目前没有任何东西能区分它们</strong>。下一个实验（把 ScanNet++ 的内容<strong>重采样进 Aria 镜头</strong>再走同一条管道）能把"内容"和另外三个分开，但<strong>分不开"采集"和"镜头"</strong>，因为重采样把单反静照带进了 Aria 的几何、却不会带进它的运动模糊。<strong>最显而易见的内容检验（把佩戴者的手排除出打分）在这批录像上做不了</strong>：这些 <code>clean</code> 序列里<strong>一个人体/手实例都没有</strong>（357 个实例全是静物），没有东西可屏蔽。</p></div>
+    <div class="row"><span class="who">镜像效应：是这批画面，还是采集方式？</span><p><strong>2026-09-09 更新：原来的问题是"内容还是管道"，§03ah 已经答了——是内容。这一行现在记的是它窄了一档之后剩下的部分。</strong>起点是：反射输入的代价在 Aria 上是 <strong>+50% 到 +296%</strong>，<strong>而且不是黑边</strong>——因为<strong>那些视角里根本没有黑角</strong>（§03af 末的更正：89° 的角射线是 54.2°，不是我当初算的 62.9°）。而在 ScanNet++ 上<strong>几乎为零</strong>。<strong>连带作废的是"ScanNet++ 不复现是因为它没有黑角"那个候选解释</strong>。两边差四件事——<strong>内容、采集、真值、打分区域</strong>——<strong>§03ah 排除掉了其中一个</strong>：H48 那个 2×2 把两个数据集的画面互相重采样进对方的镜头，结果是<strong>效应跟着内容走，不跟着镜头走</strong>（Aria 画面换掉镜头后仍保留 <strong>41–62%</strong>；ScanNet++ 画面套上 Aria 镜头只多出 <strong>3–11 个百分点</strong>）。<strong>所以现在还开着的问题窄了一档：是"这批画面"还是"采集方式"？</strong>这两个 H48 分不开——重采样把每个数据集的清晰度和运动模糊带进了对方的几何，几何换了、成像没换——真值和打分区域也仍然没碰。<strong>最显而易见的内容检验（把佩戴者的手排除出打分）在这批录像上做不了</strong>：这些 <code>clean</code> 序列里<strong>一个人体/手实例都没有</strong>（357 个实例全是静物），没有东西可屏蔽。</p></div>
     <div class="row"><span class="who">硬边的机制</span><p>"模型把硬黑边当成极近的黑墙"是对误差图形状的解读，不是测出来的。可以测：把黑边换成均值灰、换成镜像填充，看边缘误差跟不跟着变。</p></div>
     <div class="row"><span class="who">滚转曲线只有一个模型</span><p><strong>曲线本身现在量得很好了</strong>：§03ab 在 <strong>13 条录像、15 个角度</strong>上、用<strong>每帧精确的重力对齐零点</strong>测了 DA3-Small，±11° 内录像间标准差低于 0.05，并解释掉了 §03u 的零点异常。<strong>§03ac 已经补上了另外三个</strong> —— 四条曲线、13 条录像、同一个重力零点，所以这一条<strong>不再是缺口</strong>。剩下的真正缺口是<strong>那个不对称</strong> —— 而 <strong>§03ad 把它缩小了四倍</strong>：已发表的版本<strong>约四分之三是"零点"放出来的</strong>（设备零点对着一条凸曲线，在中位倾斜 −3.1° 的素材上，本身就会造出正的不对称）。<strong>剩下的残余版本仍然无解</strong>：它不是零，而且<strong>符号不统一</strong>（da3:large +7.8%、vggt −7.0%），<strong>不提机制，也不该被任何结论承重</strong>。</p></div>
     <div class="row"><span class="who">选轮数</span><p>没有验证划分，检查点永远取最后一轮，20 轮这个数是继承的。它抓不到"记住房间"，但能抓到"训过头"，应该补上。</p></div>
