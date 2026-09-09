@@ -26,15 +26,30 @@ b3 = plumb < 0.01
 print(f"B3  worst flip-twice deviation anywhere: {plumb:.6f}% -> "
       f"{'PASS' if b3 else 'FAIL — nothing here is a measurement'}\n")
 
+def ratio_of_means(v):
+    """The citable statistic. `b0_mirror_cost_pct` in the JSONs is the MEAN OF
+    PER-FRAME RATIOS, which H33 and H37 both recorded as the wrong one; on Aria
+    it inflates by 10-60 points. See ../correction.md."""
+    pf = v["per_frame"]
+    n = [x for x, y in zip(pf["normal|0.0"], pf["mirror|0.0"])
+         if x not in (None, 0) and y is not None]
+    mm = [y for x, y in zip(pf["normal|0.0"], pf["mirror|0.0"])
+          if x not in (None, 0) and y is not None]
+    return 100 * (sum(mm) / sum(n) - 1)
+
+
 out = {}
-print(f"{'backbone':<12}{'mirror cost':>14}{'sd':>8}{'min':>9}{'max':>9}")
+print(f"{'backbone':<12}{'mirror cost':>14}{'sd':>8}{'min':>9}{'max':>9}"
+      f"{'as-reported':>13}")
 for m in MODELS:
-    v = [rows[s][m]["b0_mirror_cost_pct"] for s in seqs]
+    v = [ratio_of_means(rows[s][m]) for s in seqs]
+    old_v = [rows[s][m]["b0_mirror_cost_pct"] for s in seqs]
     out[m] = {"mean": st.mean(v), "sd": st.stdev(v), "min": min(v), "max": max(v),
-              "n": len(v)}
+              "n": len(v), "mean_of_ratios_as_reported": st.mean(old_v),
+              "per_seq": {s: r for s, r in zip(seqs, v)}}
     o = out[m]
     print(f"{m:<12}{o['mean']:>+13.1f}%{o['sd']:>8.1f}{o['min']:>+8.1f}%"
-          f"{o['max']:>+8.1f}%")
+          f"{o['max']:>+8.1f}%{o['mean_of_ratios_as_reported']:>+12.1f}%")
 
 da3 = [out[m]["mean"] for m in ("da3:small", "da3:large")]
 vg = [out[m]["mean"] for m in ("vggt", "vggt_omega")]

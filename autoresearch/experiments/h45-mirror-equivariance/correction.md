@@ -72,3 +72,25 @@ relative ones") and H37's ratio rule to results that were already committed. No
 GPU, no new data, and the box was unreachable at the time. **Third instance of
 CPU-only arithmetic on committed artefacts producing a correction** — after
 H39b's decomposition and H43's origin account.
+
+## Two ways to aggregate, both citable, ≤4 points apart
+
+The table above pools every frame from every recording. The report and
+`summary.json` instead give the **mean over recordings of each recording's own
+ratio of means, with an sd** — which is how the rest of this line reports
+things:
+
+| backbone | pooled over frames | mean over 13 recordings |
+|---|---|---|
+| `da3:small` | +214.3% | **+214.5% ± 29.3** |
+| `da3:large` | +291.7% | **+295.5% ± 62.2** |
+| `vggt` | +57.6% | **+59.0% ± 18.7** |
+| `vggt_omega` | +49.6% | **+50.1% ± 14.2** |
+
+They differ by at most 4 points. **The per-recording form is the one quoted**,
+because it carries a spread; the difference is recorded here so the two are not
+silently mixed.
+
+`analyze_h45.py` now computes the citable statistic and keeps the as-reported
+one beside it, and the report's figure is regenerated from it — the figure and
+the table had disagreed for one publish.

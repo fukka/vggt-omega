@@ -30,12 +30,10 @@ def main(argv=None):
     a = p.parse_args(argv)
     S = json.loads(Path(a.summary).read_text())["per_model"]
 
-    per: dict[str, dict[str, float]] = {}
-    for f in sorted(glob.glob(str(Path(a.results) / "*_seq*.json"))):
-        d = json.loads(Path(f).read_text())
-        s = "seq" + d["seq"].split("_seq")[1].split("_")[0]
-        for m, v in d["models"].items():
-            per.setdefault(m, {}).setdefault(s, v["b0_mirror_cost_pct"])
+    # Per-recording RATIO OF MEANS, matching the summary. The JSONs' own
+    # b0_mirror_cost_pct is the mean of per-frame ratios and is not citable
+    # (H33, H37); see h45-mirror-equivariance/correction.md.
+    per: dict[str, dict[str, float]] = {m: dict(S[m]["per_seq"]) for m in S}
 
     fig, ax = plt.subplots(figsize=(9.4, 3.9), dpi=190)
     for i, m in enumerate(ORDER):
@@ -63,7 +61,7 @@ def main(argv=None):
         ax.spines[s].set_visible(False)
     ax.spines["bottom"].set_color("#D5D8DA")
     ax.set_xlabel("extra depth error from reflecting the model's input, then "
-                  "reflecting the answer back  (log scale)",
+                  "reflecting the answer back  (ratio of means, log scale)",
                   color=INK, fontsize=10, labelpad=8)
     ax.text(0.015, 0.93, "13 recordings · one dot each",
             transform=ax.transAxes, ha="left", color=GREY, fontsize=9.2)
