@@ -54,6 +54,8 @@ _H5 = _HERE.parents[1] / "h5-rim-finetune" / "code"
 Seq = _load("h5_train", _H5 / "train.py").Seq
 from finetune.eval.metrics import align_depth  # noqa: E402
 
+ARMS = ("normal", "mirror", "twice")
+
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
@@ -117,7 +119,7 @@ def main(argv=None):
         bb.install(None, rig0.views[0].pin, (vs, vs), patch_undistort=False,
                    border_token=False, dpt_grid=False, depth_convention="z")
 
-        preds = {(arm, d): {} for arm in ("normal", "mirror") for d in deltas}
+        preds = {(arm, d): {} for arm in ARMS for d in deltas}
         masks = {}
         for j, f in enumerate(s.frames):
             src = s.src.image(f).to(a.device)
@@ -127,10 +129,18 @@ def main(argv=None):
                                                  height=vs,
                                                  roll_deg=float(psi[j] + d))],
                              patch=ps)
-                for arm in ("normal", "mirror"):
+                for arm in ARMS:
                     def fz(w, _v, _a=arm):
                         if _a == "normal":
                             return U.forward_z(bb, w)
+                        if _a == "twice":
+                            # Plumbing check: flipping twice is the identity, so
+                            # this arm MUST equal `normal` to the last decimal.
+                            # If it does not, the flip/unflip pairing is wrong
+                            # and the mirror arm measures nothing.
+                            x = torch.flip(torch.flip(w, dims=[-1]), dims=[-1])
+                            z = U.forward_z(bb, x)
+                            return torch.flip(torch.flip(z, dims=[-1]), dims=[-1])
                         z = U.forward_z(bb, torch.flip(w, dims=[-1]))
                         return torch.flip(z, dims=[-1])
                     with torch.no_grad():
@@ -141,11 +151,10 @@ def main(argv=None):
             masks[f] = cone & cov_all & common
 
         # per-frame AbsRel at every (arm, delta)
-        per_frame = {f"{arm}|{d}": [] for arm in ("normal", "mirror")
-                     for d in deltas}
+        per_frame = {f"{arm}|{d}": [] for arm in ARMS for d in deltas}
         for f in s.frames:
             gt = gts[f]
-            for arm in ("normal", "mirror"):
+            for arm in ARMS:
                 for d in deltas:
                     pr = preds[(arm, d)][f]
                     v = masks[f] & (gt > 0) & (gt <= a.depth_max_m) & (pr > 1e-6)
@@ -158,7 +167,7 @@ def main(argv=None):
         # Each arm is normalised by ITS OWN level render, so the curves compare
         # shape. The cost of the mirror itself is B0 and is reported separately.
         g = {}
-        for arm in ("normal", "mirror"):
+        for arm in ARMS:
             ref = per_frame[f"{arm}|0.0"]
             for d in deltas:
                 k = f"{arm}|{d}"
@@ -170,10 +179,18 @@ def main(argv=None):
         b0 = [y / x for x, y in zip(per_frame["normal|0.0"], per_frame["mirror|0.0"])
               if x not in (None, 0) and y is not None]
         b0_pct = 100 * (float(np.mean(b0)) - 1)
+        tw = [abs(y / x - 1) for x, y in zip(per_frame["normal|0.0"],
+                                             per_frame["twice|0.0"])
+              if x not in (None, 0) and y is not None]
+        tw_max = 100 * max(tw) if tw else float("nan")
+        print(f"  PLUMBING  flip-twice differs from normal by at most "
+              f"{tw_max:.4f}%  {'OK' if tw_max < 0.01 else '<-- BROKEN'}",
+              flush=True)
         print(f"  B0  mirroring a level frame costs {b0_pct:+.2f}% "
-              f"{'  <-- OVER 25%, VOID' if abs(b0_pct) > 25 else ''}", flush=True)
+              f"{'  <-- OVER 25%' if abs(b0_pct) > 25 else ''}", flush=True)
         out[spec] = {"g": g, "per_frame": per_frame, "deltas": deltas,
-                     "b0_mirror_cost_pct": b0_pct}
+                     "b0_mirror_cost_pct": b0_pct,
+                     "plumbing_max_rel_pct": tw_max}
         del bb
         torch.cuda.empty_cache()
 
