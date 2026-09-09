@@ -2096,3 +2096,25 @@ thirteen result files twice this tick. Recoverable both times from the stash's
 third parent — but the second time I had already written the lesson down and
 still did it, because the stash line was buried inside a launch command. The
 habit has to be in the launch command, not in the log.
+
+### H48 designed; the box went away mid-launch
+
+H48 separates the first of H46's four candidate differences from the other
+three: take ScanNet++ content, resample it **into Aria's lens**, and run H47's
+pipeline unchanged. `autoresearch/data/scannetpp_aria.py` already does the
+resampling with the void kept explicit — written for exactly this class of
+question, and the third time this session that the machinery already existed.
+
+Two things checked before designing it, rather than assumed:
+
+* **The void does not reach the experiment.** ScanNet++ leaves an uncovered
+  crescent in Aria's disc at 51.57–54.83°, and a 60° view's corner ray is 42.4°.
+* **The obvious content test is not available.** Masking the wearer's hands
+  cannot be done on these recordings: `docs/handoff/tickets/027` records that
+  the `Apartment_release_clean` sequences have **zero** human/hand instances —
+  all 357 are static objects. There is nothing to mask, which is why H48 goes
+  at content through the lens instead.
+
+Protocol, script and runner are committed. `lambda_63` stopped answering on port
+22 during the launch — the documented shared-box failure mode, not a new one.
+A waiter is armed; no GPU work was started.
