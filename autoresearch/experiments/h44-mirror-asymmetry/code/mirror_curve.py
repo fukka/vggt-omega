@@ -174,7 +174,7 @@ def main(argv=None):
                 r = [x / y for x, y in zip(per_frame[k], ref)
                      if x is not None and y not in (None, 0)]
                 g[k] = (float(np.mean(r)), float(np.std(r)), len(r))
-                print(f"  {arm:<7s} residual {-d:+6.1f} deg   g = {g[k][0]:.4f} "
+                print(f"  [{s.name}] {arm:<7s} residual {-d:+6.1f} deg   g = {g[k][0]:.4f} "
                       f"± {g[k][1]:.4f}  (n={g[k][2]})", flush=True)
         b0 = [y / x for x, y in zip(per_frame["normal|0.0"], per_frame["mirror|0.0"])
               if x not in (None, 0) and y is not None]
@@ -183,10 +183,10 @@ def main(argv=None):
                                              per_frame["twice|0.0"])
               if x not in (None, 0) and y is not None]
         tw_max = 100 * max(tw) if tw else float("nan")
-        print(f"  PLUMBING  flip-twice differs from normal by at most "
+        print(f"  [{s.name}] {spec} PLUMBING  flip-twice differs from normal by at most "
               f"{tw_max:.4f}%  {'OK' if tw_max < 0.01 else '<-- BROKEN'}",
               flush=True)
-        print(f"  B0  mirroring a level frame costs {b0_pct:+.2f}% "
+        print(f"  [{s.name}] {spec} B0  mirroring a level frame costs {b0_pct:+.2f}% "
               f"{'  <-- OVER 25%' if abs(b0_pct) > 25 else ''}", flush=True)
         out[spec] = {"g": g, "per_frame": per_frame, "deltas": deltas,
                      "b0_mirror_cost_pct": b0_pct,

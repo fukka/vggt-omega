@@ -149,7 +149,7 @@ def main(argv=None):
             r = [x / y for x, y in zip(per_frame[k], ref)
                  if x is not None and y not in (None, 0)]
             g[k] = (float(np.mean(r)), float(np.std(r)), len(r))
-            print(f"  residual {-d:+6.1f} deg   g = {g[k][0]:.4f} "
+            print(f"  [{s.name}] residual {-d:+6.1f} deg   g = {g[k][0]:.4f} "
                   f"± {g[k][1]:.4f}  (n={g[k][2]})", flush=True)
         out[spec] = {"g": g, "per_frame": per_frame, "deltas": deltas}
         del bb
