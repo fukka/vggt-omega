@@ -3724,3 +3724,57 @@ variants fit an affine with **slope ≈ 1 and a small positive intercept**
 (0.92/+0.039, 0.98/+0.018), the shape of a nearly pure offset, while the DA3
 variants have slope 1.4–2.0 *and* an intercept of 0.11–0.16. One fit per cell,
 no held-out split — **an observation, and nothing depends on it.**
+
+## Literature check — the roll premise was already published, and it changes what this line can claim
+
+Six ticks into a hardware outage, with nothing runnable, the loop's own advice
+applied: **go back to the literature when a result is surprising and
+unexplained.** It should have happened much earlier.
+
+**arXiv 2608.00678, "Breaking the Horizontal Prior"** (2026-08) independently
+establishes what H17.2 established for itself: monocular depth models degrade
+under camera roll, and the cause is the orientation distribution of the
+pretraining data — they name it the *Horizontal Prior*. Their DAv2 numbers,
+pooled over five perspective benchmarks: **+13.5%** at [0,15°], **+23.9%** at
+[0,45°], **+32.3%** at [0,90°]. Same order and same shape as this line's
++12.4% at ±20° and ~+40% at ±30° for DA3-Small.
+
+### What must be restated as replication
+
+*"The horizontal prior is a property of the pretraining data, not of depth
+estimation"* — measured here independently, on different models, but **not
+first**. Both reports currently present it as this line's finding. It is
+corroboration, and describing it any other way would be wrong.
+
+### What remains this line's own
+
+1. **The pretraining-family split.** All four of their models are single-image
+   (Marigold, GenPercept, DAv2, DistillAD). That **VGGT and VGGT-Omega are 4–5×
+   less roll-sensitive and more accurate** has no counterpart there, and is now
+   a whole-curve result on thirteen recordings.
+2. **Fisheye and egocentric.** Their benchmarks are DIODE, ScanNet, ETH3D,
+   KITTI, NYUv2 — all perspective.
+3. **The cost under a real roll distribution.** They evaluate at synthetic angle
+   ranges; H17.1 + H35 integrate against 60,105 frames of measured head roll and
+   get **0.46–1.85%**. For a deployment decision that is the number that matters
+   and it is not in their paper.
+4. **A training-free fix.** ID-Constraint is a training recipe (0.135 → 0.106).
+   H38/H39 fold the known gravity vector into the resampling grid instead: no
+   labels, no training, no model change.
+5. **The mirror thread.** They say nothing about flip or mirror equivariance.
+
+### And one method credit that is not ours
+
+Flip → predict → flip back → relative absolute error is an **established
+inconsistency measure** in this literature. H45's construction is a standard
+probe applied to a new setting, not a new probe, and should be described that
+way.
+
+### The process lesson, which is the uncomfortable one
+
+This line ran **thirty-plus experiments** on roll before anyone searched for
+prior work on roll. The bootstrap survey (`docs/research/`, 2026-07-29) predates
+the roll question entirely, and no tick since re-opened it. **A line that grows
+a new question mid-stream needs a new literature pass for that question**, and
+the cost of skipping it here was presenting a replication as a discovery in two
+published reports for several days.
