@@ -2338,3 +2338,38 @@ h49_addendum_additive_vs_multiplicative:
     positive intercept (0.92/+0.039, 0.98/+0.018) — the shape of a nearly pure
     offset — while DA3 has slope 1.4-2.0 AND an intercept of 0.11-0.16. One fit
     per cell, no cross-validation. An observation; nothing depends on it.
+
+# ------------------------------------------- literature check 2026-09-09
+literature_horizontal_prior:
+  paper: "arXiv 2608.00678 — Breaking the Horizontal Prior (2026-08)"
+  note: autoresearch/literature/2608.00678-horizontal-prior.md
+  it_owns: >
+    "Monocular depth models are roll-sensitive because the pretraining
+    orientation distribution is overwhelmingly horizontal." DAv2 over five
+    perspective benchmarks: +13.5% at [0,15], +23.9% at [0,45], +32.3% at
+    [0,90]. Fix is a TRAINING recipe (ID-Constraint), 0.135 -> 0.106.
+  section_02b_already_credited_it: >
+    IMPORTANT — my first draft of this entry said both reports presented the
+    premise as this line's discovery. WRONG, and checking the fragments caught
+    it before publishing. 02b is titled "a fault of the depth task or of the
+    pretraining data?", opens by attributing the prior to that paper, names its
+    four models, notes ALL FOUR ARE SINGLE-IMAGE, and frames H17.2 as testing
+    whether the attribution survives a backbone without that long tail.
+  what_was_actually_missing: >
+    The citation never reached the SUMMARY sections. Section 00's one-page row
+    and section 04's recommendations bullet both stated the conclusion with no
+    source. Both now carry it.
+  still_this_line_s_own:
+    - "The pretraining-family split — their four models are all single-image; VGGT/VGGT-Omega 4-5x less roll-sensitive AND more accurate has no counterpart there."
+    - "Fisheye and egocentric; their benchmarks are all perspective."
+    - "Expected cost integrated against 60,105 frames of MEASURED head roll (0.46-1.85%) rather than synthetic angle ranges."
+    - "A training-free fix: fold the gravity vector into the resampling grid (H38/H39)."
+    - "The mirror thread (H45-H49); they say nothing about flip equivariance."
+  method_credit_not_ours: >
+    Flip -> predict -> flip back -> relative absolute error is an ESTABLISHED
+    inconsistency measure in this literature. H45's construction is a standard
+    probe applied to a new setting, not a new probe.
+  the_lesson_and_it_is_a_repeat: >
+    A credit that lands where the work is written and not where it is quoted —
+    the same failure mode as the superseded numbers two ticks earlier. Summary
+    sections are what a reader takes away and they are the ones that go stale.

@@ -2236,3 +2236,31 @@ no structural check beyond tag balance.
 **Recorded as a null**: the additive-versus-multiplicative fit on H49's
 per-frame pairs does not separate — twelve cells, residuals within 10%, three
 ties. Written down so a future tick does not spend itself re-deriving it.
+
+### Sixth tick down, so the literature got searched — and my first write-up of it was wrong
+
+With nothing runnable, the loop's own advice applied: go back to the literature
+when a result is unexplained. **arXiv 2608.00678, "Breaking the Horizontal
+Prior"** turns out to own the premise the roll line rests on, with numbers in
+the same range as ours.
+
+**I then drafted a paragraph saying both reports had presented that premise as
+our discovery — and it was false.** §02b opens by attributing the prior to that
+paper, names its four models, points out that all four are single-image, and
+frames H17.2 as testing whether the attribution survives a backbone that lacks
+the long tail. Reading the fragments before publishing caught it.
+
+Two things worth keeping:
+
+* **Check the artefact before writing the confession.** A self-criticism that
+  is itself wrong is worse than the omission it invents, and it would have gone
+  into two reports.
+* **The real gap was narrower and is a repeat.** The citation lived in the
+  experiment section and never reached §00's one-page row or §04's
+  recommendations bullet — the two places a reader actually takes away. That is
+  exactly the failure mode of the superseded numbers two ticks ago: **a credit
+  or a correction lands where the work is written, not where it is quoted.**
+
+Also recorded from the same search: flip → predict → flip back → relative error
+is an established inconsistency measure, so H45's construction is a standard
+probe applied to a new setting rather than a new probe.
