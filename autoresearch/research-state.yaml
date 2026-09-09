@@ -2132,3 +2132,61 @@ roll_orientation_line:
   reports_current:
     chinese: "43 sections, artifact ebba1289 — through H43b."
     english: "artifact c6461af3 — caught up with H37-H43 on 2026-09-08: capacity claim corrected, asymmetry retired in place, the gravity-in-the-warp recommendation added with a figure, and the projection-vs-border open question struck through as closed."
+
+# ------------------------------------------- H44 VOID / H45 resolved 2026-09-08
+h44_mirror_asymmetry:
+  status: VOID — its own mandatory B0 failed by an order of magnitude
+  what_it_wanted: >
+    Use a mirror to separate two explanations for the RESIDUAL roll asymmetry:
+    carried by the scene as the model sees it (should flip sign under mirroring)
+    vs a handedness fixed in the model's image space (should not).
+  construction_was_right_this_time: >
+    Mirrored in the RENDERED VIEW, not the fisheye source: the virtual pinhole
+    has cx = (width-1)/2 exactly, planar z is a scalar so flipping the prediction
+    back is exact, and the GT is NEVER TOUCHED because the prediction returns to
+    the original frame before scoring. That is what H34 got wrong.
+  why_void: >
+    B0 (mirroring a LEVEL frame must cost under 25%) came out +50% to +450%. The
+    mirror moves the error regime by 2-5x, so a shape comparison on top of it is
+    uninterpretable — exactly H34's trap.
+  THE_MOVE_THAT_MATTERED: >
+    When a construction bar fails, ask whether the bar can distinguish "broken"
+    from "surprising". B0 could not. One extra arm that MUST be the identity
+    (flip and unflip before predicting) settled it in two minutes: 0.000000%
+    deviation everywhere. Void run -> H45.
+
+h45_mirror_equivariance:
+  status: "B1, B2, B3 all PASS — CONFIRMATORY, direction already seen in H44's pilot"
+  artifact: autoresearch/experiments/h45-mirror-equivariance/results/summary.json
+  analysis: autoresearch/experiments/h45-mirror-equivariance/analysis.md
+  cost_of_reflecting_the_input:
+    vggt_omega: "+58.0% +- 13.2  (+27.1 .. +80.2)"
+    vggt:       "+67.0% +- 16.8  (+39.8 .. +99.4)"
+    da3_small:  "+254.2% +- 39.8 (+182.7 .. +304.5)"
+    da3_large:  "+350.1% +- 74.7 (+222.6 .. +464.3)"
+  b3_is_what_makes_it_a_result: "flip-twice differs from untouched by 0.000000% on every recording and backbone"
+  family_split: >
+    NO OVERLAP: every DA3 value >= +182.7%, every VGGT value <= +99.4%. Same
+    direction as roll robustness and the border ordering, 4-6x gap.
+  da3_large_worst_again: >
+    Most accurate DA3 on a clean frame; most fragile of the four to a border
+    (+269%, H37) and to a reflection (+350%). Roll is the exception (H42 found it
+    slightly flatter). MOST ACCURATE, MOST FRAGILE ON TWO OF THREE PERTURBATION
+    AXES MEASURED.
+  PRACTICAL: >
+    Horizontal-flip augmentation is a reflex in vision pipelines and mirroring a
+    preview is common. On these models neither is a free symmetry — +58% at best,
+    +350% at worst. IF ANYTHING UPSTREAM MIRRORS, UN-MIRROR BEFORE THE DEPTH
+    MODEL.
+  does_not_say:
+    - "Nothing about the roll asymmetry — H44 was void precisely because the mirror cannot serve as that discriminator."
+    - "No mechanism. Chirality cues in natural photographs are the obvious guess and nothing here tests it."
+    - "The transform lands as a reflection about a DIFFERENT AXIS than a reader would assume, because forward_z applies a fixed quarter turn between the flip and the backbone."
+  limits:
+    - "One rectified 89 deg view of one fisheye, indoors, per-frame scale-shift alignment. The magnitude is large enough that an independent check on another dataset would be worth having."
+
+gotcha_unlabelled_log_tail_again:
+  symptom: "Read the model ordering off a log tail and had it backwards for a paragraph — decided VGGT was the mirror-sensitive family when it is DA3."
+  first_time: "H38, which cost two diagnostic runs."
+  why_it_recurred: "The fix landed in derotate.py and never propagated to residual_curve.py or to mirror_curve.py, which is derived from it."
+  fixed: "Every progress line in both now names the recording, and the mirror script's lines name the backbone too."
