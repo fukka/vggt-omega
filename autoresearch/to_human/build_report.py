@@ -38,6 +38,30 @@ STALE = ("三分之二", "这一块是黑边", "发布 16 个数的径向标定"
          # H21 refuted this inference: matching the lens buys nothing (+0.84 pt,
          # inside noise), and the curve is a property of the ANGLE, not the lens.
          "所以它能带到另一个房间、另一台设备")
+# Numbers a correction superseded, with how many times each is still ALLOWED to
+# appear -- always somewhere that labels it as the old value ("as reported", or
+# a quote of what was originally written). Count UP = it leaked into a new
+# sentence. Count DOWN = a labelled comparison was lost. Counted on the
+# tag-stripped text, so base64 image data cannot produce false matches.
+#
+# This exists because a correction on 2026-09-08 fixed one table and left the
+# same numbers standing in four other places -- a callout, a comparison column,
+# a recommendations bullet and an uncertainty row. Only re-reading caught it.
+SUPERSEDED = {
+    # counts verified against the built page on 2026-09-08, not guessed --
+    # the first version of this table guessed two of them and the tripwire
+    # caught itself on the first run, which is the behaviour wanted.
+    "+254.2": 1,   # 03ae's "as reported" column
+    "+350.1": 1,   # 03ae's "as reported" column
+    "+67.0": 1,    # 03ae's "as reported" column
+    "+58.0": 3,    # 03ae's column, plus two unrelated data-ladder numbers in
+                   # body4 that happen to share the string
+    "+254%": 0,    # must not appear anywhere; superseded by +214.5%
+    "+350%": 1,    # only 03ae's quote of the wording it is correcting
+    "+210.9": 0,   # H47, superseded by +154.8%
+    "+41.9": 0,    # H47, superseded by +29.9%
+    "+56.8": 0,    # H47, superseded by +45.7%
+}
 VOID = {"img", "br", "meta", "link", "input", "hr",
         "path", "rect", "circle", "line", "polyline", "polygon", "text"}
 EXTRA_CSS = """<style>
@@ -92,6 +116,14 @@ def build(frag: Path, figs: Path, out: Path) -> None:
                      f"A fragment has been resurrected from an old copy.")
 
     text = re.sub(r"<[^>]*>", "", html)
+
+    for num, allowed in SUPERSEDED.items():
+        got = text.count(num)
+        if got != allowed:
+            print(f"[build] superseded number {num!r} appears {got}x, expected "
+                  f"{allowed}x — UP means it leaked into a new sentence, DOWN "
+                  f"means a labelled comparison was lost. See SUPERSEDED.",
+                  file=sys.stderr)
     m = re.search(r"一页纸的结论(.{0,20000}?)问题与协议", text, re.S)
     if m:
         n = len(m.group(1).replace(" ", "").replace("\n", ""))

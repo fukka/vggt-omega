@@ -2190,3 +2190,28 @@ And 52 result JSONs were sitting untracked on the **Mac** — H42's wide-angle
 extension, which was H43b's input. Committed. The exposure the box's stash
 created has a mirror image on this side, and neither is visible until someone
 looks.
+
+### A correction is not done when the table is fixed
+
+Auditing the built page for the numbers the statistical correction superseded
+found them still standing in **four other places**: §03ae's DA3-Large callout
+("most fragile to a reflection, +350%"), §03af's whole Aria comparison column,
+the recommendations bullet, and §08's uncertainty row — which also still said
+the border-free view left the effect "unchanged", the wording H47's own
+correction had already retired.
+
+Two ticks of corrections had each fixed the thing being written and left the
+places that quote it. **Nothing caught it but reading the page.**
+
+So it is now a build check. `SUPERSEDED` in `build_report.py` maps each retired
+number to how many times it is still *allowed* to appear — always somewhere
+that labels it as the old value — and the build says so if a count moves. Up
+means it leaked into a new sentence; down means a labelled comparison was lost.
+
+Two details worth keeping:
+
+* **It is counted on the tag-stripped text**, because base64 image data contains
+  `+` and would otherwise produce false matches.
+* **The first version guessed two of the counts and the tripwire caught itself
+  on its first run.** That is the behaviour wanted from a tripwire, and the
+  counts are now measured against the built page rather than assumed.
