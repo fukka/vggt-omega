@@ -1,7 +1,9 @@
 # ADT skeleton sequences: how many pixels are hands/body, and where
 
 **Owner:** gpu
-**Status:** open — not started.
+**Status:** open — not started. (Commit `4c38261`'s message says "ticket 27",
+but that commit delivered **#26**'s calibration JSON, not this. Nothing here has
+been done.)
 **Files I may touch:** new script `autoresearch/experiments/h4-dynamics/code/hand_pixel_stats.py`
 (create), results to the `results` branch as `results/autoresearch-h4-stats/*.json`.
 Nothing else.
