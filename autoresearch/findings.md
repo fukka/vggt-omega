@@ -3677,3 +3677,37 @@ softens.**
 **Third correction this line has produced from CPU-only arithmetic on already
 committed artefacts** — after H39b's price/prize decomposition and H43's origin
 account. All three needed no data that did not already exist.
+
+## H49 — the mirror effect is on nearly every Aria frame (exploratory)
+
+Post-hoc, no bars locked, no compute — arithmetic on per-frame data already
+committed by H45, H46 and H47 while `lambda_63` was down.
+
+If **particular scene configurations** carried the effect — a hand in frame, one
+layout, a close surface — the per-frame distribution would be tail-driven or
+bimodal. It is neither:
+
+| set | backbone | frames | worse | >1.5× | median | p10 |
+|---|---|---|---|---|---|---|
+| Aria 60° border-free | `da3:small` | 113 | **96%** | 88% | 2.91 | **1.31** |
+| | `da3:large` | 113 | **98%** | 90% | 3.63 | 1.52 |
+| Aria 89° | `da3:small` | 232 | **99%** | 94% | 3.14 | 1.69 |
+| | `da3:large` | 232 | **100%** | 95% | 3.67 | 1.83 |
+| ScanNet++ rectified | `da3:small` | 260 | 53% | 16% | 1.05 | 0.79 |
+| | `da3:large` | 260 | 56% | **3%** | 1.03 | 0.78 |
+
+**DA3-Large degrades on 232 of 232 Aria frames**, and DA3-Small's least affected
+tenth still degrades 31–69%. **The floor of the distribution is above 1, not
+just its mean.** On ScanNet++ the same models over 260 frames are at a coin
+flip.
+
+**Rules out the subset form of the content explanation. Does not rule out a
+pervasive property of egocentric imagery** — everything close, floor in a fixed
+place, the wearer's body in the same region — which predicts exactly this shape.
+H48 remains the experiment that decides.
+
+**Incidental:** `corr(baseline, ratio)` is negative everywhere (−0.17 to −0.82).
+Frames the model finds *easy* degrade proportionally *more* — consistent with a
+roughly additive corruption, offered as consistency rather than mechanism. It is
+also one more reason the ratio of means is the citable statistic: per-frame
+ratios are largest exactly where the denominator is smallest.

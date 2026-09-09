@@ -2284,3 +2284,27 @@ mirror_thread:
     Apartment_release_clean sequences have ZERO human/hand instances (all 357
     are static objects, verified 2026-08-18), so there is nothing to mask.
     Skeleton-bearing ADT sequences would be needed and are not extracted.
+
+# ------------------------------------------------- H49 resolved 2026-09-08
+h49_mirror_per_frame:
+  status: "EXPLORATORY — post-hoc, no bars locked, zero compute"
+  artifact: autoresearch/experiments/h49-mirror-per-frame/results/summary.json
+  analysis: autoresearch/experiments/h49-mirror-per-frame/analysis.md
+  shape:
+    aria_60_border_free: "da3:small 96% of frames worse, p10 ratio 1.31; da3:large 98%, p10 1.52"
+    aria_89: "da3:small 99% worse, p10 1.69; da3:large 100% (232 of 232), p10 1.83"
+    scannetpp_rectified: "da3:small 53% worse, median 1.05, only 16% past 1.5x; da3:large 56%, 3% past 1.5x"
+  RULES_OUT: >
+    The SUBSET form of the content explanation. A hand in frame, one layout, a
+    close surface would give a tail or a bimodal split. The FLOOR of the Aria
+    distribution is above 1, not just its mean.
+  DOES_NOT_RULE_OUT: >
+    A PERVASIVE property of egocentric imagery — everything close, floor in a
+    fixed place, the wearer's body in the same region. That predicts exactly this
+    shape. H48 remains the experiment that decides.
+  incidental_negative_correlation: >
+    corr(baseline error, mirror ratio) is negative everywhere (-0.17 to -0.82):
+    frames the model finds EASY degrade proportionally MORE. Consistent with a
+    roughly additive corruption; offered as consistency, NOT mechanism. Also one
+    more reason the ratio of means is citable — per-frame ratios are largest
+    exactly where the denominator is smallest.
