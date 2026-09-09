@@ -49,13 +49,38 @@ more than any other single run available.
 * **B3 — the family ordering.** If B2 passes, both DA3 variants exceed both
   VGGT variants, as on Aria. If B2 fails, this is not evaluated.
 
-## What it cannot do
+## Addendum 2026-09-09 — make it a 2×2 with the reciprocal arm
+
+`AriaRemap.build(src_cam, dst_cam, hw)` is generic in both cameras, so the
+reverse resample costs nothing extra to write: **Aria content through
+ScanNet++'s lens.** With it the design becomes a proper factorial:
+
+| | Aria lens | ScanNet++ lens |
+|---|---|---|
+| **Aria content** | **H47** (+154.8 / +261.4 / +45.7 / +29.9%) | **new arm** |
+| **ScanNet++ content** | **H48** (this) | **H46** (+13.5 / +3.3 / −9.3 / +1.6%) |
+
+Two cells are already measured. The two resampled cells decide it:
+
+* effect follows the **row** (Aria content) → **content**;
+* effect follows the **column** (Aria lens) → **lens or warp**;
+* effect in neither → the resampling itself destroys whatever carries it, and
+  the 2×2 cannot answer the question. **That outcome is possible and is stated
+  now**, because a resample is not a null operation.
+
+**Geometry checked before writing any code** (with the *corrected* corner-ray
+formula — see `../h47-mirror-border/CORRECTION.md`): the reciprocal arm renders
+a 60° co-axial view whose corner ray is **39.2°**, and Aria's content only exists
+out to **54.83°**, so the region with no Aria source never enters the scored
+view. Same argument as the forward arm, other direction.
+
+## What it cannot do, either way
 
 It cannot separate **capture** (motion blur, auto-exposure, 30 Hz video) from
-**lens** (Aria's KB4 optics and the warp), because resampling carries
-ScanNet++'s sharp stills through Aria's geometry — the geometry changes and the
-sharpness does not. So a positive result means *"the lens or the warp"*, not
-*"the lens"*. That distinction is named here so it is not quietly dropped later.
+**lens** (the optics and the warp), because a resample carries each dataset's
+sharpness through the other's geometry — the geometry changes and the sharpness
+does not. So "follows the column" means *"the lens or the warp"*, not *"the
+lens"*. Named here so it is not quietly dropped later.
 
 ## Cost
 
