@@ -2476,3 +2476,32 @@ page caught it.** Two of the last three defects in this report were introduced
 by edits meant to fix earlier ones. The build's structural checks (tags, tables,
 numbers, now wording) catch none of that class — a grammatically broken sentence
 is well-formed HTML with the right numbers in it.
+
+### Sixteenth tick — the analysis script H48 was missing, and every branch of it tested
+
+Last tick's lesson was that **editing the report is now the main source of new
+defects** — two of its last three came from edits meant to fix earlier ones — so
+this tick did not touch it.
+
+What it found instead: H48 had two runners and two experiment scripts and **no
+analysis script**. This line commits the analysis before the results exist
+precisely so the verdict logic cannot be shaped by the numbers (H37, H40, H41,
+H45, H46 all did). H48 would have had it written under time pressure with the
+2×2 already on screen.
+
+`analyze_h48.py` assembles the four cells — H47 and H46 hard-coded so the
+comparison target cannot drift, the two resampled cells read from the runs — and
+fixes the reading in advance:
+
+* Aria-content cells large, ScanNet++-content cells not → **content**
+* Aria-**lens** cells large → **lens or warp**
+* both large → neither factor alone; **the design cannot separate them and says so**
+* neither large → the resample destroyed whatever carries the effect; **stated in
+  the protocol before the run as a possible outcome**
+
+**Every branch was exercised on synthetic inputs**, including the incomplete
+case, so the logic is tested before it meets a real number. That is cheap to do
+now and impossible to do honestly afterwards.
+
+It also reads the **ratio of means**, which the runners record beside the mean of
+per-frame ratios — the pair that had to be corrected in H45 after the fact.
