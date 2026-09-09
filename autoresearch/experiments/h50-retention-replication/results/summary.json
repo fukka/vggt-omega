@@ -1,0 +1,54 @@
+{
+  "native": {
+    "da3:small": 173.5308628006069,
+    "da3:large": 296.7871798785603,
+    "vggt": 54.46848659468566,
+    "vggt_omega": 31.17164702784907
+  },
+  "row": {
+    "da3:small": 107.20119644320594,
+    "da3:large": 121.40745338891163,
+    "vggt": 24.898418448665442,
+    "vggt_omega": 19.856098100378066
+  },
+  "col": {
+    "da3:small": -5.823510677191105,
+    "da3:large": -5.195560054792672,
+    "vggt": 5.586380563469629,
+    "vggt_omega": 1.5721158966141526
+  },
+  "ss_not_matched": {
+    "da3:small": -4.088788765695615,
+    "da3:large": 23.064493419491413,
+    "vggt": 6.094646685520515,
+    "vggt_omega": 0.27770738759428415
+  },
+  "verdict": "VOID",
+  "why": "a gate failed, so the rule is not applied: a/da3:small resolves at 1.56x",
+  "rule_output_if_gate_had_passed": [
+    "CONTENT REPLICATES",
+    "retention da3:small 0.62, da3:large 0.41, vggt 0.46, vggt_omega 0.64, row > column 4/4"
+  ],
+  "headroom": {
+    "aa": {
+      "da3:small": 3.8055014023611133,
+      "da3:large": 9.048159352748335,
+      "vggt": 6.1610721809566895,
+      "vggt_omega": 8.150322970061154
+    },
+    "r": {
+      "da3:small": 2.7897886111647394,
+      "da3:large": 4.4685451778248755,
+      "vggt": 3.735228333901661,
+      "vggt_omega": 4.483830493915143
+    },
+    "a": {
+      "da3:small": 1.5620844261853772,
+      "da3:large": 2.5442876033144657,
+      "vggt": 2.684566570904644,
+      "vggt_omega": 3.7728038850895897
+    }
+  },
+  "retention_min": 0.3,
+  "headroom_min": 2.0
+}

@@ -81,6 +81,33 @@ def cell(prefix):
             plumb, spread_fail, len(files))
 
 
+def headroom(prefix):
+    """floor / baseline AbsRel per backbone for one cell, from results/diag/.
+
+    protocol.md specifies this gate; the first version of this script printed a
+    reminder to run it by hand, which is exactly how a gate stops being one.
+    Implemented here after the run, WITHOUT changing the 2.0x threshold the
+    protocol fixed -- the number was written down before the data existed and
+    is not touched.
+    """
+    fs = sorted((RES / "diag").glob(f"{prefix}_*.json"))
+    if not fs:
+        return {}
+    floor = float(np.mean([json.load(open(f))["agg"]["floor"] for f in fs]))
+    base = {}
+    for f in sorted(RES.glob(f"{prefix}_*.json")):
+        for m, v in json.load(open(f)).get("models", {}).items():
+            b = v.get("normal_absrel")
+            if b is None:
+                pf = v.get("per_frame", {})
+                n = pf.get("normal") or pf.get("normal|0.0") or []
+                n = [x for x in n if x]
+                b = float(np.mean(n)) if n else None
+            if b:
+                base.setdefault(m, []).append(b)
+    return {m: floor / float(np.mean(v)) for m, v in base.items()}
+
+
 def verdict(native, row, col):
     missing = [m for m in MODELS
                if m not in native or m not in row or m not in col]
@@ -167,8 +194,14 @@ def main():
     sf = sf_aa + sf_r + sf_a
     print(f"gate 3  resampling preserved content: "
           f"{'PASS' if not sf else 'FAIL ' + str(sf)}")
-    print("gate 2  resolving power: run diag_h48.py over the held-out scenes; "
-          "recorded in results/diag/")
+    hr = {c: headroom(c) for c in ("aa", "r", "a")}
+    thin = [(c, m, h) for c, d in hr.items() for m, h in sorted(d.items())
+            if h < HEADROOM_MIN]
+    print(f"gate 2  resolving power: worst "
+          f"{min([h for d in hr.values() for h in d.values()], default=float('nan')):.2f}x "
+          f"-> {'PASS' if not thin else 'FAIL'}")
+    for c, m, h in thin:
+        print(f"        cell {c!r} backbone {m}: {h:.2f}x, below the {HEADROOM_MIN}x bar")
 
     print(f"\n{'backbone':12s} {'Aria/Aria':>10s} {'Aria/SN++lens':>14s} "
           f"{'SN++/Aria lens':>15s} {'retention':>10s} {'SN++/SN++*':>11s}")
@@ -180,12 +213,22 @@ def main():
     print("* not region-matched; in no clause of the rule (protocol.md)")
 
     v, why = verdict(native, row, col)
-    if plumb >= PLUMBING_MAX_PCT or sf:
-        v, why = "VOID", "a gate failed; the rule is not applied"
+    rule_said = (v, why)
+    if plumb >= PLUMBING_MAX_PCT or sf or thin:
+        v = "VOID"
+        why = ("a gate failed, so the rule is not applied: "
+               + "; ".join(f"{c}/{m} resolves at {h:.2f}x" for c, m, h in thin))
     print(f"\nVERDICT: {v} — {why}")
+    if v == "VOID":
+        print(f"         (what the rule would have said, had the gate passed: "
+              f"{rule_said[0]} — {rule_said[1]})")
+        print("         Clause 1 (retention) uses only the aa and r cells. "
+              "Neither is implicated: see the headroom table.")
     (RES / "summary.json").write_text(json.dumps(
         {"native": native, "row": row, "col": col, "ss_not_matched": ss,
-         "verdict": v, "why": why, "retention_min": RETENTION_MIN}, indent=2))
+         "verdict": v, "why": why, "rule_output_if_gate_had_passed": rule_said,
+         "headroom": hr, "retention_min": RETENTION_MIN,
+         "headroom_min": HEADROOM_MIN}, indent=2))
     print(f"[h50] wrote {RES / 'summary.json'}")
     return 0
 
