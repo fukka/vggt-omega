@@ -2505,3 +2505,24 @@ now and impossible to do honestly afterwards.
 
 It also reads the **ratio of means**, which the runners record beside the mean of
 per-frame ratios — the pair that had to be corrected in H45 after the fact.
+
+### Seventeenth tick — an index for the file the loop reads first
+
+H48 is completely prepared: protocol, two experiment scripts, two runners, a
+tested analysis script, and one command to launch it. There is nothing left to
+prepare for it, and the report is deliberately untouched.
+
+So this tick fixed something that has been quietly taxing every tick:
+`research-state.yaml` is **what the loop instruction says to read first**, and it
+had grown past **2,400 lines and 97 top-level keys** with no index. Finding the
+current state meant scrolling through fifty experiments in chronological order.
+
+`_status_2026_09_09` at the top is a **pointer list, not a summary** — where the
+line stands, what is blocked and on whom, what is ready to launch, and which key
+holds each standing rule, recurring mistake and correction. Every claim still
+lives in the key it names; the header repeats none of them.
+
+**Checked, not assumed**: the file still parses as YAML, and a script confirms
+that **all 21 keys the index references exist**. An index that points at
+something that is not there is worse than no index — and this file has already
+carried one false "open" ticket and one credit attached to the wrong number.

@@ -1,6 +1,44 @@
 # Research State — Central Project Tracking
 # Updated by the agent after each experiment and reflection.
 
+# ============================================================================
+# WHERE THINGS STAND — read this block, then jump to the key you need.
+# Added 2026-09-09 because this file is what the loop reads first every tick and
+# it had grown past 2,400 lines with no index. It is a POINTER LIST, not a
+# summary: every claim lives in the key it names.
+# ============================================================================
+_status_2026_09_09:
+  roll_orientation_line: "CLOSED. All four parts of the opening question answered. See `roll_orientation_line`."
+  live_thread: "`mirror_thread` — real on Aria, absent on ScanNet++, cause unknown."
+  blocked_on_hardware: >
+    lambda_63 unreachable since 2026-09-08, seventeen consecutive loop ticks.
+    space-container is NOT a fallback — the ssh chain runs through lambda_63.
+    See `outage_blocks_both_boxes`.
+  blocked_on_the_user: >
+    The ADT download decision (`adt_unused_sequences`). Not acted on; it is the
+    only thing that fixes the cross-room evidence, still 120 frames over two
+    near-static recordings.
+  ready_to_launch: >
+    H48, a full 2x2 (protocol, both experiment scripts, both runners, and an
+    analysis script whose every branch is tested on synthetic inputs). One
+    command: `bash autoresearch/tools/resume_after_outage.sh`.
+
+  where_to_find_things:
+    the_line_end_to_end: "`roll_orientation_line`, then findings.md's two outer-loop syntheses"
+    what_is_replication_not_discovery: "`literature_horizontal_prior` — the roll premise is arXiv 2608.00678's"
+    the_flip_probe_is_the_field_s: "`literature_flip_consistency`"
+    numbers_that_moved: "`h43b_no_extrapolation`, `h45_mirror_equivariance` (citable statistic), `corner_ray_correction_2026_09_09`"
+    standing_rules: >
+      `standing_rule_2` (absolutes beside relatives), `standing_rule_3` (one
+      recording is not a test set), `rule_check_the_construction_not_the_result`,
+      `rule_when_a_curve_looks_odd_near_its_origin`, `rule_origin_paid_three_times`,
+      `pattern_write_the_weakness_next_to_the_result`, `pattern_which_model_not_how_big`
+    recurring_mistakes: >
+      `gotcha_argparse_negative_list`, `gotcha_precheck_needs_two_flags`,
+      `gotcha_reused_script_new_config`, `gotcha_unlabelled_log_tail_again`,
+      `operational_progress_lines_must_name_the_recording`
+    build_tripwires: "autoresearch/to_human/build_report.py — STALE, SUPERSEDED, RETIRED, tag balance, table columns"
+
 project:
   title: "Peripheral-aware adaptation of depth foundation backbones to Aria fisheye"
   question: >
