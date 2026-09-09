@@ -2118,3 +2118,24 @@ Two things checked before designing it, rather than assumed:
 Protocol, script and runner are committed. `lambda_63` stopped answering on port
 22 during the launch — the documented shared-box failure mode, not a new one.
 A waiter is armed; no GPU work was started.
+
+### Turning the stash lesson into a command
+
+`autoresearch/tools/fetch_results.sh` pulls every experiment's results off the
+box in one call. It exists because the lesson alone did not work: I wrote down
+"fetch before touching the stash" after `git stash push -u` swept thirteen
+result files, and then did it again in the same session, because the stash line
+was buried inside a long launch command and the habit had nowhere to live.
+
+A rule that has to be remembered at the moment of writing a launch command is a
+rule that will be broken. **The fix belongs in a command.**
+
+Also audited, since the same bug class has now bitten three times (`rot` from
+the wrong module, `weights="pretrained"` for a backbone that needs a checkpoint,
+a span check reading one model's grid for four): every call site in H48's
+unexecuted script was checked against the actual signature —
+`from_aria(h, w)`, `ScanNetPPFisheye(..., depth_convention="z")`,
+`AriaRemap.build(src_cam, dst_cam, hw)`, `remap.depth()` wanting **millimetres**
+of planar z while the loader returns metres, and `rig.teach` wanting a CHW
+tensor. Static reading, not a run — but it is the check that would have caught
+all three of those.
