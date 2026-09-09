@@ -39,7 +39,7 @@ import upright as U  # noqa: E402
 import rect_teacher as RT  # noqa: E402
 import roll_controls as RC  # noqa: E402
 from raytun3r.data import ScanNetPPFisheye  # noqa: E402
-from autoresearch.data.scannetpp_aria import AriaRemap  # noqa: E402
+from autoresearch.data.scannetpp_aria import AriaRemap, to_grid  # noqa: E402
 from finetune.eval.metrics import align_depth  # noqa: E402
 
 
@@ -91,7 +91,12 @@ def main(argv=None):
         # depth_npy is planar z in millimetres; Seq.gt_range divides by cos to
         # get range, which is exactly what must NOT happen before a pure lens
         # re-parameterisation.
-        gz_mm = np.load(src.dp[src.stem(f)]).astype(np.float32)
+        # depth_npy is on the sensor's 1408 grid; the Aria camera of record is
+        # built at --size, and AriaRemap's maps index THAT grid. The first run
+        # of this arm skipped this line and warped the sensor's top-left corner
+        # as if it were the whole frame -- see analysis.md, arm VOID.
+        gz_mm = to_grid(np.load(src.dp[src.stem(f)]).astype(np.float32),
+                        (int(aria.height), int(aria.width)))
         img = src.src.image(f).permute(1, 2, 0).numpy()
         wi, vi = remap.image(img)
         wd, vd = remap.depth(gz_mm)

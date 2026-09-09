@@ -49,6 +49,22 @@ import numpy as np
 __all__ = ["AriaRemap", "build_maps"]
 
 
+def to_grid(arr: np.ndarray, hw: Tuple[int, int]) -> np.ndarray:
+    """Nearest-neighbour resample onto ``hw``; identity when already there.
+
+    Sensor depth (ADT's ``depth_npy``) lives on the sensor's own grid while the
+    camera of record is built at the size the images are resized to. Nearest,
+    never interpolation -- averaging across a depth discontinuity invents a
+    surface that exists in neither frame.
+    """
+    if tuple(arr.shape[:2]) == tuple(hw):
+        return arr
+    h, w = hw
+    ii = ((np.arange(h) + 0.5) * arr.shape[0] / h).astype(int)
+    jj = ((np.arange(w) + 0.5) * arr.shape[1] / w).astype(int)
+    return arr[np.ix_(ii, jj)]
+
+
 def build_maps(src_cam, dst_cam, dst_hw: Tuple[int, int]
                ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """``(map_x, map_y, in_cone, void)`` taking ``dst`` pixels from ``src``.
@@ -89,6 +105,7 @@ class AriaRemap:
     map_y: np.ndarray
     in_cone: np.ndarray
     void: np.ndarray
+    src_hw: Tuple[int, int] = (0, 0)
 
     @property
     def covered(self) -> np.ndarray:
@@ -101,9 +118,28 @@ class AriaRemap:
                 "covered_frac_of_disc": float(self.covered.sum() / max(disc, 1)),
                 "void_frac_of_disc": float(self.void.sum() / max(disc, 1))}
 
+    def _check(self, arr: np.ndarray, what: str) -> None:
+        """The maps are PIXEL coordinates in the source camera's own grid.
+
+        Handing this a differently-sized array does not fail: cv2.remap simply
+        samples the sub-rectangle those coordinates happen to land in, and
+        returns a plausible picture of the wrong part of the scene. H48's
+        reciprocal arm ran a whole 2x2 that way -- a 504 camera's maps sampling
+        a 1408 depth map, so the ground truth was the sensor's top-left corner
+        while the image was the whole frame. Refuse instead.
+        """
+        if self.src_hw == (0, 0):
+            return
+        if tuple(arr.shape[:2]) != tuple(self.src_hw):
+            raise ValueError(
+                f"AriaRemap.{what}: expected source grid {self.src_hw}, got "
+                f"{tuple(arr.shape[:2])}. The maps index the source camera's "
+                f"pixels; resample to the camera's grid first.")
+
     def image(self, img: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """RGB -> (warped, valid). Void and corners come back as 0 AND masked."""
         import cv2
+        self._check(img, "image")
         out = cv2.remap(img, self.map_x, self.map_y, cv2.INTER_LINEAR,
                         borderMode=cv2.BORDER_CONSTANT, borderValue=0)
         out[~self.covered] = 0
@@ -118,6 +154,7 @@ class AriaRemap:
         pixels do not survive as thin ribbons of invented surface.
         """
         import cv2
+        self._check(depth_mm, "depth")
         hole = (depth_mm == 0).astype(np.uint8)
         if hole_dilate > 0:
             hole = cv2.dilate(hole, np.ones((2 * hole_dilate + 1,) * 2, np.uint8))
@@ -132,4 +169,5 @@ class AriaRemap:
 
     @classmethod
     def build(cls, src_cam, dst_cam, dst_hw: Tuple[int, int]) -> "AriaRemap":
-        return cls(*build_maps(src_cam, dst_cam, dst_hw))
+        return cls(*build_maps(src_cam, dst_cam, dst_hw),
+                   src_hw=(int(src_cam.height), int(src_cam.width)))

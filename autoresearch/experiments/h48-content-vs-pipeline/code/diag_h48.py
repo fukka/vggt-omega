@@ -51,7 +51,7 @@ sys.path.insert(0, str(_HERE.parents[1] / "h16-orientation" / "code"))
 import importlib.util as _ilu  # noqa: E402
 from raytun3r.cameras import from_aria  # noqa: E402
 from raytun3r.data import ScanNetPPFisheye  # noqa: E402
-from autoresearch.data.scannetpp_aria import AriaRemap  # noqa: E402
+from autoresearch.data.scannetpp_aria import AriaRemap, to_grid  # noqa: E402
 from finetune.eval.metrics import align_depth  # noqa: E402
 
 
@@ -136,18 +136,9 @@ def main(argv=None):
         cone = (theta <= dst.theta_max).numpy()
         common = cone & (np.rad2deg(theta.numpy()) <= a.common_theta_deg)
         for f in src.frames:
-            gz_mm = np.load(src.dp[src.stem(f)]).astype(np.float32)
+            gz_mm = to_grid(np.load(src.dp[src.stem(f)]).astype(np.float32),
+                            (int(aria.height), int(aria.width)))
             if remap is None:
-                # Native Aria: depth_npy is at the sensor's own 1408 grid while
-                # the scored region is built on the 504 camera the images are
-                # resized to. Nearest-neighbour index map, never interpolation
-                # -- averaging across a depth discontinuity invents surfaces.
-                if gz_mm.shape != common.shape:
-                    ii = ((np.arange(common.shape[0]) + 0.5)
-                          * gz_mm.shape[0] / common.shape[0]).astype(int)
-                    jj = ((np.arange(common.shape[1]) + 0.5)
-                          * gz_mm.shape[1] / common.shape[1]).astype(int)
-                    gz_mm = gz_mm[np.ix_(ii, jj)]
                 gz, vd, vi = gz_mm / 1000.0, np.ones_like(common), np.ones_like(common)
             else:
                 _, vi = remap.image(src.src.image(f).permute(1, 2, 0).numpy())
