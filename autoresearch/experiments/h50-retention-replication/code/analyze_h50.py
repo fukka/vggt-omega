@@ -33,10 +33,34 @@ SPREAD_TOL = 0.15
 
 
 def mirror_pct(v):
-    for k in ("mirror_cost_pct_ratio_of_means", "mirror_cost_pct"):
-        if k in v:
-            return v[k]
-    return None
+    """Mirror cost as the RATIO OF MEANS, recomputed from per-frame values.
+
+    The four cells come from three scripts and only H48's two report the
+    citable statistic. `mirror_curve.py` (the Aria-native cell) writes
+    `b0_mirror_cost_pct` and `mirror_scannetpp.py` (the ScanNet++-native cell)
+    writes `mirror_cost_pct`, and BOTH are the mean of per-frame ratios -- the
+    statistic H45's correction retired, because per-frame ratios explode where
+    the denominator is small (H33, H37). Reading either stored value here would
+    have put a retired statistic in the numerator of `retention` and a citable
+    one in the denominator.
+
+    So recompute from `per_frame` whenever it is there, pairing the arms frame
+    by frame first: the ratio of means is only meaningful over one frame set.
+    A stored value is used only when it says in its own name that it is the
+    ratio of means.
+    """
+    per = v.get("per_frame")
+    if per:
+        norm = per.get("normal", per.get("normal|0.0"))
+        mirr = per.get("mirror", per.get("mirror|0.0"))
+        if norm and mirr:
+            pairs = [(x, y) for x, y in zip(norm, mirr)
+                     if x not in (None, 0) and y is not None]
+            if pairs:
+                n = float(np.mean([x for x, _ in pairs]))
+                m = float(np.mean([y for _, y in pairs]))
+                return 100.0 * (m / n - 1.0) if n else None
+    return v.get("mirror_cost_pct_ratio_of_means")
 
 
 def cell(prefix):
@@ -94,7 +118,28 @@ def self_test():
         ("a cell is missing", n, {k: v for k, v in ok_row.items() if k != "vggt"},
          low_col, "INCOMPLETE"),
     ]
+    # the statistic itself, on both per-frame namings and on the pairing rule
+    stat_cases = [
+        ("H48 naming",
+         {"per_frame": {"normal": [1.0, 2.0], "mirror": [2.0, 4.0]}}, 100.0),
+        ("mirror_curve naming",
+         {"per_frame": {"normal|0.0": [1.0, 3.0], "mirror|0.0": [2.0, 2.0]}}, 0.0),
+        ("ratio of means, NOT mean of ratios",
+         # mean of ratios would be (10/1 + 1/10)/2 = 5.05 -> +405%
+         {"per_frame": {"normal": [1.0, 10.0], "mirror": [10.0, 1.0]}}, 0.0),
+        ("unpaired frames dropped from both sides",
+         {"per_frame": {"normal": [1.0, None, 2.0], "mirror": [2.0, 9.9, 4.0]}}, 100.0),
+        ("stored ratio-of-means accepted when per_frame is absent",
+         {"mirror_cost_pct_ratio_of_means": 42.0}, 42.0),
+        ("stored mean-of-ratios REFUSED", {"mirror_cost_pct": 42.0}, None),
+    ]
     bad = 0
+    for name, v, want in stat_cases:
+        got = mirror_pct(v)
+        ok = (got is None and want is None) or (
+            got is not None and want is not None and abs(got - want) < 1e-9)
+        print(f"  [{'ok ' if ok else 'FAIL'}] statistic: {name:44s} -> {got}")
+        bad += 0 if ok else 1
     for name, a, b, c, want in cases:
         got, why = verdict(a, b, c)
         mark = "ok " if got == want else "FAIL"
