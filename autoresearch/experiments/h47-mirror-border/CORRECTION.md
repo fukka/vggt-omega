@@ -70,3 +70,44 @@ a discarded launch. *Copy a constant from the code that established it.*
 And it survived three protocols because it was **conservative in the safe
 direction**: the true corner ray is *smaller* than I wrote, so every "this view
 fits inside the cone" claim held anyway, and nothing failed loudly.
+
+---
+
+## Follow-up audit — every other view geometry in this session's protocols
+
+Since the error came from re-deriving a constant, the obvious question is
+whether any *other* asserted geometry has the same problem. Checked with the
+corrected formula:
+
+| where | fov | edge ray | corner ray | limit it must respect | ok |
+|---|---|---|---|---|---|
+| H45 / H46 rectified view | 89° | 44.50° | **54.26°** | Aria 54.83° | ✓ |
+| H47 second arm | 60° | 30.00° | **39.23°** | Aria 54.83° | ✓ |
+| H48 (planned) | 60° | 30.00° | **39.23°** | Aria 54.83° | ✓ |
+| H40 canvas | 78.8° | 39.4° | **49.3°** | Aria 54.83° | ✓ |
+
+H40's canvas figures were **computed by the script**, not by hand, which is why
+they were right all along; only its prose about the 89° view was wrong.
+
+### The one that actually needed checking
+
+**H46's 89° view on ScanNet++.** That source is not a full circle: its
+**vertical half-FOV is 51.53°** (`autoresearch/data/scannetpp_aria.py`), which is
+*below* the 54.26° corner ray. So the question is whether the corners fall off
+the sensor.
+
+They do not. The corner direction of a square view has **equal horizontal and
+vertical components**, each `atan(tan 44.5°) = 44.5°` — the 54.26° is the
+*diagonal*, not the vertical extent. **44.5° < 51.53°, so no void.** H46's
+rectified arm is fully covered and its comparison against Aria is not
+asymmetric in the way the corrected formula might have implied.
+
+### Why the original error was easy to make and hard to see
+
+The 89° corner ray is **54.26°** against Aria's **54.83°** cone — inside by
+**0.57°**. A view that clears its limit by half a degree is exactly the case
+where a plausible-sounding wrong formula (which put it 8° *outside*) produces a
+confident, wrong story about black corners, and where the true margin is too
+thin for anyone's intuition to object.
+
+**The audit found nothing further.** Recorded so the next tick does not repeat it.

@@ -2350,3 +2350,25 @@ Three things worth keeping:
   says the effect at 60° is 60–90% of the 89° value — **it grows with field of
   view**. That is a real observation that had been sitting under the wrong name,
   and it is not offered as a mechanism.
+
+### Eleventh tick — the follow-up audit, and it found nothing
+
+The corner-ray error came from re-deriving a constant, so the obvious next
+question was whether any other geometry asserted this session has the same
+problem. Checked all four with the corrected formula: H45/H46's 89° view
+(corner 54.26°), H47's and H48's 60° views (39.23°), H40's canvas (49.3°). **All
+inside their limits.** H40's canvas numbers were computed by its script rather
+than by hand, which is why they were right when the prose beside them was not.
+
+The one that genuinely needed thought was **H46's 89° view on ScanNet++**, whose
+source has a **vertical** half-FOV of 51.53° — below the 54.26° corner ray. It
+is fine: the corner's *vertical* extent is 44.5°, since 54.26° is the diagonal.
+No void, and H46's comparison is not asymmetric.
+
+Worth recording why the original error hid so well: the 89° view clears Aria's
+cone by **0.57°**. A wrong formula that put it 8° *outside* produces a
+confident story about black corners, and the true margin is far too thin for
+intuition to object to either version.
+
+**The audit found nothing further, and that is the result.** Written down so the
+next tick does not repeat it.
