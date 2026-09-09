@@ -62,9 +62,29 @@ criterion above:
 `--calib` in H39, H41, H42 and H43 to read per-frame head roll from MPS, which
 is what `roll_distribution.py` was already doing.
 
-**What this unblocks, and what it does not.** The ticket says ADT
-translation-direction numbers stay flagged approximate "until this JSON exists".
-It exists — but `cam3r.adt.resolve_extrinsics` reports `exact=True/False` per
-call, and whether any published number is still carrying the caveat has **not**
-been re-checked here. That check is CPU-side, cheap, and is the natural
-follow-up; it is deliberately not claimed as done.
+**What this unblocks, and what is still carrying the caveat.**
+`resolve_extrinsics` returns `exact=True` only when an `extrinsics_json` is
+passed; several benchmark call sites already pass this file
+(`autoresearch/experiments/bench/code/raytun3r_row.py`, `raytun3r/train.py`,
+`raytun3r/eval.py`, `cam3r/eval_adt.py`).
+
+**But the experiment this ticket was written for does not.**
+`autoresearch/experiments/h1-rim-pose-value/code/adt_pose_value.py` still
+recovers the device→camera rotation with `hand_eye_rotation(...)`, and its own
+failure path prints *"file the GPU ticket for the calibration JSON"* — the
+ticket that has been satisfied since `4c38261`. So H1.3's ADT
+translation-direction numbers are still in exactly the state described above,
+for the reason that this ticket was never closed and nobody went back to wire
+the file in.
+
+**The rotation cross-check the acceptance asked CPU side to report:** the
+hand-eye bootstrap measures **40.55°**, the factory calibration **38.44°** —
+agreeing to **2.1°**, comfortably inside the 38–43° window. So the bootstrap was
+sound for *rotation*. What it cannot supply, and what the JSON adds, is the
+**lever arm**: `translation = [-0.004281, -0.011842, -0.005114]`, about **13 mm**
+between the device origin and the RGB sensor. That is the part every
+translation-direction number was missing.
+
+**Deliberately not done here:** wiring the JSON into `adt_pose_value.py`.
+Changing how a published experiment obtains its extrinsics changes its numbers,
+and that needs a protocol and a re-run, not a quiet edit during an outage.

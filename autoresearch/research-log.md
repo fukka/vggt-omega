@@ -2291,3 +2291,32 @@ Two process notes:
   through, so the retry was safe. Checking before re-publishing is the right
   order; assuming failure and re-pushing blindly is how a live artifact gets
   clobbered.
+
+### Ninth tick down — a stale ticket, found by looking somewhere new
+
+Both GPU boxes are unreachable and CPU work on the mirror numbers has passed
+diminishing returns, so this tick looked at the shared handoff queue instead.
+
+**Ticket #26 has been done since commit `4c38261` and still read "open — not
+started"**, because that commit's message credits *"ticket 27"* — a different,
+genuinely untouched task. Its deliverable,
+`cam3r/data/adt_camera_rgb_calibration.json`, has been in daily use all session
+as the `--calib` argument of H39, H41, H42 and H43.
+
+Verified against every acceptance criterion rather than assumed, including the
+one the ticket asked the CPU side to report: **the hand-eye bootstrap's 40.55°
+against the factory calibration's 38.44°, agreeing to 2.1°.** So the bootstrap
+was sound for rotation; what it never had, and the JSON supplies, is the **13 mm
+lever arm** that every ADT translation-direction number was missing.
+
+**And the caveat is still live where it matters.**
+`adt_pose_value.py` still calls `hand_eye_rotation(...)`, and its failure path
+still prints "file the GPU ticket for the calibration JSON" — for a ticket
+satisfied a month ago. Deliberately **not** wired in here: changing how a
+published experiment gets its extrinsics changes its numbers, and that needs a
+protocol and a re-run, not a quiet edit during an outage.
+
+The lesson is small and general: **a queue everyone reads goes stale in one
+direction — items get done and not closed — and nothing surfaces that except
+someone re-reading it.** Two ticks ago the same shape appeared inside the
+report, where a correction landed on the work and not on the places quoting it.
