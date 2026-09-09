@@ -115,6 +115,37 @@ def build(frag: Path, figs: Path, out: Path) -> None:
             sys.exit(f"[build] a withdrawn claim is back in the page: {bad!r}. "
                      f"A fragment has been resurrected from an old copy.")
 
+    # Column-count check. These tables are hand-edited HTML and a header that
+    # has drifted from its rows renders as a silently shifted column, which no
+    # existing check would catch. Compare the FIRST header row's effective
+    # width (colspan summed) against each body row's -- a two-row header's
+    # second row belongs to the first row's groups and must not be added in.
+    for tbl in re.findall(r"<table[^>]*>.*?</table>", html, re.S):
+        head = re.search(r"<thead.*?</thead>", tbl, re.S)
+        if not head:
+            continue
+        first = re.search(r"<tr\b[^>]*>(.*?)</tr>", head.group(0), re.S)
+        if not first:
+            continue
+
+        def eff(row):
+            n = 0
+            for cell in re.finditer(r"<t[dh]\b([^>]*)>", row):
+                cs = re.search(r"colspan\s*=\s*[\"']?(\d+)", cell.group(1))
+                n += int(cs.group(1)) if cs else 1
+            return n
+
+        ncol = eff(first.group(1))
+        for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", tbl, re.S):
+            if "<td" not in row:
+                continue
+            if eff(row) != ncol:
+                cap = re.search(r"<caption[^>]*>(.*?)</caption>", tbl, re.S)
+                cap = re.sub(r"<[^>]+>", "", cap.group(1))[:60] if cap else "?"
+                print(f"[build] table column mismatch: header {ncol}, a body "
+                      f"row {eff(row)} — {cap.strip()}", file=sys.stderr)
+                break
+
     text = re.sub(r"<[^>]*>", "", html)
 
     for num, allowed in SUPERSEDED.items():

@@ -2215,3 +2215,24 @@ Two details worth keeping:
 * **The first version guessed two of the counts and the tripwire caught itself
   on its first run.** That is the behaviour wanted from a tripwire, and the
   counts are now measured against the built page rather than assumed.
+
+### Auditing what already exists, since nothing could be run
+
+Fifth tick with `lambda_63` unreachable. Two audits of the built page, both on
+the class of defect hand-edited HTML produces and no existing check would catch.
+
+**Table column counts: 65 tables, zero real mismatches.** The first version of
+the checker reported six, all false — it counted `colspan` cells as one, and
+then summed *both* rows of a two-row header instead of taking the first row's
+effective width. **A check that cries wolf is worse than no check**, so it was
+fixed before being believed, and then **verified by breaking a table on
+purpose** and confirming it fires. It is now in `build_report.py`.
+
+Worth stating plainly: the audit's finding is that **there was nothing wrong**.
+That is the outcome a check should usually have, and it is still worth the
+tick — the alternative was continuing to publish 46 hand-edited sections with
+no structural check beyond tag balance.
+
+**Recorded as a null**: the additive-versus-multiplicative fit on H49's
+per-frame pairs does not separate — twelve cells, residuals within 10%, three
+ties. Written down so a future tick does not spend itself re-deriving it.
