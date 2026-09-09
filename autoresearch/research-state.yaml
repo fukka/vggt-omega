@@ -11,7 +11,7 @@ _status_2026_09_09:
   roll_orientation_line: "CLOSED. All four parts of the opening question answered. See `roll_orientation_line`."
   live_thread: "`mirror_thread` — real on Aria, absent on ScanNet++, cause unknown."
   blocked_on_hardware: >
-    lambda_63 unreachable since 2026-09-08, seventeen consecutive loop ticks.
+    lambda_63 unreachable since 2026-09-08, EIGHTEEN consecutive loop ticks (~2 days).
     space-container is NOT a fallback — the ssh chain runs through lambda_63.
     See `outage_blocks_both_boxes`.
   blocked_on_the_user: >
@@ -2351,11 +2351,18 @@ h49_mirror_per_frame:
 # ------------------------------------------- lambda_63 outage 2026-09-08/09
 lambda_63_outage_2:
   first_seen: "2026-09-08, during H48's launch"
-  still_down: "2026-09-09, four consecutive loop ticks"
+  still_down: "2026-09-09, EIGHTEEN consecutive loop ticks (~2 days). Not a transient."
   note: >
     Documented shared-box failure mode, not a new one. NO GPU WORK WAS STARTED.
     H48's protocol, script and runner are committed and its call sites were
     audited against the real signatures; it launches as soon as the box answers.
+  everything_for_the_restart_is_prepared: >
+    H48 is complete: protocol (2x2, with all three possible outcomes named
+    before the run), both experiment scripts, both runners, and an analysis
+    script whose every branch was exercised on synthetic inputs. One command
+    launches it: autoresearch/tools/resume_after_outage.sh. NOTHING FURTHER CAN
+    BE PREPARED FOR IT, and further edits to the report are net-negative — two
+    of its last three defects came from edits meant to fix earlier ones.
   what_the_outage_produced_instead: >
     Four CPU-only pieces, three of them corrections to work published in the
     ticks just before: the citable-statistic correction to H45/H47, the
