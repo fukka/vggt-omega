@@ -2426,3 +2426,29 @@ The resume script now launches both directions, one per GPU, and its closing
 note points at the plumbing line — *if any is not 0.000000%, nothing in that
 file is a measurement* — which has been the bar since H44 and is the first thing
 to read when the logs arrive.
+
+### Fourteenth tick — the same failure mode, for the third time, and I had predicted it
+
+The corner-ray correction landed on §03af, where the work is written. It did
+**not** reach the two places that quote it: the recommendations bullet
+(*"not the black corners — unchanged after removing the black corners, H47"*)
+and §08's mirror row (*"H47 still keeps 60–90% after removing the black
+corners"*). Both were still describing the removal of something that never
+existed.
+
+**This is the third instance**, and two ticks ago I wrote the rule that predicts
+it: *a correction or a credit lands where the work is written, not where it is
+quoted.* The first was the superseded mirror numbers, the second the literature
+credit that never reached §00 and §04. Knowing the rule did not stop it.
+
+What did catch it was **grepping the built page for the words the correction
+retired** — the same move that found the superseded numbers. So the practice
+that works is not "remember to update the summaries" but **"after any
+correction, search the artefact for the retired phrasing, not just the retired
+numbers."** `SUPERSEDED` in `build_report.py` already does that for numbers;
+phrases have no equivalent, and adding one would need the correction to name its
+own retired wording — which is a reasonable thing to require of a correction.
+
+Both statements now say the simpler true thing: the effect is not the black
+corners **because there were none**, and the ScanNet++ candidate explanation
+dies with them, leaving all four candidate differences unreduced.
