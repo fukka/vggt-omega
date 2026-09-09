@@ -62,6 +62,21 @@ SUPERSEDED = {
     "+41.9": 0,    # H47, superseded by +29.9%
     "+56.8": 0,    # H47, superseded by +45.7%
 }
+# Phrasings a correction retired, with how many times each is still ALLOWED —
+# always in a place that quotes it as what was originally written. Same shape as
+# SUPERSEDED, for words instead of numbers, and it exists because the same
+# failure mode has now cost three ticks: a correction lands where the work is
+# written and not where it is quoted. SUPERSEDED caught the numbers; nothing
+# caught the wording until someone grepped the built page.
+#
+# The rule this imposes on a correction is reasonable: SAY WHICH WORDING YOU ARE
+# RETIRING, and add it here.
+RETIRED = {
+    "去掉黑边": 1,      # 03af's correction box, quoting H47's own premise
+    "去掉黑角": 0,      # never legitimate — there were no black corners
+    "原封不动": 1,      # 03af, quoting the word the statistical correction retired
+    "只重测了 DA3 那一对": 1,   # 00's one-page row, labelled as the old state
+}
 VOID = {"img", "br", "meta", "link", "input", "hr",
         "path", "rect", "circle", "line", "polyline", "polygon", "text"}
 EXTRA_CSS = """<style>
@@ -147,6 +162,13 @@ def build(frag: Path, figs: Path, out: Path) -> None:
                 break
 
     text = re.sub(r"<[^>]*>", "", html)
+
+    for phrase, allowed in RETIRED.items():
+        got = text.count(phrase)
+        if got != allowed:
+            print(f"[build] retired wording {phrase!r} appears {got}x, expected "
+                  f"{allowed}x — UP means a correction did not reach a section "
+                  f"that quotes it. See RETIRED.", file=sys.stderr)
 
     for num, allowed in SUPERSEDED.items():
         got = text.count(num)

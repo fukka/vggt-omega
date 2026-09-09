@@ -2452,3 +2452,27 @@ own retired wording — which is a reasonable thing to require of a correction.
 Both statements now say the simpler true thing: the effect is not the black
 corners **because there were none**, and the ScanNet++ candidate explanation
 dies with them, leaving all four candidate differences unreduced.
+
+### Fifteenth tick — the mechanism for retired wording, and a sentence I had broken
+
+Last tick's log said the practice that works is *"after any correction, search
+the artefact for the retired phrasing, not just the retired numbers"*, and that
+`SUPERSEDED` covers numbers with no equivalent for words. `RETIRED` in
+`build_report.py` is now that equivalent — same shape, one allowed count per
+phrase, always a place that quotes the old wording deliberately. **Verified by
+reintroducing a retired phrase and watching it fire.**
+
+The rule it imposes on a correction is the reasonable one: **say which wording
+you are retiring, and add it to the list.**
+
+**And the search found something else: I had broken a sentence.** Last tick's
+edit to §08's mirror row replaced a clause and left the one that used to follow
+it dangling, so the row read *"…so none of the four candidates was eliminated,
+but on ScanNet++ it is nearly zero."* — a non-sequitur, published. Repaired.
+
+That is worth stating plainly: **the tick that fixed a correction's reach
+introduced a new defect in the same paragraph, and only re-reading the built
+page caught it.** Two of the last three defects in this report were introduced
+by edits meant to fix earlier ones. The build's structural checks (tags, tables,
+numbers, now wording) catch none of that class — a grammatically broken sentence
+is well-formed HTML with the right numbers in it.
