@@ -90,6 +90,15 @@ Native cells are re-measured on the same held-out data rather than quoted from
 H47/H46, since `retention` is a ratio between two cells and both must come from
 the same recordings.
 
+**The rule needs three cells, not four.** `retention` is (Aria ct / ScanNet++
+lens) ÷ (Aria ct / Aria lens); clause 2 compares (Aria ct / ScanNet++ lens)
+against (ScanNet++ ct / Aria lens). The fourth cell — ScanNet++ through its own
+lens — appears in no clause. It is run anyway for the table, with H46's script
+and therefore **H46's scored region**, which is not the θ ≤ 28° cone the other
+three share. It is reported as not region-matched and **is not used by the
+rule**. Named here so the mismatch is not discovered later and treated as a
+result.
+
 ## What a failure would mean
 
 Not "the effect is not real" — H45/H47 established it on 13 recordings. It
