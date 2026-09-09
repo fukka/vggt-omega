@@ -68,7 +68,8 @@ class AriaLocalPairs:
     another device is scored through its own lens.
     """
 
-    def __init__(self, seq_dir: str, size: int = 504, camera=None) -> None:
+    def __init__(self, seq_dir: str, size: int = 504, camera=None,
+                 rgb_subdir: str = "videos_rgb") -> None:
         from PIL import Image
 
         # Accept .jpg or .png. This class was written against 28 staged seq131
@@ -79,13 +80,16 @@ class AriaLocalPairs:
         # by hand -- applied here instead, so it stops being folklore.
         # One extension at a time, jpg first, so a directory holding both does
         # not silently yield an interleaved pair list.
+        # `rgb_subdir` exists so the SAME recording can be read from its real
+        # sensor frames or from ADT's Blender renders of them, which is H51's
+        # whole design. It defaults to videos_rgb, so no existing caller moves.
         for ext in ("*.jpg", "*.png"):
-            self.paths = sorted(glob.glob(os.path.join(seq_dir, "videos_rgb", ext)))
+            self.paths = sorted(glob.glob(os.path.join(seq_dir, rgb_subdir, ext)))
             if self.paths:
                 break
         if not self.paths:
             raise RuntimeError(
-                f"no .jpg or .png frames under {seq_dir}/videos_rgb")
+                f"no .jpg or .png frames under {seq_dir}/{rgb_subdir}")
         ts, T = load_trajectory(os.path.join(seq_dir, "groundtruth",
                                              "aria_trajectory.csv"))
         self._traj_ts, self._traj_T = ts.numpy(), T
