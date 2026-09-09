@@ -2110,7 +2110,7 @@ rule_origin_paid_three_times:
 
 # ------------------------------------------------- line status 2026-09-08
 roll_orientation_line:
-  status: CLOSED
+  status: "CLOSED — but a new thread opened out of it and is LIVE (see mirror_thread)"
   what_closed_it: >
     All four parts of the opening human question answered (H17.1 distribution,
     H17.2 backbones, H35 expected cost, H38/H39 use the IMU); every in-room
@@ -2248,3 +2248,32 @@ pattern_write_the_weakness_next_to_the_result:
     - "H43 published a hedged verdict AND named the run that would reverse it; when it did, the cost was a paragraph."
     - "H45's limits section named the independent check that would break it; the next tick ran it and the correction landed in the same tick it was found."
   corollary: "Design the follow-up so the DAMAGING outcome is the pre-registered pass condition. H46's B2 and H47's B2 were both written that way before either ran."
+
+# --------------------------------------------------- mirror thread, LIVE
+mirror_thread:
+  opened_by: "H44's construction check, which failed by an order of magnitude and turned out to be a measurement"
+  status: LIVE
+  established:
+    - "H45: on 13 Aria recordings, reflecting the model's input and reflecting the answer back costs +58 / +67 / +254 / +350% (vggt_omega / vggt / da3:small / da3:large). Plumbing exact."
+    - "H47: it is NOT the black corners — on a border-free 60 deg view the effect is unchanged (ratios 0.83, 1.00, 0.85, 0.72)."
+    - "H46: it does NOT replicate on ScanNet++ under the same rectified construction (+13.5 / +3.3 / -9.3 / +1.6%)."
+  the_open_question: >
+    Content or pipeline? Four differences between the two datasets — content,
+    capture, ground truth, scored region — and nothing yet distinguishes them.
+  h48_designed_and_pending: >
+    ScanNet++ content resampled INTO ARIA'S LENS (autoresearch/data/scannetpp_aria.py,
+    which already keeps the void explicit) and then H47's pipeline unchanged.
+    Effect appears -> pipeline or lens. Effect absent -> content. Protocol and
+    runner committed; launch blocked by lambda_63 being unreachable (the
+    documented shared-box failure mode).
+    NAMED UP FRONT: it cannot separate CAPTURE from LENS, because resampling
+    carries ScanNet++'s sharp stills through Aria's geometry.
+  what_the_reports_say_now: >
+    Section 03ae's claim is narrowed in place and 03af carries H46/H47. The
+    recommendation is "measure it on your own data", not "un-mirror everything".
+  hand_masking_is_NOT_available: >
+    The obvious content test — exclude the wearer's hands — cannot be run on
+    these recordings. docs/handoff/tickets/027 records that
+    Apartment_release_clean sequences have ZERO human/hand instances (all 357
+    are static objects, verified 2026-08-18), so there is nothing to mask.
+    Skeleton-bearing ADT sequences would be needed and are not extracted.
