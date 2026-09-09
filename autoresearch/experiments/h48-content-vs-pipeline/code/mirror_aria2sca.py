@@ -39,7 +39,8 @@ import upright as U  # noqa: E402
 import rect_teacher as RT  # noqa: E402
 import roll_controls as RC  # noqa: E402
 from raytun3r.data import ScanNetPPFisheye  # noqa: E402
-from autoresearch.data.scannetpp_aria import AriaRemap, to_grid  # noqa: E402
+from autoresearch.data.scannetpp_aria import (AriaRemap, to_grid,  # noqa: E402
+                                             depth_spread)
 from finetune.eval.metrics import align_depth  # noqa: E402
 
 
@@ -86,6 +87,16 @@ def main(argv=None):
     cone = (theta <= dst.theta_max).numpy()
     common = cone & (np.rad2deg(theta.numpy()) <= a.common_theta_deg)
 
+    # The check H48's void arm did not carry: a pure lens re-parameterisation
+    # moves rays between pixels and cannot change what the rays hit, so the GT
+    # depth spread over the scored cone must survive it. Measured on the source
+    # side over the SOURCE camera's own theta <= common cone, so the two
+    # numbers describe the same rays.
+    th_src = src.src.camera.incidence_grid(int(aria.height), int(aria.width))
+    src_common = ((th_src <= src.src.camera.theta_max).numpy()
+                  & (np.rad2deg(th_src.numpy()) <= a.common_theta_deg))
+    spread_native, spread_warped = [], []
+
     frames = []
     for f in src.frames:
         # depth_npy is planar z in millimetres; Seq.gt_range divides by cos to
@@ -104,8 +115,18 @@ def main(argv=None):
         valid = common & vi & vd & (gz > 0) & (gz <= a.depth_max_m)
         if valid.sum() < 1000:
             continue
+        gz_src = gz_mm / 1000.0
+        src_valid = src_common & (gz_src > 0) & (gz_src <= a.depth_max_m)
+        spread_native.append(depth_spread(gz_src, src_valid))
+        spread_warped.append(depth_spread(gz, valid))
         frames.append((torch.from_numpy(wi).permute(2, 0, 1).float(), gz, valid))
     print(f"[h48r] {len(frames)} usable frames", flush=True)
+    sn, sw = float(np.mean(spread_native)), float(np.mean(spread_warped))
+    rel = abs(sw - sn) / max(sn, 1e-6)
+    verdict = ("OK" if rel <= 0.15 else
+               "FAIL - the resample did not preserve the content; arm is void")
+    print(f"[h48r] depth spread native {sn:.3f} -> warped {sw:.3f} "
+          f"({rel:+.1%}) {verdict}", flush=True)
     if not frames:
         sys.exit("[h48r] nothing usable")
 
@@ -181,6 +202,8 @@ def main(argv=None):
         Path(a.out).parent.mkdir(parents=True, exist_ok=True)
         Path(a.out).write_text(json.dumps(
             {"seq": src.name, "lens_scene": lens.name, "remap_stats": st,
+             "preservation": {"spread_native": sn, "spread_warped": sw,
+                              "rel_diff": rel, "gate_pass": rel <= 0.15},
              "models": out, "config": vars(a)}, indent=1))
         print(f"[h48r] wrote {a.out}", flush=True)
 

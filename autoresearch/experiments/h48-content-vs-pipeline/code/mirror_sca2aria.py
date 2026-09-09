@@ -30,7 +30,8 @@ import rect_teacher as RT  # noqa: E402
 import roll_controls as RC  # noqa: E402
 from raytun3r.cameras import from_aria  # noqa: E402
 from raytun3r.data import ScanNetPPFisheye  # noqa: E402
-from autoresearch.data.scannetpp_aria import AriaRemap  # noqa: E402
+from autoresearch.data.scannetpp_aria import (AriaRemap,  # noqa: E402
+                                             depth_spread)
 from finetune.eval.metrics import align_depth  # noqa: E402
 
 ARMS = ("normal", "mirror", "twice")
@@ -67,6 +68,13 @@ def main(argv=None):
     common = cone & (np.rad2deg(theta.numpy()) <= a.common_theta_deg)
 
     # Resample once; the arms all see the same frames.
+    # Same preservation check as the reciprocal arm (see its comment): the GT
+    # depth spread over the scored cone must survive a pure change of lens.
+    th_src = src.camera.incidence_grid(src.h, src.w)
+    src_common = ((th_src <= src.camera.theta_max).numpy()
+                  & (np.rad2deg(th_src.numpy()) <= a.common_theta_deg))
+    spread_native, spread_warped = [], []
+
     frames = []
     for i in range(len(src)):
         d = src.depth(i)
@@ -81,8 +89,18 @@ def main(argv=None):
         valid = common & vi & vd & (gz > 0) & (gz <= a.depth_max_m)
         if valid.sum() < 1000:
             continue
+        src_valid = src_common & (dm > 0) & (dm <= a.depth_max_m)
+        spread_native.append(depth_spread(dm, src_valid))
+        spread_warped.append(depth_spread(gz, valid))
         frames.append((torch.from_numpy(wi).permute(2, 0, 1).float(), gz, valid))
     print(f"[h48] [{src.name}] {len(frames)} usable frames", flush=True)
+    sn = float(np.mean(spread_native)) if spread_native else 0.0
+    sw = float(np.mean(spread_warped)) if spread_warped else 0.0
+    rel = abs(sw - sn) / max(sn, 1e-6)
+    verdict = ("OK" if rel <= 0.15 else
+               "FAIL - the resample did not preserve the content; arm is void")
+    print(f"[h48] [{src.name}] depth spread native {sn:.3f} -> warped {sw:.3f} "
+          f"({rel:+.1%}) {verdict}", flush=True)
     if not frames:
         sys.exit(f"[h48] {src.name}: nothing usable")
 
@@ -151,6 +169,8 @@ def main(argv=None):
         Path(a.out).parent.mkdir(parents=True, exist_ok=True)
         Path(a.out).write_text(json.dumps(
             {"scene": Path(a.scene).name, "remap_stats": st, "models": out,
+             "preservation": {"spread_native": sn, "spread_warped": sw,
+                              "rel_diff": rel, "gate_pass": rel <= 0.15},
              "config": vars(a)}, indent=1))
         print(f"[h48] wrote {a.out}", flush=True)
 

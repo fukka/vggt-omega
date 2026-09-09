@@ -49,6 +49,21 @@ import numpy as np
 __all__ = ["AriaRemap", "build_maps"]
 
 
+def depth_spread(depth: np.ndarray, mask: np.ndarray) -> float:
+    """(p95 - p5) / p50 of ``depth`` inside ``mask``; 0.0 if the mask is empty.
+
+    The one number a resampling arm has to check. A pure lens
+    re-parameterisation moves rays between pixels and does not touch what the
+    rays hit, so this must survive it. H48's reciprocal arm ran a whole 2x2
+    with 1.270 silently becoming 0.398 and nothing complained.
+    """
+    g = depth[mask]
+    if g.size == 0:
+        return 0.0
+    p5, p50, p95 = np.percentile(g, [5, 50, 95])
+    return float((p95 - p5) / max(p50, 1e-6))
+
+
 def to_grid(arr: np.ndarray, hw: Tuple[int, int]) -> np.ndarray:
     """Nearest-neighbour resample onto ``hw``; identity when already there.
 
