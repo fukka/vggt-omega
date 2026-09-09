@@ -2055,3 +2055,18 @@ nothing was published wrong — but that is twice now (H38 was the first) that a
 tail without labels sent me the wrong way for a paragraph. The fix landed in
 `derotate.py` after H38 and did not propagate to the scripts derived from
 `residual_curve.py`.
+
+### `git stash push -u` sweeps up results, not just stray edits
+
+The pull-before-launch habit on lambda_63 is `git stash push -u` — it has worked
+all session because the untracked files it swept were already committed copies.
+This tick it swept **thirteen result JSONs that existed nowhere else**, and the
+analysis then reported "no complete scenes yet" for an arm that had finished.
+
+They were recoverable: a `stash -u` commit keeps untracked files as a third
+parent, so `git checkout "stash@{0}^3" -- <path>` brings them back. Nothing was
+lost, and the analysis script's honest "no complete scenes" is what surfaced it —
+had it silently averaged over half the data, this would have gone unnoticed.
+
+**The habit that fixes it: rsync results to the Mac before touching the stash.**
+Fetching first costs seconds and makes the box's working tree disposable.
