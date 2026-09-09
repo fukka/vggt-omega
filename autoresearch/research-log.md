@@ -2526,3 +2526,67 @@ lives in the key it names; the header repeats none of them.
 that **all 21 keys the index references exist**. An index that points at
 something that is not there is worse than no index — and this file has already
 carried one false "open" ticket and one credit attached to the wrong number.
+
+---
+
+## 2026-09-09 — H48 answers the mirror thread's question, after its own arm turned out to be void
+
+`lambda_63` came back from the ~2.5-day network outage and both H48 arms ran.
+
+**The first result was read, doubted, and withdrawn — in that order.**
+`analyze_h48.py` returned *NEITHER CELL LARGE*, one of the three outcomes the
+protocol had named in advance, so it would have been easy to accept. What did
+not fit was not the size of any number but a *pattern*: four independent
+backbones agreeing to three decimals in both arms (0.0844 / 0.0830 / 0.0837 /
+0.0835), where the native cells spread 0.051–0.119, and per-frame AbsRel
+barely moving. Models do not agree like that unless the thing they are being
+scored against tells them nothing.
+
+**The diagnostic was written to test resolving power and found a bug.** Its
+idea is a *floor* rather than a range: align a **constant** prediction — a
+fronto-parallel plane that knows nothing — with the same `scale_shift` fit, and
+see what AbsRel it scores. Committed before it ran, per the protocol rule. What
+it reported first was that the reciprocal arm's ground-truth depth distribution
+did not match the native arm's on the same sequence over the same cone
+(2.18/2.67/3.23 m against 1.14/2.57/4.42). A change of lens re-parameterises
+which pixel holds which ray; it cannot flatten a distribution threefold.
+
+Cause: `AriaRemap`'s maps are pixel coordinates in the **source camera's grid**
+(504), and ADT's `depth_npy` is on the **sensor's grid** (1408). `cv2.remap`
+does not object — it sampled the sensor's top-left corner and scored every
+model against a different part of the scene than the image it was shown. The
+arm was void; its reading was withdrawn before it reached the report.
+
+The shape of the mistake is worth more than the fix. `Seq.gt_range()` does two
+things — resample to the target grid, and divide by cos θ. This arm must not do
+the second, and skipping the accessor to avoid it silently dropped the first.
+`AriaRemap` now **refuses** an array that is not on the source grid.
+
+**Then the answer.** With the arm fixed, the 2×2 is unambiguous by inspection
+and ambiguous by its own rule:
+
+| backbone | Aria/Aria | SN++ ct/Aria lens | Aria ct/SN++ lens | SN++/SN++ |
+|---|---|---|---|---|
+| da3:small | +154.8% | +24.3% | +96.3% | +13.5% |
+| da3:large | +261.4% | +6.5% | +106.5% | +3.3% |
+| vggt | +45.7% | −3.2% | +21.0% | −9.3% |
+| vggt_omega | +29.9% | +11.2% | +13.3% | +1.6% |
+
+Aria content keeps 41–62% of its mirror cost through foreign optics; ScanNet++
+content gains 3–11 pp through Aria's. **The effect travels with the content.**
+
+**The pre-registered rule did not fire, and was not retuned.** It wanted both
+DA3 cells over 100%; they landed at +96.3% and +106.5%. Its else-branch prints
+an interpretation the same session's floor table refutes. The right response is
+not to move the threshold to 90% and collect a verdict — it is to say the rule
+was the wrong statistic to pre-register (absolute, not scale-free: `vggt` and
+`vggt_omega` could never have satisfied it anywhere), report the finding as
+**exploratory**, and name the confirmatory test — pre-register **retention**,
+run it on held-out scenes and sequences.
+
+**What the day cost and bought.** Two runs of the reciprocal arm instead of
+one; one arm's result withdrawn before publication rather than after; a guard
+in shared code so the class of bug cannot recur silently; and the mirror
+thread's central question answered at exploratory strength, with the honest
+statement that this eliminates one of four candidate differences and leaves
+imagery-versus-capture standing.

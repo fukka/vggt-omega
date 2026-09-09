@@ -3633,8 +3633,8 @@ whose hedged verdict named the run that reversed it.
 |---|---|
 | **opened by** | H44's construction check, which failed by an order of magnitude and turned out to be a measurement |
 | **established** | On 13 Aria recordings, reflecting the input and reflecting the answer back costs **+58 / +67 / +254 / +350%** (`vggt_omega` / `vggt` / `da3:small` / `da3:large`), plumbing exact (H45). **Not the black corners** — unchanged on a border-free 60° view (H47). **Does not replicate on ScanNet++** under the same construction, +13.5 / +3.3 / −9.3 / +1.6% (H46). |
-| **open** | Content or pipeline? Four differences, nothing yet distinguishes them. |
-| **designed, not run** | H48: ScanNet++ content resampled **into Aria's lens**, then H47's pipeline unchanged. Appears → pipeline or lens. Absent → content. **Cannot separate capture from lens**, because resampling carries sharp stills through Aria's geometry. |
+| **answered, 2026-09-09** | **H48: it travels with the content, not the lens.** Aria content re-imaged through ScanNet++'s optics keeps **41–62%** of its mirror cost (+96.3 / +106.5 / +21.0 / +13.3%); ScanNet++ content through Aria's optics gains only **3–11 pp**. Same direction and ordering in all four backbones. Exploratory — see below for why the pre-registered rule did not fire. |
+| **open** | **Imagery or capture?** Of H46's four candidate differences the lens/warp is now the least likely; content-vs-capture is still not separated, and ground truth and scored region are untouched. |
 | **dead end, checked** | Masking the wearer's hands is impossible on these recordings — the `Apartment_release_clean` sequences contain **zero** human/hand instances (all 357 are static objects, `docs/handoff/tickets/027`). |
 | **reports** | §03ae's claim is narrowed in place, §03af carries H46/H47, §08 carries the open question, and the recommendation is *measure it on your own data*. |
 
@@ -3704,7 +3704,8 @@ flip.
 **Rules out the subset form of the content explanation. Does not rule out a
 pervasive property of egocentric imagery** — everything close, floor in a fixed
 place, the wearer's body in the same region — which predicts exactly this shape.
-H48 remains the experiment that decides.
+H48 decided between content and pipeline (below) and came down on content,
+which is the same direction this points.
 
 **Incidental:** `corr(baseline, ratio)` is negative everywhere (−0.17 to −0.82).
 Frames the model finds *easy* degrade proportionally *more* — consistent with a
@@ -3847,3 +3848,98 @@ correct. Re-deriving a geometric constant instead of looking it up produced it,
 and it survived three protocols because the error was **conservative in the safe
 direction** — the true corner ray is smaller than I wrote, so every "fits inside
 the cone" claim held anyway and nothing failed loudly.
+
+
+## H48 — the mirror effect travels with the content, not the lens
+
+The 2×2 the mirror thread was built toward. Each dataset's imagery pushed
+through the other's optics, the same 60° co-axial view and the same three arms
+downstream, scored over one matched cone (θ ≤ 28°).
+
+| backbone | Aria ct / Aria lens (H47) | ScanNet++ ct / **Aria lens** | Aria ct / **ScanNet++ lens** | ScanNet++ / ScanNet++ (H46) |
+|---|---|---|---|---|
+| da3:small  | +154.8% | +24.3% | **+96.3%**  | +13.5% |
+| da3:large  | +261.4% |  +6.5% | **+106.5%** |  +3.3% |
+| vggt       |  +45.7% |  −3.2% | **+21.0%**  |  −9.3% |
+| vggt_omega |  +29.9% | +11.2% | **+13.3%**  |  +1.6% |
+
+Aria content keeps **41–62%** of its mirror cost through foreign optics.
+ScanNet++ content picks up **3–11 pp** through Aria's — small, but positive in
+all four backbones. The rows dominate the columns.
+
+**The pre-registered rule did not fire, and is reported unchanged.**
+`analyze_h48.py`, committed before either arm ran, wanted *both* DA3 cells over
+**100%** in the Aria-content column; they came in at **+96.3%** and **+106.5%**.
+So it returns its else-branch — "the resampling destroys whatever carries the
+effect" — whose interpretation is separately refuted by the floor table below.
+The threshold was the wrong statistic to pre-register: absolute rather than
+scale-free, so `vggt` and `vggt_omega` could never have satisfied it in any
+cell. It is **not** being retuned now. The finding is exploratory; the
+confirmatory version is named and cheap — pre-register **retention**, run it on
+held-out scenes and sequences.
+
+**Both cells were shown able to resolve an effect before the table was read.**
+The first run of this 2×2 was read as "no effect either way", and that was
+wrong twice: one arm was void (below), and neither arm had been shown capable
+of showing an effect at all. The check is a *floor*, not a range — the AbsRel an
+aligned **constant** prediction scores, i.e. what a model gets for knowing
+nothing:
+
+| cell | floor | da3:small | da3:large | vggt | vggt_omega |
+|---|---|---|---|---|---|
+| ScanNet++ ct / Aria lens (8 scenes) | 0.2145 | 2.40× | 2.78× | 3.45× | 4.73× |
+| Aria ct / ScanNet++ lens (7 seqs)   | 0.4400 | 2.60× | 3.95× | 3.44× | 3.81× |
+
+Headroom is floor ÷ baseline AbsRel. Everything clears 2.4×, and the backbones'
+baselines separate instead of collapsing onto one number.
+
+**The floor table is also a result on its own.** It follows the **content row**
+and ignores the **lens column** — Aria content 0.4888 / 0.4836, ScanNet++
+content 0.1010 / 0.1005 on the scene pair where both were measured. The
+know-nothing floor is a property of the scene's depth distribution, and it
+travels through either lens intact. That is independent evidence, obtained
+without running a model, that the resampling carries content rather than
+destroying it.
+
+**What it buys and what it does not.** Of H46's four candidate differences —
+content, capture, ground truth, scored region — the **lens and the warp** is now
+the least likely carrier. Content versus capture is still *not* separated, and
+was named as unseparable in `protocol.md` before the run: a resample carries
+each dataset's sharpness, blur and exposure through the other's geometry, so
+"content" here means *the imagery*, not *the scene*. Ground truth and scored
+region are untouched. One of four eliminated — what the protocol promised at
+most.
+
+### The reciprocal arm's first run was void, and how it was caught
+
+Worth recording because the symptom was a *pattern*, not an error. The first
+2×2 returned "neither cell large" — a pre-registered possible outcome — but the
+four backbones agreed **to three decimals** in both arms (0.0844 / 0.0830 /
+0.0837 / 0.0835 against 0.051–0.119 natively). Four independent models do not
+land on the same number.
+
+The diagnostic written to test resolving power found a bug instead. Same ADT
+sequence, same cone: native Aria depth 1.14/2.57/4.42 m (spread 1.270), the
+resampled arm 2.18/2.67/3.23 m (spread 0.398). A change of lens cannot flatten
+a depth distribution threefold. `AriaRemap`'s maps are **pixel coordinates in
+the source camera's grid** (504); ADT's `depth_npy` is on the sensor's 1408
+grid; `cv2.remap` silently sampled the sensor's **top-left corner** and scored
+every model against ground truth from a different part of the scene than the
+image it was shown.
+
+The mechanism of the mistake is the transferable part: `Seq.gt_range()` both
+resamples to the target grid *and* divides by cos θ. This arm must not do the
+second — a pure lens re-parameterisation acts on planar z — and bypassing the
+accessor to avoid the division silently dropped the resize that came with it.
+`AriaRemap` now refuses an array that is not on the source grid, so the next
+occurrence is a crash rather than a number. An audit found no second instance
+in the repo. Full record: `experiments/h48-content-vs-pipeline/VOID_reciprocal_run1.md`.
+
+**Lesson, added to the constraints:** *a resampling arm must carry a check that
+its resampling preserved what it claims to preserve.* Here that check is one
+line — a pure lens re-parameterisation of the same content must preserve the GT
+depth distribution over the same cone — and after the fix it holds to two
+decimals (1.15/2.58/4.40 vs 1.14/2.57/4.42). The flip-twice plumbing bar passed
+at 0.000000% throughout, in the void run too: it proves the *arms* are exact
+relative to each other and says nothing about whether the input is the intended
+scene.
