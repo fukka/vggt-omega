@@ -2167,3 +2167,26 @@ committed artefacts**, after H39b and H43. The pattern is worth stating plainly:
 **a tick with no compute is not a tick with no progress, and the cheapest
 experiment available is usually re-reading what is already on disk against the
 rules the line has already written down.**
+
+### The correction had a second half nobody would have seen
+
+Fixing §03ae's table to the citable statistic left its **figure** drawn from the
+old one — a published section where the picture and the numbers under it
+disagreed, for one publish. Caught by re-reading the section rather than by any
+check.
+
+Two fixes, one of them structural: the figure is now generated from the same
+`summary.json` the table quotes, and `analyze_h45.py` computes the citable
+statistic **and keeps the as-reported one beside it in the output**, so the two
+can never drift apart silently again.
+
+Also written down: there are **two legitimate aggregations** — pooling every
+frame, or averaging each recording's own ratio of means — and they differ by up
+to 4 points here. The per-recording form is quoted because it carries a spread.
+Recording which one is in use is the difference between a small methodological
+note and a number nobody can reproduce.
+
+And 52 result JSONs were sitting untracked on the **Mac** — H42's wide-angle
+extension, which was H43b's input. Committed. The exposure the box's stash
+created has a mirror image on this side, and neither is visible until someone
+looks.
