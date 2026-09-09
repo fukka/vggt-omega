@@ -2264,3 +2264,30 @@ Two things worth keeping:
 Also recorded from the same search: flip → predict → flip back → relative error
 is an established inconsistency measure, so H45's construction is a standard
 probe applied to a new setting rather than a new probe.
+
+### Seventh tick down; the second literature pass beat the first
+
+Searching for prior work on the flip probe found that **the probe is the
+field's**: flip → predict → flip back → compare is an established
+augmentation-consistency signal for *uncertainty*, and flip-averaging is a
+common post-processing trick. H45's construction is a standard probe in a new
+setting, and §03ae now credits it.
+
+The useful part was not the credit but what the credit exposes. Both uses assume
+the flipped prediction is **comparably good** — and on Aria, for the DA3 pair,
+it is 2.2–3.6× worse on 96–100% of frames. So a standard uncertainty technique
+would be miscalibrated here, unequally by pretraining family, and a standard
+post-processing trick would be actively harmful. **That is the form a finding
+has to take before anyone can act on it**, and it came from a search rather than
+a run.
+
+Two process notes:
+
+* **The build's tag-balance check earned its keep**, catching a duplicated
+  `</div>` from a fallback anchor that matched a shorter string than intended.
+  The publish would have shipped a broken section.
+* **A publish reported "outcome unknown — upload stalled".** Listing the
+  artifacts showed the report was *not* at the top, i.e. it had not gone
+  through, so the retry was safe. Checking before re-publishing is the right
+  order; assuming failure and re-pushing blindly is how a live artifact gets
+  clobbered.

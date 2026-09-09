@@ -4626,6 +4626,7 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <figcaption>
       <code>D(flip(I))</code> 对任何没有手性偏好的模型都应等于 <code>flip(D(I))</code>。
       一条录像一个点，13 条。横轴对数 —— 因为两个预训练家族差 <strong>4–6 倍</strong>。
+      <strong>这个构造不是本页发明的</strong>：「翻转→预测→翻回→比较」是这一文献里既有的<strong>不一致性 / 不确定度</strong>信号（例如 arXiv 2502.05964 的消融里就叫 "Flip"），本页做的是<strong>把一个标准探针用到一个新场景</strong>。
     </figcaption>
   </figure>
 
@@ -4866,6 +4867,28 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
         <strong>那种形式的内容解释，预测的正是这个形状。</strong>
       </p>
       <p><strong>H49 把问题收窄了，没有判定它；能判定的仍然是 H48。</strong></p>
+    </div>
+    <div class="note warn">
+      <span class="eyebrow">文献给出的那个实际后果</span>
+      <p>
+        <strong>「翻转→预测→翻回→比较」在这一文献里是用来估<em>不确定度</em>的</strong>，
+        而且综述报告翻转是这类变换里<strong>表现最好</strong>的一个；
+        <strong>翻转平均</strong>（预测两次取平均）也是常见的后处理技巧。
+        <strong>两种用法都假设：翻转后的预测是同一场景的一个<em>同等好</em>的估计。</strong>
+      </p>
+      <p>
+        <strong>在这批第一人称鱼眼素材上，这个假设对 DA3 那一对不成立</strong>：
+        翻回来的预测是未翻转误差的 <strong>2.2–3.6 倍</strong>（AbsRel 0.131 → 0.412 / 0.058 → 0.226），
+        <strong>96–100% 的帧都如此</strong>。
+      </p>
+      <p>
+        由此有两条，<strong>都按"推论"而不是"测量"来说</strong>：
+        <strong>①</strong> 基于翻转的不确定度在这里会<strong>失准</strong>——它读到的主要是一个系统性的手性效应而不是逐像素的歧义，
+        而且<strong>两个家族失准的程度还不一样</strong>（VGGT 付 1.3–1.5 倍，DA3 付 2.2–3.6 倍）。
+        <strong>本页没有跑过不确定度估计器、也没有评过它的校准</strong>，这一条是从不一致性的<strong>量级</strong>推出来的。
+        <strong>②</strong> <strong>翻转平均在这里对 DA3 那一对是有害的</strong>——那是拿 0.131 的预测去和 0.412 的平均。
+        这一条直接从实测的那一对得出，不需要额外假设。
+      </p>
     </div>
     <div class="note">
       <span class="eyebrow">一个没人要的相关性</span>

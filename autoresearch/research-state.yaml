@@ -2373,3 +2373,24 @@ literature_horizontal_prior:
     A credit that lands where the work is written and not where it is quoted —
     the same failure mode as the superseded numbers two ticks earlier. Summary
     sections are what a reader takes away and they are the ones that go stale.
+
+# --------------------------------- second literature pass 2026-09-09
+literature_flip_consistency:
+  paper: "arXiv 2502.05964 — Revisiting Gradient-based Uncertainty for Monocular Depth Estimation"
+  note: autoresearch/literature/flip-consistency-as-uncertainty.md
+  the_construction_is_theirs: >
+    Flip the image, predict, flip the prediction back, compare — used as an
+    augmentation-consistency signal for UNCERTAINTY, labelled "Flip" in its
+    ablations. Survey work reports flipping as the best-performing transform for
+    that purpose. Flip-AVERAGING is separately a common post-processing trick.
+    H45's construction is A STANDARD PROBE IN A NEW SETTING, not a new probe,
+    and section 03ae now says so.
+  no_published_magnitude: "No paper found reports a magnitude, so H45 still has no published number to sit beside."
+  THE_PRACTICAL_EDGE_IT_GIVES:
+    - "Flip-based uncertainty would be MISCALIBRATED on this data, and unequally across families (VGGT 1.3-1.5x, DA3 2.2-3.6x). IMPLICATION, NOT MEASUREMENT — no uncertainty estimator was run or scored here."
+    - "Flip-averaging would be ACTIVELY HARMFUL for the DA3 pair — averaging a 0.131 prediction with a 0.412 one. Follows directly from the measured pair."
+  why_the_second_pass_beat_the_first: >
+    The first pass settled CREDIT (the roll premise is the field's; 02b always
+    said so, the summaries did not). The second settles CONSEQUENCE — it turns
+    H45 from a curiosity about some models into a caution about a standard
+    technique on this kind of data.

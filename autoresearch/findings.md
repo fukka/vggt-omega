@@ -3776,3 +3776,42 @@ section does not propagate to the summary sections**, and the summaries are what
 a reader takes away. The same failure mode as the superseded numbers two ticks
 ago: **a correction (or a credit) that lands where the work is written and not
 where it is quoted.**
+
+## Second literature pass — the flip probe is the field's, and that gives H45 a practical edge
+
+*Revisiting Gradient-based Uncertainty for Monocular Depth Estimation*
+(arXiv 2502.05964) uses **exactly H45's construction** — flip the image,
+predict, flip the prediction back, compare — as an augmentation-consistency
+signal from which to derive **uncertainty**, labelled "Flip" in its ablations.
+Survey work reports flipping as the **best-performing** of the transformations
+tried for that purpose. **Flip-averaging** — predict twice, average — is
+separately a common post-processing trick.
+
+**So H45's construction is a standard probe applied to a new setting, not a new
+probe, and it now says so.** No paper found reports a magnitude, so H45 still
+has no published number to sit beside.
+
+### What the literature does supply: the assumption
+
+Both uses assume the flipped prediction is a **comparably good** estimate of the
+same scene. On Aria egocentric fisheye that fails for the DA3 pair — the
+flipped-back prediction is at **2.2–3.6×** the unflipped error (0.131 → 0.412,
+0.058 → 0.226) on **96–100%** of frames.
+
+Two consequences, **stated as implications, not measurements**:
+
+1. **Flip-based uncertainty would be miscalibrated here**, and *unequally*
+   across families — VGGT pays 1.3–1.5× where DA3 pays 2.2–3.6×. **This line
+   has not run a flip-uncertainty estimator and scored its calibration**; the
+   inference is from the size of the inconsistency alone.
+2. **Flip-averaging would be actively harmful for the DA3 pair** — averaging a
+   0.131 prediction with a 0.412 one. This follows directly from the measured
+   pair with no further assumption.
+
+### Why the second pass was worth more than the first
+
+The first pass settled *credit* (the roll premise is the field's; §02b had
+always said so; the summaries had not). The second settles *consequence*: it
+turns H45 from a curiosity about some models into **a caution about a standard
+technique on this kind of data** — which is the form a finding has to take
+before anyone can act on it.
