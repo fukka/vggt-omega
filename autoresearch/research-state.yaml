@@ -2394,3 +2394,21 @@ literature_flip_consistency:
     said so, the summaries did not). The second settles CONSEQUENCE — it turns
     H45 from a curiosity about some models into a caution about a standard
     technique on this kind of data.
+
+# ------------------------------------ outage scope established 2026-09-09
+outage_blocks_both_boxes:
+  established_not_assumed: >
+    space-container is NOT an independent fallback while lambda_63 is down.
+    ~/.ssh/config chains space-container -> space-jumping-host -> lambda_63, and
+    SPACE_CONTAINER.md section 3's `space storage` bulk-data path is invoked FROM
+    lambda_63. With port 22 timing out on lambda_63, both GPU boxes and the bulk
+    data path are unreachable at once and nothing routes around it from the Mac.
+  recorded_where_the_other_account_can_read_it: >
+    docs/handoff/SPACE_CONTAINER.md now says this in section 1, because that doc
+    is the shared channel and the fact only matters during an outage — exactly
+    when nobody wants to rediscover it.
+  consequence_for_the_loop: >
+    Eight consecutive ticks with no compute. H48 is the only experiment that can
+    move the open question and it cannot run. Further CPU-side work on the same
+    committed numbers has passed the point of diminishing returns; the two
+    literature passes were the last things with real value in them.

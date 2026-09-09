@@ -31,6 +31,14 @@ is needed:
 Mac --> lambda_63 --> space-jumping-host (jumping-host.n6.sr-cloud.com:3307) --> space-container (pod)
 ```
 
+**The whole chain runs through `lambda_63`, so the pod is unreachable whenever
+that box is.** `space-container` → `space-jumping-host` → `lambda_63`, and §3's
+`space storage` is invoked *from* `lambda_63` as well. Confirmed 2026-09-09
+during a multi-day `lambda_63` outage: with port 22 timing out there, **both GPU
+boxes and the bulk-data path are gone at once**, and there is nothing to route
+around it from the Mac. Worth knowing before spending a turn hoping the pod is
+an independent fallback — it is not.
+
 **`bash -lc` is not optional.** The HTTP proxy is exported from the pod's
 `~/.bash_profile`, which bash sources only for **login** shells. A plain
 `ssh space-container 'git pull'` gets no proxy and dies of connect timeouts while
