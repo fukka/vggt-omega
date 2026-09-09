@@ -9,19 +9,23 @@
 # ============================================================================
 _status_2026_09_09:
   roll_orientation_line: "CLOSED. All four parts of the opening question answered. See `roll_orientation_line`."
-  live_thread: "`mirror_thread` — real on Aria, absent on ScanNet++, cause unknown."
+  live_thread: >
+    `mirror_thread` — real on Aria, absent on ScanNet++. H48 answered the first
+    branch on 2026-09-09: it travels with the CONTENT, not the lens or the warp.
+    See `h48_answered_2026_09_09` and, for the arm that had to be rerun,
+    `h48_reciprocal_arm_void_and_the_floor_table_2026_09_09`.
   blocked_on_hardware: >
-    lambda_63 unreachable since 2026-09-08, EIGHTEEN consecutive loop ticks (~2 days).
-    space-container is NOT a fallback — the ssh chain runs through lambda_63.
-    See `outage_blocks_both_boxes`.
+    CLEARED 2026-09-09. lambda_63 returned after ~2.5 days (a network outage,
+    not a reboot: `up 34 days`). Both H48 arms ran the same day.
   blocked_on_the_user: >
     The ADT download decision (`adt_unused_sequences`). Not acted on; it is the
     only thing that fixes the cross-room evidence, still 120 frames over two
     near-static recordings.
   ready_to_launch: >
-    H48, a full 2x2 (protocol, both experiment scripts, both runners, and an
-    analysis script whose every branch is tested on synthetic inputs). One
-    command: `bash autoresearch/tools/resume_after_outage.sh`.
+    H48's CONFIRMATORY rerun — pre-register RETENTION with a threshold (the
+    absolute 100% rule was the wrong statistic and did not fire) and run it on
+    scenes and sequences not used here. Everything needed exists; only the rule
+    has to be written down first, and it must be written BEFORE the run.
 
   where_to_find_things:
     the_line_end_to_end: "`roll_orientation_line`, then findings.md's two outer-loop syntheses"
@@ -2304,16 +2308,43 @@ mirror_thread:
     - "H47: it is NOT the black corners — on a border-free 60 deg view the effect is unchanged (ratios 0.83, 1.00, 0.85, 0.72)."
     - "H46: it does NOT replicate on ScanNet++ under the same rectified construction (+13.5 / +3.3 / -9.3 / +1.6%)."
   the_open_question: >
-    Content or pipeline? Four differences between the two datasets — content,
-    capture, ground truth, scored region — and nothing yet distinguishes them.
-  h48_designed_and_pending: >
-    ScanNet++ content resampled INTO ARIA'S LENS (autoresearch/data/scannetpp_aria.py,
-    which already keeps the void explicit) and then H47's pipeline unchanged.
-    Effect appears -> pipeline or lens. Effect absent -> content. Protocol and
-    runner committed; launch blocked by lambda_63 being unreachable (the
-    documented shared-box failure mode).
-    NAMED UP FRONT: it cannot separate CAPTURE from LENS, because resampling
-    carries ScanNet++'s sharp stills through Aria's geometry.
+    NARROWED 2026-09-09 by H48: imagery or capture? The LENS AND WARP is now the
+    least likely of H46's four candidate differences. Ground truth and scored
+    region remain untouched.
+  h48_answered_2026_09_09:
+    table_mirror_cost_pct: >
+      Aria/Aria | SN++ct/Aria lens | Aria ct/SN++ lens | SN++/SN++ --
+      da3:small 154.8 | 24.3 | 96.3 | 13.5;
+      da3:large 261.4 | 6.5 | 106.5 | 3.3;
+      vggt 45.7 | -3.2 | 21.0 | -9.3;
+      vggt_omega 29.9 | 11.2 | 13.3 | 1.6.
+    finding: >
+      THE EFFECT TRAVELS WITH THE CONTENT. Aria content keeps 41-62% of its
+      mirror cost through ScanNet++'s optics; ScanNet++ content picks up only
+      3-11 pp through Aria's. Same direction and ordering in all four backbones.
+    status: EXPLORATORY, deliberately.
+    why_exploratory: >
+      The pre-registered rule DID NOT FIRE. analyze_h48.py wanted both DA3 cells
+      over 100% and got +96.3 and +106.5, so it returns its else-branch, whose
+      stated interpretation the same session's floor table refutes. The
+      threshold was the wrong statistic to pre-register -- absolute rather than
+      scale-free, so vggt and vggt_omega could never have satisfied it in any
+      cell. NOT RETUNED AFTER THE FACT.
+    confirmatory_test_named: >
+      Pre-register RETENTION (Aria effect through a foreign lens as a fraction
+      of native) with a threshold, and run it on scenes and sequences not used
+      here. Cheap; do not quietly skip it.
+    resolving_power_checked_first: >
+      Floors 0.2145 (A, 8 scenes) and 0.4400 (R, 7 sequences); headroom
+      (floor / baseline AbsRel) 2.4-4.7x in every cell, and the backbones'
+      baselines separate rather than collapsing. Measured over every scene used,
+      not one -- the single-scene caution from the first diagnostic pass
+      (00dd871005, floor 0.101) does not survive its own measurement.
+    still_not_separated: >
+      CONTENT from CAPTURE, named in protocol.md before the run: a resample
+      carries each dataset's sharpness, blur and exposure through the other's
+      geometry. "Content" here means THE IMAGERY, not THE SCENE.
+    record: "autoresearch/experiments/h48-content-vs-pipeline/analysis.md"
   what_the_reports_say_now: >
     Section 03ae's claim is narrowed in place and 03af carries H46/H47. The
     recommendation is "measure it on your own data", not "un-mirror everything".
