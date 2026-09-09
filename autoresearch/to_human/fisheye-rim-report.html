@@ -4740,12 +4740,10 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
     <div class="note">
       <span class="eyebrow">H47：显而易见的嫌疑人，被排除了</span>
       <p>
-        Aria 的 89° 视角<strong>有黑角</strong>（角射线 62.9°，锥体只有 54.83°），而主点还偏心 4.5 px ——
-        所以镜像会把一个<strong>不对称的黑角图案</strong>挪过边缘。而 §03ae 的排序和量级
-        <strong>像极了黑边结果</strong>（DA3-Large 两处都最差）。
+        <strong>（这个怀疑后来被证明建立在我自己的算错上，见本节末的更正框。）</strong>当时的想法是：Aria 的 89° 视角有黑角（角射线 62.9°，锥体只有 54.83°），而主点还偏心 4.5 px，所以镜像会把一个不对称的黑角图案挪过边缘；而 §03ae 的排序和量级<strong>像极了黑边结果</strong>。
       </p>
       <p>
-        换成 <strong>60° 视角</strong>（角射线 42.4°，完全在锥内，<strong>任何地方都不黑</strong>），其余不变。<strong>更正</strong>：改用可引用的「均值之比」之后，无黑边的视角保留了效应的 <strong>60–90%</strong>，而不是当初写的"原封不动" —— <strong>结论不变（黑边不是机制），但那个词太强了</strong>；而且 60° 这条臂<strong>同时也改了视场</strong>，所以连这 10–40% 的下降也不能全算在黑边头上：
+        换成 <strong>60° 视角</strong>，其余不变。<strong>更正</strong>：改用可引用的「均值之比」之后，无黑边的视角保留了效应的 <strong>60–90%</strong>，而不是当初写的"原封不动" —— <strong>结论不变（黑边不是机制），但那个词太强了</strong>；而且 60° 这条臂<strong>同时也改了视场</strong>，所以连这 10–40% 的下降也不能全算在黑边头上：
       </p>
     </div>
   </div>
@@ -4804,6 +4802,50 @@ ul.plain li{margin-bottom:6px;color:var(--ink-soft)}
       <p>
         这是这条线上第二次「把弱点和结果写在一起，让改正变便宜」——
         第一次是 §03ad，它发布了一个带保留的判定，<strong>并指名了会推翻它的那次运行</strong>。
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <div class="note warn">
+      <span class="eyebrow">更正（2026-09-09）：那个"黑角"从头到尾就不存在</span>
+      <p>
+        方形视角的<strong>角射线是 <code>atan(√2·tan(fov/2))</code></strong>，
+        <strong>不是</strong> <code>(fov/2)·√2</code>。我在 §03aa 和本节的协议里用了后者：
+      </p>
+      <p class="mono">
+        60°　我写 42.4°　　实际 <strong>39.2°</strong><br>
+        89°　我写 62.9°　　实际 <strong>54.2°</strong>　　（Aria 锥体 54.83°）
+      </p>
+      <p>
+        <strong>所以 89° 视角同样没有黑角。</strong>仓库里 <code>run_h14_sweep.sh</code> 的表
+        一直写着「89° → 角射线 54.2，画幅 100% 是真内容」，黑色要到 95° 才出现。
+      </p>
+      <p>
+        <strong>作废的：</strong>本节 H47 的<strong>前提</strong>（它写的是"去掉黑边"，
+        而<strong>两条臂都没有黑边</strong>，它实际变的是<strong>视场</strong>）；
+        上面那条"ScanNet++ 不复现是因为它没有黑角"的<strong>候选解释</strong>；
+        以及 §03ae 里同源的黑角机制。
+        <strong>所以 H46 列的四个候选差别一个都没被排除。</strong>
+      </p>
+      <p>
+        <strong>存活且更强的：</strong>H47 的<strong>结论</strong>——效应不是黑边造成的——
+        现在<strong>平凡地成立</strong>，因为两条臂里根本就没有黑边。§03aa 的 2×2 不受影响，
+        它的黑边臂是<strong>刻意加的内切圆掩码</strong>。
+      </p>
+      <p>
+        <strong>那次测量现在说的是：</strong>89° 对 60° <strong>视场</strong>（两者都填满），
+        60° 上的效应是 89° 的 <strong>60–90%</strong>——<strong>效应随视场增大</strong>。
+        这是一个<strong>真实观察，之前挂在一个错误的标签下</strong>；<strong>不当作机制</strong>，
+        因为放大视场会同时改变重采样、角度内容和打分区域。
+      </p>
+      <p>
+        <strong>教训和 §03y 那次是同一个</strong>：这个数<strong>仓库里两处都有、而且是对的</strong>，
+        错在我<strong>重新推导了一个几何常数而不是去查它</strong>。
+        它能活过三个协议，是因为它<strong>朝安全方向偏</strong>——真实角射线比我写的小，
+        所以每一句"这个视角在锥体内"照样成立，<strong>没有任何东西大声失败</strong>。
       </p>
     </div>
   </div>

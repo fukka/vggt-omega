@@ -2320,3 +2320,33 @@ The lesson is small and general: **a queue everyone reads goes stale in one
 direction — items get done and not closed — and nothing surfaces that except
 someone re-reading it.** Two ticks ago the same shape appeared inside the
 report, where a correction landed on the work and not on the places quoting it.
+
+### The tenth tick found a real error, in my own arithmetic, three protocols deep
+
+Checking the geometry of a proposed reciprocal arm turned up that a square view's
+corner ray is `atan(√2·tan(fov/2))`, not `(fov/2)·√2`. I had used the second in
+H40's and H47's protocols. **89° is 54.2°, not 62.9°, against a 54.83° cone — so
+the 89° view has no black corners.**
+
+**H47 was built on that.** Its premise was *"the 89° view has black corners, the
+60° one does not"*. Neither does. What H47 varied is **field of view**, and its
+conclusion — the effect is not caused by black corners — is now trivially true.
+H46's candidate explanation for the ScanNet++ non-replication dies with it, so
+**H46's four candidate differences stand unreduced; nothing was eliminated.**
+
+Three things worth keeping:
+
+* **The number was already in the repo, twice, correct.** `run_h14_sweep.sh` has
+  a table saying *"89 → corner ray 54.2, 100% real frame content"*, and
+  `findings.md:754` says *"corner ray 54.3° < 54.83° at every roll, fill
+  1.000"*. Same failure mode as H39's convention bug: **re-deriving instead of
+  looking up.**
+* **It survived three protocols because it was conservative in the safe
+  direction.** The true corner ray is *smaller* than I wrote, so every "this
+  view fits inside the cone" claim held anyway and nothing ever failed loudly.
+  An error that only ever makes a safety margin look tighter than it is will not
+  be caught by any check that watches for failures.
+* **The measurement was still worth having, under a corrected label.** H47 now
+  says the effect at 60° is 60–90% of the 89° value — **it grows with field of
+  view**. That is a real observation that had been sitting under the wrong name,
+  and it is not offered as a mechanism.
