@@ -3711,3 +3711,16 @@ Frames the model finds *easy* degrade proportionally *more* — consistent with 
 roughly additive corruption, offered as consistency rather than mechanism. It is
 also one more reason the ratio of means is the citable statistic: per-frame
 ratios are largest exactly where the denominator is smallest.
+
+
+### H49 addendum — additive or multiplicative? A null.
+
+Fitting `mirror = normal + c` against `mirror = k · normal` per backbone leaves
+the two residuals within **10%** of each other in every one of twelve cells,
+with three outright ties. **Recorded as a null so the tick is not spent again.**
+
+The one pattern worth noticing and not building on: on Aria the two VGGT
+variants fit an affine with **slope ≈ 1 and a small positive intercept**
+(0.92/+0.039, 0.98/+0.018), the shape of a nearly pure offset, while the DA3
+variants have slope 1.4–2.0 *and* an intercept of 0.11–0.16. One fit per cell,
+no held-out split — **an observation, and nothing depends on it.**

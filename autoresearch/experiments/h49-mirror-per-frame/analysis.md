@@ -56,3 +56,38 @@ smallest.
 
 None. Arithmetic on committed JSONs, on the Mac, while `lambda_63` was
 unreachable.
+
+---
+
+## Addendum — is the effect additive or multiplicative? It does not separate.
+
+H49's negative `corr(baseline, ratio)` suggested a roughly additive corruption,
+so the obvious next step was to fit both forms per backbone and compare
+residuals: `mirror = normal + c` against `mirror = k · normal`.
+
+**It does not separate.** Across all twelve (dataset, backbone) cells the two
+RMSEs are within **10%** of each other, and three cells tie outright:
+
+| set | backbone | additive c | rmse | mult k | rmse | affine slope, intercept |
+|---|---|---|---|---|---|---|
+| Aria 60° | `da3:small` | 0.185 | 0.133 | 2.14 | 0.140 | 1.59, +0.114 |
+| | `da3:large` | 0.134 | 0.121 | 2.59 | 0.141 | 1.44, +0.111 |
+| | `vggt` | 0.033 | 0.043 | 1.28 | 0.048 | **0.92, +0.039** |
+| | `vggt_omega` | 0.017 | 0.046 | 1.18 | 0.048 | **0.98, +0.018** |
+| Aria 89° | `da3:small` | 0.283 | 0.185 | 2.84 | 0.187 | 1.96, +0.156 |
+| | `da3:large` | 0.169 | 0.132 | 3.18 | 0.150 | 1.56, +0.137 |
+| ScanNet++ | `da3:small` | 0.024 | 0.072 | 1.08 | 0.074 | 0.75, +0.078 |
+| | `vggt` | −0.028 | 0.072 | 0.71 | 0.056 | 0.05, +0.132 (degenerate) |
+
+**Recorded as a null so nobody spends a tick re-running it.** A residual
+difference under 10% between two one-parameter fits on 113–260 points, with no
+held-out split, distinguishes nothing.
+
+**The one thing worth noticing, and not building on:** on Aria the two VGGT
+variants fit an affine with **slope ≈ 1 and a small positive intercept**
+(0.92/+0.039 and 0.98/+0.018) — the shape of a nearly pure offset — while the
+DA3 variants have slope 1.4–2.0 *and* an intercept near 0.11–0.16. If that held
+up it would say the reflection costs the roll-robust models a fixed amount and
+the others a fixed amount *plus* a scaling. It is one fit per cell with no
+cross-validation, so **it is written down as an observation and nothing here
+depends on it.**

@@ -2308,3 +2308,33 @@ h49_mirror_per_frame:
     roughly additive corruption; offered as consistency, NOT mechanism. Also one
     more reason the ratio of means is citable — per-frame ratios are largest
     exactly where the denominator is smallest.
+
+# ------------------------------------------- lambda_63 outage 2026-09-08/09
+lambda_63_outage_2:
+  first_seen: "2026-09-08, during H48's launch"
+  still_down: "2026-09-09, four consecutive loop ticks"
+  note: >
+    Documented shared-box failure mode, not a new one. NO GPU WORK WAS STARTED.
+    H48's protocol, script and runner are committed and its call sites were
+    audited against the real signatures; it launches as soon as the box answers.
+  what_the_outage_produced_instead: >
+    Four CPU-only pieces, three of them corrections to work published in the
+    ticks just before: the citable-statistic correction to H45/H47, the
+    figure-vs-table mismatch it left behind, four stale numbers in sections that
+    QUOTE the corrected ones, and H49's per-frame shape analysis. Plus two
+    mechanisms so each cannot recur — autoresearch/tools/fetch_results.sh and
+    build_report.py's SUPERSEDED tripwire.
+
+h49_addendum_additive_vs_multiplicative:
+  status: "NULL — does not separate"
+  what: "Fit mirror = normal + c against mirror = k*normal per backbone."
+  result: >
+    Two residuals within 10% of each other in all twelve (dataset, backbone)
+    cells, three outright ties. A sub-10% RMSE difference between two
+    one-parameter fits on 113-260 points with no held-out split distinguishes
+    nothing. RECORDED AS A NULL so the tick is not spent again.
+  one_pattern_not_built_on: >
+    On Aria the two VGGT variants fit an affine with slope ~1 and a small
+    positive intercept (0.92/+0.039, 0.98/+0.018) — the shape of a nearly pure
+    offset — while DA3 has slope 1.4-2.0 AND an intercept of 0.11-0.16. One fit
+    per cell, no cross-validation. An observation; nothing depends on it.
